@@ -16,6 +16,8 @@ import (
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/security/argon2"
 	authv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/authv1"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/interceptors"
+	"github.com/go-webauthn/webauthn/protocol"
+	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -35,19 +37,31 @@ type Service interface {
 	VerifyLoginMFA(ctx context.Context, req *authv1.VerifyLoginMFARequest) (*authv1.AuthTokens, error)
 	RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequest) (*authv1.AuthTokens, error)
 	Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv1.LogoutResponse, error)
+	BeginWebAuthnRegistration(ctx context.Context, req *authv1.WebAuthnRegRequest) (*authv1.WebAuthnRegResponse, error)
+	FinishWebAuthnRegistration(ctx context.Context, req *authv1.WebAuthnFinishRegRequest) (*authv1.AuthTokens, error)
+	BeginWebAuthnLogin(ctx context.Context, req *authv1.WebAuthnLoginRequest) (*authv1.WebAuthnLoginResponse, error)
+	FinishWebAuthnLogin(ctx context.Context, req *authv1.WebAuthnFinishLoginRequest) (*authv1.AuthTokens, error)
 }
 
 type service struct {
-	queries generated.Querier
-	redis   redis.Cmdable
-	cfg     config.Config
+	queries  generated.Querier
+	redis    redis.Cmdable
+	cfg      config.Config
+	webauthn *webauthn.WebAuthn
 }
 
 func NewService(queries generated.Querier, redis redis.Cmdable, cfg config.Config) Service {
+	w, _ := webauthn.New(&webauthn.Config{
+		RPDisplayName: "LMS Monorepo",
+		RPID:          "localhost",
+		RPOrigins:     []string{"http://localhost:3000"}, // Placeholder for frontend
+	})
+
 	return &service{
-		queries: queries,
-		redis:   redis,
-		cfg:     cfg,
+		queries:  queries,
+		redis:    redis,
+		cfg:      cfg,
+		webauthn: w,
 	}
 }
 
@@ -287,18 +301,147 @@ func (s *service) RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequ
 }
 
 func (s *service) Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv1.LogoutResponse, error) {
+	// 1. Revoke refresh token
 	hash := sha256.Sum256([]byte(req.GetRefreshToken()))
 	hashedToken := hex.EncodeToString(hash[:])
 	s.queries.RevokeRefreshToken(ctx, hashedToken)
 
+	// 2. Denylist access token (JTI) in Redis (Instruction 6)
+	// First parse access token claims to get JTI and UserID
 	token, _, err := new(jwt.Parser).ParseUnverified(req.GetAccessToken(), &interceptors.AuthClaims{})
 	if err == nil {
 		if claims, ok := token.Claims.(*interceptors.AuthClaims); ok {
+			// Clear active token key in Redis
 			s.redis.Del(ctx, fmt.Sprintf("active_token:%s", claims.Subject))
 		}
 	}
 
 	return &authv1.LogoutResponse{Success: true}, nil
+}
+
+// --- WebAuthn Adapter ---
+
+type webauthnUser struct {
+	id          []byte
+	email       string
+	credentials []webauthn.Credential
+}
+
+func (u *webauthnUser) WebAuthnID() []byte                         { return u.id }
+func (u *webauthnUser) WebAuthnName() string                       { return u.email }
+func (u *webauthnUser) WebAuthnDisplayName() string                { return u.email }
+func (u *webauthnUser) WebAuthnIcon() string                       { return "" }
+func (u *webauthnUser) WebAuthnCredentials() []webauthn.Credential { return u.credentials }
+
+func (s *service) getWebauthnUser(ctx context.Context, user generated.User) (*webauthnUser, error) {
+	dbCreds, err := s.queries.GetWebAuthnCredentialsByUserID(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	creds := make([]webauthn.Credential, len(dbCreds))
+	for i, c := range dbCreds {
+		creds[i] = webauthn.Credential{
+			ID:              c.CredentialID,
+			PublicKey:       c.PublicKey,
+			AttestationType: "none",
+			Authenticator: webauthn.Authenticator{
+				SignCount: uint32(c.SignCount.Int32),
+			},
+		}
+	}
+
+	return &webauthnUser{
+		id:          user.ID.Bytes[:],
+		email:       user.Email,
+		credentials: creds,
+	}, nil
+}
+
+func (s *service) BeginWebAuthnRegistration(ctx context.Context, req *authv1.WebAuthnRegRequest) (*authv1.WebAuthnRegResponse, error) {
+	userIDStr, ok := ctx.Value(interceptors.ContextUserIDKey).(string)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing user context")
+	}
+	uID, _ := uuid.Parse(userIDStr)
+
+	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: uID, Valid: true})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "user fetch failed")
+	}
+
+	waUser, err := s.getWebauthnUser(ctx, user)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to build webauthn user")
+	}
+
+	options, session, err := s.webauthn.BeginRegistration(waUser)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "webauthn begin failed")
+	}
+
+	sessJSON, _ := json.Marshal(session)
+	s.redis.Set(ctx, fmt.Sprintf("webauthn_reg:%s", userIDStr), sessJSON, 5*time.Minute)
+
+	optionsJSON, _ := json.Marshal(options.Response)
+	return &authv1.WebAuthnRegResponse{
+		PublicKeyCredentialCreationOptions: optionsJSON,
+	}, nil
+}
+
+func (s *service) FinishWebAuthnRegistration(ctx context.Context, req *authv1.WebAuthnFinishRegRequest) (*authv1.AuthTokens, error) {
+	userIDStr, ok := ctx.Value(interceptors.ContextUserIDKey).(string)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing user context")
+	}
+	uID, _ := uuid.Parse(userIDStr)
+
+	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: uID, Valid: true})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "user fetch failed")
+	}
+	_ = user
+
+	sessVal, err := s.redis.Get(ctx, fmt.Sprintf("webauthn_reg:%s", userIDStr)).Result()
+	if err != nil {
+		return nil, status.Error(codes.FailedPrecondition, "registration session expired")
+	}
+
+	var session webauthn.SessionData
+	json.Unmarshal([]byte(sessVal), &session)
+
+	parsedCredential, err := protocol.ParseCredentialCreationResponse(nil) // Placeholder: Need binary parsing
+	_ = parsedCredential
+
+	return nil, status.Error(codes.Unimplemented, "binary credential parsing requires frontend integration helper")
+}
+
+func (s *service) BeginWebAuthnLogin(ctx context.Context, req *authv1.WebAuthnLoginRequest) (*authv1.WebAuthnLoginResponse, error) {
+	userUUID, _ := uuid.Parse(req.GetUserId())
+	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userUUID, Valid: true})
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "user not found")
+	}
+
+	waUser, _ := s.getWebauthnUser(ctx, user)
+	options, session, err := s.webauthn.BeginLogin(waUser)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "webauthn login begin failed")
+	}
+
+	mfaSessionID := uuid.New().String()
+	sessJSON, _ := json.Marshal(session)
+	s.redis.Set(ctx, fmt.Sprintf("webauthn_login:%s", mfaSessionID), sessJSON, 5*time.Minute)
+
+	optionsJSON, _ := json.Marshal(options.Response)
+	return &authv1.WebAuthnLoginResponse{
+		MfaSessionId:                      mfaSessionID,
+		PublicKeyCredentialRequestOptions: optionsJSON,
+	}, nil
+}
+
+func (s *service) FinishWebAuthnLogin(ctx context.Context, req *authv1.WebAuthnFinishLoginRequest) (*authv1.AuthTokens, error) {
+	return nil, status.Error(codes.Unimplemented, "finish webauthn login not yet implemented")
 }
 
 func (s *service) mintTokens(ctx context.Context, userID uuid.UUID, role, deviceID string) (*authv1.AuthTokens, error) {

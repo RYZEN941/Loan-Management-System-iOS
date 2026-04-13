@@ -13,13 +13,17 @@ import (
 type Querier interface {
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	CreateWebAuthnCredential(ctx context.Context, arg CreateWebAuthnCredentialParams) (WebauthnCredential, error)
 	GetRefreshTokenByHashedToken(ctx context.Context, hashedToken string) (RefreshToken, error)
 	GetUserByEmailOrPhone(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
+	GetWebAuthnCredentialByID(ctx context.Context, credentialID []byte) (WebauthnCredential, error)
+	GetWebAuthnCredentialsByUserID(ctx context.Context, userID pgtype.UUID) ([]WebauthnCredential, error)
 	RevokeRefreshToken(ctx context.Context, hashedToken string) error
 	RevokeRefreshTokensForUserDevice(ctx context.Context, arg RevokeRefreshTokensForUserDeviceParams) error
 	SetTOTPSecret(ctx context.Context, arg SetTOTPSecretParams) error
 	UpdateUserVerification(ctx context.Context, arg UpdateUserVerificationParams) error
+	UpdateWebAuthnCredentialSignCount(ctx context.Context, arg UpdateWebAuthnCredentialSignCountParams) error
 }
 
 var _ Querier = (*Queries)(nil)

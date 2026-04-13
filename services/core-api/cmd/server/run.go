@@ -40,7 +40,7 @@ func Run() error {
 		return fmt.Errorf("listen on grpc port %s: %w", cfg.GRPCPort, err)
 	}
 
-	authService := auth.NewService(queries, redisClient)
+	authService := auth.NewService(queries, redisClient, cfg)
 	application := app.New(authService, queries)
 
 	publicMethods := map[string]struct{}{

@@ -3,17 +3,23 @@ package auth
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
 	"strings"
 	"time"
 
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/config"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/repository/generated"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/security/argon2"
 	authv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/authv1"
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/interceptors"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/pquerna/otp/totp"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -34,12 +40,14 @@ type Service interface {
 type service struct {
 	queries generated.Querier
 	redis   redis.Cmdable
+	cfg     config.Config
 }
 
-func NewService(queries generated.Querier, redis redis.Cmdable) Service {
+func NewService(queries generated.Querier, redis redis.Cmdable, cfg config.Config) Service {
 	return &service{
 		queries: queries,
 		redis:   redis,
+		cfg:     cfg,
 	}
 }
 
@@ -53,13 +61,11 @@ func (s *service) Hello(ctx context.Context, name string) (string, error) {
 }
 
 func (s *service) InitiateSignup(ctx context.Context, req *authv1.SignupRequest) (*authv1.SignupResponse, error) {
-	// 1. Hash password with Argon2id (Instruction 3)
 	hash, err := argon2.HashPassword(req.GetPassword(), argon2.DefaultConfig())
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to hash password")
 	}
 
-	// 2. Create user via sqlc (Instruction 4)
 	user, err := s.queries.CreateUser(ctx, generated.CreateUserParams{
 		Email:        req.GetEmail(),
 		Phone:        req.GetPhone(),
@@ -67,7 +73,6 @@ func (s *service) InitiateSignup(ctx context.Context, req *authv1.SignupRequest)
 		Role:         req.GetRole(),
 	})
 	if err != nil {
-		// Handle unique constraint violations
 		if strings.Contains(err.Error(), "users_email_key") {
 			return nil, status.Error(codes.AlreadyExists, "email already registered")
 		}
@@ -77,11 +82,9 @@ func (s *service) InitiateSignup(ctx context.Context, req *authv1.SignupRequest)
 		return nil, status.Error(codes.Internal, "failed to create user")
 	}
 
-	// 3. Generate 6-digit OTPs (Instruction 4)
 	emailOTP := generateOTP()
 	phoneOTP := generateOTP()
 
-	// 4. Save to Redis (Instruction 6)
 	regID := uuid.New().String()
 	regData, _ := json.Marshal(map[string]string{
 		"user_id":   user.ID.String(),
@@ -94,7 +97,6 @@ func (s *service) InitiateSignup(ctx context.Context, req *authv1.SignupRequest)
 		return nil, status.Error(codes.Internal, "failed to store registration state")
 	}
 
-	// TODO: Send OTPs via Email/SMS service (Placeholder)
 	fmt.Printf("DEBUG: Email OTP for %s: %s\n", req.GetEmail(), emailOTP)
 	fmt.Printf("DEBUG: Phone OTP for %s: %s\n", req.GetPhone(), phoneOTP)
 
@@ -104,7 +106,6 @@ func (s *service) InitiateSignup(ctx context.Context, req *authv1.SignupRequest)
 }
 
 func (s *service) VerifySignupOTPs(ctx context.Context, req *authv1.VerifyOTPsRequest) (*authv1.VerifyOTPsResponse, error) {
-	// 1. Retrieve registration data from Redis
 	key := fmt.Sprintf("signup_reg:%s", req.GetRegistrationId())
 	val, err := s.redis.Get(ctx, key).Result()
 	if err != nil {
@@ -119,41 +120,224 @@ func (s *service) VerifySignupOTPs(ctx context.Context, req *authv1.VerifyOTPsRe
 		return nil, status.Error(codes.Internal, "corrupt registration state")
 	}
 
-	// 2. Verify both OTPs (Instruction 4)
 	if req.GetEmailCode() != data["email_otp"] || req.GetPhoneCode() != data["phone_otp"] {
 		return nil, status.Error(codes.InvalidArgument, "invalid verification codes")
 	}
 
-	// 3. Update user status via sqlc (Instruction 4)
 	userUUID, _ := uuid.Parse(data["user_id"])
 	err = s.queries.UpdateUserVerification(ctx, generated.UpdateUserVerificationParams{
-		ID: pgtype.UUID{
-			Bytes: userUUID,
-			Valid: true,
-		},
-		IsActive: pgtype.Bool{
-			Bool:  true,
-			Valid: true,
-		},
-		IsEmailVerified: pgtype.Bool{
-			Bool:  true,
-			Valid: true,
-		},
-		IsPhoneVerified: pgtype.Bool{
-			Bool:  true,
-			Valid: true,
-		},
+		ID:              pgtype.UUID{Bytes: userUUID, Valid: true},
+		IsActive:        pgtype.Bool{Bool: true, Valid: true},
+		IsEmailVerified: pgtype.Bool{Bool: true, Valid: true},
+		IsPhoneVerified: pgtype.Bool{Bool: true, Valid: true},
 	})
 
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to activate user")
 	}
 
-	// 4. Cleanup Redis
 	s.redis.Del(ctx, key)
 
-	return &authv1.VerifyOTPsResponse{
-		Verified: true,
+	return &authv1.VerifyOTPsResponse{Verified: true}, nil
+}
+
+func (s *service) SetupTOTP(ctx context.Context, req *authv1.SetupTOTPRequest) (*authv1.SetupTOTPResponse, error) {
+	userIDStr, ok := ctx.Value(interceptors.ContextUserIDKey).(string)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "user not found in context")
+	}
+	userID, _ := uuid.Parse(userIDStr)
+
+	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to fetch user")
+	}
+
+	key, err := totp.Generate(totp.GenerateOpts{
+		Issuer:      "LMS-Core",
+		AccountName: user.Email,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to generate totp secret")
+	}
+
+	err = s.queries.SetTOTPSecret(ctx, generated.SetTOTPSecretParams{
+		ID:         pgtype.UUID{Bytes: userID, Valid: true},
+		TotpSecret: pgtype.Text{String: key.Secret(), Valid: true},
+		HasTotp:    pgtype.Bool{Bool: false, Valid: true},
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to save totp secret")
+	}
+
+	return &authv1.SetupTOTPResponse{
+		Secret:          key.Secret(),
+		ProvisioningUri: key.URL(),
+	}, nil
+}
+
+func (s *service) VerifyTOTPSetup(ctx context.Context, req *authv1.VerifyTOTPSetupRequest) (*authv1.AuthTokens, error) {
+	userIDStr, ok := ctx.Value(interceptors.ContextUserIDKey).(string)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "user not found in context")
+	}
+	userID, _ := uuid.Parse(userIDStr)
+
+	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to fetch user")
+	}
+
+	if !totp.Validate(req.GetCode(), user.TotpSecret.String) {
+		return nil, status.Error(codes.InvalidArgument, "invalid totp code")
+	}
+
+	err = s.queries.SetTOTPSecret(ctx, generated.SetTOTPSecretParams{
+		ID:         pgtype.UUID{Bytes: userID, Valid: true},
+		TotpSecret: user.TotpSecret,
+		HasTotp:    pgtype.Bool{Bool: true, Valid: true},
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to finalize totp setup")
+	}
+
+	return s.mintTokens(ctx, userID, user.Role, req.GetDeviceId())
+}
+
+func (s *service) LoginPrimary(ctx context.Context, req *authv1.LoginRequest) (*authv1.LoginPrimaryResponse, error) {
+	user, err := s.queries.GetUserByEmailOrPhone(ctx, req.GetEmailOrPhone())
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "invalid credentials")
+	}
+
+	match, err := argon2.VerifyPassword(req.GetPassword(), user.PasswordHash)
+	if err != nil || !match {
+		return nil, status.Error(codes.Unauthenticated, "invalid credentials")
+	}
+
+	mfaSessionID := uuid.New().String()
+	allowedFactors := []string{}
+	if user.HasTotp.Bool {
+		allowedFactors = append(allowedFactors, "totp")
+	}
+
+	mfaData, _ := json.Marshal(map[string]string{
+		"user_id": user.ID.String(),
+		"role":    user.Role,
+	})
+
+	err = s.redis.Set(ctx, fmt.Sprintf("mfa_session:%s", mfaSessionID), mfaData, 5*time.Minute).Err()
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to create mfa session")
+	}
+
+	return &authv1.LoginPrimaryResponse{
+		MfaSessionId:   mfaSessionID,
+		AllowedFactors: allowedFactors,
+	}, nil
+}
+
+func (s *service) VerifyLoginMFA(ctx context.Context, req *authv1.VerifyLoginMFARequest) (*authv1.AuthTokens, error) {
+	key := fmt.Sprintf("mfa_session:%s", req.GetMfaSessionId())
+	val, err := s.redis.Get(ctx, key).Result()
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "mfa session expired or invalid")
+	}
+
+	var data map[string]string
+	json.Unmarshal([]byte(val), &data)
+	userID, _ := uuid.Parse(data["user_id"])
+
+	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to fetch user")
+	}
+
+	switch f := req.Factor.(type) {
+	case *authv1.VerifyLoginMFARequest_TotpCode:
+		if !totp.Validate(f.TotpCode, user.TotpSecret.String) {
+			return nil, status.Error(codes.InvalidArgument, "invalid totp code")
+		}
+	default:
+		return nil, status.Error(codes.InvalidArgument, "no mfa factor provided")
+	}
+
+	s.redis.Del(ctx, key)
+	return s.mintTokens(ctx, userID, user.Role, req.GetDeviceId())
+}
+
+func (s *service) RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequest) (*authv1.AuthTokens, error) {
+	hash := sha256.Sum256([]byte(req.GetRefreshToken()))
+	hashedToken := hex.EncodeToString(hash[:])
+
+	tokenRecord, err := s.queries.GetRefreshTokenByHashedToken(ctx, hashedToken)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "invalid refresh token")
+	}
+
+	if tokenRecord.DeviceID != req.GetDeviceId() {
+		return nil, status.Error(codes.Unauthenticated, "invalid device id")
+	}
+
+	s.queries.RevokeRefreshToken(ctx, hashedToken)
+	userID := uuid.UUID(tokenRecord.UserID.Bytes)
+	user, _ := s.queries.GetUserByID(ctx, tokenRecord.UserID)
+
+	return s.mintTokens(ctx, userID, user.Role, req.GetDeviceId())
+}
+
+func (s *service) Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv1.LogoutResponse, error) {
+	hash := sha256.Sum256([]byte(req.GetRefreshToken()))
+	hashedToken := hex.EncodeToString(hash[:])
+	s.queries.RevokeRefreshToken(ctx, hashedToken)
+
+	token, _, err := new(jwt.Parser).ParseUnverified(req.GetAccessToken(), &interceptors.AuthClaims{})
+	if err == nil {
+		if claims, ok := token.Claims.(*interceptors.AuthClaims); ok {
+			s.redis.Del(ctx, fmt.Sprintf("active_token:%s", claims.Subject))
+		}
+	}
+
+	return &authv1.LogoutResponse{Success: true}, nil
+}
+
+func (s *service) mintTokens(ctx context.Context, userID uuid.UUID, role, deviceID string) (*authv1.AuthTokens, error) {
+	jti := uuid.New().String()
+
+	claims := interceptors.AuthClaims{
+		Role: role,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   userID.String(),
+			ID:        jti,
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	accessToken, _ := token.SignedString([]byte(s.cfg.JWTKey))
+
+	refreshToken := uuid.New().String()
+	hash := sha256.Sum256([]byte(refreshToken))
+	hashedToken := hex.EncodeToString(hash[:])
+
+	expiresAt := time.Now().Add(7 * 24 * time.Hour)
+	_, err := s.queries.CreateRefreshToken(ctx, generated.CreateRefreshTokenParams{
+		UserID:      pgtype.UUID{Bytes: userID, Valid: true},
+		DeviceID:    deviceID,
+		HashedToken: hashedToken,
+		ExpiresAt:   pgtype.Timestamptz{Time: expiresAt, Valid: true},
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to persist refresh token")
+	}
+
+	err = s.redis.Set(ctx, fmt.Sprintf("active_token:%s", userID.String()), jti, 15*time.Minute).Err()
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to set active session")
+	}
+
+	return &authv1.AuthTokens{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 	}, nil
 }
 
@@ -161,28 +345,4 @@ func generateOTP() string {
 	max := big.NewInt(1000000)
 	n, _ := rand.Int(rand.Reader, max)
 	return fmt.Sprintf("%06d", n)
-}
-
-func (s *service) SetupTOTP(ctx context.Context, req *authv1.SetupTOTPRequest) (*authv1.SetupTOTPResponse, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (s *service) VerifyTOTPSetup(ctx context.Context, req *authv1.VerifyTOTPSetupRequest) (*authv1.AuthTokens, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (s *service) LoginPrimary(ctx context.Context, req *authv1.LoginRequest) (*authv1.LoginPrimaryResponse, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (s *service) VerifyLoginMFA(ctx context.Context, req *authv1.VerifyLoginMFARequest) (*authv1.AuthTokens, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (s *service) RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequest) (*authv1.AuthTokens, error) {
-	return nil, fmt.Errorf("not implemented")
-}
-
-func (s *service) Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv1.LogoutResponse, error) {
-	return nil, fmt.Errorf("not implemented")
 }

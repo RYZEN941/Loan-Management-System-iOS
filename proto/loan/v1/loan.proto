@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+package loan.v1;
+
+option go_package = "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/loanv1;loanv1";
+
+service LoanService {}

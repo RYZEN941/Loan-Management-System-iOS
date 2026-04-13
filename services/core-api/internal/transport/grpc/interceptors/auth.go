@@ -21,6 +21,31 @@ const (
 	ContextRoleKey   contextKey = "role"
 )
 
+type RBACPolicy map[string][]string
+
+func RBACUnaryInterceptor(policy RBACPolicy) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		allowedRoles, ok := policy[info.FullMethod]
+		if !ok {
+			// If method not in policy, we assume it's publicly accessible or handled by JWT interceptor
+			return handler(ctx, req)
+		}
+
+		userRole, ok := ctx.Value(ContextRoleKey).(string)
+		if !ok || userRole == "" {
+			return nil, status.Error(codes.Unauthenticated, "missing user role")
+		}
+
+		for _, role := range allowedRoles {
+			if role == userRole {
+				return handler(ctx, req)
+			}
+		}
+
+		return nil, status.Error(codes.PermissionDenied, "access denied for this role")
+	}
+}
+
 type AuthClaims struct {
 	Role string `json:"role"`
 	jwt.RegisteredClaims

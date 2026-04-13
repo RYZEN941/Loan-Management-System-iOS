@@ -9,6 +9,7 @@ import (
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/app"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/config"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/db"
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/repository/generated"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/auth"
 	authv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/authv1"
 	grpcinterceptors "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/interceptors"
@@ -26,26 +27,50 @@ func Run() error {
 		log.Printf("redis not connected at startup: %v", err)
 	}
 
+	pgPool, err := db.NewPostgresPool(context.Background(), cfg.PostgresDSN)
+	if err != nil {
+		return fmt.Errorf("failed to connect to postgres: %w", err)
+	}
+	defer pgPool.Close()
+
+	queries := generated.New(pgPool)
+
 	lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
 	if err != nil {
 		return fmt.Errorf("listen on grpc port %s: %w", cfg.GRPCPort, err)
 	}
 
-	authService := auth.NewService()
-	application := app.New(authService)
+	authService := auth.NewService(queries, redisClient)
+	application := app.New(authService, queries)
 
 	publicMethods := map[string]struct{}{
-		"/auth.v1.AuthService/Hello":   {},
-		"/grpc.health.v1.Health/Check": {},
-		"/grpc.health.v1.Health/Watch": {},
+		"/auth.v1.AuthService/Hello":            {},
+		"/auth.v1.AuthService/InitiateSignup":   {},
+		"/auth.v1.AuthService/VerifySignupOTPs": {},
+		"/auth.v1.AuthService/LoginPrimary":     {},
+		"/auth.v1.AuthService/VerifyLoginMFA":   {},
+		"/auth.v1.AuthService/RefreshToken":     {},
+		"/grpc.health.v1.Health/Check":          {},
+		"/grpc.health.v1.Health/Watch":          {},
+	}
+
+	rbacPolicy := grpcinterceptors.RBACPolicy{
+		"/auth.v1.AuthService/SetupTOTP":       {"borrower", "officer", "manager", "admin"},
+		"/auth.v1.AuthService/VerifyTOTPSetup": {"borrower", "officer", "manager", "admin"},
+		"/auth.v1.AuthService/Logout":          {"borrower", "officer", "manager", "admin"},
+		// Example future loan roles
+		// "/loan.v1.LoanService/ApproveLoan": {"officer", "manager", "admin"},
 	}
 
 	grpcServer := grpc.NewServer(
-		grpc.UnaryInterceptor(grpcinterceptors.JWTUnaryInterceptor(grpcinterceptors.JWTConfig{
-			SigningKey:    []byte(cfg.JWTKey),
-			RedisClient:   redisClient,
-			PublicMethods: publicMethods,
-		})),
+		grpc.ChainUnaryInterceptor(
+			grpcinterceptors.JWTUnaryInterceptor(grpcinterceptors.JWTConfig{
+				SigningKey:    []byte(cfg.JWTKey),
+				RedisClient:   redisClient,
+				PublicMethods: publicMethods,
+			}),
+			grpcinterceptors.RBACUnaryInterceptor(rbacPolicy),
+		),
 	)
 
 	healthServer := health.NewServer()

@@ -109,11 +109,16 @@ func (s *service) InitiateSignup(ctx context.Context, req *authv1.SignupRequest)
 		return nil, status.Error(codes.Internal, "failed to hash password")
 	}
 
+	role, err := mapProtoRole(req.GetRole())
+	if err != nil {
+		return nil, err
+	}
+
 	user, err := s.queries.CreateUser(ctx, generated.CreateUserParams{
 		Email:        req.GetEmail(),
 		Phone:        req.GetPhone(),
 		PasswordHash: hash,
-		Role:         req.GetRole(),
+		Role:         role,
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), "users_email_key") {
@@ -248,7 +253,7 @@ func (s *service) VerifyTOTPSetup(ctx context.Context, req *authv1.VerifyTOTPSet
 		return nil, status.Error(codes.Internal, "failed to finalize totp setup")
 	}
 
-	return s.mintTokens(ctx, userID, user.Role, req.GetDeviceId())
+	return s.mintTokens(ctx, userID, string(user.Role), req.GetDeviceId())
 }
 
 func (s *service) LoginPrimary(ctx context.Context, req *authv1.LoginRequest) (*authv1.LoginPrimaryResponse, error) {
@@ -280,7 +285,7 @@ func (s *service) LoginPrimary(ctx context.Context, req *authv1.LoginRequest) (*
 
 	mfaData, err := json.Marshal(mfaSessionState{
 		UserID:         user.ID.String(),
-		Role:           user.Role,
+		Role:           string(user.Role),
 		Email:          user.Email,
 		Phone:          user.Phone,
 		AllowedFactors: allowedFactors,
@@ -419,7 +424,7 @@ func (s *service) VerifyLoginMFA(ctx context.Context, req *authv1.VerifyLoginMFA
 		return nil, status.Error(codes.Internal, "failed to clear mfa session")
 	}
 
-	return s.mintTokens(ctx, userID, user.Role, req.GetDeviceId())
+	return s.mintTokens(ctx, userID, string(user.Role), req.GetDeviceId())
 }
 
 func (s *service) getMFASession(ctx context.Context, sessionID string) (*mfaSessionState, error) {
@@ -525,7 +530,7 @@ func (s *service) RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequ
 		return nil, status.Error(codes.Internal, "failed to load user for refresh")
 	}
 
-	return s.mintTokens(ctx, userID, user.Role, req.GetDeviceId())
+	return s.mintTokens(ctx, userID, string(user.Role), req.GetDeviceId())
 }
 
 func (s *service) Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv1.LogoutResponse, error) {
@@ -766,4 +771,19 @@ func maskPhone(phone string) string {
 		return "****"
 	}
 	return "***" + phone[len(phone)-4:]
+}
+
+func mapProtoRole(role authv1.UserRole) (generated.UserRole, error) {
+	switch role {
+	case authv1.UserRole_USER_ROLE_ADMIN:
+		return generated.UserRoleAdmin, nil
+	case authv1.UserRole_USER_ROLE_MANAGER:
+		return generated.UserRoleManager, nil
+	case authv1.UserRole_USER_ROLE_OFFICER:
+		return generated.UserRoleOfficer, nil
+	case authv1.UserRole_USER_ROLE_BORROWER:
+		return generated.UserRoleBorrower, nil
+	default:
+		return "", status.Error(codes.InvalidArgument, "invalid role")
+	}
 }

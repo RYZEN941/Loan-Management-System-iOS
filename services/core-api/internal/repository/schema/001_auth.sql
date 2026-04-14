@@ -1,9 +1,11 @@
+CREATE TYPE user_role AS ENUM ('admin', 'manager', 'officer', 'borrower');
+
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
     phone VARCHAR(20) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(50) NOT NULL, -- 'borrower', 'officer', 'manager', 'admin'
+    role user_role NOT NULL,
     
     -- Status Flags
     is_email_verified BOOLEAN DEFAULT false,

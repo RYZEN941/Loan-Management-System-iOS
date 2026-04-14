@@ -43,7 +43,15 @@ message SignupRequest {
   string email = 1;
   string phone = 2;
   string password = 3;
-  string role = 4;
+  UserRole role = 4;
+}
+
+enum UserRole {
+  USER_ROLE_UNSPECIFIED = 0;
+  USER_ROLE_ADMIN = 1;
+  USER_ROLE_MANAGER = 2;
+  USER_ROLE_OFFICER = 3;
+  USER_ROLE_BORROWER = 4;
 }
 
 message SignupResponse {

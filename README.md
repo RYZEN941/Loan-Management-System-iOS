@@ -180,9 +180,41 @@ Defined in `proto/auth/v1/auth.proto`:
 
 - Health/demo: `Hello`
 - Signup: `InitiateSignup`, `VerifySignupOTPs`
-- MFA setup/login: `SetupTOTP`, `VerifyTOTPSetup`, `LoginPrimary`, `VerifyLoginMFA`
+- MFA setup/login: `SetupTOTP`, `VerifyTOTPSetup`, `LoginPrimary`, `SelectLoginMFAFactor`, `VerifyLoginMFA`
 - Session/token: `RefreshToken`, `Logout`
 - WebAuthn: begin/finish registration and login methods exist, but finish flows are not fully implemented yet
+
+### Signup role enum
+
+`SignupRequest.role` is a protobuf enum (`UserRole`), not a free-form string.
+
+Allowed values:
+
+- `USER_ROLE_ADMIN`
+- `USER_ROLE_MANAGER`
+- `USER_ROLE_OFFICER`
+- `USER_ROLE_BORROWER`
+
+Sample signup payload:
+
+```json
+{
+  "email": "borrower@example.com",
+  "phone": "+15550001111",
+  "password": "StrongPassword123!",
+  "role": "USER_ROLE_BORROWER"
+}
+```
+
+### Login flow sequence
+
+Current login requires explicit MFA factor selection:
+
+1. `LoginPrimary`
+2. `SelectLoginMFAFactor`
+3. `VerifyLoginMFA`
+
+`VerifyLoginMFA` without `SelectLoginMFAFactor` returns a failed precondition error.
 
 ## Troubleshooting
 

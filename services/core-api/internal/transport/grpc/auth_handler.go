@@ -15,7 +15,12 @@ type AuthService interface {
 	SetupTOTP(ctx context.Context, req *authv1.SetupTOTPRequest) (*authv1.SetupTOTPResponse, error)
 	VerifyTOTPSetup(ctx context.Context, req *authv1.VerifyTOTPSetupRequest) (*authv1.AuthTokens, error)
 	LoginPrimary(ctx context.Context, req *authv1.LoginRequest) (*authv1.LoginPrimaryResponse, error)
+	SelectLoginMFAFactor(ctx context.Context, req *authv1.SelectLoginMFAFactorRequest) (*authv1.SelectLoginMFAFactorResponse, error)
 	VerifyLoginMFA(ctx context.Context, req *authv1.VerifyLoginMFARequest) (*authv1.AuthTokens, error)
+	BeginWebAuthnRegistration(ctx context.Context, req *authv1.WebAuthnRegRequest) (*authv1.WebAuthnRegResponse, error)
+	FinishWebAuthnRegistration(ctx context.Context, req *authv1.WebAuthnFinishRegRequest) (*authv1.AuthTokens, error)
+	BeginWebAuthnLogin(ctx context.Context, req *authv1.WebAuthnLoginRequest) (*authv1.WebAuthnLoginResponse, error)
+	FinishWebAuthnLogin(ctx context.Context, req *authv1.WebAuthnFinishLoginRequest) (*authv1.AuthTokens, error)
 	RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequest) (*authv1.AuthTokens, error)
 	Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv1.LogoutResponse, error)
 }
@@ -57,6 +62,10 @@ func (h *AuthHandler) LoginPrimary(ctx context.Context, req *authv1.LoginRequest
 	return h.authService.LoginPrimary(ctx, req)
 }
 
+func (h *AuthHandler) SelectLoginMFAFactor(ctx context.Context, req *authv1.SelectLoginMFAFactorRequest) (*authv1.SelectLoginMFAFactorResponse, error) {
+	return h.authService.SelectLoginMFAFactor(ctx, req)
+}
+
 func (h *AuthHandler) VerifyLoginMFA(ctx context.Context, req *authv1.VerifyLoginMFARequest) (*authv1.AuthTokens, error) {
 	return h.authService.VerifyLoginMFA(ctx, req)
 }
@@ -69,18 +78,18 @@ func (h *AuthHandler) Logout(ctx context.Context, req *authv1.LogoutRequest) (*a
 	return h.authService.Logout(ctx, req)
 }
 
-func (h *AuthHandler) FinishWebAuthnRegistration(context.Context, *authv1.WebAuthnFinishRegRequest) (*authv1.AuthTokens, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+func (h *AuthHandler) FinishWebAuthnRegistration(ctx context.Context, req *authv1.WebAuthnFinishRegRequest) (*authv1.AuthTokens, error) {
+	return h.authService.FinishWebAuthnRegistration(ctx, req)
 }
 
-func (h *AuthHandler) BeginWebAuthnLogin(context.Context, *authv1.WebAuthnLoginRequest) (*authv1.WebAuthnLoginResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+func (h *AuthHandler) BeginWebAuthnLogin(ctx context.Context, req *authv1.WebAuthnLoginRequest) (*authv1.WebAuthnLoginResponse, error) {
+	return h.authService.BeginWebAuthnLogin(ctx, req)
 }
 
-func (h *AuthHandler) FinishWebAuthnLogin(context.Context, *authv1.WebAuthnFinishLoginRequest) (*authv1.AuthTokens, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+func (h *AuthHandler) FinishWebAuthnLogin(ctx context.Context, req *authv1.WebAuthnFinishLoginRequest) (*authv1.AuthTokens, error) {
+	return h.authService.FinishWebAuthnLogin(ctx, req)
 }
 
-func (h *AuthHandler) BeginWebAuthnRegistration(context.Context, *authv1.WebAuthnRegRequest) (*authv1.WebAuthnRegResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+func (h *AuthHandler) BeginWebAuthnRegistration(ctx context.Context, req *authv1.WebAuthnRegRequest) (*authv1.WebAuthnRegResponse, error) {
+	return h.authService.BeginWebAuthnRegistration(ctx, req)
 }

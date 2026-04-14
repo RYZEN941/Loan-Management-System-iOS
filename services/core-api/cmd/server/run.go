@@ -24,8 +24,9 @@ func Run() error {
 
 	redisClient, err := db.NewRedisClient(context.Background(), cfg.RedisAddr, cfg.RedisPass)
 	if err != nil {
-		log.Printf("redis not connected at startup: %v", err)
+		return fmt.Errorf("failed to connect to redis: %w", err)
 	}
+	defer redisClient.Close()
 
 	pgPool, err := db.NewPostgresPool(context.Background(), cfg.PostgresDSN)
 	if err != nil {
@@ -44,14 +45,15 @@ func Run() error {
 	application := app.New(authService, queries)
 
 	publicMethods := map[string]struct{}{
-		"/auth.v1.AuthService/Hello":            {},
-		"/auth.v1.AuthService/InitiateSignup":   {},
-		"/auth.v1.AuthService/VerifySignupOTPs": {},
-		"/auth.v1.AuthService/LoginPrimary":     {},
-		"/auth.v1.AuthService/VerifyLoginMFA":   {},
-		"/auth.v1.AuthService/RefreshToken":     {},
-		"/grpc.health.v1.Health/Check":          {},
-		"/grpc.health.v1.Health/Watch":          {},
+		"/auth.v1.AuthService/Hello":                {},
+		"/auth.v1.AuthService/InitiateSignup":       {},
+		"/auth.v1.AuthService/VerifySignupOTPs":     {},
+		"/auth.v1.AuthService/LoginPrimary":         {},
+		"/auth.v1.AuthService/SelectLoginMFAFactor": {},
+		"/auth.v1.AuthService/VerifyLoginMFA":       {},
+		"/auth.v1.AuthService/RefreshToken":         {},
+		"/grpc.health.v1.Health/Check":              {},
+		"/grpc.health.v1.Health/Watch":              {},
 	}
 
 	rbacPolicy := grpcinterceptors.RBACPolicy{

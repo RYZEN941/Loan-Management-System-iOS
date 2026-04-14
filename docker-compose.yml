@@ -10,13 +10,14 @@ services:
       POSTGRES_PASSWORD: lms
     ports:
       - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U lms -d lms"]
       interval: 10s
       timeout: 5s
       retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./services/core-api/internal/repository/schema/001_auth.sql:/docker-entrypoint-initdb.d/001_auth.sql:ro
 
   redis:
     image: redis:7
@@ -30,6 +31,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  core-api:
+    build:
+      context: ./services/core-api
+      dockerfile: Dockerfile
+    container_name: lms-core-api
+    environment:
+      GRPC_PORT: "8080"
+      JWT_SIGNING_KEY: "dev-only-change-me"
+      POSTGRES_DSN: "postgres://lms:lms@postgres:5432/lms?sslmode=disable"
+      REDIS_ADDR: "redis:6379"
+      REDIS_PASSWORD: ""
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
 volumes:
   postgres_data:

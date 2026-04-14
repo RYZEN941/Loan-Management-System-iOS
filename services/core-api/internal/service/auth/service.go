@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -34,6 +35,7 @@ type Service interface {
 	SetupTOTP(ctx context.Context, req *authv1.SetupTOTPRequest) (*authv1.SetupTOTPResponse, error)
 	VerifyTOTPSetup(ctx context.Context, req *authv1.VerifyTOTPSetupRequest) (*authv1.AuthTokens, error)
 	LoginPrimary(ctx context.Context, req *authv1.LoginRequest) (*authv1.LoginPrimaryResponse, error)
+	SelectLoginMFAFactor(ctx context.Context, req *authv1.SelectLoginMFAFactorRequest) (*authv1.SelectLoginMFAFactorResponse, error)
 	VerifyLoginMFA(ctx context.Context, req *authv1.VerifyLoginMFARequest) (*authv1.AuthTokens, error)
 	RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequest) (*authv1.AuthTokens, error)
 	Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv1.LogoutResponse, error)
@@ -48,6 +50,33 @@ type service struct {
 	redis    redis.Cmdable
 	cfg      config.Config
 	webauthn *webauthn.WebAuthn
+}
+
+const (
+	mfaFactorTOTP     = "totp"
+	mfaFactorEmailOTP = "email_otp"
+	mfaFactorPhoneOTP = "phone_otp"
+
+	mfaSessionTTL      = 5 * time.Minute
+	mfaChallengeTTL    = 5 * time.Minute
+	mfaChallengeMaxTry = 5
+)
+
+type mfaSessionState struct {
+	UserID         string   `json:"user_id"`
+	Role           string   `json:"role"`
+	Email          string   `json:"email"`
+	Phone          string   `json:"phone"`
+	AllowedFactors []string `json:"allowed_factors"`
+	SelectedFactor string   `json:"selected_factor"`
+}
+
+type mfaOTPChallenge struct {
+	Factor    string `json:"factor"`
+	OTPHash   string `json:"otp_hash"`
+	Attempts  int    `json:"attempts"`
+	MaxTry    int    `json:"max_try"`
+	ExpiresAt int64  `json:"expires_at"`
 }
 
 func NewService(queries generated.Querier, redis redis.Cmdable, cfg config.Config) Service {
@@ -138,7 +167,11 @@ func (s *service) VerifySignupOTPs(ctx context.Context, req *authv1.VerifyOTPsRe
 		return nil, status.Error(codes.InvalidArgument, "invalid verification codes")
 	}
 
-	userUUID, _ := uuid.Parse(data["user_id"])
+	userUUID, err := uuid.Parse(data["user_id"])
+	if err != nil {
+		return nil, status.Error(codes.Internal, "invalid registration user id")
+	}
+
 	err = s.queries.UpdateUserVerification(ctx, generated.UpdateUserVerificationParams{
 		ID:              pgtype.UUID{Bytes: userUUID, Valid: true},
 		IsActive:        pgtype.Bool{Bool: true, Valid: true},
@@ -232,15 +265,31 @@ func (s *service) LoginPrimary(ctx context.Context, req *authv1.LoginRequest) (*
 	mfaSessionID := uuid.New().String()
 	allowedFactors := []string{}
 	if user.HasTotp.Bool {
-		allowedFactors = append(allowedFactors, "totp")
+		allowedFactors = append(allowedFactors, mfaFactorTOTP)
+	}
+	if user.IsEmailVerified.Bool {
+		allowedFactors = append(allowedFactors, mfaFactorEmailOTP)
+	}
+	if user.IsPhoneVerified.Bool {
+		allowedFactors = append(allowedFactors, mfaFactorPhoneOTP)
 	}
 
-	mfaData, _ := json.Marshal(map[string]string{
-		"user_id": user.ID.String(),
-		"role":    user.Role,
-	})
+	if len(allowedFactors) == 0 {
+		return nil, status.Error(codes.FailedPrecondition, "no mfa factors available")
+	}
 
-	err = s.redis.Set(ctx, fmt.Sprintf("mfa_session:%s", mfaSessionID), mfaData, 5*time.Minute).Err()
+	mfaData, err := json.Marshal(mfaSessionState{
+		UserID:         user.ID.String(),
+		Role:           user.Role,
+		Email:          user.Email,
+		Phone:          user.Phone,
+		AllowedFactors: allowedFactors,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to encode mfa session")
+	}
+
+	err = s.redis.Set(ctx, fmt.Sprintf("mfa_session:%s", mfaSessionID), mfaData, mfaSessionTTL).Err()
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to create mfa session")
 	}
@@ -251,33 +300,207 @@ func (s *service) LoginPrimary(ctx context.Context, req *authv1.LoginRequest) (*
 	}, nil
 }
 
-func (s *service) VerifyLoginMFA(ctx context.Context, req *authv1.VerifyLoginMFARequest) (*authv1.AuthTokens, error) {
-	key := fmt.Sprintf("mfa_session:%s", req.GetMfaSessionId())
-	val, err := s.redis.Get(ctx, key).Result()
+func (s *service) SelectLoginMFAFactor(ctx context.Context, req *authv1.SelectLoginMFAFactorRequest) (*authv1.SelectLoginMFAFactorResponse, error) {
+	session, err := s.getMFASession(ctx, req.GetMfaSessionId())
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "mfa session expired or invalid")
+		return nil, err
 	}
 
-	var data map[string]string
-	json.Unmarshal([]byte(val), &data)
-	userID, _ := uuid.Parse(data["user_id"])
+	factor := strings.TrimSpace(strings.ToLower(req.GetFactor()))
+	if factor == "" {
+		return nil, status.Error(codes.InvalidArgument, "mfa factor is required")
+	}
+
+	if !containsString(session.AllowedFactors, factor) {
+		return nil, status.Error(codes.InvalidArgument, "selected mfa factor is not allowed")
+	}
+
+	challengeSent := false
+	challengeTarget := ""
+
+	session.SelectedFactor = factor
+
+	switch factor {
+	case mfaFactorTOTP:
+		// No out-of-band challenge required.
+	case mfaFactorEmailOTP, mfaFactorPhoneOTP:
+		otp := generateOTP()
+		challenge := mfaOTPChallenge{
+			Factor:    factor,
+			OTPHash:   hashOTP(otp),
+			Attempts:  0,
+			MaxTry:    mfaChallengeMaxTry,
+			ExpiresAt: time.Now().Add(mfaChallengeTTL).Unix(),
+		}
+
+		challengeJSON, err := json.Marshal(challenge)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed to encode mfa challenge")
+		}
+
+		if err := s.redis.Set(ctx, fmt.Sprintf("mfa_challenge:%s", req.GetMfaSessionId()), challengeJSON, mfaChallengeTTL).Err(); err != nil {
+			return nil, status.Error(codes.Internal, "failed to create mfa challenge")
+		}
+
+		challengeSent = true
+		if factor == mfaFactorEmailOTP {
+			challengeTarget = maskEmail(session.Email)
+			fmt.Printf("DEBUG: Login Email OTP for %s: %s\n", session.Email, otp)
+		} else {
+			challengeTarget = maskPhone(session.Phone)
+			fmt.Printf("DEBUG: Login Phone OTP for %s: %s\n", session.Phone, otp)
+		}
+	default:
+		return nil, status.Error(codes.InvalidArgument, "unsupported mfa factor")
+	}
+
+	if err := s.setMFASession(ctx, req.GetMfaSessionId(), session); err != nil {
+		return nil, err
+	}
+
+	return &authv1.SelectLoginMFAFactorResponse{
+		ChallengeSent:   challengeSent,
+		ChallengeTarget: challengeTarget,
+	}, nil
+}
+
+func (s *service) VerifyLoginMFA(ctx context.Context, req *authv1.VerifyLoginMFARequest) (*authv1.AuthTokens, error) {
+	session, err := s.getMFASession(ctx, req.GetMfaSessionId())
+	if err != nil {
+		return nil, err
+	}
+	if session.SelectedFactor == "" {
+		return nil, status.Error(codes.FailedPrecondition, "mfa factor not selected")
+	}
+
+	userID, err := uuid.Parse(session.UserID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "invalid mfa user id")
+	}
 
 	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to fetch user")
 	}
 
-	switch f := req.Factor.(type) {
-	case *authv1.VerifyLoginMFARequest_TotpCode:
+	switch session.SelectedFactor {
+	case mfaFactorTOTP:
+		f, ok := req.Factor.(*authv1.VerifyLoginMFARequest_TotpCode)
+		if !ok || strings.TrimSpace(f.TotpCode) == "" {
+			return nil, status.Error(codes.InvalidArgument, "totp code is required")
+		}
 		if !totp.Validate(f.TotpCode, user.TotpSecret.String) {
 			return nil, status.Error(codes.InvalidArgument, "invalid totp code")
 		}
+	case mfaFactorEmailOTP:
+		f, ok := req.Factor.(*authv1.VerifyLoginMFARequest_EmailOtpCode)
+		if !ok || strings.TrimSpace(f.EmailOtpCode) == "" {
+			return nil, status.Error(codes.InvalidArgument, "email otp code is required")
+		}
+		if err := s.verifyMFAOTP(ctx, req.GetMfaSessionId(), mfaFactorEmailOTP, f.EmailOtpCode); err != nil {
+			return nil, err
+		}
+	case mfaFactorPhoneOTP:
+		f, ok := req.Factor.(*authv1.VerifyLoginMFARequest_PhoneOtpCode)
+		if !ok || strings.TrimSpace(f.PhoneOtpCode) == "" {
+			return nil, status.Error(codes.InvalidArgument, "phone otp code is required")
+		}
+		if err := s.verifyMFAOTP(ctx, req.GetMfaSessionId(), mfaFactorPhoneOTP, f.PhoneOtpCode); err != nil {
+			return nil, err
+		}
 	default:
-		return nil, status.Error(codes.InvalidArgument, "no mfa factor provided")
+		return nil, status.Error(codes.InvalidArgument, "unsupported mfa factor")
 	}
 
-	s.redis.Del(ctx, key)
+	if err := s.redis.Del(ctx, fmt.Sprintf("mfa_challenge:%s", req.GetMfaSessionId())).Err(); err != nil {
+		return nil, status.Error(codes.Internal, "failed to clear mfa challenge")
+	}
+	if err := s.redis.Del(ctx, fmt.Sprintf("mfa_session:%s", req.GetMfaSessionId())).Err(); err != nil {
+		return nil, status.Error(codes.Internal, "failed to clear mfa session")
+	}
+
 	return s.mintTokens(ctx, userID, user.Role, req.GetDeviceId())
+}
+
+func (s *service) getMFASession(ctx context.Context, sessionID string) (*mfaSessionState, error) {
+	key := fmt.Sprintf("mfa_session:%s", sessionID)
+	val, err := s.redis.Get(ctx, key).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return nil, status.Error(codes.Unauthenticated, "mfa session expired or invalid")
+		}
+		return nil, status.Error(codes.Internal, "failed to load mfa session")
+	}
+
+	var session mfaSessionState
+	if err := json.Unmarshal([]byte(val), &session); err != nil {
+		return nil, status.Error(codes.Internal, "corrupt mfa session")
+	}
+
+	if session.UserID == "" {
+		return nil, status.Error(codes.Internal, "invalid mfa session")
+	}
+
+	return &session, nil
+}
+
+func (s *service) setMFASession(ctx context.Context, sessionID string, session *mfaSessionState) error {
+	b, err := json.Marshal(session)
+	if err != nil {
+		return status.Error(codes.Internal, "failed to encode mfa session")
+	}
+
+	if err := s.redis.Set(ctx, fmt.Sprintf("mfa_session:%s", sessionID), b, mfaSessionTTL).Err(); err != nil {
+		return status.Error(codes.Internal, "failed to persist mfa session")
+	}
+
+	return nil
+}
+
+func (s *service) verifyMFAOTP(ctx context.Context, sessionID, factor, code string) error {
+	key := fmt.Sprintf("mfa_challenge:%s", sessionID)
+	val, err := s.redis.Get(ctx, key).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return status.Error(codes.Unauthenticated, "mfa challenge expired or missing")
+		}
+		return status.Error(codes.Internal, "failed to load mfa challenge")
+	}
+
+	var challenge mfaOTPChallenge
+	if err := json.Unmarshal([]byte(val), &challenge); err != nil {
+		return status.Error(codes.Internal, "corrupt mfa challenge")
+	}
+
+	if challenge.Factor != factor {
+		return status.Error(codes.InvalidArgument, "mfa factor mismatch")
+	}
+
+	if challenge.MaxTry <= 0 {
+		challenge.MaxTry = mfaChallengeMaxTry
+	}
+
+	if subtle.ConstantTimeCompare([]byte(hashOTP(code)), []byte(challenge.OTPHash)) != 1 {
+		challenge.Attempts++
+		if challenge.Attempts >= challenge.MaxTry {
+			_ = s.redis.Del(ctx, key).Err()
+			_ = s.redis.Del(ctx, fmt.Sprintf("mfa_session:%s", sessionID)).Err()
+			return status.Error(codes.PermissionDenied, "too many invalid mfa attempts")
+		}
+
+		challengeJSON, err := json.Marshal(challenge)
+		if err != nil {
+			return status.Error(codes.Internal, "failed to encode mfa challenge")
+		}
+
+		if err := s.redis.Set(ctx, key, challengeJSON, mfaChallengeTTL).Err(); err != nil {
+			return status.Error(codes.Internal, "failed to persist mfa challenge")
+		}
+
+		return status.Error(codes.InvalidArgument, "invalid otp code")
+	}
+
+	return nil
 }
 
 func (s *service) RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequest) (*authv1.AuthTokens, error) {
@@ -293,9 +516,14 @@ func (s *service) RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequ
 		return nil, status.Error(codes.Unauthenticated, "invalid device id")
 	}
 
-	s.queries.RevokeRefreshToken(ctx, hashedToken)
+	if err := s.queries.RevokeRefreshToken(ctx, hashedToken); err != nil {
+		return nil, status.Error(codes.Internal, "failed to revoke previous refresh token")
+	}
 	userID := uuid.UUID(tokenRecord.UserID.Bytes)
-	user, _ := s.queries.GetUserByID(ctx, tokenRecord.UserID)
+	user, err := s.queries.GetUserByID(ctx, tokenRecord.UserID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to load user for refresh")
+	}
 
 	return s.mintTokens(ctx, userID, user.Role, req.GetDeviceId())
 }
@@ -304,15 +532,23 @@ func (s *service) Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv
 	// 1. Revoke refresh token
 	hash := sha256.Sum256([]byte(req.GetRefreshToken()))
 	hashedToken := hex.EncodeToString(hash[:])
-	s.queries.RevokeRefreshToken(ctx, hashedToken)
+	if err := s.queries.RevokeRefreshToken(ctx, hashedToken); err != nil {
+		return nil, status.Error(codes.Internal, "failed to revoke refresh token")
+	}
 
 	// 2. Denylist access token (JTI) in Redis (Instruction 6)
 	// First parse access token claims to get JTI and UserID
-	token, _, err := new(jwt.Parser).ParseUnverified(req.GetAccessToken(), &interceptors.AuthClaims{})
-	if err == nil {
-		if claims, ok := token.Claims.(*interceptors.AuthClaims); ok {
-			// Clear active token key in Redis
-			s.redis.Del(ctx, fmt.Sprintf("active_token:%s", claims.Subject))
+	token, err := jwt.ParseWithClaims(req.GetAccessToken(), &interceptors.AuthClaims{}, func(t *jwt.Token) (any, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, status.Error(codes.Unauthenticated, "unexpected signing method")
+		}
+		return []byte(s.cfg.JWTKey), nil
+	})
+	if err == nil && token.Valid {
+		if claims, ok := token.Claims.(*interceptors.AuthClaims); ok && claims.Subject != "" {
+			if err := s.redis.Del(ctx, fmt.Sprintf("active_token:%s", claims.Subject)).Err(); err != nil {
+				return nil, status.Error(codes.Internal, "failed to clear active session")
+			}
 		}
 	}
 
@@ -408,7 +644,9 @@ func (s *service) FinishWebAuthnRegistration(ctx context.Context, req *authv1.We
 	}
 
 	var session webauthn.SessionData
-	json.Unmarshal([]byte(sessVal), &session)
+	if err := json.Unmarshal([]byte(sessVal), &session); err != nil {
+		return nil, status.Error(codes.Internal, "invalid registration session")
+	}
 
 	parsedCredential, err := protocol.ParseCredentialCreationResponse(nil) // Placeholder: Need binary parsing
 	_ = parsedCredential
@@ -417,13 +655,20 @@ func (s *service) FinishWebAuthnRegistration(ctx context.Context, req *authv1.We
 }
 
 func (s *service) BeginWebAuthnLogin(ctx context.Context, req *authv1.WebAuthnLoginRequest) (*authv1.WebAuthnLoginResponse, error) {
-	userUUID, _ := uuid.Parse(req.GetUserId())
+	userUUID, err := uuid.Parse(req.GetUserId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid user id")
+	}
+
 	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userUUID, Valid: true})
 	if err != nil {
 		return nil, status.Error(codes.NotFound, "user not found")
 	}
 
-	waUser, _ := s.getWebauthnUser(ctx, user)
+	waUser, err := s.getWebauthnUser(ctx, user)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to build webauthn user")
+	}
 	options, session, err := s.webauthn.BeginLogin(waUser)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "webauthn login begin failed")
@@ -488,4 +733,37 @@ func generateOTP() string {
 	max := big.NewInt(1000000)
 	n, _ := rand.Int(rand.Reader, max)
 	return fmt.Sprintf("%06d", n)
+}
+
+func containsString(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
+}
+
+func hashOTP(code string) string {
+	h := sha256.Sum256([]byte(code))
+	return hex.EncodeToString(h[:])
+}
+
+func maskEmail(email string) string {
+	parts := strings.SplitN(email, "@", 2)
+	if len(parts) != 2 {
+		return ""
+	}
+	local := parts[0]
+	if len(local) <= 2 {
+		return "**@" + parts[1]
+	}
+	return local[:2] + "***@" + parts[1]
+}
+
+func maskPhone(phone string) string {
+	if len(phone) <= 4 {
+		return "****"
+	}
+	return "***" + phone[len(phone)-4:]
 }

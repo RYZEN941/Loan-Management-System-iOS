@@ -25,6 +25,7 @@ const (
 	AuthService_SetupTOTP_FullMethodName                  = "/auth.v1.AuthService/SetupTOTP"
 	AuthService_VerifyTOTPSetup_FullMethodName            = "/auth.v1.AuthService/VerifyTOTPSetup"
 	AuthService_LoginPrimary_FullMethodName               = "/auth.v1.AuthService/LoginPrimary"
+	AuthService_SelectLoginMFAFactor_FullMethodName       = "/auth.v1.AuthService/SelectLoginMFAFactor"
 	AuthService_VerifyLoginMFA_FullMethodName             = "/auth.v1.AuthService/VerifyLoginMFA"
 	AuthService_BeginWebAuthnRegistration_FullMethodName  = "/auth.v1.AuthService/BeginWebAuthnRegistration"
 	AuthService_FinishWebAuthnRegistration_FullMethodName = "/auth.v1.AuthService/FinishWebAuthnRegistration"
@@ -44,6 +45,7 @@ type AuthServiceClient interface {
 	SetupTOTP(ctx context.Context, in *SetupTOTPRequest, opts ...grpc.CallOption) (*SetupTOTPResponse, error)
 	VerifyTOTPSetup(ctx context.Context, in *VerifyTOTPSetupRequest, opts ...grpc.CallOption) (*AuthTokens, error)
 	LoginPrimary(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginPrimaryResponse, error)
+	SelectLoginMFAFactor(ctx context.Context, in *SelectLoginMFAFactorRequest, opts ...grpc.CallOption) (*SelectLoginMFAFactorResponse, error)
 	VerifyLoginMFA(ctx context.Context, in *VerifyLoginMFARequest, opts ...grpc.CallOption) (*AuthTokens, error)
 	BeginWebAuthnRegistration(ctx context.Context, in *WebAuthnRegRequest, opts ...grpc.CallOption) (*WebAuthnRegResponse, error)
 	FinishWebAuthnRegistration(ctx context.Context, in *WebAuthnFinishRegRequest, opts ...grpc.CallOption) (*AuthTokens, error)
@@ -115,6 +117,16 @@ func (c *authServiceClient) LoginPrimary(ctx context.Context, in *LoginRequest, 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(LoginPrimaryResponse)
 	err := c.cc.Invoke(ctx, AuthService_LoginPrimary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) SelectLoginMFAFactor(ctx context.Context, in *SelectLoginMFAFactorRequest, opts ...grpc.CallOption) (*SelectLoginMFAFactorResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SelectLoginMFAFactorResponse)
+	err := c.cc.Invoke(ctx, AuthService_SelectLoginMFAFactor_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -201,6 +213,7 @@ type AuthServiceServer interface {
 	SetupTOTP(context.Context, *SetupTOTPRequest) (*SetupTOTPResponse, error)
 	VerifyTOTPSetup(context.Context, *VerifyTOTPSetupRequest) (*AuthTokens, error)
 	LoginPrimary(context.Context, *LoginRequest) (*LoginPrimaryResponse, error)
+	SelectLoginMFAFactor(context.Context, *SelectLoginMFAFactorRequest) (*SelectLoginMFAFactorResponse, error)
 	VerifyLoginMFA(context.Context, *VerifyLoginMFARequest) (*AuthTokens, error)
 	BeginWebAuthnRegistration(context.Context, *WebAuthnRegRequest) (*WebAuthnRegResponse, error)
 	FinishWebAuthnRegistration(context.Context, *WebAuthnFinishRegRequest) (*AuthTokens, error)
@@ -235,6 +248,9 @@ func (UnimplementedAuthServiceServer) VerifyTOTPSetup(context.Context, *VerifyTO
 }
 func (UnimplementedAuthServiceServer) LoginPrimary(context.Context, *LoginRequest) (*LoginPrimaryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LoginPrimary not implemented")
+}
+func (UnimplementedAuthServiceServer) SelectLoginMFAFactor(context.Context, *SelectLoginMFAFactorRequest) (*SelectLoginMFAFactorResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SelectLoginMFAFactor not implemented")
 }
 func (UnimplementedAuthServiceServer) VerifyLoginMFA(context.Context, *VerifyLoginMFARequest) (*AuthTokens, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method VerifyLoginMFA not implemented")
@@ -382,6 +398,24 @@ func _AuthService_LoginPrimary_Handler(srv interface{}, ctx context.Context, dec
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AuthServiceServer).LoginPrimary(ctx, req.(*LoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_SelectLoginMFAFactor_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SelectLoginMFAFactorRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).SelectLoginMFAFactor(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_SelectLoginMFAFactor_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).SelectLoginMFAFactor(ctx, req.(*SelectLoginMFAFactorRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -542,6 +576,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "LoginPrimary",
 			Handler:    _AuthService_LoginPrimary_Handler,
+		},
+		{
+			MethodName: "SelectLoginMFAFactor",
+			Handler:    _AuthService_SelectLoginMFAFactor_Handler,
 		},
 		{
 			MethodName: "VerifyLoginMFA",

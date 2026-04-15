@@ -37,6 +37,14 @@ services:
       context: ./services/core-api
       dockerfile: Dockerfile
     container_name: lms-core-api
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.lmsapi.rule=Host(`lmsapi.chirag.codes`)
+      - traefik.http.routers.lmsapi.entrypoints=websecure
+      - traefik.http.routers.lmsapi.tls=true
+      - traefik.http.routers.lmsapi.service=lmsapi-svc
+      - traefik.http.services.lmsapi-svc.loadbalancer.server.port=8080
+      - traefik.http.services.lmsapi-svc.loadbalancer.server.scheme=h2c
     environment:
       GRPC_PORT: "8080"
       JWT_SIGNING_KEY: "dev-only-change-me"

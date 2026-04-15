@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: lms
       POSTGRES_PASSWORD: lms
     ports:
-      - "5432:5432"
+      - "15432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U lms -d lms"]
       interval: 10s
@@ -23,7 +23,7 @@ services:
     image: redis:7
     container_name: lms-redis
     ports:
-      - "6379:6379"
+      - "16379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -44,7 +44,7 @@ services:
       REDIS_ADDR: "redis:6379"
       REDIS_PASSWORD: ""
     ports:
-      - "8080:8080"
+      - "18080:8080"
     depends_on:
       postgres:
         condition: service_healthy

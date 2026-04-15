@@ -17,6 +17,8 @@ import (
 type Service interface {
 	CreateEmployeeAccount(ctx context.Context, req *adminv1.CreateEmployeeAccountRequest) (*adminv1.CreateEmployeeAccountResponse, error)
 	CreateBankBranch(ctx context.Context, req *adminv1.CreateBankBranchRequest) (*adminv1.CreateBankBranchResponse, error)
+	UpdateBankBranch(ctx context.Context, req *adminv1.UpdateBankBranchRequest) (*adminv1.UpdateBankBranchResponse, error)
+	UpdateEmployeeAccount(ctx context.Context, req *adminv1.UpdateEmployeeAccountRequest) (*adminv1.UpdateEmployeeAccountResponse, error)
 }
 
 type service struct {
@@ -145,6 +147,143 @@ func (s *service) CreateBankBranch(ctx context.Context, req *adminv1.CreateBankB
 		Success:  true,
 		BranchId: branch.ID.String(),
 	}, nil
+}
+
+// UpdateBankBranch updates branch metadata and manager assignment.
+func (s *service) UpdateBankBranch(ctx context.Context, req *adminv1.UpdateBankBranchRequest) (*adminv1.UpdateBankBranchResponse, error) {
+	if _, ok := interceptors.UserIDFromContext(ctx); !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing user context")
+	}
+
+	branchIDStr := strings.TrimSpace(req.GetBranchId())
+	if branchIDStr == "" {
+		return nil, status.Error(codes.InvalidArgument, "branch_id is required")
+	}
+
+	branchID, err := uuid.Parse(branchIDStr)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "branch_id must be a valid uuid")
+	}
+
+	currentBranch, err := s.queries.GetBankBranchByID(ctx, pgtype.UUID{Bytes: branchID, Valid: true})
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "branch not found")
+	}
+
+	name := strings.TrimSpace(req.GetName())
+	if name == "" {
+		name = currentBranch.Name
+	}
+	region := strings.TrimSpace(req.GetRegion())
+	if region == "" {
+		region = currentBranch.Region
+	}
+	city := strings.TrimSpace(req.GetCity())
+	if city == "" {
+		city = currentBranch.City
+	}
+
+	managerID := currentBranch.ManagerID
+	if req.GetClearManager() {
+		managerID = pgtype.UUID{Valid: false}
+	} else if rawManagerID := strings.TrimSpace(req.GetManagerId()); rawManagerID != "" {
+		parsedManagerID, err := uuid.Parse(rawManagerID)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, "manager_id must be a valid uuid")
+		}
+
+		_, err = s.queries.GetManagerProfileByID(ctx, pgtype.UUID{Bytes: parsedManagerID, Valid: true})
+		if err != nil {
+			return nil, status.Error(codes.NotFound, "manager profile not found")
+		}
+
+		managerID = pgtype.UUID{Bytes: parsedManagerID, Valid: true}
+	}
+
+	err = s.queries.UpdateBankBranch(ctx, generated.UpdateBankBranchParams{
+		ID:        pgtype.UUID{Bytes: branchID, Valid: true},
+		Name:      name,
+		Region:    region,
+		City:      city,
+		ManagerID: managerID,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to update branch")
+	}
+
+	return &adminv1.UpdateBankBranchResponse{Success: true}, nil
+}
+
+// UpdateEmployeeAccount updates manager/officer email/phone and optionally resets password.
+// Admin password reset always forces is_requiring_password_change=true.
+func (s *service) UpdateEmployeeAccount(ctx context.Context, req *adminv1.UpdateEmployeeAccountRequest) (*adminv1.UpdateEmployeeAccountResponse, error) {
+	if _, ok := interceptors.UserIDFromContext(ctx); !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing user context")
+	}
+
+	userIDStr := strings.TrimSpace(req.GetUserId())
+	if userIDStr == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "user_id must be a valid uuid")
+	}
+
+	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "employee user not found")
+	}
+
+	if user.Role != generated.UserRoleManager && user.Role != generated.UserRoleOfficer {
+		return nil, status.Error(codes.InvalidArgument, "user role must be manager or officer")
+	}
+
+	email := strings.TrimSpace(req.GetEmail())
+	if email == "" {
+		email = user.Email
+	}
+
+	phone := strings.TrimSpace(req.GetPhoneNumber())
+	if phone == "" {
+		phone = user.Phone
+	}
+
+	if err := s.queries.UpdateEmployeeEmailAndPhone(ctx, generated.UpdateEmployeeEmailAndPhoneParams{
+		ID:    pgtype.UUID{Bytes: userID, Valid: true},
+		Email: email,
+		Phone: phone,
+	}); err != nil {
+		if strings.Contains(err.Error(), "users_email_key") {
+			return nil, status.Error(codes.AlreadyExists, "email already registered")
+		}
+		if strings.Contains(err.Error(), "users_phone_key") {
+			return nil, status.Error(codes.AlreadyExists, "phone number already registered")
+		}
+		return nil, status.Error(codes.Internal, "failed to update employee contact")
+	}
+
+	newPassword := req.GetNewPassword()
+	if strings.TrimSpace(newPassword) != "" {
+		if err := validatePasswordStrength(newPassword); err != nil {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+
+		hash, err := argon2.HashPassword(newPassword, argon2.DefaultConfig())
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed to hash password")
+		}
+
+		if err := s.queries.UpdateEmployeePasswordByAdmin(ctx, generated.UpdateEmployeePasswordByAdminParams{
+			ID:           pgtype.UUID{Bytes: userID, Valid: true},
+			PasswordHash: hash,
+		}); err != nil {
+			return nil, status.Error(codes.Internal, "failed to update employee password")
+		}
+	}
+
+	return &adminv1.UpdateEmployeeAccountResponse{Success: true}, nil
 }
 
 func mapEmployeeTypeToRole(employeeType adminv1.EmployeeType) (generated.UserRole, error) {

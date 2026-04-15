@@ -21,6 +21,7 @@ type Querier interface {
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateWebAuthnCredential(ctx context.Context, arg CreateWebAuthnCredentialParams) (WebauthnCredential, error)
+	GetBankBranchByID(ctx context.Context, id pgtype.UUID) (BankBranch, error)
 	GetBorrowerProfileByUserID(ctx context.Context, userID pgtype.UUID) (BorrowerProfile, error)
 	GetManagerProfileByID(ctx context.Context, id pgtype.UUID) (ManagerProfile, error)
 	GetRefreshTokenByHashedToken(ctx context.Context, hashedToken string) (RefreshToken, error)
@@ -31,6 +32,9 @@ type Querier interface {
 	RevokeRefreshToken(ctx context.Context, hashedToken string) error
 	RevokeRefreshTokensForUserDevice(ctx context.Context, arg RevokeRefreshTokensForUserDeviceParams) error
 	SetTOTPSecret(ctx context.Context, arg SetTOTPSecretParams) error
+	UpdateBankBranch(ctx context.Context, arg UpdateBankBranchParams) error
+	UpdateEmployeeEmailAndPhone(ctx context.Context, arg UpdateEmployeeEmailAndPhoneParams) error
+	UpdateEmployeePasswordByAdmin(ctx context.Context, arg UpdateEmployeePasswordByAdminParams) error
 	UpdateUserVerification(ctx context.Context, arg UpdateUserVerificationParams) error
 	UpdateWebAuthnCredentialSignCount(ctx context.Context, arg UpdateWebAuthnCredentialSignCountParams) error
 }

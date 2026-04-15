@@ -65,6 +65,8 @@ func Run() error {
 	rbacPolicy := grpcinterceptors.RBACPolicy{
 		"/admin.v1.AdminService/CreateEmployeeAccount":                {"admin"},
 		"/admin.v1.AdminService/CreateBankBranch":                     {"admin"},
+		"/admin.v1.AdminService/UpdateBankBranch":                     {"admin"},
+		"/admin.v1.AdminService/UpdateEmployeeAccount":                {"admin"},
 		"/auth.v1.AuthService/SetupTOTP":                              {"borrower", "officer", "manager", "admin"},
 		"/auth.v1.AuthService/VerifyTOTPSetup":                        {"borrower", "officer", "manager", "admin"},
 		"/auth.v1.AuthService/ChangePassword":                         {"borrower", "officer", "manager", "admin"},

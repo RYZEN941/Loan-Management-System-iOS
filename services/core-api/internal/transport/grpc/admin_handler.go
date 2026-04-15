@@ -9,6 +9,8 @@ import (
 type AdminService interface {
 	CreateEmployeeAccount(ctx context.Context, req *adminv1.CreateEmployeeAccountRequest) (*adminv1.CreateEmployeeAccountResponse, error)
 	CreateBankBranch(ctx context.Context, req *adminv1.CreateBankBranchRequest) (*adminv1.CreateBankBranchResponse, error)
+	UpdateBankBranch(ctx context.Context, req *adminv1.UpdateBankBranchRequest) (*adminv1.UpdateBankBranchResponse, error)
+	UpdateEmployeeAccount(ctx context.Context, req *adminv1.UpdateEmployeeAccountRequest) (*adminv1.UpdateEmployeeAccountResponse, error)
 }
 
 type AdminHandler struct {
@@ -26,4 +28,12 @@ func (h *AdminHandler) CreateEmployeeAccount(ctx context.Context, req *adminv1.C
 
 func (h *AdminHandler) CreateBankBranch(ctx context.Context, req *adminv1.CreateBankBranchRequest) (*adminv1.CreateBankBranchResponse, error) {
 	return h.adminService.CreateBankBranch(ctx, req)
+}
+
+func (h *AdminHandler) UpdateBankBranch(ctx context.Context, req *adminv1.UpdateBankBranchRequest) (*adminv1.UpdateBankBranchResponse, error) {
+	return h.adminService.UpdateBankBranch(ctx, req)
+}
+
+func (h *AdminHandler) UpdateEmployeeAccount(ctx context.Context, req *adminv1.UpdateEmployeeAccountRequest) (*adminv1.UpdateEmployeeAccountResponse, error) {
+	return h.adminService.UpdateEmployeeAccount(ctx, req)
 }

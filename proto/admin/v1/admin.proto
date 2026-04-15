@@ -7,6 +7,8 @@ option go_package = "github.com/chirag3003/lms-monorepo/services/core-api/intern
 service AdminService {
   rpc CreateEmployeeAccount(CreateEmployeeAccountRequest) returns (CreateEmployeeAccountResponse);
   rpc CreateBankBranch(CreateBankBranchRequest) returns (CreateBankBranchResponse);
+  rpc UpdateBankBranch(UpdateBankBranchRequest) returns (UpdateBankBranchResponse);
+  rpc UpdateEmployeeAccount(UpdateEmployeeAccountRequest) returns (UpdateEmployeeAccountResponse);
 }
 
 enum EmployeeType {
@@ -39,4 +41,28 @@ message CreateBankBranchRequest {
 message CreateBankBranchResponse {
   bool success = 1;
   string branch_id = 2;
+}
+
+message UpdateBankBranchRequest {
+  string branch_id = 1;
+  string name = 2;
+  string region = 3;
+  string city = 4;
+  string manager_id = 5;
+  bool clear_manager = 6;
+}
+
+message UpdateBankBranchResponse {
+  bool success = 1;
+}
+
+message UpdateEmployeeAccountRequest {
+  string user_id = 1;
+  string email = 2;
+  string phone_number = 3;
+  string new_password = 4;
+}
+
+message UpdateEmployeeAccountResponse {
+  bool success = 1;
 }

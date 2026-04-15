@@ -52,3 +52,28 @@ INSERT INTO bank_branches (
     $3,
     $4
 ) RETURNING *;
+
+-- name: GetBankBranchByID :one
+SELECT * FROM bank_branches WHERE id = $1 LIMIT 1;
+
+-- name: UpdateBankBranch :exec
+UPDATE bank_branches
+SET name = $2,
+    region = $3,
+    city = $4,
+    manager_id = $5
+WHERE id = $1;
+
+-- name: UpdateEmployeeEmailAndPhone :exec
+UPDATE users
+SET email = $2,
+    phone = $3
+WHERE id = $1
+  AND is_deleted = false;
+
+-- name: UpdateEmployeePasswordByAdmin :exec
+UPDATE users
+SET password_hash = $2,
+    is_requiring_password_change = true
+WHERE id = $1
+  AND is_deleted = false;

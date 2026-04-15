@@ -160,6 +160,24 @@ func (q *Queries) CreateOfficerProfile(ctx context.Context, arg CreateOfficerPro
 	return i, err
 }
 
+const getBankBranchByID = `-- name: GetBankBranchByID :one
+SELECT id, name, region, city, manager_id, created_at FROM bank_branches WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetBankBranchByID(ctx context.Context, id pgtype.UUID) (BankBranch, error) {
+	row := q.db.QueryRow(ctx, getBankBranchByID, id)
+	var i BankBranch
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Region,
+		&i.City,
+		&i.ManagerID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getManagerProfileByID = `-- name: GetManagerProfileByID :one
 SELECT id, user_id, name, created_at FROM manager_profiles WHERE id = $1 LIMIT 1
 `
@@ -174,4 +192,69 @@ func (q *Queries) GetManagerProfileByID(ctx context.Context, id pgtype.UUID) (Ma
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const updateBankBranch = `-- name: UpdateBankBranch :exec
+UPDATE bank_branches
+SET name = $2,
+    region = $3,
+    city = $4,
+    manager_id = $5
+WHERE id = $1
+`
+
+type UpdateBankBranchParams struct {
+	ID        pgtype.UUID `json:"id"`
+	Name      string      `json:"name"`
+	Region    string      `json:"region"`
+	City      string      `json:"city"`
+	ManagerID pgtype.UUID `json:"manager_id"`
+}
+
+func (q *Queries) UpdateBankBranch(ctx context.Context, arg UpdateBankBranchParams) error {
+	_, err := q.db.Exec(ctx, updateBankBranch,
+		arg.ID,
+		arg.Name,
+		arg.Region,
+		arg.City,
+		arg.ManagerID,
+	)
+	return err
+}
+
+const updateEmployeeEmailAndPhone = `-- name: UpdateEmployeeEmailAndPhone :exec
+UPDATE users
+SET email = $2,
+    phone = $3
+WHERE id = $1
+  AND is_deleted = false
+`
+
+type UpdateEmployeeEmailAndPhoneParams struct {
+	ID    pgtype.UUID `json:"id"`
+	Email string      `json:"email"`
+	Phone string      `json:"phone"`
+}
+
+func (q *Queries) UpdateEmployeeEmailAndPhone(ctx context.Context, arg UpdateEmployeeEmailAndPhoneParams) error {
+	_, err := q.db.Exec(ctx, updateEmployeeEmailAndPhone, arg.ID, arg.Email, arg.Phone)
+	return err
+}
+
+const updateEmployeePasswordByAdmin = `-- name: UpdateEmployeePasswordByAdmin :exec
+UPDATE users
+SET password_hash = $2,
+    is_requiring_password_change = true
+WHERE id = $1
+  AND is_deleted = false
+`
+
+type UpdateEmployeePasswordByAdminParams struct {
+	ID           pgtype.UUID `json:"id"`
+	PasswordHash string      `json:"password_hash"`
+}
+
+func (q *Queries) UpdateEmployeePasswordByAdmin(ctx context.Context, arg UpdateEmployeePasswordByAdminParams) error {
+	_, err := q.db.Exec(ctx, updateEmployeePasswordByAdmin, arg.ID, arg.PasswordHash)
+	return err
 }

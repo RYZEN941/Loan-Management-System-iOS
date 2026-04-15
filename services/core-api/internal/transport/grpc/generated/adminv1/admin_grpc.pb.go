@@ -21,6 +21,8 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	AdminService_CreateEmployeeAccount_FullMethodName = "/admin.v1.AdminService/CreateEmployeeAccount"
 	AdminService_CreateBankBranch_FullMethodName      = "/admin.v1.AdminService/CreateBankBranch"
+	AdminService_UpdateBankBranch_FullMethodName      = "/admin.v1.AdminService/UpdateBankBranch"
+	AdminService_UpdateEmployeeAccount_FullMethodName = "/admin.v1.AdminService/UpdateEmployeeAccount"
 )
 
 // AdminServiceClient is the client API for AdminService service.
@@ -29,6 +31,8 @@ const (
 type AdminServiceClient interface {
 	CreateEmployeeAccount(ctx context.Context, in *CreateEmployeeAccountRequest, opts ...grpc.CallOption) (*CreateEmployeeAccountResponse, error)
 	CreateBankBranch(ctx context.Context, in *CreateBankBranchRequest, opts ...grpc.CallOption) (*CreateBankBranchResponse, error)
+	UpdateBankBranch(ctx context.Context, in *UpdateBankBranchRequest, opts ...grpc.CallOption) (*UpdateBankBranchResponse, error)
+	UpdateEmployeeAccount(ctx context.Context, in *UpdateEmployeeAccountRequest, opts ...grpc.CallOption) (*UpdateEmployeeAccountResponse, error)
 }
 
 type adminServiceClient struct {
@@ -59,12 +63,34 @@ func (c *adminServiceClient) CreateBankBranch(ctx context.Context, in *CreateBan
 	return out, nil
 }
 
+func (c *adminServiceClient) UpdateBankBranch(ctx context.Context, in *UpdateBankBranchRequest, opts ...grpc.CallOption) (*UpdateBankBranchResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateBankBranchResponse)
+	err := c.cc.Invoke(ctx, AdminService_UpdateBankBranch_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) UpdateEmployeeAccount(ctx context.Context, in *UpdateEmployeeAccountRequest, opts ...grpc.CallOption) (*UpdateEmployeeAccountResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateEmployeeAccountResponse)
+	err := c.cc.Invoke(ctx, AdminService_UpdateEmployeeAccount_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AdminServiceServer is the server API for AdminService service.
 // All implementations must embed UnimplementedAdminServiceServer
 // for forward compatibility.
 type AdminServiceServer interface {
 	CreateEmployeeAccount(context.Context, *CreateEmployeeAccountRequest) (*CreateEmployeeAccountResponse, error)
 	CreateBankBranch(context.Context, *CreateBankBranchRequest) (*CreateBankBranchResponse, error)
+	UpdateBankBranch(context.Context, *UpdateBankBranchRequest) (*UpdateBankBranchResponse, error)
+	UpdateEmployeeAccount(context.Context, *UpdateEmployeeAccountRequest) (*UpdateEmployeeAccountResponse, error)
 	mustEmbedUnimplementedAdminServiceServer()
 }
 
@@ -80,6 +106,12 @@ func (UnimplementedAdminServiceServer) CreateEmployeeAccount(context.Context, *C
 }
 func (UnimplementedAdminServiceServer) CreateBankBranch(context.Context, *CreateBankBranchRequest) (*CreateBankBranchResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateBankBranch not implemented")
+}
+func (UnimplementedAdminServiceServer) UpdateBankBranch(context.Context, *UpdateBankBranchRequest) (*UpdateBankBranchResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateBankBranch not implemented")
+}
+func (UnimplementedAdminServiceServer) UpdateEmployeeAccount(context.Context, *UpdateEmployeeAccountRequest) (*UpdateEmployeeAccountResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateEmployeeAccount not implemented")
 }
 func (UnimplementedAdminServiceServer) mustEmbedUnimplementedAdminServiceServer() {}
 func (UnimplementedAdminServiceServer) testEmbeddedByValue()                      {}
@@ -138,6 +170,42 @@ func _AdminService_CreateBankBranch_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AdminService_UpdateBankBranch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateBankBranchRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).UpdateBankBranch(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_UpdateBankBranch_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).UpdateBankBranch(ctx, req.(*UpdateBankBranchRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_UpdateEmployeeAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateEmployeeAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).UpdateEmployeeAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_UpdateEmployeeAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).UpdateEmployeeAccount(ctx, req.(*UpdateEmployeeAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AdminService_ServiceDesc is the grpc.ServiceDesc for AdminService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -152,6 +220,14 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateBankBranch",
 			Handler:    _AdminService_CreateBankBranch_Handler,
+		},
+		{
+			MethodName: "UpdateBankBranch",
+			Handler:    _AdminService_UpdateBankBranch_Handler,
+		},
+		{
+			MethodName: "UpdateEmployeeAccount",
+			Handler:    _AdminService_UpdateEmployeeAccount_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

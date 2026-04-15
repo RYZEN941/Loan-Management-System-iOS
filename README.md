@@ -18,9 +18,12 @@ lms-monorepo/
 ├── sdk/
 │   └── swift/                       # Swift SDK workspace/artifacts
 ├── docker-compose.yml               # Local infra + core-api
+├── docs/                            # Frontend integration docs (auth/onboarding)
 ├── Makefile                         # Helper commands (proto, sqlc, docker)
 └── go.work                          # Go workspace (currently includes core-api)
 ```
+
+Frontend API docs are available in `docs/README.md`.
 
 ## Architecture At A Glance
 

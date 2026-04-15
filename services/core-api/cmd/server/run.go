@@ -71,6 +71,7 @@ func Run() error {
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
+			grpcinterceptors.LoggingUnaryInterceptor(),
 			grpcinterceptors.JWTUnaryInterceptor(grpcinterceptors.JWTConfig{
 				SigningKey:    []byte(cfg.JWTKey),
 				RedisClient:   redisClient,

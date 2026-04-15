@@ -16,6 +16,21 @@ For protected methods, send metadata:
 
 If missing or invalid, backend returns `Unauthenticated`.
 
+## Request ID (Recommended)
+
+Send a per-request correlation id in metadata:
+
+- `x-request-id: <unique-id>`
+
+Why:
+
+- backend request logs include `request_id`, making frontend/backend trace matching easier.
+- useful for debugging retries, intermittent failures, and user-reported issues.
+
+Recommended format:
+
+- UUID v4 (or any globally unique string your client stack already uses).
+
 ## Public vs Protected Methods
 
 Public methods (no JWT needed):

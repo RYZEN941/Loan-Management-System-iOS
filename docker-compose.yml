@@ -39,9 +39,12 @@ services:
     container_name: lms-core-api
     labels:
       - traefik.enable=true
+      - traefik.docker.network=ios-lms-htagnc
       - traefik.http.routers.lmsapi.rule=Host(`lmsapi.chirag.codes`)
       - traefik.http.routers.lmsapi.entrypoints=websecure
       - traefik.http.routers.lmsapi.tls=true
+      - traefik.http.routers.lmsapi.tls.certresolver=letsencrypt
+      - traefik.http.routers.lmsapi.priority=1000
       - traefik.http.routers.lmsapi.service=lmsapi-svc
       - traefik.http.services.lmsapi-svc.loadbalancer.server.port=8080
       - traefik.http.services.lmsapi-svc.loadbalancer.server.scheme=h2c

@@ -92,6 +92,7 @@ message LoginRequest {
 message LoginPrimaryResponse {
   string mfa_session_id = 1;
   repeated string allowed_factors = 2;
+  bool is_requiring_password_change = 3;
 }
 
 message SelectLoginMFAFactorRequest {

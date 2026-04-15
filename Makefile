@@ -12,6 +12,7 @@ proto:
 		--go_opt=module=$(MODULE) \
 		--go-grpc_out=$(CORE_API_DIR) \
 		--go-grpc_opt=module=$(MODULE) \
+		$(PROTO_DIR)/admin/v1/admin.proto \
 		$(PROTO_DIR)/auth/v1/auth.proto \
 		$(PROTO_DIR)/onboarding/v1/onboarding.proto \
 		$(PROTO_DIR)/loan/v1/loan.proto

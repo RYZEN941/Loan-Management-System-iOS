@@ -7,6 +7,7 @@ This folder contains frontend-focused integration docs for the gRPC backend.
 - `docs/api-conventions.md` - auth headers, token handling, error handling, and common request rules.
 - `docs/auth.md` - all auth APIs with exact call order for signup, login, MFA, password change, refresh, and logout.
 - `docs/onboarding.md` - borrower onboarding API and when to call it in the app lifecycle.
+- `docs/admin.md` - admin-only APIs for creating employee accounts and bank branches.
 
 ## Current Service Endpoints
 

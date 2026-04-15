@@ -147,6 +147,15 @@ type AdminProfile struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type BankBranch struct {
+	ID        pgtype.UUID        `json:"id"`
+	Name      string             `json:"name"`
+	Region    string             `json:"region"`
+	City      string             `json:"city"`
+	ManagerID pgtype.UUID        `json:"manager_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type BorrowerProfile struct {
 	ID                         pgtype.UUID            `json:"id"`
 	UserID                     pgtype.UUID            `json:"user_id"`
@@ -167,12 +176,14 @@ type BorrowerProfile struct {
 type ManagerProfile struct {
 	ID        pgtype.UUID        `json:"id"`
 	UserID    pgtype.UUID        `json:"user_id"`
+	Name      string             `json:"name"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type OfficerProfile struct {
 	ID        pgtype.UUID        `json:"id"`
 	UserID    pgtype.UUID        `json:"user_id"`
+	Name      string             `json:"name"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 

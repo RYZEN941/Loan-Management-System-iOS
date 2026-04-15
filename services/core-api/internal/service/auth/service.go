@@ -306,8 +306,9 @@ func (s *service) LoginPrimary(ctx context.Context, req *authv1.LoginRequest) (*
 	}
 
 	return &authv1.LoginPrimaryResponse{
-		MfaSessionId:   mfaSessionID,
-		AllowedFactors: allowedFactors,
+		MfaSessionId:              mfaSessionID,
+		AllowedFactors:            allowedFactors,
+		IsRequiringPasswordChange: user.IsRequiringPasswordChange.Bool,
 	}, nil
 }
 

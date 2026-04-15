@@ -10,8 +10,10 @@ import (
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/config"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/db"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/repository/generated"
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/admin"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/auth"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/onboarding"
+	adminv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/adminv1"
 	authv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/authv1"
 	onboardingv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/onboardingv1"
 	grpcinterceptors "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/interceptors"
@@ -43,9 +45,10 @@ func Run() error {
 		return fmt.Errorf("listen on grpc port %s: %w", cfg.GRPCPort, err)
 	}
 
+	adminService := admin.NewService(queries)
 	authService := auth.NewService(queries, redisClient, cfg)
 	onboardingService := onboarding.NewService(queries)
-	application := app.New(authService, onboardingService)
+	application := app.New(adminService, authService, onboardingService)
 
 	publicMethods := map[string]struct{}{
 		"/auth.v1.AuthService/Hello":                {},
@@ -60,6 +63,8 @@ func Run() error {
 	}
 
 	rbacPolicy := grpcinterceptors.RBACPolicy{
+		"/admin.v1.AdminService/CreateEmployeeAccount":                {"admin"},
+		"/admin.v1.AdminService/CreateBankBranch":                     {"admin"},
 		"/auth.v1.AuthService/SetupTOTP":                              {"borrower", "officer", "manager", "admin"},
 		"/auth.v1.AuthService/VerifyTOTPSetup":                        {"borrower", "officer", "manager", "admin"},
 		"/auth.v1.AuthService/ChangePassword":                         {"borrower", "officer", "manager", "admin"},
@@ -85,6 +90,7 @@ func Run() error {
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
 
+	adminv1.RegisterAdminServiceServer(grpcServer, application.AdminHandler)
 	authv1.RegisterAuthServiceServer(grpcServer, application.AuthHandler)
 	onboardingv1.RegisterOnboardingServiceServer(grpcServer, application.OnboardingHandler)
 	reflection.Register(grpcServer)

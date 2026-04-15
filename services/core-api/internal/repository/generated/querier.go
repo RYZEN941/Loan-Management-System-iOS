@@ -13,11 +13,16 @@ import (
 type Querier interface {
 	ActivateUser(ctx context.Context, id pgtype.UUID) error
 	ChangeUserPassword(ctx context.Context, arg ChangeUserPasswordParams) error
+	CreateBankBranch(ctx context.Context, arg CreateBankBranchParams) (BankBranch, error)
 	CreateBorrowerProfile(ctx context.Context, arg CreateBorrowerProfileParams) (BorrowerProfile, error)
+	CreateEmployeeUser(ctx context.Context, arg CreateEmployeeUserParams) (User, error)
+	CreateManagerProfile(ctx context.Context, arg CreateManagerProfileParams) (ManagerProfile, error)
+	CreateOfficerProfile(ctx context.Context, arg CreateOfficerProfileParams) (OfficerProfile, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateWebAuthnCredential(ctx context.Context, arg CreateWebAuthnCredentialParams) (WebauthnCredential, error)
 	GetBorrowerProfileByUserID(ctx context.Context, userID pgtype.UUID) (BorrowerProfile, error)
+	GetManagerProfileByID(ctx context.Context, id pgtype.UUID) (ManagerProfile, error)
 	GetRefreshTokenByHashedToken(ctx context.Context, hashedToken string) (RefreshToken, error)
 	GetUserByEmailOrPhone(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)

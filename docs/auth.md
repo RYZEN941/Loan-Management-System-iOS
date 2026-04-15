@@ -81,10 +81,12 @@ Response:
 
 - `mfa_session_id`
 - `allowed_factors` (subset of: `totp`, `email_otp`, `phone_otp`)
+- `is_requiring_password_change`
 
 Frontend action:
 
 - Show factor picker using `allowed_factors`.
+- If `is_requiring_password_change=true`, force password-change flow after successful MFA.
 
 ### 2.2 SelectLoginMFAFactor
 

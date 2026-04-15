@@ -4,18 +4,14 @@
 
 import SwiftUI
 
-// ═══════════════════════════════════════════════════════════════
-// MARK: - Signup Routes
-// ═══════════════════════════════════════════════════════════════
+enum SignupRoute: Hashable {
+    case phoneOTP
+    case emailOTP
+    case passkey
+    case totp
+    case home
+}
 
-enum SignupRoute: Hashable { case otp, passkey, totp, home }
-
-// ═══════════════════════════════════════════════════════════════
-// MARK: - Signup Flow Controller
-// ═══════════════════════════════════════════════════════════════
-
-/// Owns the NavigationStack for the entire signup flow.
-/// Routes: Details → OTP → Passkey (Face ID) → TOTP Setup → Home
 struct SignupRoot: View {
     @State private var path = NavigationPath()
     let onBackToLogin: () -> Void
@@ -25,10 +21,20 @@ struct SignupRoot: View {
             SignupStep1View(path: $path, onBackToLogin: onBackToLogin)
                 .navigationDestination(for: SignupRoute.self) { route in
                     switch route {
-                    case .otp:     SignupOTPView(path: $path)
-                    case .passkey: SignupPasskeyView(path: $path)
-                    case .totp:    SignupTOTPView(path: $path)
-                    case .home:    HomeView()
+                    case .phoneOTP:
+                        SignupOTPView(path: $path)
+
+                    case .emailOTP:
+                        SignupEmailOTPView(path: $path)
+
+                    case .passkey:
+                        SignupPasskeyView(path: $path)
+
+                    case .totp:
+                        SignupTOTPView(path: $path)
+
+                    case .home:
+                        HomeView()
                     }
                 }
         }

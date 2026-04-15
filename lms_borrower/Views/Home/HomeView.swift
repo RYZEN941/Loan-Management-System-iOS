@@ -1,103 +1,159 @@
 // Views/Home/HomeView.swift
 // LoanOS — Borrower App
-// Home screen shown after successful authentication.
-// Displays account status summary and a Logout button.
+// Minimal signed-in screen.
 
 import SwiftUI
 
-// ═══════════════════════════════════════════════════════════════
-// MARK: - Home View
-// ═══════════════════════════════════════════════════════════════
-
 struct HomeView: View {
     @EnvironmentObject var session: SessionStore
-    @State private var appeared = false
 
     var body: some View {
-        ZStack {
-            DS.surface.ignoresSafeArea()
-            ConfettiView(trigger: appeared)
+        VStack(spacing: 0) {
+            Spacer(minLength: 44)
 
-            VStack(spacing: 32) {
-                Spacer()
+            headerSection
 
-                // Success checkmark with animated rings
-                ZStack {
-                    Circle().fill(DS.success.opacity(0.1)).frame(width: 150, height: 150)
-                    Circle().fill(DS.success.opacity(0.2)).frame(width: 110, height: 110)
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 58)).foregroundColor(DS.success)
-                        .scaleEffect(appeared ? 1 : 0.2)
-                        .animation(.spring(response: 0.55, dampingFraction: 0.6).delay(0.15),
-                                   value: appeared)
-                }
+            Spacer(minLength: 28)
 
-                VStack(spacing: 10) {
-                    Text("Login Completed")
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
-                        .foregroundColor(DS.textPrimary)
-                    Text("You're securely signed in to LoanOS.")
-                        .font(.system(size: 15, design: .rounded))
-                        .foregroundColor(DS.textSecondary)
-                }
-                .opacity(appeared ? 1 : 0).offset(y: appeared ? 0 : 16)
+            statusCard
+                .padding(.horizontal, 20)
 
-                // Account summary card
-                VStack(spacing: 0) {
-                    HomeRow(icon: "person.fill",      label: "Account",   value: "Verified",   last: false)
-                    HomeRow(icon: "faceid",           label: "Biometric", value: "Enabled",    last: false)
-                    HomeRow(icon: "shield.checkered", label: "2FA",       value: "Configured", last: true)
-                }
-                .background(DS.card).cornerRadius(16)
-                .overlay(RoundedRectangle(cornerRadius: 16).stroke(DS.border, lineWidth: 1))
-                .padding(.horizontal, 24)
-                .opacity(appeared ? 1 : 0).offset(y: appeared ? 0 : 20)
-                .animation(.spring(response: 0.5).delay(0.3), value: appeared)
+            Spacer()
 
-                Spacer()
+            footerSection
+                .padding(.horizontal, 20)
+                .padding(.bottom, 34)
+        }
+        .background(
+            LinearGradient(
+                colors: [Color.white, DS.surface],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        )
+        .navigationBarBackButtonHidden(true)
+    }
 
-                PrimaryBtn(title: "Logout",
-                           icon: "rectangle.portrait.and.arrow.right",
-                           style: .danger) {
-                    session.logout()
-                }
-                .padding(.horizontal, 24)
-                .opacity(appeared ? 1 : 0)
-                .padding(.bottom, 40)
+    private var headerSection: some View {
+        VStack(spacing: 18) {
+            ZStack {
+                Circle()
+                    .fill(Color(hex: "#EAF8F0"))
+                    .frame(width: 104, height: 104)
+
+                Circle()
+                    .fill(Color(hex: "#CFF1DD"))
+                    .frame(width: 76, height: 76)
+
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 44, weight: .medium))
+                    .foregroundColor(Color(hex: "#34C759"))
+            }
+
+            VStack(spacing: 8) {
+                Text("You’re signed in")
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .foregroundColor(DS.textPrimary)
+
+                Text("Your account is ready to use.")
+                    .font(.system(size: 16))
+                    .foregroundColor(DS.textSecondary)
             }
         }
-        .navigationBarBackButtonHidden(true)
-        .onAppear {
-            withAnimation(.spring(response: 0.5).delay(0.1)) { appeared = true }
+    }
+
+    private var statusCard: some View {
+        VStack(spacing: 0) {
+            HomeStatusRow(
+                icon: "person.crop.circle.fill",
+                label: "Account",
+                value: "Verified",
+                valueColor: Color(hex: "#34C759"),
+                isLast: false
+            )
+
+            HomeStatusRow(
+                icon: "faceid",
+                label: "Passkey",
+                value: "Enabled",
+                valueColor: DS.textPrimary,
+                isLast: false
+            )
+
+            HomeStatusRow(
+                icon: "checkmark.shield.fill",
+                label: "Authenticator",
+                value: "Active",
+                valueColor: DS.textPrimary,
+                isLast: true
+            )
+        }
+        .background(.white.opacity(0.84))
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(.white.opacity(0.92), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.04), radius: 14, x: 0, y: 6)
+    }
+
+    private var footerSection: some View {
+        VStack(spacing: 12) {
+            PrimaryBtn(title: "Continue") {
+                // Keep user signed in and stay on the authenticated area.
+            }
+
+            Button {
+                session.logout()
+            } label: {
+                Text("Sign out")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(DS.textSecondary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+            }
         }
     }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// MARK: - Home Row
-// ═══════════════════════════════════════════════════════════════
-
-struct HomeRow: View {
+private struct HomeStatusRow: View {
     let icon: String
     let label: String
     let value: String
-    let last: Bool
+    let valueColor: Color
+    let isLast: Bool
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 13, weight: .semibold)).foregroundColor(DS.primary)
-                .frame(width: 30, height: 30).background(DS.primaryLight).cornerRadius(8)
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(DS.primaryLight)
+
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(DS.primary)
+            }
+            .frame(width: 34, height: 34)
+
             Text(label)
-                .font(.system(size: 13, design: .rounded)).foregroundColor(DS.textSecondary)
-            Spacer()
-            Text(value)
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .font(.system(size: 15))
                 .foregroundColor(DS.textPrimary)
+
+            Spacer()
+
+            Text(value)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(valueColor)
         }
-        .padding(.horizontal, 16).padding(.vertical, 12)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 16)
         .overlay(alignment: .bottom) {
-            if !last { Divider().padding(.leading, 58) }
+            if !isLast {
+                Divider()
+                    .padding(.leading, 64)
+            }
         }
     }
 }

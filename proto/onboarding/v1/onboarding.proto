@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package onboarding.v1;
+
+option go_package = "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/onboardingv1;onboardingv1";
+
+service OnboardingService {
+  rpc CompleteBorrowerOnboarding(CompleteBorrowerOnboardingRequest) returns (CompleteBorrowerOnboardingResponse);
+}
+
+enum BorrowerGender {
+  BORROWER_GENDER_UNSPECIFIED = 0;
+  BORROWER_GENDER_MALE = 1;
+  BORROWER_GENDER_FEMALE = 2;
+  BORROWER_GENDER_OTHER = 3;
+}
+
+enum BorrowerEmploymentType {
+  BORROWER_EMPLOYMENT_TYPE_UNSPECIFIED = 0;
+  BORROWER_EMPLOYMENT_TYPE_SALARIED = 1;
+  BORROWER_EMPLOYMENT_TYPE_SELF_EMPLOYED = 2;
+  BORROWER_EMPLOYMENT_TYPE_BUSINESS = 3;
+}
+
+message CompleteBorrowerOnboardingRequest {
+  string first_name = 1;
+  string last_name = 2;
+  string date_of_birth = 3;
+  BorrowerGender gender = 4;
+  string address_line1 = 5;
+  string city = 6;
+  string state = 7;
+  string pincode = 8;
+  BorrowerEmploymentType employment_type = 9;
+  string monthly_income = 10;
+  int32 profile_completeness_percent = 11;
+}
+
+message CompleteBorrowerOnboardingResponse {
+  bool success = 1;
+}

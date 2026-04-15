@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -23,6 +24,8 @@ const (
 
 type RBACPolicy map[string][]string
 
+// RBACUnaryInterceptor enforces role-based access for methods defined in policy.
+// Methods that are not present in the policy map are allowed to continue.
 func RBACUnaryInterceptor(policy RBACPolicy) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		allowedRoles, ok := policy[info.FullMethod]
@@ -57,6 +60,8 @@ type JWTConfig struct {
 	PublicMethods map[string]struct{}
 }
 
+// JWTUnaryInterceptor validates bearer JWTs and verifies active session state in Redis.
+// For non-public methods, it injects authenticated user ID and role into context.
 func JWTUnaryInterceptor(cfg JWTConfig) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		_ = req
@@ -92,11 +97,25 @@ func JWTUnaryInterceptor(cfg JWTConfig) grpc.UnaryServerInterceptor {
 			return nil, status.Error(codes.Unauthenticated, "token is no longer active")
 		}
 
-		ctx = context.WithValue(ctx, ContextUserIDKey, claims.Subject)
+		userID, err := uuid.Parse(claims.Subject)
+		if err != nil {
+			return nil, status.Error(codes.Unauthenticated, "invalid subject claim")
+		}
+
+		ctx = context.WithValue(ctx, ContextUserIDKey, userID)
 		ctx = context.WithValue(ctx, ContextRoleKey, claims.Role)
 
 		return handler(ctx, req)
 	}
+}
+
+// UserIDFromContext returns the authenticated user ID set by JWTUnaryInterceptor.
+func UserIDFromContext(ctx context.Context) (uuid.UUID, bool) {
+	userID, ok := ctx.Value(ContextUserIDKey).(uuid.UUID)
+	if !ok {
+		return uuid.UUID{}, false
+	}
+	return userID, true
 }
 
 func extractBearerToken(ctx context.Context) (string, error) {

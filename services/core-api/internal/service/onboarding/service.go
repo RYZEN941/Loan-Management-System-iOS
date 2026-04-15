@@ -8,7 +8,6 @@ import (
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/repository/generated"
 	onboardingv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/onboardingv1"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/interceptors"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -22,19 +21,17 @@ type service struct {
 	queries generated.Querier
 }
 
+// NewService constructs onboarding service dependencies.
 func NewService(queries generated.Querier) Service {
 	return &service{queries: queries}
 }
 
+// CompleteBorrowerOnboarding creates borrower profile details for the authenticated borrower.
+// User identity is derived from JWT context, not from request payload.
 func (s *service) CompleteBorrowerOnboarding(ctx context.Context, req *onboardingv1.CompleteBorrowerOnboardingRequest) (*onboardingv1.CompleteBorrowerOnboardingResponse, error) {
-	userIDStr, ok := ctx.Value(interceptors.ContextUserIDKey).(string)
-	if !ok || strings.TrimSpace(userIDStr) == "" {
+	userID, ok := interceptors.UserIDFromContext(ctx)
+	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "missing user context")
-	}
-
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "invalid user context")
 	}
 
 	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true})

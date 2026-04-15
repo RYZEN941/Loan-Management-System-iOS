@@ -80,6 +80,7 @@ type mfaOTPChallenge struct {
 	ExpiresAt int64  `json:"expires_at"`
 }
 
+// NewService constructs the auth service with repository, redis, and runtime config dependencies.
 func NewService(queries generated.Querier, redis redis.Cmdable, cfg config.Config) Service {
 	w, _ := webauthn.New(&webauthn.Config{
 		RPDisplayName: "LMS Monorepo",
@@ -104,6 +105,7 @@ func (s *service) Hello(ctx context.Context, name string) (string, error) {
 	return "hello " + trimmed, nil
 }
 
+// InitiateSignup creates an unverified user and starts a short-lived OTP verification session.
 func (s *service) InitiateSignup(ctx context.Context, req *authv1.SignupRequest) (*authv1.SignupResponse, error) {
 	hash, err := argon2.HashPassword(req.GetPassword(), argon2.DefaultConfig())
 	if err != nil {
@@ -154,6 +156,8 @@ func (s *service) InitiateSignup(ctx context.Context, req *authv1.SignupRequest)
 	}, nil
 }
 
+// VerifySignupOTPs validates email/phone OTPs and marks the user as verified.
+// Activation remains false until role-specific onboarding is completed.
 func (s *service) VerifySignupOTPs(ctx context.Context, req *authv1.VerifyOTPsRequest) (*authv1.VerifyOTPsResponse, error) {
 	key := fmt.Sprintf("signup_reg:%s", req.GetRegistrationId())
 	val, err := s.redis.Get(ctx, key).Result()
@@ -194,12 +198,12 @@ func (s *service) VerifySignupOTPs(ctx context.Context, req *authv1.VerifyOTPsRe
 	return &authv1.VerifyOTPsResponse{Verified: true}, nil
 }
 
+// SetupTOTP creates a TOTP secret for the authenticated user.
 func (s *service) SetupTOTP(ctx context.Context, req *authv1.SetupTOTPRequest) (*authv1.SetupTOTPResponse, error) {
-	userIDStr, ok := ctx.Value(interceptors.ContextUserIDKey).(string)
+	userID, ok := interceptors.UserIDFromContext(ctx)
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "user not found in context")
 	}
-	userID, _ := uuid.Parse(userIDStr)
 
 	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
 	if err != nil {
@@ -229,12 +233,12 @@ func (s *service) SetupTOTP(ctx context.Context, req *authv1.SetupTOTPRequest) (
 	}, nil
 }
 
+// VerifyTOTPSetup validates the submitted TOTP code and enables TOTP for future logins.
 func (s *service) VerifyTOTPSetup(ctx context.Context, req *authv1.VerifyTOTPSetupRequest) (*authv1.AuthTokens, error) {
-	userIDStr, ok := ctx.Value(interceptors.ContextUserIDKey).(string)
+	userID, ok := interceptors.UserIDFromContext(ctx)
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "user not found in context")
 	}
-	userID, _ := uuid.Parse(userIDStr)
 
 	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
 	if err != nil {
@@ -257,6 +261,7 @@ func (s *service) VerifyTOTPSetup(ctx context.Context, req *authv1.VerifyTOTPSet
 	return s.mintTokens(ctx, userID, string(user.Role), req.GetDeviceId())
 }
 
+// LoginPrimary verifies username/password and returns an MFA session with allowed factors.
 func (s *service) LoginPrimary(ctx context.Context, req *authv1.LoginRequest) (*authv1.LoginPrimaryResponse, error) {
 	user, err := s.queries.GetUserByEmailOrPhone(ctx, req.GetEmailOrPhone())
 	if err != nil {
@@ -306,6 +311,7 @@ func (s *service) LoginPrimary(ctx context.Context, req *authv1.LoginRequest) (*
 	}, nil
 }
 
+// SelectLoginMFAFactor stores the selected MFA factor and issues an OTP challenge when required.
 func (s *service) SelectLoginMFAFactor(ctx context.Context, req *authv1.SelectLoginMFAFactorRequest) (*authv1.SelectLoginMFAFactorResponse, error) {
 	session, err := s.getMFASession(ctx, req.GetMfaSessionId())
 	if err != nil {
@@ -370,6 +376,7 @@ func (s *service) SelectLoginMFAFactor(ctx context.Context, req *authv1.SelectLo
 	}, nil
 }
 
+// VerifyLoginMFA validates the selected MFA factor and mints access/refresh tokens on success.
 func (s *service) VerifyLoginMFA(ctx context.Context, req *authv1.VerifyLoginMFARequest) (*authv1.AuthTokens, error) {
 	session, err := s.getMFASession(ctx, req.GetMfaSessionId())
 	if err != nil {
@@ -428,15 +435,12 @@ func (s *service) VerifyLoginMFA(ctx context.Context, req *authv1.VerifyLoginMFA
 	return s.mintTokens(ctx, userID, string(user.Role), req.GetDeviceId())
 }
 
+// ChangePassword verifies current_password, validates new_password strength, and updates password hash.
+// The password-change-required flag is always reset to false on successful update.
 func (s *service) ChangePassword(ctx context.Context, req *authv1.ChangePasswordRequest) (*authv1.ChangePasswordResponse, error) {
-	userIDStr, ok := ctx.Value(interceptors.ContextUserIDKey).(string)
-	if !ok || strings.TrimSpace(userIDStr) == "" {
+	userID, ok := interceptors.UserIDFromContext(ctx)
+	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "missing user context")
-	}
-
-	userID, err := uuid.Parse(userIDStr)
-	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "invalid user context")
 	}
 
 	currentPassword := strings.TrimSpace(req.GetCurrentPassword())
@@ -482,6 +486,7 @@ func (s *service) ChangePassword(ctx context.Context, req *authv1.ChangePassword
 	return &authv1.ChangePasswordResponse{Success: true}, nil
 }
 
+// getMFASession loads and validates the MFA session blob from Redis.
 func (s *service) getMFASession(ctx context.Context, sessionID string) (*mfaSessionState, error) {
 	key := fmt.Sprintf("mfa_session:%s", sessionID)
 	val, err := s.redis.Get(ctx, key).Result()
@@ -504,6 +509,7 @@ func (s *service) getMFASession(ctx context.Context, sessionID string) (*mfaSess
 	return &session, nil
 }
 
+// setMFASession persists MFA session state with a fresh TTL.
 func (s *service) setMFASession(ctx context.Context, sessionID string, session *mfaSessionState) error {
 	b, err := json.Marshal(session)
 	if err != nil {
@@ -517,6 +523,7 @@ func (s *service) setMFASession(ctx context.Context, sessionID string, session *
 	return nil
 }
 
+// verifyMFAOTP compares OTP challenge hash, updates attempt counters, and enforces max attempts.
 func (s *service) verifyMFAOTP(ctx context.Context, sessionID, factor, code string) error {
 	key := fmt.Sprintf("mfa_challenge:%s", sessionID)
 	val, err := s.redis.Get(ctx, key).Result()
@@ -563,6 +570,7 @@ func (s *service) verifyMFAOTP(ctx context.Context, sessionID, factor, code stri
 	return nil
 }
 
+// RefreshToken rotates refresh tokens and mints a fresh access/refresh pair.
 func (s *service) RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequest) (*authv1.AuthTokens, error) {
 	hash := sha256.Sum256([]byte(req.GetRefreshToken()))
 	hashedToken := hex.EncodeToString(hash[:])
@@ -588,6 +596,7 @@ func (s *service) RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequ
 	return s.mintTokens(ctx, userID, string(user.Role), req.GetDeviceId())
 }
 
+// Logout revokes refresh token and clears the active access-token session in Redis.
 func (s *service) Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv1.LogoutResponse, error) {
 	// 1. Revoke refresh token
 	hash := sha256.Sum256([]byte(req.GetRefreshToken()))
@@ -655,13 +664,13 @@ func (s *service) getWebauthnUser(ctx context.Context, user generated.User) (*we
 }
 
 func (s *service) BeginWebAuthnRegistration(ctx context.Context, req *authv1.WebAuthnRegRequest) (*authv1.WebAuthnRegResponse, error) {
-	userIDStr, ok := ctx.Value(interceptors.ContextUserIDKey).(string)
+	userID, ok := interceptors.UserIDFromContext(ctx)
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "missing user context")
 	}
-	uID, _ := uuid.Parse(userIDStr)
+	userIDStr := userID.String()
 
-	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: uID, Valid: true})
+	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "user fetch failed")
 	}
@@ -686,13 +695,13 @@ func (s *service) BeginWebAuthnRegistration(ctx context.Context, req *authv1.Web
 }
 
 func (s *service) FinishWebAuthnRegistration(ctx context.Context, req *authv1.WebAuthnFinishRegRequest) (*authv1.AuthTokens, error) {
-	userIDStr, ok := ctx.Value(interceptors.ContextUserIDKey).(string)
+	userID, ok := interceptors.UserIDFromContext(ctx)
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "missing user context")
 	}
-	uID, _ := uuid.Parse(userIDStr)
+	userIDStr := userID.String()
 
-	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: uID, Valid: true})
+	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "user fetch failed")
 	}
@@ -843,6 +852,7 @@ func mapProtoRole(role authv1.UserRole) (generated.UserRole, error) {
 	}
 }
 
+// validatePasswordStrength enforces minimum complexity for new user passwords.
 func validatePasswordStrength(password string) error {
 	if len(password) < 8 {
 		return fmt.Errorf("new password must be at least 8 characters long")

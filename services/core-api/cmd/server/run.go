@@ -11,7 +11,9 @@ import (
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/db"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/repository/generated"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/auth"
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/onboarding"
 	authv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/authv1"
+	onboardingv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/onboardingv1"
 	grpcinterceptors "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/interceptors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -42,7 +44,8 @@ func Run() error {
 	}
 
 	authService := auth.NewService(queries, redisClient, cfg)
-	application := app.New(authService, queries)
+	onboardingService := onboarding.NewService(queries)
+	application := app.New(authService, onboardingService)
 
 	publicMethods := map[string]struct{}{
 		"/auth.v1.AuthService/Hello":                {},
@@ -57,9 +60,10 @@ func Run() error {
 	}
 
 	rbacPolicy := grpcinterceptors.RBACPolicy{
-		"/auth.v1.AuthService/SetupTOTP":       {"borrower", "officer", "manager", "admin"},
-		"/auth.v1.AuthService/VerifyTOTPSetup": {"borrower", "officer", "manager", "admin"},
-		"/auth.v1.AuthService/Logout":          {"borrower", "officer", "manager", "admin"},
+		"/auth.v1.AuthService/SetupTOTP":                              {"borrower", "officer", "manager", "admin"},
+		"/auth.v1.AuthService/VerifyTOTPSetup":                        {"borrower", "officer", "manager", "admin"},
+		"/onboarding.v1.OnboardingService/CompleteBorrowerOnboarding": {"borrower"},
+		"/auth.v1.AuthService/Logout":                                 {"borrower", "officer", "manager", "admin"},
 		// Example future loan roles
 		// "/loan.v1.LoanService/ApproveLoan": {"officer", "manager", "admin"},
 	}
@@ -80,6 +84,7 @@ func Run() error {
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
 
 	authv1.RegisterAuthServiceServer(grpcServer, application.AuthHandler)
+	onboardingv1.RegisterOnboardingServiceServer(grpcServer, application.OnboardingHandler)
 	reflection.Register(grpcServer)
 
 	log.Printf("grpc server listening on :%s", cfg.GRPCPort)

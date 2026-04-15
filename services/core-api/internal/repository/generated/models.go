@@ -11,6 +11,92 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type BorrowerEmploymentType string
+
+const (
+	BorrowerEmploymentTypeSALARIED     BorrowerEmploymentType = "SALARIED"
+	BorrowerEmploymentTypeSELFEMPLOYED BorrowerEmploymentType = "SELF_EMPLOYED"
+	BorrowerEmploymentTypeBUSINESS     BorrowerEmploymentType = "BUSINESS"
+)
+
+func (e *BorrowerEmploymentType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = BorrowerEmploymentType(s)
+	case string:
+		*e = BorrowerEmploymentType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for BorrowerEmploymentType: %T", src)
+	}
+	return nil
+}
+
+type NullBorrowerEmploymentType struct {
+	BorrowerEmploymentType BorrowerEmploymentType `json:"borrower_employment_type"`
+	Valid                  bool                   `json:"valid"` // Valid is true if BorrowerEmploymentType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullBorrowerEmploymentType) Scan(value interface{}) error {
+	if value == nil {
+		ns.BorrowerEmploymentType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.BorrowerEmploymentType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullBorrowerEmploymentType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.BorrowerEmploymentType), nil
+}
+
+type BorrowerGender string
+
+const (
+	BorrowerGenderMALE   BorrowerGender = "MALE"
+	BorrowerGenderFEMALE BorrowerGender = "FEMALE"
+	BorrowerGenderOTHER  BorrowerGender = "OTHER"
+)
+
+func (e *BorrowerGender) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = BorrowerGender(s)
+	case string:
+		*e = BorrowerGender(s)
+	default:
+		return fmt.Errorf("unsupported scan type for BorrowerGender: %T", src)
+	}
+	return nil
+}
+
+type NullBorrowerGender struct {
+	BorrowerGender BorrowerGender `json:"borrower_gender"`
+	Valid          bool           `json:"valid"` // Valid is true if BorrowerGender is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullBorrowerGender) Scan(value interface{}) error {
+	if value == nil {
+		ns.BorrowerGender, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.BorrowerGender.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullBorrowerGender) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.BorrowerGender), nil
+}
+
 type UserRole string
 
 const (
@@ -55,6 +141,41 @@ func (ns NullUserRole) Value() (driver.Value, error) {
 	return string(ns.UserRole), nil
 }
 
+type AdminProfile struct {
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type BorrowerProfile struct {
+	ID                         pgtype.UUID            `json:"id"`
+	UserID                     pgtype.UUID            `json:"user_id"`
+	FirstName                  string                 `json:"first_name"`
+	LastName                   string                 `json:"last_name"`
+	DateOfBirth                pgtype.Date            `json:"date_of_birth"`
+	Gender                     BorrowerGender         `json:"gender"`
+	AddressLine1               string                 `json:"address_line1"`
+	City                       string                 `json:"city"`
+	State                      string                 `json:"state"`
+	Pincode                    string                 `json:"pincode"`
+	EmploymentType             BorrowerEmploymentType `json:"employment_type"`
+	MonthlyIncome              pgtype.Numeric         `json:"monthly_income"`
+	ProfileCompletenessPercent int32                  `json:"profile_completeness_percent"`
+	CreatedAt                  pgtype.Timestamptz     `json:"created_at"`
+}
+
+type ManagerProfile struct {
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type OfficerProfile struct {
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type RefreshToken struct {
 	ID          pgtype.UUID        `json:"id"`
 	UserID      pgtype.UUID        `json:"user_id"`
@@ -66,17 +187,19 @@ type RefreshToken struct {
 }
 
 type User struct {
-	ID              pgtype.UUID        `json:"id"`
-	Email           string             `json:"email"`
-	Phone           string             `json:"phone"`
-	PasswordHash    string             `json:"password_hash"`
-	Role            UserRole           `json:"role"`
-	IsEmailVerified pgtype.Bool        `json:"is_email_verified"`
-	IsPhoneVerified pgtype.Bool        `json:"is_phone_verified"`
-	IsActive        pgtype.Bool        `json:"is_active"`
-	HasTotp         pgtype.Bool        `json:"has_totp"`
-	TotpSecret      pgtype.Text        `json:"totp_secret"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	ID                        pgtype.UUID        `json:"id"`
+	Email                     string             `json:"email"`
+	Phone                     string             `json:"phone"`
+	PasswordHash              string             `json:"password_hash"`
+	Role                      UserRole           `json:"role"`
+	IsEmailVerified           pgtype.Bool        `json:"is_email_verified"`
+	IsPhoneVerified           pgtype.Bool        `json:"is_phone_verified"`
+	IsActive                  pgtype.Bool        `json:"is_active"`
+	IsRequiringPasswordChange pgtype.Bool        `json:"is_requiring_password_change"`
+	IsDeleted                 pgtype.Bool        `json:"is_deleted"`
+	HasTotp                   pgtype.Bool        `json:"has_totp"`
+	TotpSecret                pgtype.Text        `json:"totp_secret"`
+	CreatedAt                 pgtype.Timestamptz `json:"created_at"`
 }
 
 type WebauthnCredential struct {

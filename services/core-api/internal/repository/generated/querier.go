@@ -11,9 +11,12 @@ import (
 )
 
 type Querier interface {
+	ActivateUser(ctx context.Context, id pgtype.UUID) error
+	CreateBorrowerProfile(ctx context.Context, arg CreateBorrowerProfileParams) (BorrowerProfile, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateWebAuthnCredential(ctx context.Context, arg CreateWebAuthnCredentialParams) (WebauthnCredential, error)
+	GetBorrowerProfileByUserID(ctx context.Context, userID pgtype.UUID) (BorrowerProfile, error)
 	GetRefreshTokenByHashedToken(ctx context.Context, hashedToken string) (RefreshToken, error)
 	GetUserByEmailOrPhone(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)

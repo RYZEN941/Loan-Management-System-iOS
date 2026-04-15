@@ -1,4 +1,6 @@
 CREATE TYPE user_role AS ENUM ('admin', 'manager', 'officer', 'borrower');
+CREATE TYPE borrower_gender AS ENUM ('MALE', 'FEMALE', 'OTHER');
+CREATE TYPE borrower_employment_type AS ENUM ('SALARIED', 'SELF_EMPLOYED', 'BUSINESS');
 
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -11,11 +13,48 @@ CREATE TABLE users (
     is_email_verified BOOLEAN DEFAULT false,
     is_phone_verified BOOLEAN DEFAULT false,
     is_active BOOLEAN DEFAULT false,
-    
+    is_requiring_password_change BOOLEAN DEFAULT false,
+    is_deleted BOOLEAN DEFAULT false,
+
     -- MFA Data
     has_totp BOOLEAN DEFAULT false,
     totp_secret VARCHAR(255),
     
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE admin_profiles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE manager_profiles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE officer_profiles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE borrower_profiles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    date_of_birth DATE NOT NULL,
+    gender borrower_gender NOT NULL,
+    address_line1 VARCHAR(255) NOT NULL,
+    city VARCHAR(100) NOT NULL,
+    state VARCHAR(100) NOT NULL,
+    pincode VARCHAR(20) NOT NULL,
+    employment_type borrower_employment_type NOT NULL,
+    monthly_income NUMERIC(12,2) NOT NULL,
+    profile_completeness_percent INTEGER NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

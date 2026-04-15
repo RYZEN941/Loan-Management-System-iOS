@@ -51,7 +51,7 @@ INSERT INTO users (
     email, phone, password_hash, role
 ) VALUES (
     $1, $2, $3, $4
-) RETURNING id, email, phone, password_hash, role, is_email_verified, is_phone_verified, is_active, has_totp, totp_secret, created_at
+) RETURNING id, email, phone, password_hash, role, is_email_verified, is_phone_verified, is_active, is_requiring_password_change, is_deleted, has_totp, totp_secret, created_at
 `
 
 type CreateUserParams struct {
@@ -78,6 +78,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.IsEmailVerified,
 		&i.IsPhoneVerified,
 		&i.IsActive,
+		&i.IsRequiringPasswordChange,
+		&i.IsDeleted,
 		&i.HasTotp,
 		&i.TotpSecret,
 		&i.CreatedAt,
@@ -107,8 +109,9 @@ func (q *Queries) GetRefreshTokenByHashedToken(ctx context.Context, hashedToken 
 }
 
 const getUserByEmailOrPhone = `-- name: GetUserByEmailOrPhone :one
-SELECT id, email, phone, password_hash, role, is_email_verified, is_phone_verified, is_active, has_totp, totp_secret, created_at FROM users 
-WHERE email = $1 OR phone = $1 
+SELECT id, email, phone, password_hash, role, is_email_verified, is_phone_verified, is_active, is_requiring_password_change, is_deleted, has_totp, totp_secret, created_at FROM users 
+WHERE (email = $1 OR phone = $1)
+  AND is_deleted = false
 LIMIT 1
 `
 
@@ -124,6 +127,8 @@ func (q *Queries) GetUserByEmailOrPhone(ctx context.Context, email string) (User
 		&i.IsEmailVerified,
 		&i.IsPhoneVerified,
 		&i.IsActive,
+		&i.IsRequiringPasswordChange,
+		&i.IsDeleted,
 		&i.HasTotp,
 		&i.TotpSecret,
 		&i.CreatedAt,
@@ -132,7 +137,7 @@ func (q *Queries) GetUserByEmailOrPhone(ctx context.Context, email string) (User
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, phone, password_hash, role, is_email_verified, is_phone_verified, is_active, has_totp, totp_secret, created_at FROM users WHERE id = $1 LIMIT 1
+SELECT id, email, phone, password_hash, role, is_email_verified, is_phone_verified, is_active, is_requiring_password_change, is_deleted, has_totp, totp_secret, created_at FROM users WHERE id = $1 AND is_deleted = false LIMIT 1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error) {
@@ -147,6 +152,8 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 		&i.IsEmailVerified,
 		&i.IsPhoneVerified,
 		&i.IsActive,
+		&i.IsRequiringPasswordChange,
+		&i.IsDeleted,
 		&i.HasTotp,
 		&i.TotpSecret,
 		&i.CreatedAt,

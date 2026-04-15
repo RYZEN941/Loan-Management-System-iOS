@@ -179,13 +179,13 @@ func (s *service) VerifySignupOTPs(ctx context.Context, req *authv1.VerifyOTPsRe
 
 	err = s.queries.UpdateUserVerification(ctx, generated.UpdateUserVerificationParams{
 		ID:              pgtype.UUID{Bytes: userUUID, Valid: true},
-		IsActive:        pgtype.Bool{Bool: true, Valid: true},
+		IsActive:        pgtype.Bool{Bool: false, Valid: true},
 		IsEmailVerified: pgtype.Bool{Bool: true, Valid: true},
 		IsPhoneVerified: pgtype.Bool{Bool: true, Valid: true},
 	})
 
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to activate user")
+		return nil, status.Error(codes.Internal, "failed to verify user")
 	}
 
 	s.redis.Del(ctx, key)

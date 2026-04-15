@@ -1,6 +1,7 @@
 -- name: GetUserByEmailOrPhone :one
 SELECT * FROM users 
-WHERE email = $1 OR phone = $1 
+WHERE (email = $1 OR phone = $1)
+  AND is_deleted = false
 LIMIT 1;
 
 -- name: UpdateUserVerification :exec
@@ -43,4 +44,4 @@ INSERT INTO users (
 ) RETURNING *;
 
 -- name: GetUserByID :one
-SELECT * FROM users WHERE id = $1 LIMIT 1;
+SELECT * FROM users WHERE id = $1 AND is_deleted = false LIMIT 1;

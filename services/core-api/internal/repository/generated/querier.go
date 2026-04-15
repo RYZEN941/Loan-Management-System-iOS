@@ -12,6 +12,7 @@ import (
 
 type Querier interface {
 	ActivateUser(ctx context.Context, id pgtype.UUID) error
+	ChangeUserPassword(ctx context.Context, arg ChangeUserPasswordParams) error
 	CreateBorrowerProfile(ctx context.Context, arg CreateBorrowerProfileParams) (BorrowerProfile, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)

@@ -27,6 +27,7 @@ const (
 	AuthService_LoginPrimary_FullMethodName               = "/auth.v1.AuthService/LoginPrimary"
 	AuthService_SelectLoginMFAFactor_FullMethodName       = "/auth.v1.AuthService/SelectLoginMFAFactor"
 	AuthService_VerifyLoginMFA_FullMethodName             = "/auth.v1.AuthService/VerifyLoginMFA"
+	AuthService_ChangePassword_FullMethodName             = "/auth.v1.AuthService/ChangePassword"
 	AuthService_BeginWebAuthnRegistration_FullMethodName  = "/auth.v1.AuthService/BeginWebAuthnRegistration"
 	AuthService_FinishWebAuthnRegistration_FullMethodName = "/auth.v1.AuthService/FinishWebAuthnRegistration"
 	AuthService_BeginWebAuthnLogin_FullMethodName         = "/auth.v1.AuthService/BeginWebAuthnLogin"
@@ -47,6 +48,7 @@ type AuthServiceClient interface {
 	LoginPrimary(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginPrimaryResponse, error)
 	SelectLoginMFAFactor(ctx context.Context, in *SelectLoginMFAFactorRequest, opts ...grpc.CallOption) (*SelectLoginMFAFactorResponse, error)
 	VerifyLoginMFA(ctx context.Context, in *VerifyLoginMFARequest, opts ...grpc.CallOption) (*AuthTokens, error)
+	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*ChangePasswordResponse, error)
 	BeginWebAuthnRegistration(ctx context.Context, in *WebAuthnRegRequest, opts ...grpc.CallOption) (*WebAuthnRegResponse, error)
 	FinishWebAuthnRegistration(ctx context.Context, in *WebAuthnFinishRegRequest, opts ...grpc.CallOption) (*AuthTokens, error)
 	BeginWebAuthnLogin(ctx context.Context, in *WebAuthnLoginRequest, opts ...grpc.CallOption) (*WebAuthnLoginResponse, error)
@@ -143,6 +145,16 @@ func (c *authServiceClient) VerifyLoginMFA(ctx context.Context, in *VerifyLoginM
 	return out, nil
 }
 
+func (c *authServiceClient) ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*ChangePasswordResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ChangePasswordResponse)
+	err := c.cc.Invoke(ctx, AuthService_ChangePassword_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authServiceClient) BeginWebAuthnRegistration(ctx context.Context, in *WebAuthnRegRequest, opts ...grpc.CallOption) (*WebAuthnRegResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(WebAuthnRegResponse)
@@ -215,6 +227,7 @@ type AuthServiceServer interface {
 	LoginPrimary(context.Context, *LoginRequest) (*LoginPrimaryResponse, error)
 	SelectLoginMFAFactor(context.Context, *SelectLoginMFAFactorRequest) (*SelectLoginMFAFactorResponse, error)
 	VerifyLoginMFA(context.Context, *VerifyLoginMFARequest) (*AuthTokens, error)
+	ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error)
 	BeginWebAuthnRegistration(context.Context, *WebAuthnRegRequest) (*WebAuthnRegResponse, error)
 	FinishWebAuthnRegistration(context.Context, *WebAuthnFinishRegRequest) (*AuthTokens, error)
 	BeginWebAuthnLogin(context.Context, *WebAuthnLoginRequest) (*WebAuthnLoginResponse, error)
@@ -254,6 +267,9 @@ func (UnimplementedAuthServiceServer) SelectLoginMFAFactor(context.Context, *Sel
 }
 func (UnimplementedAuthServiceServer) VerifyLoginMFA(context.Context, *VerifyLoginMFARequest) (*AuthTokens, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method VerifyLoginMFA not implemented")
+}
+func (UnimplementedAuthServiceServer) ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ChangePassword not implemented")
 }
 func (UnimplementedAuthServiceServer) BeginWebAuthnRegistration(context.Context, *WebAuthnRegRequest) (*WebAuthnRegResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BeginWebAuthnRegistration not implemented")
@@ -438,6 +454,24 @@ func _AuthService_VerifyLoginMFA_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_ChangePassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ChangePasswordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ChangePassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_ChangePassword_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ChangePassword(ctx, req.(*ChangePasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AuthService_BeginWebAuthnRegistration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(WebAuthnRegRequest)
 	if err := dec(in); err != nil {
@@ -584,6 +618,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "VerifyLoginMFA",
 			Handler:    _AuthService_VerifyLoginMFA_Handler,
+		},
+		{
+			MethodName: "ChangePassword",
+			Handler:    _AuthService_ChangePassword_Handler,
 		},
 		{
 			MethodName: "BeginWebAuthnRegistration",

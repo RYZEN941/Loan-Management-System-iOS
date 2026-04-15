@@ -14,6 +14,13 @@ UPDATE users
 SET totp_secret = $2, has_totp = $3
 WHERE id = $1;
 
+-- name: ChangeUserPassword :exec
+UPDATE users
+SET password_hash = $2,
+    is_requiring_password_change = false
+WHERE id = $1
+  AND is_deleted = false;
+
 -- name: GetRefreshTokenByHashedToken :one
 SELECT * FROM refresh_tokens 
 WHERE hashed_token = $1 AND is_revoked = false AND expires_at > NOW() 

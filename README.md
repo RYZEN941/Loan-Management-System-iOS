@@ -181,8 +181,12 @@ Defined in `proto/auth/v1/auth.proto`:
 - Health/demo: `Hello`
 - Signup: `InitiateSignup`, `VerifySignupOTPs`
 - MFA setup/login: `SetupTOTP`, `VerifyTOTPSetup`, `LoginPrimary`, `SelectLoginMFAFactor`, `VerifyLoginMFA`
-- Session/token: `RefreshToken`, `Logout`
+- Password/session: `ChangePassword`, `RefreshToken`, `Logout`
 - WebAuthn: begin/finish registration and login methods exist, but finish flows are not fully implemented yet
+
+Defined in `proto/onboarding/v1/onboarding.proto`:
+
+- Borrower onboarding: `CompleteBorrowerOnboarding`
 
 ### Signup role enum
 
@@ -215,6 +219,38 @@ Current login requires explicit MFA factor selection:
 3. `VerifyLoginMFA`
 
 `VerifyLoginMFA` without `SelectLoginMFAFactor` returns a failed precondition error.
+
+### Change password RPC
+
+`ChangePassword` is an authenticated RPC (JWT required).
+
+- Any authenticated role can call it.
+- `current_password` is mandatory.
+- `new_password` must pass strength checks:
+  - minimum 8 chars
+  - at least one uppercase letter
+  - at least one lowercase letter
+  - at least one digit
+  - at least one special character
+- On successful update, `users.is_requiring_password_change` is set to `false`.
+
+Sample request payload:
+
+```json
+{
+  "current_password": "CurrentPassword123!",
+  "new_password": "NewSecurePassword123!"
+}
+```
+
+Sample `grpcurl` (replace token):
+
+```bash
+grpcurl -plaintext \
+  -H "authorization: Bearer <ACCESS_TOKEN>" \
+  -d '{"current_password":"CurrentPassword123!","new_password":"NewSecurePassword123!"}' \
+  localhost:8080 auth.v1.AuthService/ChangePassword
+```
 
 ## Troubleshooting
 

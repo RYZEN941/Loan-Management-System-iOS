@@ -16,6 +16,7 @@ service AuthService {
   rpc LoginPrimary(LoginRequest) returns (LoginPrimaryResponse);
   rpc SelectLoginMFAFactor(SelectLoginMFAFactorRequest) returns (SelectLoginMFAFactorResponse);
   rpc VerifyLoginMFA(VerifyLoginMFARequest) returns (AuthTokens);
+  rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
 
   rpc BeginWebAuthnRegistration(WebAuthnRegRequest) returns (WebAuthnRegResponse);
   rpc FinishWebAuthnRegistration(WebAuthnFinishRegRequest) returns (AuthTokens);
@@ -112,6 +113,15 @@ message VerifyLoginMFARequest {
     string phone_otp_code = 6;
   }
   string device_id = 4;
+}
+
+message ChangePasswordRequest {
+  string current_password = 1;
+  string new_password = 2;
+}
+
+message ChangePasswordResponse {
+  bool success = 1;
 }
 
 message WebAuthnRegRequest {

@@ -11,6 +11,24 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const changeUserPassword = `-- name: ChangeUserPassword :exec
+UPDATE users
+SET password_hash = $2,
+    is_requiring_password_change = false
+WHERE id = $1
+  AND is_deleted = false
+`
+
+type ChangeUserPasswordParams struct {
+	ID           pgtype.UUID `json:"id"`
+	PasswordHash string      `json:"password_hash"`
+}
+
+func (q *Queries) ChangeUserPassword(ctx context.Context, arg ChangeUserPasswordParams) error {
+	_, err := q.db.Exec(ctx, changeUserPassword, arg.ID, arg.PasswordHash)
+	return err
+}
+
 const createRefreshToken = `-- name: CreateRefreshToken :one
 INSERT INTO refresh_tokens (
     user_id, device_id, hashed_token, expires_at

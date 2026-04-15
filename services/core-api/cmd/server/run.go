@@ -62,6 +62,7 @@ func Run() error {
 	rbacPolicy := grpcinterceptors.RBACPolicy{
 		"/auth.v1.AuthService/SetupTOTP":                              {"borrower", "officer", "manager", "admin"},
 		"/auth.v1.AuthService/VerifyTOTPSetup":                        {"borrower", "officer", "manager", "admin"},
+		"/auth.v1.AuthService/ChangePassword":                         {"borrower", "officer", "manager", "admin"},
 		"/onboarding.v1.OnboardingService/CompleteBorrowerOnboarding": {"borrower"},
 		"/auth.v1.AuthService/Logout":                                 {"borrower", "officer", "manager", "admin"},
 		// Example future loan roles

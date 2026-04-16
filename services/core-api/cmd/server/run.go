@@ -51,6 +51,11 @@ func Run() error {
 	application := app.New(adminService, authService, onboardingService)
 
 	publicMethods := map[string]struct{}{
+		// BOOTSTRAP ADMIN ONLY:
+		// Keep this line uncommented only for initial setup environments where the first admin
+		// must be created without authentication. Comment this line in production to disable
+		// unauthenticated admin bootstrap account creation.
+		"/admin.v1.AdminService/CreateAdminAccount": {},
 		"/auth.v1.AuthService/Hello":                {},
 		"/auth.v1.AuthService/InitiateSignup":       {},
 		"/auth.v1.AuthService/VerifySignupOTPs":     {},

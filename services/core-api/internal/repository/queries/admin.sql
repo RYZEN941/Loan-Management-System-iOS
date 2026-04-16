@@ -19,6 +19,34 @@ INSERT INTO users (
     true
 ) RETURNING *;
 
+-- name: CreateAdminUser :one
+INSERT INTO users (
+    email,
+    phone,
+    password_hash,
+    role,
+    is_email_verified,
+    is_phone_verified,
+    is_active,
+    is_requiring_password_change
+) VALUES (
+    $1,
+    $2,
+    $3,
+    'admin',
+    true,
+    true,
+    true,
+    false
+) RETURNING *;
+
+-- name: CreateAdminProfile :one
+INSERT INTO admin_profiles (
+    user_id
+) VALUES (
+    $1
+) RETURNING *;
+
 -- name: CreateManagerProfile :one
 INSERT INTO manager_profiles (
     user_id,

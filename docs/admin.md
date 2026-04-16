@@ -6,6 +6,37 @@ This document explains admin-only APIs for employee and branch management.
 
 - gRPC service: `admin.v1.AdminService`
 
+## Bootstrap Admin (Setup Only)
+
+RPC: `CreateAdminAccount`
+
+This endpoint is intended only for bootstrapping the first admin user.
+
+- By default, the server currently exposes this method as public via `publicMethods` in `services/core-api/cmd/server/run.go`.
+- For production, comment out the `"/admin.v1.AdminService/CreateAdminAccount"` line in `publicMethods` to disable unauthenticated bootstrap.
+
+Request fields:
+
+- `email`
+- `phone_number`
+- `password`
+
+Response:
+
+- `success`
+- `user_id`
+- `profile_id`
+
+Example payload:
+
+```json
+{
+  "email": "admin@bank.com",
+  "phone_number": "+919900000000",
+  "password": "StrongAdmin123!"
+}
+```
+
 ## Authentication and Role
 
 - JWT required in metadata:

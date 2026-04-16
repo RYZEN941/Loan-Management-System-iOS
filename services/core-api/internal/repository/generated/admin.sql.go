@@ -11,6 +11,70 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createAdminProfile = `-- name: CreateAdminProfile :one
+INSERT INTO admin_profiles (
+    user_id
+) VALUES (
+    $1
+) RETURNING id, user_id, created_at
+`
+
+func (q *Queries) CreateAdminProfile(ctx context.Context, userID pgtype.UUID) (AdminProfile, error) {
+	row := q.db.QueryRow(ctx, createAdminProfile, userID)
+	var i AdminProfile
+	err := row.Scan(&i.ID, &i.UserID, &i.CreatedAt)
+	return i, err
+}
+
+const createAdminUser = `-- name: CreateAdminUser :one
+INSERT INTO users (
+    email,
+    phone,
+    password_hash,
+    role,
+    is_email_verified,
+    is_phone_verified,
+    is_active,
+    is_requiring_password_change
+) VALUES (
+    $1,
+    $2,
+    $3,
+    'admin',
+    true,
+    true,
+    true,
+    false
+) RETURNING id, email, phone, password_hash, role, is_email_verified, is_phone_verified, is_active, is_requiring_password_change, is_deleted, has_totp, totp_secret, created_at
+`
+
+type CreateAdminUserParams struct {
+	Email        string `json:"email"`
+	Phone        string `json:"phone"`
+	PasswordHash string `json:"password_hash"`
+}
+
+func (q *Queries) CreateAdminUser(ctx context.Context, arg CreateAdminUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, createAdminUser, arg.Email, arg.Phone, arg.PasswordHash)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Phone,
+		&i.PasswordHash,
+		&i.Role,
+		&i.IsEmailVerified,
+		&i.IsPhoneVerified,
+		&i.IsActive,
+		&i.IsRequiringPasswordChange,
+		&i.IsDeleted,
+		&i.HasTotp,
+		&i.TotpSecret,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const createBankBranch = `-- name: CreateBankBranch :one
 INSERT INTO bank_branches (
     name,

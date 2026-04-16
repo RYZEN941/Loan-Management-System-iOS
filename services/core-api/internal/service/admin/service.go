@@ -15,6 +15,7 @@ import (
 )
 
 type Service interface {
+	CreateAdminAccount(ctx context.Context, req *adminv1.CreateAdminAccountRequest) (*adminv1.CreateAdminAccountResponse, error)
 	CreateEmployeeAccount(ctx context.Context, req *adminv1.CreateEmployeeAccountRequest) (*adminv1.CreateEmployeeAccountResponse, error)
 	CreateBankBranch(ctx context.Context, req *adminv1.CreateBankBranchRequest) (*adminv1.CreateBankBranchResponse, error)
 	UpdateBankBranch(ctx context.Context, req *adminv1.UpdateBankBranchRequest) (*adminv1.UpdateBankBranchResponse, error)
@@ -28,6 +29,52 @@ type service struct {
 
 func NewService(queries generated.Querier) Service {
 	return &service{queries: queries}
+}
+
+// CreateAdminAccount is a bootstrap-only endpoint used to create the first admin user.
+// Keep this RPC non-public in production by commenting out the publicMethods entry in run.go.
+func (s *service) CreateAdminAccount(ctx context.Context, req *adminv1.CreateAdminAccountRequest) (*adminv1.CreateAdminAccountResponse, error) {
+	email := strings.TrimSpace(req.GetEmail())
+	phone := strings.TrimSpace(req.GetPhoneNumber())
+	password := req.GetPassword()
+	if email == "" || phone == "" || password == "" {
+		return nil, status.Error(codes.InvalidArgument, "email, phone_number, and password are required")
+	}
+
+	if err := validatePasswordStrength(password); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	hash, err := argon2.HashPassword(password, argon2.DefaultConfig())
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to hash password")
+	}
+
+	user, err := s.queries.CreateAdminUser(ctx, generated.CreateAdminUserParams{
+		Email:        email,
+		Phone:        phone,
+		PasswordHash: hash,
+	})
+	if err != nil {
+		if strings.Contains(err.Error(), "users_email_key") {
+			return nil, status.Error(codes.AlreadyExists, "email already registered")
+		}
+		if strings.Contains(err.Error(), "users_phone_key") {
+			return nil, status.Error(codes.AlreadyExists, "phone number already registered")
+		}
+		return nil, status.Error(codes.Internal, "failed to create admin user")
+	}
+
+	adminProfile, err := s.queries.CreateAdminProfile(ctx, user.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to create admin profile")
+	}
+
+	return &adminv1.CreateAdminAccountResponse{
+		Success:   true,
+		UserId:    user.ID.String(),
+		ProfileId: adminProfile.ID.String(),
+	}, nil
 }
 
 // CreateEmployeeAccount creates a manager/officer account and corresponding profile row.

@@ -5,11 +5,24 @@ package admin.v1;
 option go_package = "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/adminv1;adminv1";
 
 service AdminService {
+  rpc CreateAdminAccount(CreateAdminAccountRequest) returns (CreateAdminAccountResponse);
   rpc CreateEmployeeAccount(CreateEmployeeAccountRequest) returns (CreateEmployeeAccountResponse);
   rpc CreateBankBranch(CreateBankBranchRequest) returns (CreateBankBranchResponse);
   rpc UpdateBankBranch(UpdateBankBranchRequest) returns (UpdateBankBranchResponse);
   rpc UpdateEmployeeAccount(UpdateEmployeeAccountRequest) returns (UpdateEmployeeAccountResponse);
   rpc AssignEmployeeBranch(AssignEmployeeBranchRequest) returns (AssignEmployeeBranchResponse);
+}
+
+message CreateAdminAccountRequest {
+  string email = 1;
+  string phone_number = 2;
+  string password = 3;
+}
+
+message CreateAdminAccountResponse {
+  bool success = 1;
+  string user_id = 2;
+  string profile_id = 3;
 }
 
 enum EmployeeType {

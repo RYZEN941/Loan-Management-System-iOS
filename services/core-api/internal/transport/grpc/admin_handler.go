@@ -7,6 +7,7 @@ import (
 )
 
 type AdminService interface {
+	CreateAdminAccount(ctx context.Context, req *adminv1.CreateAdminAccountRequest) (*adminv1.CreateAdminAccountResponse, error)
 	CreateEmployeeAccount(ctx context.Context, req *adminv1.CreateEmployeeAccountRequest) (*adminv1.CreateEmployeeAccountResponse, error)
 	CreateBankBranch(ctx context.Context, req *adminv1.CreateBankBranchRequest) (*adminv1.CreateBankBranchResponse, error)
 	UpdateBankBranch(ctx context.Context, req *adminv1.UpdateBankBranchRequest) (*adminv1.UpdateBankBranchResponse, error)
@@ -21,6 +22,10 @@ type AdminHandler struct {
 
 func NewAdminHandler(adminService AdminService) *AdminHandler {
 	return &AdminHandler{adminService: adminService}
+}
+
+func (h *AdminHandler) CreateAdminAccount(ctx context.Context, req *adminv1.CreateAdminAccountRequest) (*adminv1.CreateAdminAccountResponse, error) {
+	return h.adminService.CreateAdminAccount(ctx, req)
 }
 
 func (h *AdminHandler) CreateEmployeeAccount(ctx context.Context, req *adminv1.CreateEmployeeAccountRequest) (*adminv1.CreateEmployeeAccountResponse, error) {

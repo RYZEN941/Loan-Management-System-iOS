@@ -19,6 +19,7 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	AdminService_CreateAdminAccount_FullMethodName    = "/admin.v1.AdminService/CreateAdminAccount"
 	AdminService_CreateEmployeeAccount_FullMethodName = "/admin.v1.AdminService/CreateEmployeeAccount"
 	AdminService_CreateBankBranch_FullMethodName      = "/admin.v1.AdminService/CreateBankBranch"
 	AdminService_UpdateBankBranch_FullMethodName      = "/admin.v1.AdminService/UpdateBankBranch"
@@ -30,6 +31,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AdminServiceClient interface {
+	CreateAdminAccount(ctx context.Context, in *CreateAdminAccountRequest, opts ...grpc.CallOption) (*CreateAdminAccountResponse, error)
 	CreateEmployeeAccount(ctx context.Context, in *CreateEmployeeAccountRequest, opts ...grpc.CallOption) (*CreateEmployeeAccountResponse, error)
 	CreateBankBranch(ctx context.Context, in *CreateBankBranchRequest, opts ...grpc.CallOption) (*CreateBankBranchResponse, error)
 	UpdateBankBranch(ctx context.Context, in *UpdateBankBranchRequest, opts ...grpc.CallOption) (*UpdateBankBranchResponse, error)
@@ -43,6 +45,16 @@ type adminServiceClient struct {
 
 func NewAdminServiceClient(cc grpc.ClientConnInterface) AdminServiceClient {
 	return &adminServiceClient{cc}
+}
+
+func (c *adminServiceClient) CreateAdminAccount(ctx context.Context, in *CreateAdminAccountRequest, opts ...grpc.CallOption) (*CreateAdminAccountResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateAdminAccountResponse)
+	err := c.cc.Invoke(ctx, AdminService_CreateAdminAccount_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *adminServiceClient) CreateEmployeeAccount(ctx context.Context, in *CreateEmployeeAccountRequest, opts ...grpc.CallOption) (*CreateEmployeeAccountResponse, error) {
@@ -99,6 +111,7 @@ func (c *adminServiceClient) AssignEmployeeBranch(ctx context.Context, in *Assig
 // All implementations must embed UnimplementedAdminServiceServer
 // for forward compatibility.
 type AdminServiceServer interface {
+	CreateAdminAccount(context.Context, *CreateAdminAccountRequest) (*CreateAdminAccountResponse, error)
 	CreateEmployeeAccount(context.Context, *CreateEmployeeAccountRequest) (*CreateEmployeeAccountResponse, error)
 	CreateBankBranch(context.Context, *CreateBankBranchRequest) (*CreateBankBranchResponse, error)
 	UpdateBankBranch(context.Context, *UpdateBankBranchRequest) (*UpdateBankBranchResponse, error)
@@ -114,6 +127,9 @@ type AdminServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedAdminServiceServer struct{}
 
+func (UnimplementedAdminServiceServer) CreateAdminAccount(context.Context, *CreateAdminAccountRequest) (*CreateAdminAccountResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateAdminAccount not implemented")
+}
 func (UnimplementedAdminServiceServer) CreateEmployeeAccount(context.Context, *CreateEmployeeAccountRequest) (*CreateEmployeeAccountResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateEmployeeAccount not implemented")
 }
@@ -148,6 +164,24 @@ func RegisterAdminServiceServer(s grpc.ServiceRegistrar, srv AdminServiceServer)
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&AdminService_ServiceDesc, srv)
+}
+
+func _AdminService_CreateAdminAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateAdminAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).CreateAdminAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_CreateAdminAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).CreateAdminAccount(ctx, req.(*CreateAdminAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _AdminService_CreateEmployeeAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -247,6 +281,10 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "admin.v1.AdminService",
 	HandlerType: (*AdminServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CreateAdminAccount",
+			Handler:    _AdminService_CreateAdminAccount_Handler,
+		},
 		{
 			MethodName: "CreateEmployeeAccount",
 			Handler:    _AdminService_CreateEmployeeAccount_Handler,

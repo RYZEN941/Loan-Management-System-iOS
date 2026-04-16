@@ -13,6 +13,8 @@ import (
 type Querier interface {
 	ActivateUser(ctx context.Context, id pgtype.UUID) error
 	ChangeUserPassword(ctx context.Context, arg ChangeUserPasswordParams) error
+	CreateAdminProfile(ctx context.Context, userID pgtype.UUID) (AdminProfile, error)
+	CreateAdminUser(ctx context.Context, arg CreateAdminUserParams) (User, error)
 	CreateBankBranch(ctx context.Context, arg CreateBankBranchParams) (BankBranch, error)
 	CreateBorrowerProfile(ctx context.Context, arg CreateBorrowerProfileParams) (BorrowerProfile, error)
 	CreateEmployeeUser(ctx context.Context, arg CreateEmployeeUserParams) (User, error)

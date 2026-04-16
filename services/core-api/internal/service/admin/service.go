@@ -19,6 +19,7 @@ type Service interface {
 	CreateBankBranch(ctx context.Context, req *adminv1.CreateBankBranchRequest) (*adminv1.CreateBankBranchResponse, error)
 	UpdateBankBranch(ctx context.Context, req *adminv1.UpdateBankBranchRequest) (*adminv1.UpdateBankBranchResponse, error)
 	UpdateEmployeeAccount(ctx context.Context, req *adminv1.UpdateEmployeeAccountRequest) (*adminv1.UpdateEmployeeAccountResponse, error)
+	AssignEmployeeBranch(ctx context.Context, req *adminv1.AssignEmployeeBranchRequest) (*adminv1.AssignEmployeeBranchResponse, error)
 }
 
 type service struct {
@@ -53,6 +54,20 @@ func (s *service) CreateEmployeeAccount(ctx context.Context, req *adminv1.Create
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
+	branchID := pgtype.UUID{Valid: false}
+	if rawBranchID := strings.TrimSpace(req.GetBranchId()); rawBranchID != "" {
+		parsedBranchID, err := uuid.Parse(rawBranchID)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, "branch_id must be a valid uuid")
+		}
+
+		if _, err := s.queries.GetBankBranchByID(ctx, pgtype.UUID{Bytes: parsedBranchID, Valid: true}); err != nil {
+			return nil, status.Error(codes.NotFound, "branch not found")
+		}
+
+		branchID = pgtype.UUID{Bytes: parsedBranchID, Valid: true}
+	}
+
 	hash, err := argon2.HashPassword(password, argon2.DefaultConfig())
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to hash password")
@@ -78,8 +93,9 @@ func (s *service) CreateEmployeeAccount(ctx context.Context, req *adminv1.Create
 	switch role {
 	case generated.UserRoleManager:
 		managerProfile, err := s.queries.CreateManagerProfile(ctx, generated.CreateManagerProfileParams{
-			UserID: user.ID,
-			Name:   name,
+			UserID:   user.ID,
+			Name:     name,
+			BranchID: branchID,
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, "failed to create manager profile")
@@ -87,8 +103,9 @@ func (s *service) CreateEmployeeAccount(ctx context.Context, req *adminv1.Create
 		profileID = managerProfile.ID.String()
 	case generated.UserRoleOfficer:
 		officerProfile, err := s.queries.CreateOfficerProfile(ctx, generated.CreateOfficerProfileParams{
-			UserID: user.ID,
-			Name:   name,
+			UserID:   user.ID,
+			Name:     name,
+			BranchID: branchID,
 		})
 		if err != nil {
 			return nil, status.Error(codes.Internal, "failed to create officer profile")
@@ -105,7 +122,7 @@ func (s *service) CreateEmployeeAccount(ctx context.Context, req *adminv1.Create
 	}, nil
 }
 
-// CreateBankBranch creates a branch and optionally links it to a manager profile id.
+// CreateBankBranch creates a branch.
 func (s *service) CreateBankBranch(ctx context.Context, req *adminv1.CreateBankBranchRequest) (*adminv1.CreateBankBranchResponse, error) {
 	if _, ok := interceptors.UserIDFromContext(ctx); !ok {
 		return nil, status.Error(codes.Unauthenticated, "missing user context")
@@ -118,26 +135,10 @@ func (s *service) CreateBankBranch(ctx context.Context, req *adminv1.CreateBankB
 		return nil, status.Error(codes.InvalidArgument, "name, region, and city are required")
 	}
 
-	managerID := pgtype.UUID{Valid: false}
-	if rawManagerID := strings.TrimSpace(req.GetManagerId()); rawManagerID != "" {
-		parsedManagerID, err := uuid.Parse(rawManagerID)
-		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, "manager_id must be a valid uuid")
-		}
-
-		_, err = s.queries.GetManagerProfileByID(ctx, pgtype.UUID{Bytes: parsedManagerID, Valid: true})
-		if err != nil {
-			return nil, status.Error(codes.NotFound, "manager profile not found")
-		}
-
-		managerID = pgtype.UUID{Bytes: parsedManagerID, Valid: true}
-	}
-
 	branch, err := s.queries.CreateBankBranch(ctx, generated.CreateBankBranchParams{
-		Name:      name,
-		Region:    region,
-		City:      city,
-		ManagerID: managerID,
+		Name:   name,
+		Region: region,
+		City:   city,
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to create bank branch")
@@ -149,7 +150,7 @@ func (s *service) CreateBankBranch(ctx context.Context, req *adminv1.CreateBankB
 	}, nil
 }
 
-// UpdateBankBranch updates branch metadata and manager assignment.
+// UpdateBankBranch updates branch metadata.
 func (s *service) UpdateBankBranch(ctx context.Context, req *adminv1.UpdateBankBranchRequest) (*adminv1.UpdateBankBranchResponse, error) {
 	if _, ok := interceptors.UserIDFromContext(ctx); !ok {
 		return nil, status.Error(codes.Unauthenticated, "missing user context")
@@ -183,29 +184,11 @@ func (s *service) UpdateBankBranch(ctx context.Context, req *adminv1.UpdateBankB
 		city = currentBranch.City
 	}
 
-	managerID := currentBranch.ManagerID
-	if req.GetClearManager() {
-		managerID = pgtype.UUID{Valid: false}
-	} else if rawManagerID := strings.TrimSpace(req.GetManagerId()); rawManagerID != "" {
-		parsedManagerID, err := uuid.Parse(rawManagerID)
-		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, "manager_id must be a valid uuid")
-		}
-
-		_, err = s.queries.GetManagerProfileByID(ctx, pgtype.UUID{Bytes: parsedManagerID, Valid: true})
-		if err != nil {
-			return nil, status.Error(codes.NotFound, "manager profile not found")
-		}
-
-		managerID = pgtype.UUID{Bytes: parsedManagerID, Valid: true}
-	}
-
 	err = s.queries.UpdateBankBranch(ctx, generated.UpdateBankBranchParams{
-		ID:        pgtype.UUID{Bytes: branchID, Valid: true},
-		Name:      name,
-		Region:    region,
-		City:      city,
-		ManagerID: managerID,
+		ID:     pgtype.UUID{Bytes: branchID, Valid: true},
+		Name:   name,
+		Region: region,
+		City:   city,
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to update branch")
@@ -284,6 +267,63 @@ func (s *service) UpdateEmployeeAccount(ctx context.Context, req *adminv1.Update
 	}
 
 	return &adminv1.UpdateEmployeeAccountResponse{Success: true}, nil
+}
+
+// AssignEmployeeBranch assigns or clears a branch on manager/officer profiles.
+func (s *service) AssignEmployeeBranch(ctx context.Context, req *adminv1.AssignEmployeeBranchRequest) (*adminv1.AssignEmployeeBranchResponse, error) {
+	if _, ok := interceptors.UserIDFromContext(ctx); !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing user context")
+	}
+
+	userIDStr := strings.TrimSpace(req.GetUserId())
+	if userIDStr == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "user_id must be a valid uuid")
+	}
+
+	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "employee user not found")
+	}
+
+	if user.Role != generated.UserRoleManager && user.Role != generated.UserRoleOfficer {
+		return nil, status.Error(codes.InvalidArgument, "user role must be manager or officer")
+	}
+
+	branchID := pgtype.UUID{Valid: false}
+	if !req.GetClearBranch() {
+		rawBranchID := strings.TrimSpace(req.GetBranchId())
+		if rawBranchID == "" {
+			return nil, status.Error(codes.InvalidArgument, "branch_id is required unless clear_branch is true")
+		}
+
+		parsedBranchID, err := uuid.Parse(rawBranchID)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, "branch_id must be a valid uuid")
+		}
+
+		if _, err := s.queries.GetBankBranchByID(ctx, pgtype.UUID{Bytes: parsedBranchID, Valid: true}); err != nil {
+			return nil, status.Error(codes.NotFound, "branch not found")
+		}
+
+		branchID = pgtype.UUID{Bytes: parsedBranchID, Valid: true}
+	}
+
+	if user.Role == generated.UserRoleManager {
+		if err := s.queries.UpdateManagerBranch(ctx, generated.UpdateManagerBranchParams{UserID: user.ID, BranchID: branchID}); err != nil {
+			return nil, status.Error(codes.Internal, "failed to update manager branch")
+		}
+	} else {
+		if err := s.queries.UpdateOfficerBranch(ctx, generated.UpdateOfficerBranchParams{UserID: user.ID, BranchID: branchID}); err != nil {
+			return nil, status.Error(codes.Internal, "failed to update officer branch")
+		}
+	}
+
+	return &adminv1.AssignEmployeeBranchResponse{Success: true}, nil
 }
 
 func mapEmployeeTypeToRole(employeeType adminv1.EmployeeType) (generated.UserRole, error) {

@@ -152,7 +152,6 @@ type BankBranch struct {
 	Name      string             `json:"name"`
 	Region    string             `json:"region"`
 	City      string             `json:"city"`
-	ManagerID pgtype.UUID        `json:"manager_id"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
@@ -177,6 +176,7 @@ type ManagerProfile struct {
 	ID        pgtype.UUID        `json:"id"`
 	UserID    pgtype.UUID        `json:"user_id"`
 	Name      string             `json:"name"`
+	BranchID  pgtype.UUID        `json:"branch_id"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
@@ -184,6 +184,7 @@ type OfficerProfile struct {
 	ID        pgtype.UUID        `json:"id"`
 	UserID    pgtype.UUID        `json:"user_id"`
 	Name      string             `json:"name"`
+	BranchID  pgtype.UUID        `json:"branch_id"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 

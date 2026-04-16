@@ -9,6 +9,7 @@ service AdminService {
   rpc CreateBankBranch(CreateBankBranchRequest) returns (CreateBankBranchResponse);
   rpc UpdateBankBranch(UpdateBankBranchRequest) returns (UpdateBankBranchResponse);
   rpc UpdateEmployeeAccount(UpdateEmployeeAccountRequest) returns (UpdateEmployeeAccountResponse);
+  rpc AssignEmployeeBranch(AssignEmployeeBranchRequest) returns (AssignEmployeeBranchResponse);
 }
 
 enum EmployeeType {
@@ -23,6 +24,7 @@ message CreateEmployeeAccountRequest {
   string phone_number = 3;
   string password = 4;
   EmployeeType employee_type = 5;
+  string branch_id = 6;
 }
 
 message CreateEmployeeAccountResponse {
@@ -35,7 +37,6 @@ message CreateBankBranchRequest {
   string name = 1;
   string region = 2;
   string city = 3;
-  string manager_id = 4;
 }
 
 message CreateBankBranchResponse {
@@ -48,8 +49,6 @@ message UpdateBankBranchRequest {
   string name = 2;
   string region = 3;
   string city = 4;
-  string manager_id = 5;
-  bool clear_manager = 6;
 }
 
 message UpdateBankBranchResponse {
@@ -64,5 +63,15 @@ message UpdateEmployeeAccountRequest {
 }
 
 message UpdateEmployeeAccountResponse {
+  bool success = 1;
+}
+
+message AssignEmployeeBranchRequest {
+  string user_id = 1;
+  string branch_id = 2;
+  bool clear_branch = 3;
+}
+
+message AssignEmployeeBranchResponse {
   bool success = 1;
 }

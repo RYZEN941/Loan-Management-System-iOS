@@ -11,6 +11,7 @@ type AdminService interface {
 	CreateBankBranch(ctx context.Context, req *adminv1.CreateBankBranchRequest) (*adminv1.CreateBankBranchResponse, error)
 	UpdateBankBranch(ctx context.Context, req *adminv1.UpdateBankBranchRequest) (*adminv1.UpdateBankBranchResponse, error)
 	UpdateEmployeeAccount(ctx context.Context, req *adminv1.UpdateEmployeeAccountRequest) (*adminv1.UpdateEmployeeAccountResponse, error)
+	AssignEmployeeBranch(ctx context.Context, req *adminv1.AssignEmployeeBranchRequest) (*adminv1.AssignEmployeeBranchResponse, error)
 }
 
 type AdminHandler struct {
@@ -36,4 +37,8 @@ func (h *AdminHandler) UpdateBankBranch(ctx context.Context, req *adminv1.Update
 
 func (h *AdminHandler) UpdateEmployeeAccount(ctx context.Context, req *adminv1.UpdateEmployeeAccountRequest) (*adminv1.UpdateEmployeeAccountResponse, error) {
 	return h.adminService.UpdateEmployeeAccount(ctx, req)
+}
+
+func (h *AdminHandler) AssignEmployeeBranch(ctx context.Context, req *adminv1.AssignEmployeeBranchRequest) (*adminv1.AssignEmployeeBranchResponse, error) {
+	return h.adminService.AssignEmployeeBranch(ctx, req)
 }

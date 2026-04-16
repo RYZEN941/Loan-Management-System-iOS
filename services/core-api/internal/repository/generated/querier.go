@@ -35,6 +35,8 @@ type Querier interface {
 	UpdateBankBranch(ctx context.Context, arg UpdateBankBranchParams) error
 	UpdateEmployeeEmailAndPhone(ctx context.Context, arg UpdateEmployeeEmailAndPhoneParams) error
 	UpdateEmployeePasswordByAdmin(ctx context.Context, arg UpdateEmployeePasswordByAdminParams) error
+	UpdateManagerBranch(ctx context.Context, arg UpdateManagerBranchParams) error
+	UpdateOfficerBranch(ctx context.Context, arg UpdateOfficerBranchParams) error
 	UpdateUserVerification(ctx context.Context, arg UpdateUserVerificationParams) error
 	UpdateWebAuthnCredentialSignCount(ctx context.Context, arg UpdateWebAuthnCredentialSignCountParams) error
 }

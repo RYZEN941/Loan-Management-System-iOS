@@ -32,11 +32,13 @@ Request fields:
 - `employee_type` (enum)
   - `EMPLOYEE_TYPE_MANAGER`
   - `EMPLOYEE_TYPE_OFFICER`
+- `branch_id` (optional UUID)
 
 Backend behavior:
 
 - employee user is created as active and verified.
 - `is_requiring_password_change` is set to `true`.
+- if `branch_id` is provided, it is attached to manager/officer profile.
 - duplicate email/phone returns `AlreadyExists`.
 
 Response:
@@ -53,7 +55,8 @@ Example payload:
   "email": "riya.manager@bank.com",
   "phone_number": "+919900001111",
   "password": "TempPass123!",
-  "employee_type": "EMPLOYEE_TYPE_MANAGER"
+  "employee_type": "EMPLOYEE_TYPE_MANAGER",
+  "branch_id": "527c4c88-7f16-42e7-bb38-5ed19a5d1517"
 }
 ```
 
@@ -63,7 +66,7 @@ RPC: `CreateBankBranch`
 
 Purpose:
 
-- Create a bank branch with optional manager assignment.
+- Create a bank branch.
 
 Request fields:
 
@@ -72,10 +75,12 @@ Request fields:
 - `city` (string)
 - `manager_id` (optional UUID, must be `manager_profiles.id`)
 
+`manager_id` is no longer part of branch creation.
+
 Behavior:
 
 - if `manager_id` is provided, backend validates it exists in `manager_profiles`.
-- if omitted, branch is created with nullable `manager_id`.
+- branch is created independently; managers/officers are linked by assigning `branch_id` on profile tables.
 
 Response:
 
@@ -110,7 +115,6 @@ RPC: `UpdateBankBranch`
 Purpose:
 
 - Update branch details (`name`, `region`, `city`).
-- Assign, change, or clear the branch manager.
 
 Request fields:
 
@@ -118,34 +122,25 @@ Request fields:
 - `name` (optional)
 - `region` (optional)
 - `city` (optional)
-- `manager_id` (optional UUID of `manager_profiles.id`)
-- `clear_manager` (optional bool; when true, unassigns manager)
 
 Behavior:
 
 - Empty optional fields keep existing values.
-- `clear_manager=true` removes manager assignment.
-- If `manager_id` is provided, backend validates manager profile exists.
+
+Manager assignment is handled through `AssignEmployeeBranch`.
 
 Response:
 
 - `success`
 
-Example payload (assign manager):
+Example payload:
 
 ```json
 {
   "branch_id": "527c4c88-7f16-42e7-bb38-5ed19a5d1517",
-  "manager_id": "a4d1f2e2-9d8a-4c31-b2db-d9e21d8f2d11"
-}
-```
-
-Example payload (clear manager):
-
-```json
-{
-  "branch_id": "527c4c88-7f16-42e7-bb38-5ed19a5d1517",
-  "clear_manager": true
+  "name": "MG Road Main Branch",
+  "region": "South Zone",
+  "city": "Bengaluru"
 }
 ```
 
@@ -185,6 +180,48 @@ Example payload:
   "email": "new.email@bank.com",
   "phone_number": "+919911112222",
   "new_password": "TempPass456!"
+}
+```
+
+## 5) Assign Employee Branch
+
+RPC: `AssignEmployeeBranch`
+
+Purpose:
+
+- Assign or unassign branch for manager/officer users.
+
+Request fields:
+
+- `user_id` (required UUID of manager/officer user)
+- `branch_id` (required unless clearing)
+- `clear_branch` (optional bool)
+
+Behavior:
+
+- if `clear_branch=true`, employee branch is set to null.
+- if assigning, backend validates `branch_id` exists.
+- applies to both manager and officer profiles.
+
+Response:
+
+- `success`
+
+Example payload (assign branch):
+
+```json
+{
+  "user_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+  "branch_id": "527c4c88-7f16-42e7-bb38-5ed19a5d1517"
+}
+```
+
+Example payload (clear branch):
+
+```json
+{
+  "user_id": "0f8fad5b-d9cb-469f-a165-70867728950e",
+  "clear_branch": true
 }
 ```
 

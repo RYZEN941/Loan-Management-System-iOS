@@ -15,37 +15,28 @@ const createBankBranch = `-- name: CreateBankBranch :one
 INSERT INTO bank_branches (
     name,
     region,
-    city,
-    manager_id
+    city
 ) VALUES (
     $1,
     $2,
-    $3,
-    $4
-) RETURNING id, name, region, city, manager_id, created_at
+    $3
+) RETURNING id, name, region, city, created_at
 `
 
 type CreateBankBranchParams struct {
-	Name      string      `json:"name"`
-	Region    string      `json:"region"`
-	City      string      `json:"city"`
-	ManagerID pgtype.UUID `json:"manager_id"`
+	Name   string `json:"name"`
+	Region string `json:"region"`
+	City   string `json:"city"`
 }
 
 func (q *Queries) CreateBankBranch(ctx context.Context, arg CreateBankBranchParams) (BankBranch, error) {
-	row := q.db.QueryRow(ctx, createBankBranch,
-		arg.Name,
-		arg.Region,
-		arg.City,
-		arg.ManagerID,
-	)
+	row := q.db.QueryRow(ctx, createBankBranch, arg.Name, arg.Region, arg.City)
 	var i BankBranch
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Region,
 		&i.City,
-		&i.ManagerID,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -109,25 +100,29 @@ func (q *Queries) CreateEmployeeUser(ctx context.Context, arg CreateEmployeeUser
 const createManagerProfile = `-- name: CreateManagerProfile :one
 INSERT INTO manager_profiles (
     user_id,
-    name
+    name,
+    branch_id
 ) VALUES (
     $1,
-    $2
-) RETURNING id, user_id, name, created_at
+    $2,
+    $3
+) RETURNING id, user_id, name, branch_id, created_at
 `
 
 type CreateManagerProfileParams struct {
-	UserID pgtype.UUID `json:"user_id"`
-	Name   string      `json:"name"`
+	UserID   pgtype.UUID `json:"user_id"`
+	Name     string      `json:"name"`
+	BranchID pgtype.UUID `json:"branch_id"`
 }
 
 func (q *Queries) CreateManagerProfile(ctx context.Context, arg CreateManagerProfileParams) (ManagerProfile, error) {
-	row := q.db.QueryRow(ctx, createManagerProfile, arg.UserID, arg.Name)
+	row := q.db.QueryRow(ctx, createManagerProfile, arg.UserID, arg.Name, arg.BranchID)
 	var i ManagerProfile
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
 		&i.Name,
+		&i.BranchID,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -136,32 +131,36 @@ func (q *Queries) CreateManagerProfile(ctx context.Context, arg CreateManagerPro
 const createOfficerProfile = `-- name: CreateOfficerProfile :one
 INSERT INTO officer_profiles (
     user_id,
-    name
+    name,
+    branch_id
 ) VALUES (
     $1,
-    $2
-) RETURNING id, user_id, name, created_at
+    $2,
+    $3
+) RETURNING id, user_id, name, branch_id, created_at
 `
 
 type CreateOfficerProfileParams struct {
-	UserID pgtype.UUID `json:"user_id"`
-	Name   string      `json:"name"`
+	UserID   pgtype.UUID `json:"user_id"`
+	Name     string      `json:"name"`
+	BranchID pgtype.UUID `json:"branch_id"`
 }
 
 func (q *Queries) CreateOfficerProfile(ctx context.Context, arg CreateOfficerProfileParams) (OfficerProfile, error) {
-	row := q.db.QueryRow(ctx, createOfficerProfile, arg.UserID, arg.Name)
+	row := q.db.QueryRow(ctx, createOfficerProfile, arg.UserID, arg.Name, arg.BranchID)
 	var i OfficerProfile
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
 		&i.Name,
+		&i.BranchID,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getBankBranchByID = `-- name: GetBankBranchByID :one
-SELECT id, name, region, city, manager_id, created_at FROM bank_branches WHERE id = $1 LIMIT 1
+SELECT id, name, region, city, created_at FROM bank_branches WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetBankBranchByID(ctx context.Context, id pgtype.UUID) (BankBranch, error) {
@@ -172,14 +171,13 @@ func (q *Queries) GetBankBranchByID(ctx context.Context, id pgtype.UUID) (BankBr
 		&i.Name,
 		&i.Region,
 		&i.City,
-		&i.ManagerID,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getManagerProfileByID = `-- name: GetManagerProfileByID :one
-SELECT id, user_id, name, created_at FROM manager_profiles WHERE id = $1 LIMIT 1
+SELECT id, user_id, name, branch_id, created_at FROM manager_profiles WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetManagerProfileByID(ctx context.Context, id pgtype.UUID) (ManagerProfile, error) {
@@ -189,6 +187,7 @@ func (q *Queries) GetManagerProfileByID(ctx context.Context, id pgtype.UUID) (Ma
 		&i.ID,
 		&i.UserID,
 		&i.Name,
+		&i.BranchID,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -198,17 +197,15 @@ const updateBankBranch = `-- name: UpdateBankBranch :exec
 UPDATE bank_branches
 SET name = $2,
     region = $3,
-    city = $4,
-    manager_id = $5
+    city = $4
 WHERE id = $1
 `
 
 type UpdateBankBranchParams struct {
-	ID        pgtype.UUID `json:"id"`
-	Name      string      `json:"name"`
-	Region    string      `json:"region"`
-	City      string      `json:"city"`
-	ManagerID pgtype.UUID `json:"manager_id"`
+	ID     pgtype.UUID `json:"id"`
+	Name   string      `json:"name"`
+	Region string      `json:"region"`
+	City   string      `json:"city"`
 }
 
 func (q *Queries) UpdateBankBranch(ctx context.Context, arg UpdateBankBranchParams) error {
@@ -217,7 +214,6 @@ func (q *Queries) UpdateBankBranch(ctx context.Context, arg UpdateBankBranchPara
 		arg.Name,
 		arg.Region,
 		arg.City,
-		arg.ManagerID,
 	)
 	return err
 }
@@ -256,5 +252,37 @@ type UpdateEmployeePasswordByAdminParams struct {
 
 func (q *Queries) UpdateEmployeePasswordByAdmin(ctx context.Context, arg UpdateEmployeePasswordByAdminParams) error {
 	_, err := q.db.Exec(ctx, updateEmployeePasswordByAdmin, arg.ID, arg.PasswordHash)
+	return err
+}
+
+const updateManagerBranch = `-- name: UpdateManagerBranch :exec
+UPDATE manager_profiles
+SET branch_id = $2
+WHERE user_id = $1
+`
+
+type UpdateManagerBranchParams struct {
+	UserID   pgtype.UUID `json:"user_id"`
+	BranchID pgtype.UUID `json:"branch_id"`
+}
+
+func (q *Queries) UpdateManagerBranch(ctx context.Context, arg UpdateManagerBranchParams) error {
+	_, err := q.db.Exec(ctx, updateManagerBranch, arg.UserID, arg.BranchID)
+	return err
+}
+
+const updateOfficerBranch = `-- name: UpdateOfficerBranch :exec
+UPDATE officer_profiles
+SET branch_id = $2
+WHERE user_id = $1
+`
+
+type UpdateOfficerBranchParams struct {
+	UserID   pgtype.UUID `json:"user_id"`
+	BranchID pgtype.UUID `json:"branch_id"`
+}
+
+func (q *Queries) UpdateOfficerBranch(ctx context.Context, arg UpdateOfficerBranchParams) error {
+	_, err := q.db.Exec(ctx, updateOfficerBranch, arg.UserID, arg.BranchID)
 	return err
 }

@@ -132,9 +132,13 @@ func (s *service) InitiateSignup(ctx context.Context, req *authv1.SignupRequest)
 		}
 		return nil, status.Error(codes.Internal, "failed to create user")
 	}
+	// Uncomment this after otp sender integrations
+	//emailOTP := generateOTP()
+	//phoneOTP := generateOTP()
 
-	emailOTP := generateOTP()
-	phoneOTP := generateOTP()
+	//Comment this after otp sender integrations
+	emailOTP := "123456"
+	phoneOTP := "123456"
 
 	regID := uuid.New().String()
 	regData, _ := json.Marshal(map[string]string{
@@ -337,7 +341,11 @@ func (s *service) SelectLoginMFAFactor(ctx context.Context, req *authv1.SelectLo
 	case mfaFactorTOTP:
 		// No out-of-band challenge required.
 	case mfaFactorEmailOTP, mfaFactorPhoneOTP:
-		otp := generateOTP()
+		// Uncomment this on sender integration
+		//otp := generateOTP()
+
+		// Comment this on sender integration
+		otp := "123456"
 		challenge := mfaOTPChallenge{
 			Factor:    factor,
 			OTPHash:   hashOTP(otp),

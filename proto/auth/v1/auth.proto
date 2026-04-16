@@ -69,9 +69,7 @@ message VerifyOTPsResponse {
   bool verified = 1;
 }
 
-message SetupTOTPRequest {
-  string registration_id = 1;
-}
+message SetupTOTPRequest {}
 
 message SetupTOTPResponse {
   string secret = 1;
@@ -79,9 +77,8 @@ message SetupTOTPResponse {
 }
 
 message VerifyTOTPSetupRequest {
-  string registration_id = 1;
-  string code = 2;
-  string device_id = 3;
+  string code = 1;
+  string device_id = 2;
 }
 
 message LoginRequest {

@@ -9,6 +9,10 @@ type Config struct {
 	PostgresDSN string
 	RedisAddr   string
 	RedisPass   string
+
+	WebAuthnRPID          string
+	WebAuthnRPOrigins     string
+	WebAuthnRPDisplayName string
 }
 
 func Load() Config {
@@ -18,6 +22,10 @@ func Load() Config {
 		PostgresDSN: envOrDefault("POSTGRES_DSN", "postgres://lms:lms@localhost:5432/lms?sslmode=disable"),
 		RedisAddr:   envOrDefault("REDIS_ADDR", "localhost:6379"),
 		RedisPass:   os.Getenv("REDIS_PASSWORD"),
+
+		WebAuthnRPID:          envOrDefault("WEBAUTHN_RP_ID", "localhost"),
+		WebAuthnRPOrigins:     envOrDefault("WEBAUTHN_RP_ORIGINS", "http://localhost:3000"),
+		WebAuthnRPDisplayName: envOrDefault("WEBAUTHN_RP_DISPLAY_NAME", "LMS Monorepo"),
 	}
 }
 

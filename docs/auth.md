@@ -137,6 +137,10 @@ Use this for enrolling authenticator app MFA after user is logged in.
 
 Auth: required.
 
+Request:
+
+- empty message (`SetupTOTPRequest {}`)
+
 Response:
 
 - `secret`
@@ -223,9 +227,21 @@ Frontend action:
 
 ## 7) WebAuthn (Current Status)
 
-- Begin methods are present.
-- Finish methods are not fully implemented yet in backend business logic.
-- Treat WebAuthn as in-progress for production UI.
+- Begin and finish registration/login methods are implemented.
+- Expected client payload format:
+  - `WebAuthnFinishRegRequest.credential`: raw JSON bytes of browser/native WebAuthn attestation response.
+  - `WebAuthnFinishLoginRequest.assertion`: raw JSON bytes of WebAuthn assertion response.
+- Backend stores WebAuthn session state in Redis with short TTL and persists credentials/sign counter in Postgres.
+
+### WebAuthn Setup Requirements
+
+Backend WebAuthn behavior depends on environment values:
+
+- `WEBAUTHN_RP_ID`
+- `WEBAUTHN_RP_ORIGINS` (comma-separated)
+- `WEBAUTHN_RP_DISPLAY_NAME`
+
+These must match your deployed domain/origin, otherwise passkey ceremonies will fail validation.
 
 ## Example Sequence (Borrower First Login)
 

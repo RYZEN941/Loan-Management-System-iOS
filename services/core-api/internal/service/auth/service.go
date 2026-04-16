@@ -80,12 +80,28 @@ type mfaOTPChallenge struct {
 	ExpiresAt int64  `json:"expires_at"`
 }
 
+type webauthnLoginSession struct {
+	UserID  string               `json:"user_id"`
+	Session webauthn.SessionData `json:"session"`
+}
+
 // NewService constructs the auth service with repository, redis, and runtime config dependencies.
 func NewService(queries generated.Querier, redis redis.Cmdable, cfg config.Config) Service {
+	origins := []string{}
+	for _, origin := range strings.Split(cfg.WebAuthnRPOrigins, ",") {
+		trimmed := strings.TrimSpace(origin)
+		if trimmed != "" {
+			origins = append(origins, trimmed)
+		}
+	}
+	if len(origins) == 0 {
+		origins = []string{"http://localhost:3000"}
+	}
+
 	w, _ := webauthn.New(&webauthn.Config{
-		RPDisplayName: "LMS Monorepo",
-		RPID:          "localhost",
-		RPOrigins:     []string{"http://localhost:3000"}, // Placeholder for frontend
+		RPDisplayName: cfg.WebAuthnRPDisplayName,
+		RPID:          cfg.WebAuthnRPID,
+		RPOrigins:     origins,
 	})
 
 	return &service{
@@ -204,6 +220,7 @@ func (s *service) VerifySignupOTPs(ctx context.Context, req *authv1.VerifyOTPsRe
 
 // SetupTOTP creates a TOTP secret for the authenticated user.
 func (s *service) SetupTOTP(ctx context.Context, req *authv1.SetupTOTPRequest) (*authv1.SetupTOTPResponse, error) {
+	_ = req
 	userID, ok := interceptors.UserIDFromContext(ctx)
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "user not found in context")
@@ -673,6 +690,7 @@ func (s *service) getWebauthnUser(ctx context.Context, user generated.User) (*we
 }
 
 func (s *service) BeginWebAuthnRegistration(ctx context.Context, req *authv1.WebAuthnRegRequest) (*authv1.WebAuthnRegResponse, error) {
+	_ = req
 	userID, ok := interceptors.UserIDFromContext(ctx)
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "missing user context")
@@ -694,10 +712,18 @@ func (s *service) BeginWebAuthnRegistration(ctx context.Context, req *authv1.Web
 		return nil, status.Error(codes.Internal, "webauthn begin failed")
 	}
 
-	sessJSON, _ := json.Marshal(session)
-	s.redis.Set(ctx, fmt.Sprintf("webauthn_reg:%s", userIDStr), sessJSON, 5*time.Minute)
+	sessJSON, err := json.Marshal(session)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to serialize registration session")
+	}
+	if err := s.redis.Set(ctx, fmt.Sprintf("webauthn_reg:%s", userIDStr), sessJSON, 5*time.Minute).Err(); err != nil {
+		return nil, status.Error(codes.Internal, "failed to persist registration session")
+	}
 
-	optionsJSON, _ := json.Marshal(options.Response)
+	optionsJSON, err := json.Marshal(options.Response)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to serialize registration options")
+	}
 	return &authv1.WebAuthnRegResponse{
 		PublicKeyCredentialCreationOptions: optionsJSON,
 	}, nil
@@ -710,11 +736,14 @@ func (s *service) FinishWebAuthnRegistration(ctx context.Context, req *authv1.We
 	}
 	userIDStr := userID.String()
 
+	if strings.TrimSpace(req.GetUserId()) != "" && req.GetUserId() != userIDStr {
+		return nil, status.Error(codes.PermissionDenied, "user mismatch")
+	}
+
 	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "user fetch failed")
 	}
-	_ = user
 
 	sessVal, err := s.redis.Get(ctx, fmt.Sprintf("webauthn_reg:%s", userIDStr)).Result()
 	if err != nil {
@@ -726,10 +755,37 @@ func (s *service) FinishWebAuthnRegistration(ctx context.Context, req *authv1.We
 		return nil, status.Error(codes.Internal, "invalid registration session")
 	}
 
-	parsedCredential, err := protocol.ParseCredentialCreationResponse(nil) // Placeholder: Need binary parsing
-	_ = parsedCredential
+	parsedCredential, err := protocol.ParseCredentialCreationResponseBytes(req.GetCredential())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid credential payload")
+	}
 
-	return nil, status.Error(codes.Unimplemented, "binary credential parsing requires frontend integration helper")
+	waUser, err := s.getWebauthnUser(ctx, user)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to build webauthn user")
+	}
+
+	credential, err := s.webauthn.CreateCredential(waUser, session, parsedCredential)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "webauthn registration validation failed")
+	}
+
+	_, err = s.queries.CreateWebAuthnCredential(ctx, generated.CreateWebAuthnCredentialParams{
+		UserID:       pgtype.UUID{Bytes: userID, Valid: true},
+		CredentialID: credential.ID,
+		PublicKey:    credential.PublicKey,
+		SignCount:    pgtype.Int4{Int32: int32(credential.Authenticator.SignCount), Valid: true},
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to store passkey credential")
+	}
+
+	if err := s.redis.Del(ctx, fmt.Sprintf("webauthn_reg:%s", userIDStr)).Err(); err != nil {
+		return nil, status.Error(codes.Internal, "failed to clear registration session")
+	}
+
+	return s.mintTokens(ctx, userID, string(user.Role), req.GetDeviceId())
+
 }
 
 func (s *service) BeginWebAuthnLogin(ctx context.Context, req *authv1.WebAuthnLoginRequest) (*authv1.WebAuthnLoginResponse, error) {
@@ -753,10 +809,22 @@ func (s *service) BeginWebAuthnLogin(ctx context.Context, req *authv1.WebAuthnLo
 	}
 
 	mfaSessionID := uuid.New().String()
-	sessJSON, _ := json.Marshal(session)
-	s.redis.Set(ctx, fmt.Sprintf("webauthn_login:%s", mfaSessionID), sessJSON, 5*time.Minute)
+	loginSession := webauthnLoginSession{
+		UserID:  user.ID.String(),
+		Session: *session,
+	}
+	sessJSON, err := json.Marshal(loginSession)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to serialize login session")
+	}
+	if err := s.redis.Set(ctx, fmt.Sprintf("webauthn_login:%s", mfaSessionID), sessJSON, 5*time.Minute).Err(); err != nil {
+		return nil, status.Error(codes.Internal, "failed to persist login session")
+	}
 
-	optionsJSON, _ := json.Marshal(options.Response)
+	optionsJSON, err := json.Marshal(options.Response)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to serialize login options")
+	}
 	return &authv1.WebAuthnLoginResponse{
 		MfaSessionId:                      mfaSessionID,
 		PublicKeyCredentialRequestOptions: optionsJSON,
@@ -764,7 +832,54 @@ func (s *service) BeginWebAuthnLogin(ctx context.Context, req *authv1.WebAuthnLo
 }
 
 func (s *service) FinishWebAuthnLogin(ctx context.Context, req *authv1.WebAuthnFinishLoginRequest) (*authv1.AuthTokens, error) {
-	return nil, status.Error(codes.Unimplemented, "finish webauthn login not yet implemented")
+	sessVal, err := s.redis.Get(ctx, fmt.Sprintf("webauthn_login:%s", req.GetMfaSessionId())).Result()
+	if err != nil {
+		return nil, status.Error(codes.FailedPrecondition, "login session expired")
+	}
+
+	var loginSession webauthnLoginSession
+	if err := json.Unmarshal([]byte(sessVal), &loginSession); err != nil {
+		return nil, status.Error(codes.Internal, "invalid login session")
+	}
+
+	userID, err := uuid.Parse(loginSession.UserID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "invalid login user id")
+	}
+
+	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "user not found")
+	}
+
+	waUser, err := s.getWebauthnUser(ctx, user)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to build webauthn user")
+	}
+
+	parsedAssertion, err := protocol.ParseCredentialRequestResponseBytes(req.GetAssertion())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid assertion payload")
+	}
+
+	credential, err := s.webauthn.ValidateLogin(waUser, loginSession.Session, parsedAssertion)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "webauthn login validation failed")
+	}
+
+	err = s.queries.UpdateWebAuthnCredentialSignCount(ctx, generated.UpdateWebAuthnCredentialSignCountParams{
+		CredentialID: credential.ID,
+		SignCount:    pgtype.Int4{Int32: int32(credential.Authenticator.SignCount), Valid: true},
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to update credential sign count")
+	}
+
+	if err := s.redis.Del(ctx, fmt.Sprintf("webauthn_login:%s", req.GetMfaSessionId())).Err(); err != nil {
+		return nil, status.Error(codes.Internal, "failed to clear login session")
+	}
+
+	return s.mintTokens(ctx, userID, string(user.Role), req.GetDeviceId())
 }
 
 func (s *service) mintTokens(ctx context.Context, userID uuid.UUID, role, deviceID string) (*authv1.AuthTokens, error) {

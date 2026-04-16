@@ -8,6 +8,9 @@ This folder contains frontend-focused integration docs for the gRPC backend.
 - `docs/auth.md` - all auth APIs with exact call order for signup, login, MFA, password change, refresh, and logout.
 - `docs/onboarding.md` - borrower onboarding API and when to call it in the app lifecycle.
 - `docs/admin.md` - admin-only APIs for creating employee accounts and bank branches.
+- `docs/migrations.md` - how to run `golang-migrate` locally and in deployment.
+
+For Dokploy users, `docs/migrations.md` includes the exact pre-deploy migration command.
 
 ## Current Service Endpoints
 

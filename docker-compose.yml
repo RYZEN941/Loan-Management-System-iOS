@@ -69,6 +69,11 @@ services:
       WEBAUTHN_RP_DISPLAY_NAME: "LMS Monorepo"
       SANDBOX_API_KEY: "key_test_c4f9d814431e40b1b32de2ec1d7f4ace"
       SANDBOX_API_SECRET: "secret_test_2df45cf1a82b42d1b2e1266e4176c7ef"
+      R2_ACCOUNT_ID: "579ae5487cfcd4476a6663ccda20b80f"
+      R2_ACCESS_KEY_ID: "9da1d7eebad4688d39cb8b92d5c2f692"
+      R2_SECRET_ACCESS_KEY: "ca0daffd428bb437e51cead338261ca3a9cac29bc7205a09af3f0bf932df973c"
+      R2_BUCKET_NAME: "lms"
+      R2_PUBLIC_BASE_URL: "https://lmscdn.chirag.codes"
     ports:
       - "18080:8080"
     depends_on:

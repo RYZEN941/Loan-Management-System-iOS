@@ -64,8 +64,8 @@ services:
       POSTGRES_DSN: "postgres://lms:lms@postgres:5432/lms?sslmode=disable"
       REDIS_ADDR: "redis:6379"
       REDIS_PASSWORD: ""
-      WEBAUTHN_RP_ID: "localhost"
-      WEBAUTHN_RP_ORIGINS: "http://localhost:3000"
+      WEBAUTHN_RP_ID: "chirag.codes"
+      WEBAUTHN_RP_ORIGINS: "https://lmsapi.chirag.codes"
       WEBAUTHN_RP_DISPLAY_NAME: "LMS Monorepo"
     ports:
       - "18080:8080"

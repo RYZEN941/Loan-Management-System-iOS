@@ -33,6 +33,8 @@ This document explains `kyc.v1.KycService` APIs and the required call order for 
 
 All KYC RPCs are borrower-only and require auth metadata.
 
+Verification is marked successful only when provider status is valid and profile details match borrower profile data (name, DOB, and gender for Aadhaar; name/DOB for PAN).
+
 ## gRPC Metadata
 
 - `authorization: <access_token>`

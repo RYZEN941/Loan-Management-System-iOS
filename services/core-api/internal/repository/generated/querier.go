@@ -23,6 +23,7 @@ type Querier interface {
 	CreateDstUser(ctx context.Context, arg CreateDstUserParams) (User, error)
 	CreateEmployeeUser(ctx context.Context, arg CreateEmployeeUserParams) (User, error)
 	CreateManagerProfile(ctx context.Context, arg CreateManagerProfileParams) (ManagerProfile, error)
+	CreateMediaFile(ctx context.Context, arg CreateMediaFileParams) (MediaFile, error)
 	CreateOfficerProfile(ctx context.Context, arg CreateOfficerProfileParams) (OfficerProfile, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
@@ -40,6 +41,7 @@ type Querier interface {
 	GetWebAuthnCredentialsByUserID(ctx context.Context, userID pgtype.UUID) ([]WebauthnCredential, error)
 	ListBorrowerAadhaarKycHistory(ctx context.Context, arg ListBorrowerAadhaarKycHistoryParams) ([]BorrowerAadhaarKycHistory, error)
 	ListBorrowerPanKycHistory(ctx context.Context, arg ListBorrowerPanKycHistoryParams) ([]BorrowerPanKycHistory, error)
+	ListMediaFilesByUser(ctx context.Context, arg ListMediaFilesByUserParams) ([]MediaFile, error)
 	MarkBorrowerAadhaarVerified(ctx context.Context, arg MarkBorrowerAadhaarVerifiedParams) error
 	MarkBorrowerPanVerified(ctx context.Context, arg MarkBorrowerPanVerifiedParams) error
 	RevokeRefreshToken(ctx context.Context, hashedToken string) error

@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/integrations/sandbox"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/repository/generated"
@@ -168,9 +169,21 @@ func (s *service) VerifyAadhaarKycOtp(ctx context.Context, req *kycv1.VerifyAadh
 	}
 
 	isValid := strings.EqualFold(strings.TrimSpace(apiResp.Data.Status), "VALID")
+	mismatchFailure := false
+	if isValid && !aadhaarMatchesProfile(profile, apiResp.Data.Name, apiResp.Data.DateOfBirth, apiResp.Data.Gender) {
+		isValid = false
+		mismatchFailure = true
+	}
 	statusValue := "FAILED"
 	failureCode := textOrNull("AADHAAR_VERIFY_FAILED")
 	failureReason := textOrNull(apiResp.Data.Message)
+	if mismatchFailure {
+		failureCode = textOrNull("PROFILE_MISMATCH")
+		failureReason = textOrNull("profile details do not match with aadhaar data")
+	}
+	if !isValid && strings.TrimSpace(failureReason.String) == "" {
+		failureReason = textOrNull("profile details do not match with aadhaar data")
+	}
 	if isValid {
 		statusValue = "SUCCESS"
 		failureCode = pgtype.Text{}
@@ -263,11 +276,23 @@ func (s *service) VerifyPanKyc(ctx context.Context, req *kycv1.VerifyPanKycReque
 	}
 
 	isValid := strings.EqualFold(strings.TrimSpace(apiResp.Data.Status), "valid")
+	mismatchFailure := false
+	if isValid && !panMatchesProfile(profile, apiResp.Data.NameAsPerPANMatch, apiResp.Data.DateOfBirthMatch, name, dob) {
+		isValid = false
+		mismatchFailure = true
+	}
 	statusValue := "FAILED"
 	failureCode := textOrNull("PAN_VERIFY_FAILED")
 	failureReason := textOrNull(apiResp.Data.Remarks)
 	if strings.TrimSpace(failureReason.String) == "" {
 		failureReason = textOrNull(apiResp.Data.Status)
+	}
+	if mismatchFailure {
+		failureCode = textOrNull("PROFILE_MISMATCH")
+		failureReason = textOrNull("profile details do not match with pan data")
+	}
+	if !isValid && strings.TrimSpace(failureReason.String) == "" {
+		failureReason = textOrNull("profile details do not match with pan data")
 	}
 	if isValid {
 		statusValue = "SUCCESS"
@@ -576,4 +601,90 @@ func timeToString(t pgtype.Timestamptz) string {
 		return ""
 	}
 	return t.Time.UTC().Format(time.RFC3339)
+}
+
+func aadhaarMatchesProfile(profile generated.BorrowerProfile, providerName, providerDOB, providerGender string) bool {
+	if !nameMatchesProfile(profile, providerName) {
+		return false
+	}
+	if !dobMatchesProfile(profile, providerDOB) {
+		return false
+	}
+	return genderMatchesProfile(profile, providerGender)
+}
+
+func panMatchesProfile(profile generated.BorrowerProfile, nameAsPerPanMatch bool, dateOfBirthMatch bool, requestName string, requestDOB string) bool {
+	if !nameAsPerPanMatch || !dateOfBirthMatch {
+		return false
+	}
+	if !nameMatchesProfile(profile, requestName) {
+		return false
+	}
+	return dobMatchesProfile(profile, requestDOB)
+}
+
+func nameMatchesProfile(profile generated.BorrowerProfile, incomingName string) bool {
+	profileName := normalizeName(strings.TrimSpace(profile.FirstName) + " " + strings.TrimSpace(profile.LastName))
+	providedName := normalizeName(incomingName)
+	return profileName != "" && providedName != "" && profileName == providedName
+}
+
+func dobMatchesProfile(profile generated.BorrowerProfile, incomingDOB string) bool {
+	incomingDate, ok := parseDateFlexible(incomingDOB)
+	if !ok || !profile.DateOfBirth.Valid {
+		return false
+	}
+	profileDate := profile.DateOfBirth.Time.UTC().Format("2006-01-02")
+	return incomingDate.Format("2006-01-02") == profileDate
+}
+
+func genderMatchesProfile(profile generated.BorrowerProfile, incomingGender string) bool {
+	mapped := mapProviderGender(incomingGender)
+	if mapped == "" {
+		return false
+	}
+	return string(profile.Gender) == mapped
+}
+
+func parseDateFlexible(v string) (time.Time, bool) {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return time.Time{}, false
+	}
+	layouts := []string{"2006-01-02", "02-01-2006", "02/01/2006"}
+	for _, layout := range layouts {
+		t, err := time.Parse(layout, v)
+		if err == nil {
+			return t.UTC(), true
+		}
+	}
+	return time.Time{}, false
+}
+
+func normalizeName(v string) string {
+	v = strings.TrimSpace(strings.ToLower(v))
+	if v == "" {
+		return ""
+	}
+	b := strings.Builder{}
+	for _, r := range v {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) || unicode.IsSpace(r) {
+			b.WriteRune(r)
+		}
+	}
+	return strings.Join(strings.Fields(b.String()), " ")
+}
+
+func mapProviderGender(v string) string {
+	v = strings.TrimSpace(strings.ToUpper(v))
+	switch v {
+	case "M", "MALE":
+		return "MALE"
+	case "F", "FEMALE":
+		return "FEMALE"
+	case "O", "OTHER":
+		return "OTHER"
+	default:
+		return ""
+	}
 }

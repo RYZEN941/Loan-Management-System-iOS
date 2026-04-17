@@ -5,19 +5,23 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"time"
 
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/app"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/config"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/db"
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/integrations/r2"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/integrations/sandbox"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/repository/generated"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/admin"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/auth"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/kyc"
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/media"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/onboarding"
 	adminv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/adminv1"
 	authv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/authv1"
 	kycv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/kycv1"
+	mediav1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/mediav1"
 	onboardingv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/onboardingv1"
 	grpcinterceptors "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/interceptors"
 	"google.golang.org/grpc"
@@ -52,8 +56,13 @@ func Run() error {
 	authService := auth.NewService(queries, redisClient, cfg)
 	sandboxKYCClient := sandbox.NewKYCClient(cfg.SandboxBaseURL, cfg.SandboxAPIKey, cfg.SandboxSecret)
 	kycService := kyc.NewService(pgPool, queries, sandboxKYCClient)
+	r2Client, err := r2.NewClient(context.Background(), cfg.R2AccountID, cfg.R2AccessKeyID, cfg.R2SecretAccessKey, cfg.R2BucketName, cfg.R2PublicBaseURL)
+	if err != nil {
+		return fmt.Errorf("failed to initialize r2 client: %w", err)
+	}
+	mediaService := media.NewService(queries, r2Client, time.Duration(cfg.R2UploadURLTTLSecs)*time.Second, cfg.MediaMaxUploadSize)
 	onboardingService := onboarding.NewService(queries)
-	application := app.New(adminService, authService, kycService, onboardingService)
+	application := app.New(adminService, authService, kycService, mediaService, onboardingService)
 
 	publicMethods := map[string]struct{}{
 		// BOOTSTRAP ADMIN ONLY:
@@ -89,6 +98,9 @@ func Run() error {
 		"/kyc.v1.KycService/VerifyPanKyc":                             {"borrower"},
 		"/kyc.v1.KycService/GetBorrowerKycStatus":                     {"borrower"},
 		"/kyc.v1.KycService/ListBorrowerKycHistory":                   {"borrower"},
+		"/media.v1.MediaService/InitiateMediaUpload":                  {"borrower"},
+		"/media.v1.MediaService/CompleteMediaUpload":                  {"borrower"},
+		"/media.v1.MediaService/ListMedia":                            {"borrower"},
 		"/onboarding.v1.OnboardingService/CompleteBorrowerOnboarding": {"borrower"},
 		"/auth.v1.AuthService/Logout":                                 {"borrower", "officer", "manager", "admin", "dst"},
 		// Example future loan roles
@@ -114,6 +126,7 @@ func Run() error {
 	adminv1.RegisterAdminServiceServer(grpcServer, application.AdminHandler)
 	authv1.RegisterAuthServiceServer(grpcServer, application.AuthHandler)
 	kycv1.RegisterKycServiceServer(grpcServer, application.KycHandler)
+	mediav1.RegisterMediaServiceServer(grpcServer, application.MediaHandler)
 	onboardingv1.RegisterOnboardingServiceServer(grpcServer, application.OnboardingHandler)
 	reflection.Register(grpcServer)
 

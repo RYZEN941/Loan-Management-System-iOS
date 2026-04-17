@@ -344,6 +344,24 @@ type ManagerProfile struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type MediaFile struct {
+	ID               pgtype.UUID        `json:"id"`
+	UserID           pgtype.UUID        `json:"user_id"`
+	OriginalFileName string             `json:"original_file_name"`
+	ContentType      string             `json:"content_type"`
+	SizeBytes        int64              `json:"size_bytes"`
+	StorageProvider  string             `json:"storage_provider"`
+	BucketName       string             `json:"bucket_name"`
+	ObjectKey        string             `json:"object_key"`
+	Etag             pgtype.Text        `json:"etag"`
+	FileUrl          string             `json:"file_url"`
+	Note             pgtype.Text        `json:"note"`
+	UploadedAt       pgtype.Timestamptz `json:"uploaded_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	IsDeleted        bool               `json:"is_deleted"`
+}
+
 type OfficerProfile struct {
 	ID        pgtype.UUID        `json:"id"`
 	UserID    pgtype.UUID        `json:"user_id"`

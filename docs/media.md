@@ -50,6 +50,29 @@ Response example:
 }
 ```
 
+## Upload to Presigned URL (HTTP PUT)
+
+After `InitiateMediaUpload`, upload file bytes directly to `upload_url`.
+
+Notes:
+
+- Do not add bearer auth header for R2 presigned upload.
+- Set `Content-Type` exactly same as `content_type` used in `InitiateMediaUpload`.
+- Send raw file bytes as request body.
+
+Example cURL:
+
+```bash
+curl -X PUT "<upload_url_from_initiate_response>" \
+  -H "Content-Type: application/pdf" \
+  --data-binary @"./salary-slip-apr-2026.pdf"
+```
+
+Expected result:
+
+- HTTP `200` (or provider success status for the presigned request).
+- Then call `CompleteMediaUpload` with the same `object_key`.
+
 ## 2) CompleteMediaUpload
 
 Request example:

@@ -69,15 +69,17 @@ func Run() error {
 
 	rbacPolicy := grpcinterceptors.RBACPolicy{
 		"/admin.v1.AdminService/CreateEmployeeAccount":                {"admin"},
+		"/admin.v1.AdminService/CreateDstAccount":                     {"manager"},
 		"/admin.v1.AdminService/CreateBankBranch":                     {"admin"},
 		"/admin.v1.AdminService/UpdateBankBranch":                     {"admin"},
+		"/admin.v1.AdminService/UpdateBranchDstCommission":            {"manager", "admin"},
 		"/admin.v1.AdminService/UpdateEmployeeAccount":                {"admin"},
 		"/admin.v1.AdminService/AssignEmployeeBranch":                 {"admin"},
-		"/auth.v1.AuthService/SetupTOTP":                              {"borrower", "officer", "manager", "admin"},
-		"/auth.v1.AuthService/VerifyTOTPSetup":                        {"borrower", "officer", "manager", "admin"},
-		"/auth.v1.AuthService/ChangePassword":                         {"borrower", "officer", "manager", "admin"},
+		"/auth.v1.AuthService/SetupTOTP":                              {"borrower", "officer", "manager", "admin", "dst"},
+		"/auth.v1.AuthService/VerifyTOTPSetup":                        {"borrower", "officer", "manager", "admin", "dst"},
+		"/auth.v1.AuthService/ChangePassword":                         {"borrower", "officer", "manager", "admin", "dst"},
 		"/onboarding.v1.OnboardingService/CompleteBorrowerOnboarding": {"borrower"},
-		"/auth.v1.AuthService/Logout":                                 {"borrower", "officer", "manager", "admin"},
+		"/auth.v1.AuthService/Logout":                                 {"borrower", "officer", "manager", "admin", "dst"},
 		// Example future loan roles
 		// "/loan.v1.LoanService/ApproveLoan": {"officer", "manager", "admin"},
 	}

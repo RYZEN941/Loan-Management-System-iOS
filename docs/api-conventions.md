@@ -74,6 +74,7 @@ Handle gRPC codes at minimum:
 Always send enum names exactly as defined in proto (for JSON tooling paths), e.g.:
 
 - `USER_ROLE_BORROWER`
+- `USER_ROLE_DST`
 - `BORROWER_GENDER_MALE`
 - `BORROWER_EMPLOYMENT_TYPE_SALARIED`
 

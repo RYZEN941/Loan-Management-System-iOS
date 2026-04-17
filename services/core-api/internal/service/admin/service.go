@@ -17,8 +17,10 @@ import (
 type Service interface {
 	CreateAdminAccount(ctx context.Context, req *adminv1.CreateAdminAccountRequest) (*adminv1.CreateAdminAccountResponse, error)
 	CreateEmployeeAccount(ctx context.Context, req *adminv1.CreateEmployeeAccountRequest) (*adminv1.CreateEmployeeAccountResponse, error)
+	CreateDstAccount(ctx context.Context, req *adminv1.CreateDstAccountRequest) (*adminv1.CreateDstAccountResponse, error)
 	CreateBankBranch(ctx context.Context, req *adminv1.CreateBankBranchRequest) (*adminv1.CreateBankBranchResponse, error)
 	UpdateBankBranch(ctx context.Context, req *adminv1.UpdateBankBranchRequest) (*adminv1.UpdateBankBranchResponse, error)
+	UpdateBranchDstCommission(ctx context.Context, req *adminv1.UpdateBranchDstCommissionRequest) (*adminv1.UpdateBranchDstCommissionResponse, error)
 	UpdateEmployeeAccount(ctx context.Context, req *adminv1.UpdateEmployeeAccountRequest) (*adminv1.UpdateEmployeeAccountResponse, error)
 	AssignEmployeeBranch(ctx context.Context, req *adminv1.AssignEmployeeBranchRequest) (*adminv1.AssignEmployeeBranchResponse, error)
 }
@@ -169,6 +171,74 @@ func (s *service) CreateEmployeeAccount(ctx context.Context, req *adminv1.Create
 	}, nil
 }
 
+// CreateDstAccount creates a DST user under the same branch as the manager who invokes this RPC.
+func (s *service) CreateDstAccount(ctx context.Context, req *adminv1.CreateDstAccountRequest) (*adminv1.CreateDstAccountResponse, error) {
+	managerUserID, ok := interceptors.UserIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing user context")
+	}
+
+	role, _ := ctx.Value(interceptors.ContextRoleKey).(string)
+	if role != "manager" {
+		return nil, status.Error(codes.PermissionDenied, "only managers can create dst accounts")
+	}
+
+	managerProfile, err := s.queries.GetManagerProfileByUserID(ctx, pgtype.UUID{Bytes: managerUserID, Valid: true})
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "manager profile not found")
+	}
+	if !managerProfile.BranchID.Valid {
+		return nil, status.Error(codes.FailedPrecondition, "manager is not assigned to a branch")
+	}
+
+	name := strings.TrimSpace(req.GetName())
+	email := strings.TrimSpace(req.GetEmail())
+	phone := strings.TrimSpace(req.GetPhoneNumber())
+	password := req.GetPassword()
+	if name == "" || email == "" || phone == "" || password == "" {
+		return nil, status.Error(codes.InvalidArgument, "name, email, phone_number, and password are required")
+	}
+
+	if err := validatePasswordStrength(password); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	hash, err := argon2.HashPassword(password, argon2.DefaultConfig())
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to hash password")
+	}
+
+	user, err := s.queries.CreateDstUser(ctx, generated.CreateDstUserParams{
+		Email:        email,
+		Phone:        phone,
+		PasswordHash: hash,
+	})
+	if err != nil {
+		if strings.Contains(err.Error(), "users_email_key") {
+			return nil, status.Error(codes.AlreadyExists, "email already registered")
+		}
+		if strings.Contains(err.Error(), "users_phone_key") {
+			return nil, status.Error(codes.AlreadyExists, "phone number already registered")
+		}
+		return nil, status.Error(codes.Internal, "failed to create dst user")
+	}
+
+	dstProfile, err := s.queries.CreateDstProfile(ctx, generated.CreateDstProfileParams{
+		UserID:   user.ID,
+		Name:     name,
+		BranchID: managerProfile.BranchID,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to create dst profile")
+	}
+
+	return &adminv1.CreateDstAccountResponse{
+		Success:   true,
+		UserId:    user.ID.String(),
+		ProfileId: dstProfile.ID.String(),
+	}, nil
+}
+
 // CreateBankBranch creates a branch.
 func (s *service) CreateBankBranch(ctx context.Context, req *adminv1.CreateBankBranchRequest) (*adminv1.CreateBankBranchResponse, error) {
 	if _, ok := interceptors.UserIDFromContext(ctx); !ok {
@@ -244,6 +314,72 @@ func (s *service) UpdateBankBranch(ctx context.Context, req *adminv1.UpdateBankB
 	return &adminv1.UpdateBankBranchResponse{Success: true}, nil
 }
 
+// UpdateBranchDstCommission updates branch DST commission percentage.
+// Managers can only update their own branch; admins can update any branch.
+func (s *service) UpdateBranchDstCommission(ctx context.Context, req *adminv1.UpdateBranchDstCommissionRequest) (*adminv1.UpdateBranchDstCommissionResponse, error) {
+	callerUserID, ok := interceptors.UserIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing user context")
+	}
+
+	role, _ := ctx.Value(interceptors.ContextRoleKey).(string)
+	if role != "manager" && role != "admin" {
+		return nil, status.Error(codes.PermissionDenied, "only manager or admin can update dst commission")
+	}
+
+	branchIDStr := strings.TrimSpace(req.GetBranchId())
+	if branchIDStr == "" {
+		return nil, status.Error(codes.InvalidArgument, "branch_id is required")
+	}
+	branchID, err := uuid.Parse(branchIDStr)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "branch_id must be a valid uuid")
+	}
+
+	branch, err := s.queries.GetBankBranchByID(ctx, pgtype.UUID{Bytes: branchID, Valid: true})
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "branch not found")
+	}
+	_ = branch
+
+	if role == "manager" {
+		managerProfile, err := s.queries.GetManagerProfileByUserID(ctx, pgtype.UUID{Bytes: callerUserID, Valid: true})
+		if err != nil {
+			return nil, status.Error(codes.NotFound, "manager profile not found")
+		}
+		if !managerProfile.BranchID.Valid || managerProfile.BranchID.Bytes != branchID {
+			return nil, status.Error(codes.PermissionDenied, "manager can only update their own branch commission")
+		}
+	}
+
+	commissionRaw := strings.TrimSpace(req.GetDstCommission())
+	if commissionRaw == "" {
+		return nil, status.Error(codes.InvalidArgument, "dst_commission is required")
+	}
+
+	var commission pgtype.Numeric
+	if err := commission.Scan(commissionRaw); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "dst_commission must be a valid decimal")
+	}
+
+	floatVal, err := commission.Float64Value()
+	if err != nil || !floatVal.Valid {
+		return nil, status.Error(codes.InvalidArgument, "invalid dst_commission")
+	}
+	if floatVal.Float64 < 0 || floatVal.Float64 > 100 {
+		return nil, status.Error(codes.InvalidArgument, "dst_commission must be between 0 and 100")
+	}
+
+	if err := s.queries.UpdateBranchDstCommissionByID(ctx, generated.UpdateBranchDstCommissionByIDParams{
+		ID:            pgtype.UUID{Bytes: branchID, Valid: true},
+		DstCommission: commission,
+	}); err != nil {
+		return nil, status.Error(codes.Internal, "failed to update dst commission")
+	}
+
+	return &adminv1.UpdateBranchDstCommissionResponse{Success: true}, nil
+}
+
 // UpdateEmployeeAccount updates manager/officer email/phone and optionally resets password.
 // Admin password reset always forces is_requiring_password_change=true.
 func (s *service) UpdateEmployeeAccount(ctx context.Context, req *adminv1.UpdateEmployeeAccountRequest) (*adminv1.UpdateEmployeeAccountResponse, error) {
@@ -266,8 +402,8 @@ func (s *service) UpdateEmployeeAccount(ctx context.Context, req *adminv1.Update
 		return nil, status.Error(codes.NotFound, "employee user not found")
 	}
 
-	if user.Role != generated.UserRoleManager && user.Role != generated.UserRoleOfficer {
-		return nil, status.Error(codes.InvalidArgument, "user role must be manager or officer")
+	if user.Role != generated.UserRoleManager && user.Role != generated.UserRoleOfficer && user.Role != generated.UserRoleDst {
+		return nil, status.Error(codes.InvalidArgument, "user role must be manager, officer, or dst")
 	}
 
 	email := strings.TrimSpace(req.GetEmail())

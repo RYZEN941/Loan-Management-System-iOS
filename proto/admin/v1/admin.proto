@@ -7,8 +7,10 @@ option go_package = "github.com/chirag3003/lms-monorepo/services/core-api/intern
 service AdminService {
   rpc CreateAdminAccount(CreateAdminAccountRequest) returns (CreateAdminAccountResponse);
   rpc CreateEmployeeAccount(CreateEmployeeAccountRequest) returns (CreateEmployeeAccountResponse);
+  rpc CreateDstAccount(CreateDstAccountRequest) returns (CreateDstAccountResponse);
   rpc CreateBankBranch(CreateBankBranchRequest) returns (CreateBankBranchResponse);
   rpc UpdateBankBranch(UpdateBankBranchRequest) returns (UpdateBankBranchResponse);
+  rpc UpdateBranchDstCommission(UpdateBranchDstCommissionRequest) returns (UpdateBranchDstCommissionResponse);
   rpc UpdateEmployeeAccount(UpdateEmployeeAccountRequest) returns (UpdateEmployeeAccountResponse);
   rpc AssignEmployeeBranch(AssignEmployeeBranchRequest) returns (AssignEmployeeBranchResponse);
 }
@@ -46,6 +48,19 @@ message CreateEmployeeAccountResponse {
   string profile_id = 3;
 }
 
+message CreateDstAccountRequest {
+  string name = 1;
+  string email = 2;
+  string phone_number = 3;
+  string password = 4;
+}
+
+message CreateDstAccountResponse {
+  bool success = 1;
+  string user_id = 2;
+  string profile_id = 3;
+}
+
 message CreateBankBranchRequest {
   string name = 1;
   string region = 2;
@@ -65,6 +80,15 @@ message UpdateBankBranchRequest {
 }
 
 message UpdateBankBranchResponse {
+  bool success = 1;
+}
+
+message UpdateBranchDstCommissionRequest {
+  string branch_id = 1;
+  string dst_commission = 2;
+}
+
+message UpdateBranchDstCommissionResponse {
   bool success = 1;
 }
 

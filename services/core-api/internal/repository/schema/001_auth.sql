@@ -1,4 +1,4 @@
-CREATE TYPE user_role AS ENUM ('admin', 'manager', 'officer', 'borrower');
+CREATE TYPE user_role AS ENUM ('admin', 'manager', 'officer', 'borrower', 'dst');
 CREATE TYPE borrower_gender AS ENUM ('MALE', 'FEMALE', 'OTHER');
 CREATE TYPE borrower_employment_type AS ENUM ('SALARIED', 'SELF_EMPLOYED', 'BUSINESS');
 
@@ -34,6 +34,7 @@ CREATE TABLE bank_branches (
     name VARCHAR(255) NOT NULL,
     region VARCHAR(255) NOT NULL,
     city VARCHAR(255) NOT NULL,
+    dst_commission NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (dst_commission >= 0 AND dst_commission <= 100),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -50,6 +51,14 @@ CREATE TABLE officer_profiles (
     user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     branch_id UUID REFERENCES bank_branches(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE dst_profiles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    branch_id UUID NOT NULL REFERENCES bank_branches(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

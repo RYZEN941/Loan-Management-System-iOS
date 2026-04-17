@@ -84,7 +84,7 @@ INSERT INTO bank_branches (
     $1,
     $2,
     $3
-) RETURNING id, name, region, city, created_at
+) RETURNING id, name, region, city, dst_commission, created_at
 `
 
 type CreateBankBranchParams struct {
@@ -101,6 +101,87 @@ func (q *Queries) CreateBankBranch(ctx context.Context, arg CreateBankBranchPara
 		&i.Name,
 		&i.Region,
 		&i.City,
+		&i.DstCommission,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const createDstProfile = `-- name: CreateDstProfile :one
+INSERT INTO dst_profiles (
+    user_id,
+    name,
+    branch_id
+) VALUES (
+    $1,
+    $2,
+    $3
+) RETURNING id, user_id, name, branch_id, created_at
+`
+
+type CreateDstProfileParams struct {
+	UserID   pgtype.UUID `json:"user_id"`
+	Name     string      `json:"name"`
+	BranchID pgtype.UUID `json:"branch_id"`
+}
+
+func (q *Queries) CreateDstProfile(ctx context.Context, arg CreateDstProfileParams) (DstProfile, error) {
+	row := q.db.QueryRow(ctx, createDstProfile, arg.UserID, arg.Name, arg.BranchID)
+	var i DstProfile
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.BranchID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const createDstUser = `-- name: CreateDstUser :one
+INSERT INTO users (
+    email,
+    phone,
+    password_hash,
+    role,
+    is_email_verified,
+    is_phone_verified,
+    is_active,
+    is_requiring_password_change
+) VALUES (
+    $1,
+    $2,
+    $3,
+    'dst',
+    true,
+    true,
+    true,
+    true
+) RETURNING id, email, phone, password_hash, role, is_email_verified, is_phone_verified, is_active, is_requiring_password_change, is_deleted, has_totp, totp_secret, created_at
+`
+
+type CreateDstUserParams struct {
+	Email        string `json:"email"`
+	Phone        string `json:"phone"`
+	PasswordHash string `json:"password_hash"`
+}
+
+func (q *Queries) CreateDstUser(ctx context.Context, arg CreateDstUserParams) (User, error) {
+	row := q.db.QueryRow(ctx, createDstUser, arg.Email, arg.Phone, arg.PasswordHash)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Phone,
+		&i.PasswordHash,
+		&i.Role,
+		&i.IsEmailVerified,
+		&i.IsPhoneVerified,
+		&i.IsActive,
+		&i.IsRequiringPasswordChange,
+		&i.IsDeleted,
+		&i.HasTotp,
+		&i.TotpSecret,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -224,7 +305,7 @@ func (q *Queries) CreateOfficerProfile(ctx context.Context, arg CreateOfficerPro
 }
 
 const getBankBranchByID = `-- name: GetBankBranchByID :one
-SELECT id, name, region, city, created_at FROM bank_branches WHERE id = $1 LIMIT 1
+SELECT id, name, region, city, dst_commission, created_at FROM bank_branches WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetBankBranchByID(ctx context.Context, id pgtype.UUID) (BankBranch, error) {
@@ -235,6 +316,7 @@ func (q *Queries) GetBankBranchByID(ctx context.Context, id pgtype.UUID) (BankBr
 		&i.Name,
 		&i.Region,
 		&i.City,
+		&i.DstCommission,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -246,6 +328,23 @@ SELECT id, user_id, name, branch_id, created_at FROM manager_profiles WHERE id =
 
 func (q *Queries) GetManagerProfileByID(ctx context.Context, id pgtype.UUID) (ManagerProfile, error) {
 	row := q.db.QueryRow(ctx, getManagerProfileByID, id)
+	var i ManagerProfile
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.BranchID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getManagerProfileByUserID = `-- name: GetManagerProfileByUserID :one
+SELECT id, user_id, name, branch_id, created_at FROM manager_profiles WHERE user_id = $1 LIMIT 1
+`
+
+func (q *Queries) GetManagerProfileByUserID(ctx context.Context, userID pgtype.UUID) (ManagerProfile, error) {
+	row := q.db.QueryRow(ctx, getManagerProfileByUserID, userID)
 	var i ManagerProfile
 	err := row.Scan(
 		&i.ID,
@@ -279,6 +378,22 @@ func (q *Queries) UpdateBankBranch(ctx context.Context, arg UpdateBankBranchPara
 		arg.Region,
 		arg.City,
 	)
+	return err
+}
+
+const updateBranchDstCommissionByID = `-- name: UpdateBranchDstCommissionByID :exec
+UPDATE bank_branches
+SET dst_commission = $2
+WHERE id = $1
+`
+
+type UpdateBranchDstCommissionByIDParams struct {
+	ID            pgtype.UUID    `json:"id"`
+	DstCommission pgtype.Numeric `json:"dst_commission"`
+}
+
+func (q *Queries) UpdateBranchDstCommissionByID(ctx context.Context, arg UpdateBranchDstCommissionByIDParams) error {
+	_, err := q.db.Exec(ctx, updateBranchDstCommissionByID, arg.ID, arg.DstCommission)
 	return err
 }
 

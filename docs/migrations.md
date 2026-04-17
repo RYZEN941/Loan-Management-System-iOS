@@ -66,6 +66,7 @@ In this repository:
 
 - `000001_init_schema` is baseline schema
 - `000002_branch_profile_refactor` upgrades old branch-manager model
+- `000003_add_dst_and_branch_commission` adds DST role/profile and branch commission field
 
 ## Docker-based Run (no local migrate install)
 

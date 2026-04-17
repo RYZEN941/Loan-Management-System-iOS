@@ -191,16 +191,11 @@ Defined in `proto/onboarding/v1/onboarding.proto`:
 
 - Borrower onboarding: `CompleteBorrowerOnboarding`
 
-### Signup role enum
+### Signup behavior
 
-`SignupRequest.role` is a protobuf enum (`UserRole`), not a free-form string.
+Manual signup creates only borrower accounts.
 
-Allowed values:
-
-- `USER_ROLE_ADMIN`
-- `USER_ROLE_MANAGER`
-- `USER_ROLE_OFFICER`
-- `USER_ROLE_BORROWER`
+`SignupRequest` does not take role as input.
 
 Sample signup payload:
 
@@ -208,8 +203,7 @@ Sample signup payload:
 {
   "email": "borrower@example.com",
   "phone": "+15550001111",
-  "password": "StrongPassword123!",
-  "role": "USER_ROLE_BORROWER"
+  "password": "StrongPassword123!"
 }
 ```
 

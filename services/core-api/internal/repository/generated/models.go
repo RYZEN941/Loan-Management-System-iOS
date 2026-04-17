@@ -104,6 +104,7 @@ const (
 	UserRoleManager  UserRole = "manager"
 	UserRoleOfficer  UserRole = "officer"
 	UserRoleBorrower UserRole = "borrower"
+	UserRoleDst      UserRole = "dst"
 )
 
 func (e *UserRole) Scan(src interface{}) error {
@@ -148,11 +149,12 @@ type AdminProfile struct {
 }
 
 type BankBranch struct {
-	ID        pgtype.UUID        `json:"id"`
-	Name      string             `json:"name"`
-	Region    string             `json:"region"`
-	City      string             `json:"city"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ID            pgtype.UUID        `json:"id"`
+	Name          string             `json:"name"`
+	Region        string             `json:"region"`
+	City          string             `json:"city"`
+	DstCommission pgtype.Numeric     `json:"dst_commission"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 }
 
 type BorrowerProfile struct {
@@ -170,6 +172,14 @@ type BorrowerProfile struct {
 	MonthlyIncome              pgtype.Numeric         `json:"monthly_income"`
 	ProfileCompletenessPercent int32                  `json:"profile_completeness_percent"`
 	CreatedAt                  pgtype.Timestamptz     `json:"created_at"`
+}
+
+type DstProfile struct {
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	Name      string             `json:"name"`
+	BranchID  pgtype.UUID        `json:"branch_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type ManagerProfile struct {

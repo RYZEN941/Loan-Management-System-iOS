@@ -44,7 +44,6 @@ message SignupRequest {
   string email = 1;
   string phone = 2;
   string password = 3;
-  UserRole role = 4;
 }
 
 enum UserRole {
@@ -53,6 +52,7 @@ enum UserRole {
   USER_ROLE_MANAGER = 2;
   USER_ROLE_OFFICER = 3;
   USER_ROLE_BORROWER = 4;
+  USER_ROLE_DST = 5;
 }
 
 message SignupResponse {

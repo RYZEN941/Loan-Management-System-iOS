@@ -69,6 +69,41 @@ INSERT INTO officer_profiles (
     $3
 ) RETURNING *;
 
+-- name: CreateDstUser :one
+INSERT INTO users (
+    email,
+    phone,
+    password_hash,
+    role,
+    is_email_verified,
+    is_phone_verified,
+    is_active,
+    is_requiring_password_change
+) VALUES (
+    $1,
+    $2,
+    $3,
+    'dst',
+    true,
+    true,
+    true,
+    true
+) RETURNING *;
+
+-- name: CreateDstProfile :one
+INSERT INTO dst_profiles (
+    user_id,
+    name,
+    branch_id
+) VALUES (
+    $1,
+    $2,
+    $3
+) RETURNING *;
+
+-- name: GetManagerProfileByUserID :one
+SELECT * FROM manager_profiles WHERE user_id = $1 LIMIT 1;
+
 -- name: GetManagerProfileByID :one
 SELECT * FROM manager_profiles WHERE id = $1 LIMIT 1;
 
@@ -85,6 +120,11 @@ INSERT INTO bank_branches (
 
 -- name: GetBankBranchByID :one
 SELECT * FROM bank_branches WHERE id = $1 LIMIT 1;
+
+-- name: UpdateBranchDstCommissionByID :exec
+UPDATE bank_branches
+SET dst_commission = $2
+WHERE id = $1;
 
 -- name: UpdateBankBranch :exec
 UPDATE bank_branches

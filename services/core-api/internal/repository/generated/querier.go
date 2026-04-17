@@ -17,6 +17,8 @@ type Querier interface {
 	CreateAdminUser(ctx context.Context, arg CreateAdminUserParams) (User, error)
 	CreateBankBranch(ctx context.Context, arg CreateBankBranchParams) (BankBranch, error)
 	CreateBorrowerProfile(ctx context.Context, arg CreateBorrowerProfileParams) (BorrowerProfile, error)
+	CreateDstProfile(ctx context.Context, arg CreateDstProfileParams) (DstProfile, error)
+	CreateDstUser(ctx context.Context, arg CreateDstUserParams) (User, error)
 	CreateEmployeeUser(ctx context.Context, arg CreateEmployeeUserParams) (User, error)
 	CreateManagerProfile(ctx context.Context, arg CreateManagerProfileParams) (ManagerProfile, error)
 	CreateOfficerProfile(ctx context.Context, arg CreateOfficerProfileParams) (OfficerProfile, error)
@@ -26,6 +28,7 @@ type Querier interface {
 	GetBankBranchByID(ctx context.Context, id pgtype.UUID) (BankBranch, error)
 	GetBorrowerProfileByUserID(ctx context.Context, userID pgtype.UUID) (BorrowerProfile, error)
 	GetManagerProfileByID(ctx context.Context, id pgtype.UUID) (ManagerProfile, error)
+	GetManagerProfileByUserID(ctx context.Context, userID pgtype.UUID) (ManagerProfile, error)
 	GetRefreshTokenByHashedToken(ctx context.Context, hashedToken string) (RefreshToken, error)
 	GetUserByEmailOrPhone(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
@@ -35,6 +38,7 @@ type Querier interface {
 	RevokeRefreshTokensForUserDevice(ctx context.Context, arg RevokeRefreshTokensForUserDeviceParams) error
 	SetTOTPSecret(ctx context.Context, arg SetTOTPSecretParams) error
 	UpdateBankBranch(ctx context.Context, arg UpdateBankBranchParams) error
+	UpdateBranchDstCommissionByID(ctx context.Context, arg UpdateBranchDstCommissionByIDParams) error
 	UpdateEmployeeEmailAndPhone(ctx context.Context, arg UpdateEmployeeEmailAndPhoneParams) error
 	UpdateEmployeePasswordByAdmin(ctx context.Context, arg UpdateEmployeePasswordByAdminParams) error
 	UpdateManagerBranch(ctx context.Context, arg UpdateManagerBranchParams) error

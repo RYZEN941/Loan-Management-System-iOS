@@ -36,7 +36,11 @@ Request fields:
 - `email`
 - `phone`
 - `password`
-- `role` (`USER_ROLE_ADMIN|MANAGER|OFFICER|BORROWER`)
+
+Behavior:
+
+- Manual signup creates only borrower accounts.
+- Role is not accepted in signup request.
 
 Response:
 

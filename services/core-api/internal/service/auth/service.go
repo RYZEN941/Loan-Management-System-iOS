@@ -130,16 +130,11 @@ func (s *service) InitiateSignup(ctx context.Context, req *authv1.SignupRequest)
 		return nil, status.Error(codes.Internal, "failed to hash password")
 	}
 
-	role, err := mapProtoRole(req.GetRole())
-	if err != nil {
-		return nil, err
-	}
-
 	user, err := s.queries.CreateUser(ctx, generated.CreateUserParams{
 		Email:        req.GetEmail(),
 		Phone:        req.GetPhone(),
 		PasswordHash: hash,
-		Role:         role,
+		Role:         generated.UserRoleBorrower,
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), "users_email_key") {
@@ -1016,6 +1011,8 @@ func mapProtoRole(role authv1.UserRole) (generated.UserRole, error) {
 		return generated.UserRoleOfficer, nil
 	case authv1.UserRole_USER_ROLE_BORROWER:
 		return generated.UserRoleBorrower, nil
+	case authv1.UserRole_USER_ROLE_DST:
+		return generated.UserRoleDst, nil
 	default:
 		return "", status.Error(codes.InvalidArgument, "invalid role")
 	}

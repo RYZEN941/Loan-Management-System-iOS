@@ -14,6 +14,7 @@ This document explains `auth.v1.AuthService` APIs and the required call order.
 - `SetupTOTP`
 - `VerifyTOTPSetup`
 - `LoginPrimary`
+- `InitiateReopen`
 - `SelectLoginMFAFactor`
 - `VerifyLoginMFA`
 - `ChangePassword`
@@ -132,6 +133,34 @@ Frontend action:
 - Store tokens securely.
 - Use `access_token` in authorization metadata for protected calls.
 
+## 2.4 Reopen Flow (Passwordless + MFA Required)
+
+Use this when app is reopened and client still has a refresh token for the same device.
+
+1. `InitiateReopen`
+2. `SelectLoginMFAFactor`
+3. `VerifyLoginMFA`
+
+### InitiateReopen
+
+Request:
+
+- `refresh_token`
+- `device_id`
+
+Response:
+
+- `mfa_session_id`
+- `allowed_factors` (subset of: `totp`, `email_otp`, `phone_otp`, `webauthn`)
+
+Behavior:
+
+- Password is not required.
+- Backend validates refresh token ownership and device binding.
+- If refresh token is revoked (logged out), backend returns unauthenticated and password login is required.
+- If refresh token is expired, backend returns unauthenticated and password login is required.
+- On successful `VerifyLoginMFA`, backend revokes old refresh token and mints a new token pair.
+
 ## 3) TOTP Setup Flow (Authenticated)
 
 Use this for enrolling authenticator app MFA after user is logged in.
@@ -204,9 +233,10 @@ Request:
 - `refresh_token`
 - `device_id`
 
-Response:
+Current behavior:
 
-- new token pair
+- Direct token refresh is disabled.
+- Backend returns `FailedPrecondition` instructing clients to use `InitiateReopen` + MFA.
 
 Frontend action:
 

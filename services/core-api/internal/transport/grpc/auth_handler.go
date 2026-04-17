@@ -15,6 +15,7 @@ type AuthService interface {
 	SetupTOTP(ctx context.Context, req *authv1.SetupTOTPRequest) (*authv1.SetupTOTPResponse, error)
 	VerifyTOTPSetup(ctx context.Context, req *authv1.VerifyTOTPSetupRequest) (*authv1.AuthTokens, error)
 	LoginPrimary(ctx context.Context, req *authv1.LoginRequest) (*authv1.LoginPrimaryResponse, error)
+	InitiateReopen(ctx context.Context, req *authv1.InitiateReopenRequest) (*authv1.LoginPrimaryResponse, error)
 	SelectLoginMFAFactor(ctx context.Context, req *authv1.SelectLoginMFAFactorRequest) (*authv1.SelectLoginMFAFactorResponse, error)
 	VerifyLoginMFA(ctx context.Context, req *authv1.VerifyLoginMFARequest) (*authv1.AuthTokens, error)
 	ChangePassword(ctx context.Context, req *authv1.ChangePasswordRequest) (*authv1.ChangePasswordResponse, error)
@@ -61,6 +62,10 @@ func (h *AuthHandler) VerifyTOTPSetup(ctx context.Context, req *authv1.VerifyTOT
 
 func (h *AuthHandler) LoginPrimary(ctx context.Context, req *authv1.LoginRequest) (*authv1.LoginPrimaryResponse, error) {
 	return h.authService.LoginPrimary(ctx, req)
+}
+
+func (h *AuthHandler) InitiateReopen(ctx context.Context, req *authv1.InitiateReopenRequest) (*authv1.LoginPrimaryResponse, error) {
+	return h.authService.InitiateReopen(ctx, req)
 }
 
 func (h *AuthHandler) SelectLoginMFAFactor(ctx context.Context, req *authv1.SelectLoginMFAFactorRequest) (*authv1.SelectLoginMFAFactorResponse, error) {

@@ -126,6 +126,27 @@ func (q *Queries) GetRefreshTokenByHashedToken(ctx context.Context, hashedToken 
 	return i, err
 }
 
+const getRefreshTokenByHashedTokenAny = `-- name: GetRefreshTokenByHashedTokenAny :one
+SELECT id, user_id, device_id, hashed_token, expires_at, is_revoked, created_at FROM refresh_tokens
+WHERE hashed_token = $1
+LIMIT 1
+`
+
+func (q *Queries) GetRefreshTokenByHashedTokenAny(ctx context.Context, hashedToken string) (RefreshToken, error) {
+	row := q.db.QueryRow(ctx, getRefreshTokenByHashedTokenAny, hashedToken)
+	var i RefreshToken
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.DeviceID,
+		&i.HashedToken,
+		&i.ExpiresAt,
+		&i.IsRevoked,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getUserByEmailOrPhone = `-- name: GetUserByEmailOrPhone :one
 SELECT id, email, phone, password_hash, role, is_email_verified, is_phone_verified, is_active, is_requiring_password_change, is_deleted, has_totp, totp_secret, created_at FROM users 
 WHERE (email = $1 OR phone = $1)

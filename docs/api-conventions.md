@@ -39,6 +39,7 @@ Public methods (no JWT needed):
 - `AuthService/InitiateSignup`
 - `AuthService/VerifySignupOTPs`
 - `AuthService/LoginPrimary`
+- `AuthService/InitiateReopen`
 - `AuthService/SelectLoginMFAFactor`
 - `AuthService/VerifyLoginMFA`
 - `AuthService/RefreshToken`
@@ -54,8 +55,9 @@ Protected methods (JWT required):
 ## Token Model
 
 - Access token: short-lived JWT.
-- Refresh token: opaque token used only with `RefreshToken`.
+- Refresh token: opaque token used to start `InitiateReopen`.
 - Use returned access token for protected RPCs.
+- Reopen/unlock flow is MFA-based: `InitiateReopen` -> `SelectLoginMFAFactor` -> `VerifyLoginMFA`.
 
 ## Error Handling
 
@@ -87,4 +89,5 @@ Always send enum names exactly as defined in proto (for JSON tooling paths), e.g
 
 - Signup is multi-step: initiate -> verify OTPs.
 - Login MFA is strict 3-step: login primary -> select factor -> verify factor.
+- Reopen MFA is strict 3-step: initiate reopen -> select factor -> verify factor.
 - Onboarding is separate service and should be called post-auth for borrower users.

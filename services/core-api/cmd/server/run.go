@@ -74,6 +74,7 @@ func Run() error {
 		"/auth.v1.AuthService/InitiateSignup":       {},
 		"/auth.v1.AuthService/VerifySignupOTPs":     {},
 		"/auth.v1.AuthService/LoginPrimary":         {},
+		"/auth.v1.AuthService/InitiateReopen":       {},
 		"/auth.v1.AuthService/SelectLoginMFAFactor": {},
 		"/auth.v1.AuthService/VerifyLoginMFA":       {},
 		"/auth.v1.AuthService/RefreshToken":         {},

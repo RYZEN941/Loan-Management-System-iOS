@@ -25,6 +25,7 @@ const (
 	AuthService_SetupTOTP_FullMethodName                  = "/auth.v1.AuthService/SetupTOTP"
 	AuthService_VerifyTOTPSetup_FullMethodName            = "/auth.v1.AuthService/VerifyTOTPSetup"
 	AuthService_LoginPrimary_FullMethodName               = "/auth.v1.AuthService/LoginPrimary"
+	AuthService_InitiateReopen_FullMethodName             = "/auth.v1.AuthService/InitiateReopen"
 	AuthService_SelectLoginMFAFactor_FullMethodName       = "/auth.v1.AuthService/SelectLoginMFAFactor"
 	AuthService_VerifyLoginMFA_FullMethodName             = "/auth.v1.AuthService/VerifyLoginMFA"
 	AuthService_ChangePassword_FullMethodName             = "/auth.v1.AuthService/ChangePassword"
@@ -46,6 +47,7 @@ type AuthServiceClient interface {
 	SetupTOTP(ctx context.Context, in *SetupTOTPRequest, opts ...grpc.CallOption) (*SetupTOTPResponse, error)
 	VerifyTOTPSetup(ctx context.Context, in *VerifyTOTPSetupRequest, opts ...grpc.CallOption) (*AuthTokens, error)
 	LoginPrimary(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginPrimaryResponse, error)
+	InitiateReopen(ctx context.Context, in *InitiateReopenRequest, opts ...grpc.CallOption) (*LoginPrimaryResponse, error)
 	SelectLoginMFAFactor(ctx context.Context, in *SelectLoginMFAFactorRequest, opts ...grpc.CallOption) (*SelectLoginMFAFactorResponse, error)
 	VerifyLoginMFA(ctx context.Context, in *VerifyLoginMFARequest, opts ...grpc.CallOption) (*AuthTokens, error)
 	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*ChangePasswordResponse, error)
@@ -119,6 +121,16 @@ func (c *authServiceClient) LoginPrimary(ctx context.Context, in *LoginRequest, 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(LoginPrimaryResponse)
 	err := c.cc.Invoke(ctx, AuthService_LoginPrimary_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) InitiateReopen(ctx context.Context, in *InitiateReopenRequest, opts ...grpc.CallOption) (*LoginPrimaryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LoginPrimaryResponse)
+	err := c.cc.Invoke(ctx, AuthService_InitiateReopen_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -225,6 +237,7 @@ type AuthServiceServer interface {
 	SetupTOTP(context.Context, *SetupTOTPRequest) (*SetupTOTPResponse, error)
 	VerifyTOTPSetup(context.Context, *VerifyTOTPSetupRequest) (*AuthTokens, error)
 	LoginPrimary(context.Context, *LoginRequest) (*LoginPrimaryResponse, error)
+	InitiateReopen(context.Context, *InitiateReopenRequest) (*LoginPrimaryResponse, error)
 	SelectLoginMFAFactor(context.Context, *SelectLoginMFAFactorRequest) (*SelectLoginMFAFactorResponse, error)
 	VerifyLoginMFA(context.Context, *VerifyLoginMFARequest) (*AuthTokens, error)
 	ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error)
@@ -261,6 +274,9 @@ func (UnimplementedAuthServiceServer) VerifyTOTPSetup(context.Context, *VerifyTO
 }
 func (UnimplementedAuthServiceServer) LoginPrimary(context.Context, *LoginRequest) (*LoginPrimaryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LoginPrimary not implemented")
+}
+func (UnimplementedAuthServiceServer) InitiateReopen(context.Context, *InitiateReopenRequest) (*LoginPrimaryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InitiateReopen not implemented")
 }
 func (UnimplementedAuthServiceServer) SelectLoginMFAFactor(context.Context, *SelectLoginMFAFactorRequest) (*SelectLoginMFAFactorResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SelectLoginMFAFactor not implemented")
@@ -414,6 +430,24 @@ func _AuthService_LoginPrimary_Handler(srv interface{}, ctx context.Context, dec
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AuthServiceServer).LoginPrimary(ctx, req.(*LoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_InitiateReopen_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InitiateReopenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).InitiateReopen(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_InitiateReopen_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).InitiateReopen(ctx, req.(*InitiateReopenRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -610,6 +644,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "LoginPrimary",
 			Handler:    _AuthService_LoginPrimary_Handler,
+		},
+		{
+			MethodName: "InitiateReopen",
+			Handler:    _AuthService_InitiateReopen_Handler,
 		},
 		{
 			MethodName: "SelectLoginMFAFactor",

@@ -14,6 +14,7 @@ service AuthService {
   rpc VerifyTOTPSetup(VerifyTOTPSetupRequest) returns (AuthTokens);
 
   rpc LoginPrimary(LoginRequest) returns (LoginPrimaryResponse);
+  rpc InitiateReopen(InitiateReopenRequest) returns (LoginPrimaryResponse);
   rpc SelectLoginMFAFactor(SelectLoginMFAFactorRequest) returns (SelectLoginMFAFactorResponse);
   rpc VerifyLoginMFA(VerifyLoginMFARequest) returns (AuthTokens);
   rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
@@ -84,6 +85,11 @@ message VerifyTOTPSetupRequest {
 message LoginRequest {
   string email_or_phone = 1;
   string password = 2;
+}
+
+message InitiateReopenRequest {
+  string refresh_token = 1;
+  string device_id = 2;
 }
 
 message LoginPrimaryResponse {

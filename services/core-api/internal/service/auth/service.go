@@ -35,6 +35,7 @@ type Service interface {
 	SetupTOTP(ctx context.Context, req *authv1.SetupTOTPRequest) (*authv1.SetupTOTPResponse, error)
 	VerifyTOTPSetup(ctx context.Context, req *authv1.VerifyTOTPSetupRequest) (*authv1.AuthTokens, error)
 	LoginPrimary(ctx context.Context, req *authv1.LoginRequest) (*authv1.LoginPrimaryResponse, error)
+	InitiateReopen(ctx context.Context, req *authv1.InitiateReopenRequest) (*authv1.LoginPrimaryResponse, error)
 	SelectLoginMFAFactor(ctx context.Context, req *authv1.SelectLoginMFAFactorRequest) (*authv1.SelectLoginMFAFactorResponse, error)
 	VerifyLoginMFA(ctx context.Context, req *authv1.VerifyLoginMFARequest) (*authv1.AuthTokens, error)
 	ChangePassword(ctx context.Context, req *authv1.ChangePasswordRequest) (*authv1.ChangePasswordResponse, error)
@@ -62,6 +63,9 @@ const (
 	mfaSessionTTL      = 5 * time.Minute
 	mfaChallengeTTL    = 5 * time.Minute
 	mfaChallengeMaxTry = 5
+
+	mfaFlowPrimary = "login_primary"
+	mfaFlowReopen  = "reopen"
 )
 
 type mfaSessionState struct {
@@ -72,6 +76,9 @@ type mfaSessionState struct {
 	AllowedFactors []string `json:"allowed_factors"`
 	SelectedFactor string   `json:"selected_factor"`
 	WebauthnUserID string   `json:"webauthn_user_id"`
+	Flow           string   `json:"flow"`
+	RefreshHash    string   `json:"refresh_hash,omitempty"`
+	BoundDeviceID  string   `json:"bound_device_id,omitempty"`
 }
 
 type mfaOTPChallenge struct {
@@ -292,23 +299,9 @@ func (s *service) LoginPrimary(ctx context.Context, req *authv1.LoginRequest) (*
 	}
 
 	mfaSessionID := uuid.New().String()
-	allowedFactors := []string{}
-	if user.HasTotp.Bool {
-		allowedFactors = append(allowedFactors, mfaFactorTOTP)
-	}
-	if user.IsEmailVerified.Bool {
-		allowedFactors = append(allowedFactors, mfaFactorEmailOTP)
-	}
-	if user.IsPhoneVerified.Bool {
-		allowedFactors = append(allowedFactors, mfaFactorPhoneOTP)
-	}
-
-	webauthnCreds, err := s.queries.GetWebAuthnCredentialsByUserID(ctx, user.ID)
+	allowedFactors, err := s.loadAllowedFactors(ctx, user)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to load passkey credentials")
-	}
-	if len(webauthnCreds) > 0 {
-		allowedFactors = append(allowedFactors, mfaFactorWebAuthn)
+		return nil, err
 	}
 
 	if len(allowedFactors) == 0 {
@@ -322,6 +315,7 @@ func (s *service) LoginPrimary(ctx context.Context, req *authv1.LoginRequest) (*
 		Phone:          user.Phone,
 		AllowedFactors: allowedFactors,
 		WebauthnUserID: user.ID.String(),
+		Flow:           mfaFlowPrimary,
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to encode mfa session")
@@ -329,6 +323,71 @@ func (s *service) LoginPrimary(ctx context.Context, req *authv1.LoginRequest) (*
 
 	err = s.redis.Set(ctx, fmt.Sprintf("mfa_session:%s", mfaSessionID), mfaData, mfaSessionTTL).Err()
 	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to create mfa session")
+	}
+
+	return &authv1.LoginPrimaryResponse{
+		MfaSessionId:              mfaSessionID,
+		AllowedFactors:            allowedFactors,
+		IsRequiringPasswordChange: user.IsRequiringPasswordChange.Bool,
+	}, nil
+}
+
+// InitiateReopen starts a passwordless reopen flow by validating refresh token and requiring MFA step-up.
+func (s *service) InitiateReopen(ctx context.Context, req *authv1.InitiateReopenRequest) (*authv1.LoginPrimaryResponse, error) {
+	refreshToken := strings.TrimSpace(req.GetRefreshToken())
+	deviceID := strings.TrimSpace(req.GetDeviceId())
+	if refreshToken == "" || deviceID == "" {
+		return nil, status.Error(codes.InvalidArgument, "refresh_token and device_id are required")
+	}
+
+	refreshHash := hashRefreshToken(refreshToken)
+	tokenRecord, err := s.queries.GetRefreshTokenByHashedTokenAny(ctx, refreshHash)
+	if err != nil {
+		return nil, status.Error(codes.Unauthenticated, "invalid refresh token")
+	}
+
+	if tokenRecord.IsRevoked.Bool {
+		return nil, status.Error(codes.Unauthenticated, "session logged out; password login required")
+	}
+	if isRefreshTokenExpired(tokenRecord.ExpiresAt) {
+		return nil, status.Error(codes.Unauthenticated, "session expired; password login required")
+	}
+	if tokenRecord.DeviceID != deviceID {
+		return nil, status.Error(codes.Unauthenticated, "invalid device id")
+	}
+
+	userID := uuid.UUID(tokenRecord.UserID.Bytes)
+	user, err := s.queries.GetUserByID(ctx, tokenRecord.UserID)
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "user not found")
+	}
+
+	allowedFactors, err := s.loadAllowedFactors(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+	if len(allowedFactors) == 0 {
+		return nil, status.Error(codes.FailedPrecondition, "no mfa factors available")
+	}
+
+	mfaSessionID := uuid.New().String()
+	mfaData, err := json.Marshal(mfaSessionState{
+		UserID:         userID.String(),
+		Role:           string(user.Role),
+		Email:          user.Email,
+		Phone:          user.Phone,
+		AllowedFactors: allowedFactors,
+		WebauthnUserID: userID.String(),
+		Flow:           mfaFlowReopen,
+		RefreshHash:    refreshHash,
+		BoundDeviceID:  deviceID,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to encode mfa session")
+	}
+
+	if err := s.redis.Set(ctx, fmt.Sprintf("mfa_session:%s", mfaSessionID), mfaData, mfaSessionTTL).Err(); err != nil {
 		return nil, status.Error(codes.Internal, "failed to create mfa session")
 	}
 
@@ -492,6 +551,11 @@ func (s *service) VerifyLoginMFA(ctx context.Context, req *authv1.VerifyLoginMFA
 	if err := s.redis.Del(ctx, fmt.Sprintf("mfa_challenge:%s", req.GetMfaSessionId())).Err(); err != nil {
 		return nil, status.Error(codes.Internal, "failed to clear mfa challenge")
 	}
+	if session.Flow == mfaFlowReopen {
+		if err := s.validateReopenAndRevoke(ctx, session, req.GetDeviceId()); err != nil {
+			return nil, err
+		}
+	}
 	if err := s.redis.Del(ctx, fmt.Sprintf("mfa_session:%s", req.GetMfaSessionId())).Err(); err != nil {
 		return nil, status.Error(codes.Internal, "failed to clear mfa session")
 	}
@@ -636,28 +700,9 @@ func (s *service) verifyMFAOTP(ctx context.Context, sessionID, factor, code stri
 
 // RefreshToken rotates refresh tokens and mints a fresh access/refresh pair.
 func (s *service) RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequest) (*authv1.AuthTokens, error) {
-	hash := sha256.Sum256([]byte(req.GetRefreshToken()))
-	hashedToken := hex.EncodeToString(hash[:])
-
-	tokenRecord, err := s.queries.GetRefreshTokenByHashedToken(ctx, hashedToken)
-	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "invalid refresh token")
-	}
-
-	if tokenRecord.DeviceID != req.GetDeviceId() {
-		return nil, status.Error(codes.Unauthenticated, "invalid device id")
-	}
-
-	if err := s.queries.RevokeRefreshToken(ctx, hashedToken); err != nil {
-		return nil, status.Error(codes.Internal, "failed to revoke previous refresh token")
-	}
-	userID := uuid.UUID(tokenRecord.UserID.Bytes)
-	user, err := s.queries.GetUserByID(ctx, tokenRecord.UserID)
-	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to load user for refresh")
-	}
-
-	return s.mintTokens(ctx, userID, string(user.Role), req.GetDeviceId())
+	_ = ctx
+	_ = req
+	return nil, status.Error(codes.FailedPrecondition, "direct refresh is disabled; use InitiateReopen and complete MFA")
 }
 
 // Logout revokes refresh token and clears the active access-token session in Redis.
@@ -905,6 +950,13 @@ func (s *service) FinishWebAuthnLogin(ctx context.Context, req *authv1.WebAuthnF
 		return nil, status.Error(codes.Unauthenticated, "webauthn login validation failed")
 	}
 
+	mfaSession, err := s.getMFASession(ctx, req.GetMfaSessionId())
+	if err == nil && mfaSession.Flow == mfaFlowReopen {
+		if err := s.validateReopenAndRevoke(ctx, mfaSession, req.GetDeviceId()); err != nil {
+			return nil, err
+		}
+	}
+
 	err = s.queries.UpdateWebAuthnCredentialSignCount(ctx, generated.UpdateWebAuthnCredentialSignCountParams{
 		CredentialID: credential.ID,
 		SignCount:    pgtype.Int4{Int32: int32(credential.Authenticator.SignCount), Valid: true},
@@ -920,6 +972,64 @@ func (s *service) FinishWebAuthnLogin(ctx context.Context, req *authv1.WebAuthnF
 	_ = s.redis.Del(ctx, fmt.Sprintf("mfa_challenge:%s", req.GetMfaSessionId())).Err()
 
 	return s.mintTokens(ctx, userID, string(user.Role), req.GetDeviceId())
+}
+
+func (s *service) loadAllowedFactors(ctx context.Context, user generated.User) ([]string, error) {
+	allowedFactors := []string{}
+	if user.HasTotp.Bool {
+		allowedFactors = append(allowedFactors, mfaFactorTOTP)
+	}
+	if user.IsEmailVerified.Bool {
+		allowedFactors = append(allowedFactors, mfaFactorEmailOTP)
+	}
+	if user.IsPhoneVerified.Bool {
+		allowedFactors = append(allowedFactors, mfaFactorPhoneOTP)
+	}
+
+	webauthnCreds, err := s.queries.GetWebAuthnCredentialsByUserID(ctx, user.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to load passkey credentials")
+	}
+	if len(webauthnCreds) > 0 {
+		allowedFactors = append(allowedFactors, mfaFactorWebAuthn)
+	}
+
+	return allowedFactors, nil
+}
+
+func (s *service) validateReopenAndRevoke(ctx context.Context, session *mfaSessionState, deviceID string) error {
+	if session == nil || session.Flow != mfaFlowReopen {
+		return nil
+	}
+	if strings.TrimSpace(session.RefreshHash) == "" {
+		return status.Error(codes.FailedPrecondition, "invalid reopen session")
+	}
+	if strings.TrimSpace(deviceID) == "" {
+		return status.Error(codes.InvalidArgument, "device_id is required")
+	}
+	if session.BoundDeviceID != "" && session.BoundDeviceID != deviceID {
+		return status.Error(codes.Unauthenticated, "invalid device id")
+	}
+
+	tokenRecord, err := s.queries.GetRefreshTokenByHashedTokenAny(ctx, session.RefreshHash)
+	if err != nil {
+		return status.Error(codes.Unauthenticated, "session expired; password login required")
+	}
+	if tokenRecord.IsRevoked.Bool {
+		return status.Error(codes.Unauthenticated, "session logged out; password login required")
+	}
+	if isRefreshTokenExpired(tokenRecord.ExpiresAt) {
+		return status.Error(codes.Unauthenticated, "session expired; password login required")
+	}
+	if tokenRecord.DeviceID != deviceID {
+		return status.Error(codes.Unauthenticated, "invalid device id")
+	}
+
+	if err := s.queries.RevokeRefreshToken(ctx, session.RefreshHash); err != nil {
+		return status.Error(codes.Internal, "failed to rotate previous refresh token")
+	}
+
+	return nil
 }
 
 func (s *service) mintTokens(ctx context.Context, userID uuid.UUID, role, deviceID string) (*authv1.AuthTokens, error) {
@@ -980,6 +1090,18 @@ func containsString(values []string, target string) bool {
 func hashOTP(code string) string {
 	h := sha256.Sum256([]byte(code))
 	return hex.EncodeToString(h[:])
+}
+
+func hashRefreshToken(token string) string {
+	h := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(h[:])
+}
+
+func isRefreshTokenExpired(expiresAt pgtype.Timestamptz) bool {
+	if !expiresAt.Valid {
+		return true
+	}
+	return !expiresAt.Time.After(time.Now())
 }
 
 func maskEmail(email string) string {

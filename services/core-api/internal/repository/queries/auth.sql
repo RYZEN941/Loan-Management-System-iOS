@@ -26,6 +26,11 @@ SELECT * FROM refresh_tokens
 WHERE hashed_token = $1 AND is_revoked = false AND expires_at > NOW() 
 LIMIT 1;
 
+-- name: GetRefreshTokenByHashedTokenAny :one
+SELECT * FROM refresh_tokens
+WHERE hashed_token = $1
+LIMIT 1;
+
 -- name: RevokeRefreshTokensForUserDevice :exec
 UPDATE refresh_tokens 
 SET is_revoked = true 

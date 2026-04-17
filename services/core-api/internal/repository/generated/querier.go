@@ -35,6 +35,7 @@ type Querier interface {
 	GetManagerProfileByID(ctx context.Context, id pgtype.UUID) (ManagerProfile, error)
 	GetManagerProfileByUserID(ctx context.Context, userID pgtype.UUID) (ManagerProfile, error)
 	GetRefreshTokenByHashedToken(ctx context.Context, hashedToken string) (RefreshToken, error)
+	GetRefreshTokenByHashedTokenAny(ctx context.Context, hashedToken string) (RefreshToken, error)
 	GetUserByEmailOrPhone(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 	GetWebAuthnCredentialByID(ctx context.Context, credentialID []byte) (WebauthnCredential, error)

@@ -13,6 +13,10 @@ type Config struct {
 	WebAuthnRPID          string
 	WebAuthnRPOrigins     string
 	WebAuthnRPDisplayName string
+
+	SandboxBaseURL string
+	SandboxAPIKey  string
+	SandboxSecret  string
 }
 
 func Load() Config {
@@ -26,6 +30,10 @@ func Load() Config {
 		WebAuthnRPID:          envOrDefault("WEBAUTHN_RP_ID", "localhost"),
 		WebAuthnRPOrigins:     envOrDefault("WEBAUTHN_RP_ORIGINS", "http://localhost:3000"),
 		WebAuthnRPDisplayName: envOrDefault("WEBAUTHN_RP_DISPLAY_NAME", "LMS Monorepo"),
+
+		SandboxBaseURL: envOrDefault("SANDBOX_BASE_URL", "https://api.sandbox.co.in"),
+		SandboxAPIKey:  os.Getenv("SANDBOX_API_KEY"),
+		SandboxSecret:  os.Getenv("SANDBOX_API_SECRET"),
 	}
 }
 

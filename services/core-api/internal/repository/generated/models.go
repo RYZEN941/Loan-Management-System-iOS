@@ -97,6 +97,48 @@ func (ns NullBorrowerGender) Value() (driver.Value, error) {
 	return string(ns.BorrowerGender), nil
 }
 
+type ConsentTypeEnum string
+
+const (
+	ConsentTypeEnumAadharKyc ConsentTypeEnum = "aadhar_kyc"
+	ConsentTypeEnumPanKyc    ConsentTypeEnum = "pan_kyc"
+)
+
+func (e *ConsentTypeEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ConsentTypeEnum(s)
+	case string:
+		*e = ConsentTypeEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ConsentTypeEnum: %T", src)
+	}
+	return nil
+}
+
+type NullConsentTypeEnum struct {
+	ConsentTypeEnum ConsentTypeEnum `json:"consent_type_enum"`
+	Valid           bool            `json:"valid"` // Valid is true if ConsentTypeEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullConsentTypeEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.ConsentTypeEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ConsentTypeEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullConsentTypeEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ConsentTypeEnum), nil
+}
+
 type UserRole string
 
 const (
@@ -157,6 +199,114 @@ type BankBranch struct {
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 }
 
+type BorrowerAadhaarKycCurrent struct {
+	ID                    pgtype.UUID        `json:"id"`
+	UserID                pgtype.UUID        `json:"user_id"`
+	BorrowerProfileID     pgtype.UUID        `json:"borrower_profile_id"`
+	SourceHistoryID       pgtype.UUID        `json:"source_history_id"`
+	Provider              string             `json:"provider"`
+	ProviderTransactionID pgtype.Text        `json:"provider_transaction_id"`
+	ProviderReferenceID   pgtype.Int8        `json:"provider_reference_id"`
+	Status                string             `json:"status"`
+	ProviderMessage       pgtype.Text        `json:"provider_message"`
+	Name                  pgtype.Text        `json:"name"`
+	Gender                pgtype.Text        `json:"gender"`
+	DateOfBirth           pgtype.Text        `json:"date_of_birth"`
+	YearOfBirth           pgtype.Text        `json:"year_of_birth"`
+	CareOf                pgtype.Text        `json:"care_of"`
+	FullAddress           pgtype.Text        `json:"full_address"`
+	Country               pgtype.Text        `json:"country"`
+	District              pgtype.Text        `json:"district"`
+	House                 pgtype.Text        `json:"house"`
+	Landmark              pgtype.Text        `json:"landmark"`
+	Pincode               pgtype.Text        `json:"pincode"`
+	PostOffice            pgtype.Text        `json:"post_office"`
+	State                 pgtype.Text        `json:"state"`
+	Street                pgtype.Text        `json:"street"`
+	Subdistrict           pgtype.Text        `json:"subdistrict"`
+	Vtc                   pgtype.Text        `json:"vtc"`
+	EmailHash             pgtype.Text        `json:"email_hash"`
+	MobileHash            pgtype.Text        `json:"mobile_hash"`
+	RawResponse           []byte             `json:"raw_response"`
+	VerifiedAt            pgtype.Timestamptz `json:"verified_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+}
+
+type BorrowerAadhaarKycHistory struct {
+	ID                    pgtype.UUID        `json:"id"`
+	UserID                pgtype.UUID        `json:"user_id"`
+	BorrowerProfileID     pgtype.UUID        `json:"borrower_profile_id"`
+	Provider              string             `json:"provider"`
+	ProviderTransactionID pgtype.Text        `json:"provider_transaction_id"`
+	ProviderReferenceID   pgtype.Int8        `json:"provider_reference_id"`
+	Status                string             `json:"status"`
+	FailureCode           pgtype.Text        `json:"failure_code"`
+	FailureReason         pgtype.Text        `json:"failure_reason"`
+	ProviderMessage       pgtype.Text        `json:"provider_message"`
+	Name                  pgtype.Text        `json:"name"`
+	Gender                pgtype.Text        `json:"gender"`
+	DateOfBirth           pgtype.Text        `json:"date_of_birth"`
+	YearOfBirth           pgtype.Text        `json:"year_of_birth"`
+	CareOf                pgtype.Text        `json:"care_of"`
+	FullAddress           pgtype.Text        `json:"full_address"`
+	Country               pgtype.Text        `json:"country"`
+	District              pgtype.Text        `json:"district"`
+	House                 pgtype.Text        `json:"house"`
+	Landmark              pgtype.Text        `json:"landmark"`
+	Pincode               pgtype.Text        `json:"pincode"`
+	PostOffice            pgtype.Text        `json:"post_office"`
+	State                 pgtype.Text        `json:"state"`
+	Street                pgtype.Text        `json:"street"`
+	Subdistrict           pgtype.Text        `json:"subdistrict"`
+	Vtc                   pgtype.Text        `json:"vtc"`
+	EmailHash             pgtype.Text        `json:"email_hash"`
+	MobileHash            pgtype.Text        `json:"mobile_hash"`
+	RawResponse           []byte             `json:"raw_response"`
+	AttemptedAt           pgtype.Timestamptz `json:"attempted_at"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+}
+
+type BorrowerPanKycCurrent struct {
+	ID                    pgtype.UUID        `json:"id"`
+	UserID                pgtype.UUID        `json:"user_id"`
+	BorrowerProfileID     pgtype.UUID        `json:"borrower_profile_id"`
+	SourceHistoryID       pgtype.UUID        `json:"source_history_id"`
+	Provider              string             `json:"provider"`
+	ProviderTransactionID pgtype.Text        `json:"provider_transaction_id"`
+	Status                string             `json:"status"`
+	ProviderMessage       pgtype.Text        `json:"provider_message"`
+	PanMasked             pgtype.Text        `json:"pan_masked"`
+	Category              pgtype.Text        `json:"category"`
+	Remarks               pgtype.Text        `json:"remarks"`
+	NameAsPerPanMatch     pgtype.Bool        `json:"name_as_per_pan_match"`
+	DateOfBirthMatch      pgtype.Bool        `json:"date_of_birth_match"`
+	AadhaarSeedingStatus  pgtype.Text        `json:"aadhaar_seeding_status"`
+	RawResponse           []byte             `json:"raw_response"`
+	VerifiedAt            pgtype.Timestamptz `json:"verified_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+}
+
+type BorrowerPanKycHistory struct {
+	ID                    pgtype.UUID        `json:"id"`
+	UserID                pgtype.UUID        `json:"user_id"`
+	BorrowerProfileID     pgtype.UUID        `json:"borrower_profile_id"`
+	Provider              string             `json:"provider"`
+	ProviderTransactionID pgtype.Text        `json:"provider_transaction_id"`
+	Status                string             `json:"status"`
+	FailureCode           pgtype.Text        `json:"failure_code"`
+	FailureReason         pgtype.Text        `json:"failure_reason"`
+	ProviderMessage       pgtype.Text        `json:"provider_message"`
+	PanMasked             pgtype.Text        `json:"pan_masked"`
+	Category              pgtype.Text        `json:"category"`
+	Remarks               pgtype.Text        `json:"remarks"`
+	NameAsPerPanMatch     pgtype.Bool        `json:"name_as_per_pan_match"`
+	DateOfBirthMatch      pgtype.Bool        `json:"date_of_birth_match"`
+	AadhaarSeedingStatus  pgtype.Text        `json:"aadhaar_seeding_status"`
+	RawResponse           []byte             `json:"raw_response"`
+	AttemptedAt           pgtype.Timestamptz `json:"attempted_at"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+}
+
 type BorrowerProfile struct {
 	ID                         pgtype.UUID            `json:"id"`
 	UserID                     pgtype.UUID            `json:"user_id"`
@@ -171,6 +321,10 @@ type BorrowerProfile struct {
 	EmploymentType             BorrowerEmploymentType `json:"employment_type"`
 	MonthlyIncome              pgtype.Numeric         `json:"monthly_income"`
 	ProfileCompletenessPercent int32                  `json:"profile_completeness_percent"`
+	IsAadhaarVerified          bool                   `json:"is_aadhaar_verified"`
+	IsPanVerified              bool                   `json:"is_pan_verified"`
+	AadhaarVerifiedAt          pgtype.Timestamptz     `json:"aadhaar_verified_at"`
+	PanVerifiedAt              pgtype.Timestamptz     `json:"pan_verified_at"`
 	CreatedAt                  pgtype.Timestamptz     `json:"created_at"`
 }
 
@@ -222,6 +376,23 @@ type User struct {
 	HasTotp                   pgtype.Bool        `json:"has_totp"`
 	TotpSecret                pgtype.Text        `json:"totp_secret"`
 	CreatedAt                 pgtype.Timestamptz `json:"created_at"`
+}
+
+type UserConsent struct {
+	ID              pgtype.UUID        `json:"id"`
+	UserID          pgtype.UUID        `json:"user_id"`
+	ConsentType     ConsentTypeEnum    `json:"consent_type"`
+	ConsentVersion  string             `json:"consent_version"`
+	ConsentText     string             `json:"consent_text"`
+	ConsentTextHash string             `json:"consent_text_hash"`
+	IsGranted       bool               `json:"is_granted"`
+	Source          pgtype.Text        `json:"source"`
+	IpAddress       pgtype.Text        `json:"ip_address"`
+	UserAgent       pgtype.Text        `json:"user_agent"`
+	Metadata        []byte             `json:"metadata"`
+	GrantedAt       pgtype.Timestamptz `json:"granted_at"`
+	RevokedAt       pgtype.Timestamptz `json:"revoked_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
 
 type WebauthnCredential struct {

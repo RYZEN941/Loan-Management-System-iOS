@@ -18,6 +18,7 @@ proto:
 		--go-grpc_opt=module=$(MODULE) \
 		$(PROTO_DIR)/admin/v1/admin.proto \
 		$(PROTO_DIR)/auth/v1/auth.proto \
+		$(PROTO_DIR)/kyc/v1/kyc.proto \
 		$(PROTO_DIR)/onboarding/v1/onboarding.proto \
 		$(PROTO_DIR)/loan/v1/loan.proto
 

@@ -1,0 +1,258 @@
+package sandbox
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"strings"
+	"sync"
+	"time"
+)
+
+type KYCClient struct {
+	httpClient   *http.Client
+	baseURL      string
+	apiKey       string
+	apiSecret    string
+	apiVersion   string
+	token        string
+	tokenExpiry  time.Time
+	tokenMu      sync.Mutex
+	lastAuthErr  error
+	authLeeway   time.Duration
+	defaultReqTO time.Duration
+}
+
+type authenticateResponse struct {
+	Code int `json:"code"`
+	Data struct {
+		AccessToken string `json:"access_token"`
+	} `json:"data"`
+}
+
+type AadhaarGenerateOTPRequest struct {
+	Entity        string `json:"@entity"`
+	AadhaarNumber string `json:"aadhaar_number"`
+	Consent       string `json:"consent"`
+	Reason        string `json:"reason"`
+}
+
+type AadhaarGenerateOTPData struct {
+	Entity      string `json:"@entity"`
+	ReferenceID int64  `json:"reference_id"`
+	Message     string `json:"message"`
+}
+
+type AadhaarGenerateOTPResponse struct {
+	Code          int                    `json:"code"`
+	Timestamp     int64                  `json:"timestamp"`
+	TransactionID string                 `json:"transaction_id"`
+	Data          AadhaarGenerateOTPData `json:"data"`
+}
+
+type AadhaarVerifyOTPRequest struct {
+	Entity      string `json:"@entity"`
+	ReferenceID string `json:"reference_id"`
+	OTP         string `json:"otp"`
+}
+
+type AadhaarAddress struct {
+	Entity      string `json:"@entity"`
+	Country     string `json:"country"`
+	District    string `json:"district"`
+	House       string `json:"house"`
+	Landmark    string `json:"landmark"`
+	Pincode     string `json:"pincode"`
+	PostOffice  string `json:"post_office"`
+	State       string `json:"state"`
+	Street      string `json:"street"`
+	Subdistrict string `json:"subdistrict"`
+	VTC         string `json:"vtc"`
+}
+
+type AadhaarVerifyOTPData struct {
+	Entity      string         `json:"@entity"`
+	ReferenceID int64          `json:"reference_id"`
+	Status      string         `json:"status"`
+	Message     string         `json:"message"`
+	CareOf      string         `json:"care_of"`
+	FullAddress string         `json:"full_address"`
+	DateOfBirth string         `json:"date_of_birth"`
+	EmailHash   string         `json:"email_hash"`
+	Gender      string         `json:"gender"`
+	Name        string         `json:"name"`
+	Address     AadhaarAddress `json:"address"`
+	YearOfBirth string         `json:"year_of_birth"`
+	MobileHash  string         `json:"mobile_hash"`
+	ShareCode   string         `json:"share_code"`
+}
+
+type AadhaarVerifyOTPResponse struct {
+	Code          int                  `json:"code"`
+	Timestamp     int64                `json:"timestamp"`
+	TransactionID string               `json:"transaction_id"`
+	Data          AadhaarVerifyOTPData `json:"data"`
+}
+
+type PANVerifyRequest struct {
+	Entity       string `json:"@entity"`
+	PAN          string `json:"pan"`
+	NameAsPerPAN string `json:"name_as_per_pan"`
+	DateOfBirth  string `json:"date_of_birth"`
+	Consent      string `json:"consent"`
+	Reason       string `json:"reason"`
+}
+
+type PANVerifyData struct {
+	Entity             string `json:"@entity"`
+	PAN                string `json:"pan"`
+	Category           string `json:"category"`
+	Status             string `json:"status"`
+	Remarks            string `json:"remarks"`
+	NameAsPerPANMatch  bool   `json:"name_as_per_pan_match"`
+	DateOfBirthMatch   bool   `json:"date_of_birth_match"`
+	AadhaarSeedingStat string `json:"aadhaar_seeding_status"`
+}
+
+type PANVerifyResponse struct {
+	Code          int           `json:"code"`
+	Timestamp     int64         `json:"timestamp"`
+	TransactionID string        `json:"transaction_id"`
+	Data          PANVerifyData `json:"data"`
+}
+
+func NewKYCClient(baseURL, apiKey, apiSecret string) *KYCClient {
+	return &KYCClient{
+		httpClient:   &http.Client{Timeout: 20 * time.Second},
+		baseURL:      strings.TrimSuffix(baseURL, "/"),
+		apiKey:       apiKey,
+		apiSecret:    apiSecret,
+		apiVersion:   "1.0.0",
+		authLeeway:   2 * time.Minute,
+		defaultReqTO: 20 * time.Second,
+	}
+}
+
+func (c *KYCClient) GenerateAadhaarOTP(ctx context.Context, req AadhaarGenerateOTPRequest) (*AadhaarGenerateOTPResponse, []byte, error) {
+	body, respBody, err := c.postJSON(ctx, "/kyc/aadhaar/okyc/otp", req)
+	if err != nil {
+		return nil, respBody, err
+	}
+	var out AadhaarGenerateOTPResponse
+	if err := json.Unmarshal(body, &out); err != nil {
+		return nil, respBody, fmt.Errorf("decode aadhaar otp generate response: %w", err)
+	}
+	return &out, respBody, nil
+}
+
+func (c *KYCClient) VerifyAadhaarOTP(ctx context.Context, req AadhaarVerifyOTPRequest) (*AadhaarVerifyOTPResponse, []byte, error) {
+	body, respBody, err := c.postJSON(ctx, "/kyc/aadhaar/okyc/otp/verify", req)
+	if err != nil {
+		return nil, respBody, err
+	}
+	var out AadhaarVerifyOTPResponse
+	if err := json.Unmarshal(body, &out); err != nil {
+		return nil, respBody, fmt.Errorf("decode aadhaar otp verify response: %w", err)
+	}
+	return &out, respBody, nil
+}
+
+func (c *KYCClient) VerifyPAN(ctx context.Context, req PANVerifyRequest) (*PANVerifyResponse, []byte, error) {
+	body, respBody, err := c.postJSON(ctx, "/kyc/pan", req)
+	if err != nil {
+		return nil, respBody, err
+	}
+	var out PANVerifyResponse
+	if err := json.Unmarshal(body, &out); err != nil {
+		return nil, respBody, fmt.Errorf("decode pan verify response: %w", err)
+	}
+	return &out, respBody, nil
+}
+
+func (c *KYCClient) postJSON(ctx context.Context, path string, payload any) ([]byte, []byte, error) {
+	b, err := json.Marshal(payload)
+	if err != nil {
+		return nil, nil, fmt.Errorf("marshal request: %w", err)
+	}
+
+	token, err := c.getAccessToken(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	endpoint := c.baseURL + path
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(b))
+	if err != nil {
+		return nil, nil, fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("x-api-key", c.apiKey)
+	req.Header.Set("x-api-version", c.apiVersion)
+	req.Header.Set("authorization", token)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, nil, fmt.Errorf("call sandbox endpoint: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody := new(bytes.Buffer)
+	if _, err := respBody.ReadFrom(resp.Body); err != nil {
+		return nil, nil, fmt.Errorf("read response: %w", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, respBody.Bytes(), fmt.Errorf("sandbox http status %d", resp.StatusCode)
+	}
+
+	return respBody.Bytes(), respBody.Bytes(), nil
+}
+
+func (c *KYCClient) getAccessToken(ctx context.Context) (string, error) {
+	c.tokenMu.Lock()
+	defer c.tokenMu.Unlock()
+
+	now := time.Now()
+	if c.token != "" && now.Add(c.authLeeway).Before(c.tokenExpiry) {
+		return c.token, nil
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/authenticate", nil)
+	if err != nil {
+		return "", fmt.Errorf("create auth request: %w", err)
+	}
+	req.Header.Set("x-api-key", c.apiKey)
+	req.Header.Set("x-api-secret", c.apiSecret)
+	req.Header.Set("x-api-version", c.apiVersion)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		c.lastAuthErr = err
+		return "", fmt.Errorf("authenticate request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body := new(bytes.Buffer)
+	if _, err := body.ReadFrom(resp.Body); err != nil {
+		return "", fmt.Errorf("read auth response: %w", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("authenticate http status %d", resp.StatusCode)
+	}
+
+	var authResp authenticateResponse
+	if err := json.Unmarshal(body.Bytes(), &authResp); err != nil {
+		return "", fmt.Errorf("decode authenticate response: %w", err)
+	}
+	if strings.TrimSpace(authResp.Data.AccessToken) == "" {
+		return "", fmt.Errorf("empty access token from authenticate")
+	}
+
+	c.token = authResp.Data.AccessToken
+	c.tokenExpiry = time.Now().Add(24 * time.Hour)
+	return c.token, nil
+}

@@ -16,6 +16,8 @@ type Querier interface {
 	CreateAdminProfile(ctx context.Context, userID pgtype.UUID) (AdminProfile, error)
 	CreateAdminUser(ctx context.Context, arg CreateAdminUserParams) (User, error)
 	CreateBankBranch(ctx context.Context, arg CreateBankBranchParams) (BankBranch, error)
+	CreateBorrowerAadhaarKycHistory(ctx context.Context, arg CreateBorrowerAadhaarKycHistoryParams) (BorrowerAadhaarKycHistory, error)
+	CreateBorrowerPanKycHistory(ctx context.Context, arg CreateBorrowerPanKycHistoryParams) (BorrowerPanKycHistory, error)
 	CreateBorrowerProfile(ctx context.Context, arg CreateBorrowerProfileParams) (BorrowerProfile, error)
 	CreateDstProfile(ctx context.Context, arg CreateDstProfileParams) (DstProfile, error)
 	CreateDstUser(ctx context.Context, arg CreateDstUserParams) (User, error)
@@ -24,9 +26,11 @@ type Querier interface {
 	CreateOfficerProfile(ctx context.Context, arg CreateOfficerProfileParams) (OfficerProfile, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	CreateUserConsent(ctx context.Context, arg CreateUserConsentParams) (UserConsent, error)
 	CreateWebAuthnCredential(ctx context.Context, arg CreateWebAuthnCredentialParams) (WebauthnCredential, error)
 	GetBankBranchByID(ctx context.Context, id pgtype.UUID) (BankBranch, error)
 	GetBorrowerProfileByUserID(ctx context.Context, userID pgtype.UUID) (BorrowerProfile, error)
+	GetLatestGrantedConsentByType(ctx context.Context, arg GetLatestGrantedConsentByTypeParams) (UserConsent, error)
 	GetManagerProfileByID(ctx context.Context, id pgtype.UUID) (ManagerProfile, error)
 	GetManagerProfileByUserID(ctx context.Context, userID pgtype.UUID) (ManagerProfile, error)
 	GetRefreshTokenByHashedToken(ctx context.Context, hashedToken string) (RefreshToken, error)
@@ -34,6 +38,10 @@ type Querier interface {
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 	GetWebAuthnCredentialByID(ctx context.Context, credentialID []byte) (WebauthnCredential, error)
 	GetWebAuthnCredentialsByUserID(ctx context.Context, userID pgtype.UUID) ([]WebauthnCredential, error)
+	ListBorrowerAadhaarKycHistory(ctx context.Context, arg ListBorrowerAadhaarKycHistoryParams) ([]BorrowerAadhaarKycHistory, error)
+	ListBorrowerPanKycHistory(ctx context.Context, arg ListBorrowerPanKycHistoryParams) ([]BorrowerPanKycHistory, error)
+	MarkBorrowerAadhaarVerified(ctx context.Context, arg MarkBorrowerAadhaarVerifiedParams) error
+	MarkBorrowerPanVerified(ctx context.Context, arg MarkBorrowerPanVerifiedParams) error
 	RevokeRefreshToken(ctx context.Context, hashedToken string) error
 	RevokeRefreshTokensForUserDevice(ctx context.Context, arg RevokeRefreshTokensForUserDeviceParams) error
 	SetTOTPSecret(ctx context.Context, arg SetTOTPSecretParams) error
@@ -45,6 +53,8 @@ type Querier interface {
 	UpdateOfficerBranch(ctx context.Context, arg UpdateOfficerBranchParams) error
 	UpdateUserVerification(ctx context.Context, arg UpdateUserVerificationParams) error
 	UpdateWebAuthnCredentialSignCount(ctx context.Context, arg UpdateWebAuthnCredentialSignCountParams) error
+	UpsertBorrowerAadhaarKycCurrent(ctx context.Context, arg UpsertBorrowerAadhaarKycCurrentParams) (BorrowerAadhaarKycCurrent, error)
+	UpsertBorrowerPanKycCurrent(ctx context.Context, arg UpsertBorrowerPanKycCurrentParams) (BorrowerPanKycCurrent, error)
 }
 
 var _ Querier = (*Queries)(nil)

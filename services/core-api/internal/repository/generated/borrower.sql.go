@@ -49,7 +49,7 @@ INSERT INTO borrower_profiles (
     $10,
     $11,
     $12
-) RETURNING id, user_id, first_name, last_name, date_of_birth, gender, address_line1, city, state, pincode, employment_type, monthly_income, profile_completeness_percent, created_at
+) RETURNING id, user_id, first_name, last_name, date_of_birth, gender, address_line1, city, state, pincode, employment_type, monthly_income, profile_completeness_percent, is_aadhaar_verified, is_pan_verified, aadhaar_verified_at, pan_verified_at, created_at
 `
 
 type CreateBorrowerProfileParams struct {
@@ -97,13 +97,17 @@ func (q *Queries) CreateBorrowerProfile(ctx context.Context, arg CreateBorrowerP
 		&i.EmploymentType,
 		&i.MonthlyIncome,
 		&i.ProfileCompletenessPercent,
+		&i.IsAadhaarVerified,
+		&i.IsPanVerified,
+		&i.AadhaarVerifiedAt,
+		&i.PanVerifiedAt,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getBorrowerProfileByUserID = `-- name: GetBorrowerProfileByUserID :one
-SELECT id, user_id, first_name, last_name, date_of_birth, gender, address_line1, city, state, pincode, employment_type, monthly_income, profile_completeness_percent, created_at FROM borrower_profiles WHERE user_id = $1 LIMIT 1
+SELECT id, user_id, first_name, last_name, date_of_birth, gender, address_line1, city, state, pincode, employment_type, monthly_income, profile_completeness_percent, is_aadhaar_verified, is_pan_verified, aadhaar_verified_at, pan_verified_at, created_at FROM borrower_profiles WHERE user_id = $1 LIMIT 1
 `
 
 func (q *Queries) GetBorrowerProfileByUserID(ctx context.Context, userID pgtype.UUID) (BorrowerProfile, error) {
@@ -123,6 +127,10 @@ func (q *Queries) GetBorrowerProfileByUserID(ctx context.Context, userID pgtype.
 		&i.EmploymentType,
 		&i.MonthlyIncome,
 		&i.ProfileCompletenessPercent,
+		&i.IsAadhaarVerified,
+		&i.IsPanVerified,
+		&i.AadhaarVerifiedAt,
+		&i.PanVerifiedAt,
 		&i.CreatedAt,
 	)
 	return i, err

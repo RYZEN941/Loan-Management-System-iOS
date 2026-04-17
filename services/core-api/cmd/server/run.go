@@ -9,12 +9,15 @@ import (
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/app"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/config"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/db"
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/integrations/sandbox"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/repository/generated"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/admin"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/auth"
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/kyc"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/onboarding"
 	adminv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/adminv1"
 	authv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/authv1"
+	kycv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/kycv1"
 	onboardingv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/onboardingv1"
 	grpcinterceptors "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/interceptors"
 	"google.golang.org/grpc"
@@ -47,8 +50,10 @@ func Run() error {
 
 	adminService := admin.NewService(queries)
 	authService := auth.NewService(queries, redisClient, cfg)
+	sandboxKYCClient := sandbox.NewKYCClient(cfg.SandboxBaseURL, cfg.SandboxAPIKey, cfg.SandboxSecret)
+	kycService := kyc.NewService(pgPool, queries, sandboxKYCClient)
 	onboardingService := onboarding.NewService(queries)
-	application := app.New(adminService, authService, onboardingService)
+	application := app.New(adminService, authService, kycService, onboardingService)
 
 	publicMethods := map[string]struct{}{
 		// BOOTSTRAP ADMIN ONLY:
@@ -78,6 +83,12 @@ func Run() error {
 		"/auth.v1.AuthService/SetupTOTP":                              {"borrower", "officer", "manager", "admin", "dst"},
 		"/auth.v1.AuthService/VerifyTOTPSetup":                        {"borrower", "officer", "manager", "admin", "dst"},
 		"/auth.v1.AuthService/ChangePassword":                         {"borrower", "officer", "manager", "admin", "dst"},
+		"/kyc.v1.KycService/RecordUserConsent":                        {"borrower"},
+		"/kyc.v1.KycService/InitiateAadhaarKyc":                       {"borrower"},
+		"/kyc.v1.KycService/VerifyAadhaarKycOtp":                      {"borrower"},
+		"/kyc.v1.KycService/VerifyPanKyc":                             {"borrower"},
+		"/kyc.v1.KycService/GetBorrowerKycStatus":                     {"borrower"},
+		"/kyc.v1.KycService/ListBorrowerKycHistory":                   {"borrower"},
 		"/onboarding.v1.OnboardingService/CompleteBorrowerOnboarding": {"borrower"},
 		"/auth.v1.AuthService/Logout":                                 {"borrower", "officer", "manager", "admin", "dst"},
 		// Example future loan roles
@@ -102,6 +113,7 @@ func Run() error {
 
 	adminv1.RegisterAdminServiceServer(grpcServer, application.AdminHandler)
 	authv1.RegisterAuthServiceServer(grpcServer, application.AuthHandler)
+	kycv1.RegisterKycServiceServer(grpcServer, application.KycHandler)
 	onboardingv1.RegisterOnboardingServiceServer(grpcServer, application.OnboardingHandler)
 	reflection.Register(grpcServer)
 

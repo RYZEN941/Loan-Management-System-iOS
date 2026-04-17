@@ -80,7 +80,7 @@ Request:
 Response:
 
 - `mfa_session_id`
-- `allowed_factors` (subset of: `totp`, `email_otp`, `phone_otp`)
+- `allowed_factors` (subset of: `totp`, `email_otp`, `phone_otp`, `webauthn`)
 - `is_requiring_password_change`
 
 Frontend action:
@@ -99,11 +99,13 @@ Response:
 
 - `challenge_sent`
 - `challenge_target` (masked destination for OTP channels)
+- `webauthn_request_options` (returned when `factor=webauthn`)
 
 Frontend action:
 
 - For OTP factors, show input waiting for code.
 - For TOTP, show authenticator code input directly.
+- For WebAuthn, use `webauthn_request_options` to run passkey assertion and submit `webauthn_assertion` in `VerifyLoginMFA`.
 
 ### 2.3 VerifyLoginMFA
 

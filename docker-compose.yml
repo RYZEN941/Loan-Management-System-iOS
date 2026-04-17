@@ -67,6 +67,8 @@ services:
       WEBAUTHN_RP_ID: "chirag.codes"
       WEBAUTHN_RP_ORIGINS: "https://lmsapi.chirag.codes"
       WEBAUTHN_RP_DISPLAY_NAME: "LMS Monorepo"
+      SANDBOX_API_KEY: "key_test_c4f9d814431e40b1b32de2ec1d7f4ace"
+      SANDBOX_API_SECRET: "secret_test_2df45cf1a82b42d1b2e1266e4176c7ef"
     ports:
       - "18080:8080"
     depends_on:

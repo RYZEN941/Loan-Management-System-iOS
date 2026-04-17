@@ -57,6 +57,7 @@ const (
 	mfaFactorTOTP     = "totp"
 	mfaFactorEmailOTP = "email_otp"
 	mfaFactorPhoneOTP = "phone_otp"
+	mfaFactorWebAuthn = "webauthn"
 
 	mfaSessionTTL      = 5 * time.Minute
 	mfaChallengeTTL    = 5 * time.Minute
@@ -70,6 +71,7 @@ type mfaSessionState struct {
 	Phone          string   `json:"phone"`
 	AllowedFactors []string `json:"allowed_factors"`
 	SelectedFactor string   `json:"selected_factor"`
+	WebauthnUserID string   `json:"webauthn_user_id"`
 }
 
 type mfaOTPChallenge struct {
@@ -306,6 +308,14 @@ func (s *service) LoginPrimary(ctx context.Context, req *authv1.LoginRequest) (*
 		allowedFactors = append(allowedFactors, mfaFactorPhoneOTP)
 	}
 
+	webauthnCreds, err := s.queries.GetWebAuthnCredentialsByUserID(ctx, user.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to load passkey credentials")
+	}
+	if len(webauthnCreds) > 0 {
+		allowedFactors = append(allowedFactors, mfaFactorWebAuthn)
+	}
+
 	if len(allowedFactors) == 0 {
 		return nil, status.Error(codes.FailedPrecondition, "no mfa factors available")
 	}
@@ -316,6 +326,7 @@ func (s *service) LoginPrimary(ctx context.Context, req *authv1.LoginRequest) (*
 		Email:          user.Email,
 		Phone:          user.Phone,
 		AllowedFactors: allowedFactors,
+		WebauthnUserID: user.ID.String(),
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to encode mfa session")
@@ -351,12 +362,33 @@ func (s *service) SelectLoginMFAFactor(ctx context.Context, req *authv1.SelectLo
 
 	challengeSent := false
 	challengeTarget := ""
+	webauthnRequestOptions := []byte{}
 
 	session.SelectedFactor = factor
 
 	switch factor {
 	case mfaFactorTOTP:
 		// No out-of-band challenge required.
+	case mfaFactorWebAuthn:
+		beginResp, err := s.BeginWebAuthnLogin(ctx, &authv1.WebAuthnLoginRequest{UserId: session.WebauthnUserID})
+		if err != nil {
+			return nil, err
+		}
+		session.SelectedFactor = mfaFactorWebAuthn
+		if beginResp.GetMfaSessionId() == "" {
+			return nil, status.Error(codes.Internal, "webauthn login session missing")
+		}
+		if beginResp.GetMfaSessionId() != req.GetMfaSessionId() {
+			originalChallenge, err := s.redis.Get(ctx, fmt.Sprintf("webauthn_login:%s", beginResp.GetMfaSessionId())).Result()
+			if err != nil {
+				return nil, status.Error(codes.Internal, "failed to load generated webauthn challenge")
+			}
+			if err := s.redis.Set(ctx, fmt.Sprintf("webauthn_login:%s", req.GetMfaSessionId()), originalChallenge, mfaSessionTTL).Err(); err != nil {
+				return nil, status.Error(codes.Internal, "failed to link webauthn challenge")
+			}
+			_ = s.redis.Del(ctx, fmt.Sprintf("webauthn_login:%s", beginResp.GetMfaSessionId())).Err()
+		}
+		webauthnRequestOptions = beginResp.GetPublicKeyCredentialRequestOptions()
 	case mfaFactorEmailOTP, mfaFactorPhoneOTP:
 		// Uncomment this on sender integration
 		//otp := generateOTP()
@@ -397,8 +429,9 @@ func (s *service) SelectLoginMFAFactor(ctx context.Context, req *authv1.SelectLo
 	}
 
 	return &authv1.SelectLoginMFAFactorResponse{
-		ChallengeSent:   challengeSent,
-		ChallengeTarget: challengeTarget,
+		ChallengeSent:          challengeSent,
+		ChallengeTarget:        challengeTarget,
+		WebauthnRequestOptions: webauthnRequestOptions,
 	}, nil
 }
 
@@ -447,6 +480,16 @@ func (s *service) VerifyLoginMFA(ctx context.Context, req *authv1.VerifyLoginMFA
 		if err := s.verifyMFAOTP(ctx, req.GetMfaSessionId(), mfaFactorPhoneOTP, f.PhoneOtpCode); err != nil {
 			return nil, err
 		}
+	case mfaFactorWebAuthn:
+		f, ok := req.Factor.(*authv1.VerifyLoginMFARequest_WebauthnAssertion)
+		if !ok || len(f.WebauthnAssertion) == 0 {
+			return nil, status.Error(codes.InvalidArgument, "webauthn assertion is required")
+		}
+		return s.FinishWebAuthnLogin(ctx, &authv1.WebAuthnFinishLoginRequest{
+			MfaSessionId: req.GetMfaSessionId(),
+			Assertion:    f.WebauthnAssertion,
+			DeviceId:     req.GetDeviceId(),
+		})
 	default:
 		return nil, status.Error(codes.InvalidArgument, "unsupported mfa factor")
 	}
@@ -878,6 +921,8 @@ func (s *service) FinishWebAuthnLogin(ctx context.Context, req *authv1.WebAuthnF
 	if err := s.redis.Del(ctx, fmt.Sprintf("webauthn_login:%s", req.GetMfaSessionId())).Err(); err != nil {
 		return nil, status.Error(codes.Internal, "failed to clear login session")
 	}
+	_ = s.redis.Del(ctx, fmt.Sprintf("mfa_session:%s", req.GetMfaSessionId())).Err()
+	_ = s.redis.Del(ctx, fmt.Sprintf("mfa_challenge:%s", req.GetMfaSessionId())).Err()
 
 	return s.mintTokens(ctx, userID, string(user.Role), req.GetDeviceId())
 }

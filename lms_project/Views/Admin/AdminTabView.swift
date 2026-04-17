@@ -9,26 +9,24 @@
 import SwiftUI
 
 struct AdminTabView: View {
-<<<<<<< HEAD
 
-    
+    // Shim: pull AuthViewModel from environment (injected from lms_projectApp entry point)
+    @EnvironmentObject private var authVM_shim: AuthViewModel
+
+    @StateObject private var adminVM     = AdminViewModel()
+    @StateObject private var dashboardVM = DashboardViewModel()
+    @StateObject private var messagesVM  = MessagesViewModel()
     @State private var selectedTab = 0
     @State private var showProfile = false
-    
-=======
-    @StateObject private var adminVM    = AdminViewModel()
-    @StateObject private var dashboardVM = DashboardViewModel()
-    @StateObject private var messagesVM = MessagesViewModel()
 
-    @State private var selectedTab  = 0
-    @State private var showProfile  = false
-
->>>>>>> 5e06394 (extra featuers for admin have to shorten)
     var body: some View {
         TabView(selection: $selectedTab) {
 
             // ── EXISTING TAB 0 ── Dashboard (unchanged)
             AdminDashboardView(showProfile: $showProfile)
+                .environmentObject(adminVM)
+                .environmentObject(dashboardVM)
+                .environmentObject(authVM_shim)
                 .tabItem {
                     Label("Dashboard", systemImage: "chart.bar.fill")
                 }
@@ -36,6 +34,7 @@ struct AdminTabView: View {
 
             // ── EXISTING TAB 1 ── Users (unchanged)
             AdminUsersView(showProfile: $showProfile)
+                .environmentObject(adminVM)
                 .tabItem {
                     Label("Users", systemImage: "person.3.fill")
                 }
@@ -43,6 +42,7 @@ struct AdminTabView: View {
 
             // ── EXISTING TAB 2 ── System Control (unchanged)
             AdminSystemControlView(showProfile: $showProfile)
+                .environmentObject(adminVM)
                 .tabItem {
                     Label("System", systemImage: "gearshape.fill")
                 }
@@ -50,6 +50,7 @@ struct AdminTabView: View {
 
             // ── EXISTING TAB 3 ── Messages (unchanged)
             AdminMessagesView(showProfile: $showProfile)
+                .environmentObject(messagesVM)
                 .tabItem {
                     Label("Messages", systemImage: "message.fill")
                 }
@@ -95,7 +96,4 @@ struct AdminTabView: View {
                 .environmentObject(adminVM)
         }
     }
-
-    // Shim: pull AuthViewModel from environment (injected from lms_projectApp entry point)
-    @EnvironmentObject private var authVM_shim: AuthViewModel
 }

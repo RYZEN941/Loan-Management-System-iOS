@@ -350,6 +350,7 @@ class MockDataService: LMSDataService {
                      text: "Initial review completed. \(risk == .high ? "High risk flagged — needs additional verification." : "Documents look good.")",
                      timestamp: createdAt.addingTimeInterval(172800))
             ],
+            internalRemarks: [],
             status: status,
             assignedTo: "LO-001",
             branch: "Mumbai Central",

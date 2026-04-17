@@ -261,12 +261,22 @@ struct CreateUserSheet: View {
     @ObservedObject var adminVM: AdminViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
-    
-    @State private var name = ""
+
+    @State private var name         = ""
+    @State private var email        = ""
+    @State private var password     = ""
+    @State private var phone        = ""
     @State private var selectedRole: UserRole = .loanOfficer
-    @State private var branch = ""
-    @State private var employeeId = ""
-    
+    @State private var branch       = ""
+    @State private var employeeId   = ""
+    @State private var showPassword = false
+    @State private var emailError: String? = nil
+
+    private var isFormValid: Bool {
+        !name.isEmpty && !email.isEmpty && !password.isEmpty &&
+        !branch.isEmpty && !employeeId.isEmpty
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -280,6 +290,45 @@ struct CreateUserSheet: View {
                     TextField("Branch", text: $branch)
                     TextField("Employee ID", text: $employeeId)
                 }
+
+                Section {
+                    TextField("Email address", text: $email)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.emailAddress)
+
+                    TextField("Phone number", text: $phone)
+                        .keyboardType(.phonePad)
+
+                    HStack {
+                        Group {
+                            if showPassword {
+                                TextField("Password", text: $password)
+                                    .autocorrectionDisabled()
+                                    .textInputAutocapitalization(.never)
+                            } else {
+                                SecureField("Password", text: $password)
+                            }
+                        }
+                        Button {
+                            showPassword.toggle()
+                        } label: {
+                            Image(systemName: showPassword ? "eye.slash" : "eye")
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    if let err = emailError {
+                        Text(err)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                } header: {
+                    Text("Login Credentials")
+                } footer: {
+                    Text("The user will sign in with these credentials.")
+                }
             }
             .navigationTitle("Create User")
             .navigationBarTitleDisplayMode(.inline)
@@ -289,10 +338,24 @@ struct CreateUserSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Create") {
-                        adminVM.createUser(name: name, role: selectedRole, branch: branch, employeeId: employeeId)
+                        let store = UserStore.shared
+                        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                        if store.credentials.contains(where: { $0.email.lowercased() == trimmedEmail }) {
+                            emailError = "An account with this email already exists."
+                            return
+                        }
+                        adminVM.createUser(
+                            name: name,
+                            email: email,
+                            password: password,
+                            phone: phone,
+                            role: selectedRole,
+                            branch: branch,
+                            employeeId: employeeId
+                        )
                         dismiss()
                     }
-                    .disabled(name.isEmpty || branch.isEmpty || employeeId.isEmpty)
+                    .disabled(!isFormValid)
                 }
             }
         }

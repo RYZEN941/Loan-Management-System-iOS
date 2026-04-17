@@ -15,6 +15,7 @@ struct LoanApplication: Identifiable, Codable, Hashable {
     var documents: [LoanDocument]
     var verification: [VerificationItem]
     var notes: [Note]
+    var internalRemarks: [InternalRemark]
     var status: ApplicationStatus
     var assignedTo: String
     var branch: String
@@ -29,6 +30,16 @@ struct LoanApplication: Identifiable, Codable, Hashable {
         return .onTrack
     }
 }
+
+// MARK: - Internal Remark
+
+struct InternalRemark: Identifiable, Codable, Hashable {
+    let id: String
+    var author: String
+    var text: String
+    var timestamp: Date
+}
+
 
 // MARK: - Borrower
 

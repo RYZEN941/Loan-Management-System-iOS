@@ -9,13 +9,15 @@ import Combine
 class ApplicationsViewModel: ObservableObject {
     @Published var applications: [LoanApplication] = []
     @Published var selectedApplication: LoanApplication? = nil
-    @Published var filterStatus: ApplicationStatus? = nil
+    @Published var filterStatus: ApplicationStatus? = .underReview   // default: Under Review
     @Published var searchText = ""
     @Published var isLoading = false
     @Published var showXMLUploadResult = false
     @Published var xmlParseResult: XMLParseResult? = nil
     @Published var actionMessage: String? = nil
     @Published var showActionAlert = false
+    // Uploaded file URLs per document id (in-memory for session)
+    @Published var uploadedFiles: [String: [UploadedDocFile]] = [:]
     
     private let dataService = MockDataService.shared
     private let xmlService = XMLParserService.shared
@@ -123,9 +125,50 @@ class ApplicationsViewModel: ObservableObject {
         return applicationMessages[applicationId] ?? []
     }
     
+    // MARK: - Internal Remarks
+    
+    func addInternalRemark(applicationId: String, text: String, author: String) {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        let remark = InternalRemark(
+            id: UUID().uuidString,
+            author: author,
+            text: text,
+            timestamp: Date()
+        )
+        if let idx = applications.firstIndex(where: { $0.id == applicationId }) {
+            withAnimation {
+                applications[idx].internalRemarks.append(remark)
+                selectedApplication = applications[idx]
+            }
+        }
+    }
+    
+    // MARK: - Document Upload
+    
+    func recordUploadedFile(_ file: UploadedDocFile, forDocumentId docId: String) {
+        withAnimation {
+            if uploadedFiles[docId] != nil {
+                uploadedFiles[docId]!.append(file)
+            } else {
+                uploadedFiles[docId] = [file]
+            }
+        }
+        // Mark document as uploaded in the application
+        if let appIdx = applications.firstIndex(where: { app in
+            app.documents.contains(where: { $0.id == docId })
+        }) {
+            if let docIdx = applications[appIdx].documents.firstIndex(where: { $0.id == docId }) {
+                withAnimation {
+                    applications[appIdx].documents[docIdx].status = .uploaded
+                    applications[appIdx].documents[docIdx].uploadedAt = Date()
+                    selectedApplication = applications[appIdx]
+                }
+            }
+        }
+    }
+    
     func sendApplicationMessage(applicationId: String, senderName: String, senderRole: String, isManagerRemark: Bool = false) {
         guard !chatText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        
         let msg = ApplicationMessage(
             id: "\(applicationId)-AM-\(UUID().uuidString.prefix(6))",
             applicationId: applicationId,
@@ -137,7 +180,6 @@ class ApplicationsViewModel: ObservableObject {
             type: isManagerRemark ? .managerRemark : .message,
             isFromCurrentUser: true
         )
-        
         withAnimation {
             if applicationMessages[applicationId] != nil {
                 applicationMessages[applicationId]!.append(msg)
@@ -147,4 +189,14 @@ class ApplicationsViewModel: ObservableObject {
         }
         chatText = ""
     }
+}
+
+// MARK: - Uploaded Doc File
+
+struct UploadedDocFile: Identifiable {
+    let id = UUID()
+    let name: String
+    let url: URL?
+    let isImage: Bool
+    let uploadedAt: Date
 }

@@ -61,16 +61,22 @@ class AdminViewModel: ObservableObject {
         }
     }
     
-    func createUser(name: String, role: UserRole, branch: String, employeeId: String) {
+    func createUser(name: String, email: String, password: String, phone: String, role: UserRole, branch: String, employeeId: String) {
+        let resolvedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedPhone = phone.trimmingCharacters(in: .whitespacesAndNewlines)
         let newUser = User(
             id: employeeId,
             name: name,
-            email: "\(name.lowercased().replacingOccurrences(of: " ", with: "."))@bank.com",
+            email: resolvedEmail.isEmpty ? "\(name.lowercased().replacingOccurrences(of: " ", with: "."))@bank.com" : resolvedEmail,
             role: role,
             branch: branch,
-            phone: "+91-0000000000",
+            phone: resolvedPhone.isEmpty ? "+91-0000000000" : resolvedPhone,
             isActive: true,
             joinedAt: Date()
+        )
+        // Save login credential so the user can sign in from the login screen
+        UserStore.shared.addCredential(
+            StoredCredential(id: employeeId, email: resolvedEmail, password: password, phone: resolvedPhone, role: role)
         )
         withAnimation {
             users.append(newUser)

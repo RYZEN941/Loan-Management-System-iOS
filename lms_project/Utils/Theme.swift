@@ -12,42 +12,44 @@ enum Theme {
     // MARK: - Colors
     
     enum Colors {
-        // Primary
-        static let primary = Color(hex: "0066FF")
-        static let primaryDark = Color(hex: "0052CC")
-        static let primaryLight = Color(hex: "E6F0FF")
-        
+        // Primary palette (brand colours)
+        static let primary      = Color(hex: "002FDC")   // Primary Blue
+        static let secondary    = Color(hex: "264BE3")   // Secondary Blue
+        static let primaryDark  = Color(hex: "001BA8")   // Darker tint
+        static let primaryLight = Color(hex: "E8F2FA")   // Background Light (also used for tints)
+        static let accent       = Color(hex: "ED1E48")   // Accent / Reddish-Pink
+
         // Semantic
-        static let critical = Color(hex: "DC3545")
-        static let warning = Color(hex: "F5A623")
-        static let success = Color(hex: "28A745")
-        static let neutral = Color(hex: "6B7280")
-        
-        // Surfaces
-        static let background = Color(hex: "F8F9FA")
-        static let surface = Color.white
-        static let surfaceSecondary = Color(hex: "F1F3F5")
-        static let border = Color(hex: "E5E7EB")
-        
-        // Dark mode surfaces
-        static let backgroundDark = Color(hex: "1C1C1E")
-        static let surfaceDark = Color(hex: "2C2C2E")
-        static let surfaceSecondaryDark = Color(hex: "3A3A3C")
-        static let borderDark = Color(hex: "48484A")
-        
-        // Adaptive colors
+        static let critical = Color(hex: "ED1E48")   // Maps accent to critical
+        static let warning  = Color(hex: "F5A623")
+        static let success  = Color(hex: "28A745")
+        static let neutral  = Color(hex: "6B7280")
+
+        // Surfaces (light mode)
+        static let background        = Color(hex: "E8F2FA")   // Background Light
+        static let surface           = Color.white
+        static let surfaceSecondary  = Color(hex: "F0F6FC")
+        static let border            = Color(hex: "D0DCF0")
+
+        // Surfaces (dark mode)
+        static let backgroundDark       = Color(hex: "0D1423")
+        static let surfaceDark          = Color(hex: "1A2035")
+        static let surfaceSecondaryDark = Color(hex: "232E48")
+        static let borderDark           = Color(hex: "2E3E60")
+
+        // Adaptive helpers
         static func adaptiveBackground(_ colorScheme: ColorScheme) -> Color {
             colorScheme == .dark ? backgroundDark : background
         }
-        
+
         static func adaptiveSurface(_ colorScheme: ColorScheme) -> Color {
             colorScheme == .dark ? surfaceDark : surface
         }
-        
+
         static func adaptiveSurfaceSecondary(_ colorScheme: ColorScheme) -> Color {
             colorScheme == .dark ? surfaceSecondaryDark : surfaceSecondary
         }
-        
+
         static func adaptiveBorder(_ colorScheme: ColorScheme) -> Color {
             colorScheme == .dark ? borderDark : border
         }

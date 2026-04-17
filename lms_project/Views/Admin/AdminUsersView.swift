@@ -267,14 +267,16 @@ struct CreateUserSheet: View {
     @State private var password     = ""
     @State private var phone        = ""
     @State private var selectedRole: UserRole = .loanOfficer
-    @State private var branch       = ""
+    @State private var branch       = "Mumbai Central"
+    @State private var newBranchName = ""
     @State private var employeeId   = ""
     @State private var showPassword = false
     @State private var emailError: String? = nil
 
     private var isFormValid: Bool {
-        !name.isEmpty && !email.isEmpty && !password.isEmpty &&
-        !branch.isEmpty && !employeeId.isEmpty
+        let branchValid = branch == "+ Create New Branch" ? !newBranchName.trimmingCharacters(in: .whitespaces).isEmpty : !branch.isEmpty
+        return !name.isEmpty && !email.isEmpty && !password.isEmpty &&
+        branchValid && !employeeId.isEmpty
     }
 
     var body: some View {
@@ -287,7 +289,15 @@ struct CreateUserSheet: View {
                             Text(role.displayName).tag(role)
                         }
                     }
-                    TextField("Branch", text: $branch)
+                    Picker("Branch", selection: $branch) {
+                        ForEach(adminVM.branches, id: \.self) { b in
+                            Text(b).tag(b)
+                        }
+                        Text("+ Create New Branch").tag("+ Create New Branch")
+                    }
+                    if branch == "+ Create New Branch" {
+                        TextField("New Branch Name", text: $newBranchName)
+                    }
                     TextField("Employee ID", text: $employeeId)
                 }
 
@@ -344,13 +354,19 @@ struct CreateUserSheet: View {
                             emailError = "An account with this email already exists."
                             return
                         }
+                        var finalBranch = branch
+                        if branch == "+ Create New Branch" {
+                            adminVM.createBranch(newBranchName)
+                            finalBranch = newBranchName
+                        }
+                        
                         adminVM.createUser(
                             name: name,
                             email: email,
                             password: password,
                             phone: phone,
                             role: selectedRole,
-                            branch: branch,
+                            branch: finalBranch,
                             employeeId: employeeId
                         )
                         dismiss()
@@ -372,6 +388,7 @@ struct EditUserSheet: View {
     @State private var name: String
     @State private var selectedRole: UserRole
     @State private var branch: String
+    @State private var newBranchName = ""
     
     init(adminVM: AdminViewModel, user: User) {
         self.adminVM = adminVM
@@ -391,7 +408,15 @@ struct EditUserSheet: View {
                             Text(role.displayName).tag(role)
                         }
                     }
-                    TextField("Branch", text: $branch)
+                    Picker("Branch", selection: $branch) {
+                        ForEach(adminVM.branches, id: \.self) { b in
+                            Text(b).tag(b)
+                        }
+                        Text("+ Create New Branch").tag("+ Create New Branch")
+                    }
+                    if branch == "+ Create New Branch" {
+                        TextField("New Branch Name", text: $newBranchName)
+                    }
                 }
                 
                 Section("Account (Read-only)") {
@@ -426,7 +451,12 @@ struct EditUserSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        adminVM.updateUser(userId: user.id, name: name, role: selectedRole, branch: branch)
+                        var finalBranch = branch
+                        if branch == "+ Create New Branch" {
+                            adminVM.createBranch(newBranchName)
+                            finalBranch = newBranchName
+                        }
+                        adminVM.updateUser(userId: user.id, name: name, role: selectedRole, branch: finalBranch)
                         dismiss()
                     }
                     .fontWeight(.semibold)

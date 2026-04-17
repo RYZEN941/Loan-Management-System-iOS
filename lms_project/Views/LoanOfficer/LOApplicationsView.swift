@@ -20,6 +20,9 @@ struct LOApplicationsView: View {
 
     @State private var showNewApplication = false
     @State private var sidebarCollapsed   = false
+    
+    @State private var showAddDocumentAlert = false
+    @State private var newDocumentName = ""
 
     private let sidebarWidth: CGFloat = 320
 
@@ -110,14 +113,11 @@ struct LOApplicationsView: View {
                     AppFilterChip(label: "All", isSelected: applicationsVM.filterStatus == nil) {
                         applicationsVM.filterStatus = nil
                     }
-                    AppFilterChip(label: "Pending", isSelected: applicationsVM.filterStatus == .new) {
-                        applicationsVM.filterStatus = .new
+                    AppFilterChip(label: "Pending", isSelected: applicationsVM.filterStatus == .pending) {
+                        applicationsVM.filterStatus = .pending
                     }
                     AppFilterChip(label: "Under Review", isSelected: applicationsVM.filterStatus == .underReview) {
                         applicationsVM.filterStatus = .underReview
-                    }
-                    AppFilterChip(label: "Recommended", isSelected: applicationsVM.filterStatus == .recommended) {
-                        applicationsVM.filterStatus = .recommended
                     }
                     AppFilterChip(label: "Approved", isSelected: applicationsVM.filterStatus == .approved) {
                         applicationsVM.filterStatus = .approved
@@ -213,7 +213,7 @@ struct LOApplicationsView: View {
                 .background(Theme.Colors.adaptiveBackground(colorScheme))
                 .safeAreaInset(edge: .bottom) {
                     LOActionPanel(
-                        onRecommend: { applicationsVM.recommendApplication(app) },
+                        onSendToManager: { applicationsVM.sendToManager(app) },
                         onReject: { applicationsVM.rejectApplication(app) },
                         onRequestDocs: { applicationsVM.requestDocuments(app) }
                     )
@@ -356,10 +356,31 @@ struct LOApplicationsView: View {
                     }
                 )
             }
+            
+            Button {
+                newDocumentName = ""
+                showAddDocumentAlert = true
+            } label: {
+                Label("Add Other Document", systemImage: "plus.circle")
+                    .font(Theme.Typography.subheadline)
+                    .foregroundStyle(Theme.Colors.primary)
+            }
+            .padding(.top, 4)
         }
         .padding(16)
         .background(RoundedRectangle(cornerRadius: Theme.Radius.lg)
             .fill(Theme.Colors.adaptiveSurface(colorScheme)))
+        .alert("Add Document", isPresented: $showAddDocumentAlert) {
+            TextField("Document Name", text: $newDocumentName)
+            Button("Cancel", role: .cancel) { }
+            Button("Add") {
+                if !newDocumentName.trimmingCharacters(in: .whitespaces).isEmpty {
+                    applicationsVM.addOtherDocument(to: app, label: newDocumentName)
+                }
+            }
+        } message: {
+            Text("Enter a name for the new document.")
+        }
     }
 
     // ────────────────────────────────────────────────────────────────
@@ -878,10 +899,20 @@ struct CreateApplicationSheet: View {
     @State private var tenureText      = ""
     @State private var monthlyIncomeText = ""
     @State private var existingEMIText   = ""
-    @State private var panUploaded       = false
-    @State private var aadhaarUploaded   = false
-    @State private var bankUploaded      = false
     @State private var xmlParsed         = false
+    
+    // Dynamic documents
+    struct NewDocument: Identifiable {
+        let id = UUID()
+        var type: DocumentType
+        var label: String
+        var isUploaded: Bool
+    }
+    @State private var newDocuments: [NewDocument] = [
+        NewDocument(type: .panCard, label: "PAN Card", isUploaded: false),
+        NewDocument(type: .aadhaar, label: "Aadhaar Card", isUploaded: false),
+        NewDocument(type: .bankStatement, label: "Bank Statement", isUploaded: false)
+    ]
 
     var body: some View {
         NavigationStack {
@@ -904,9 +935,34 @@ struct CreateApplicationSheet: View {
                     TextField("Existing EMI (₹)",   text: $existingEMIText).keyboardType(.numberPad)
                 }
                 Section("Documents") {
-                    docToggle("PAN Card",        icon: "creditcard",           isUploaded: $panUploaded)
-                    docToggle("Aadhaar Card",    icon: "person.text.rectangle", isUploaded: $aadhaarUploaded)
-                    docToggle("Bank Statement",  icon: "building.columns",      isUploaded: $bankUploaded)
+                    ForEach($newDocuments) { $doc in
+                        HStack {
+                            Image(systemName: doc.type.icon).foregroundStyle(Theme.Colors.primary).frame(width: 24)
+                            TextField("Document Name", text: $doc.label)
+                            Spacer()
+                            Button { doc.isUploaded.toggle() } label: {
+                                Image(systemName: doc.isUploaded ? "checkmark.circle.fill" : "icloud.and.arrow.up")
+                                    .foregroundStyle(doc.isUploaded ? Theme.Colors.success : .secondary)
+                                    .font(.system(size: 18))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .onDelete { indexSet in
+                        newDocuments.remove(atOffsets: indexSet)
+                    }
+                    
+                    Menu {
+                        ForEach(DocumentType.allCases) { type in
+                            Button(type.displayName) {
+                                newDocuments.append(NewDocument(type: type, label: type.displayName, isUploaded: false))
+                            }
+                        }
+                    } label: {
+                        Label("Add Document", systemImage: "plus.circle")
+                            .foregroundStyle(Theme.Colors.primary)
+                    }
+                    
                     Button {
                         applicationsVM.simulateXMLUpload()
                         xmlParsed = true
@@ -939,18 +995,6 @@ struct CreateApplicationSheet: View {
         }
     }
 
-    private func docToggle(_ label: String, icon: String, isUploaded: Binding<Bool>) -> some View {
-        HStack {
-            Image(systemName: icon).foregroundStyle(Theme.Colors.primary).frame(width: 24)
-            Text(label)
-            Spacer()
-            Button { isUploaded.wrappedValue.toggle() } label: {
-                Image(systemName: isUploaded.wrappedValue ? "checkmark.circle.fill" : "icloud.and.arrow.up")
-                    .foregroundStyle(isUploaded.wrappedValue ? Theme.Colors.success : .secondary)
-                    .font(.system(size: 18))
-            }.buttonStyle(.plain)
-        }
-    }
 
     private func submit(draft: Bool) {
         let amount = Double(loanAmountText) ?? 0
@@ -984,18 +1028,19 @@ struct CreateApplicationSheet: View {
                 cibilScore: 0,
                 bankBalance: 0
             ),
-            documents: [
-                LoanDocument(id: "DOC-PAN-\(Int(Date().timeIntervalSince1970))", type: .panCard, label: "PAN Card",
-                             status: panUploaded ? .uploaded : .pending, uploadedAt: panUploaded ? Date() : nil),
-                LoanDocument(id: "DOC-AAD-\(Int(Date().timeIntervalSince1970))", type: .aadhaar, label: "Aadhaar Card",
-                             status: aadhaarUploaded ? .uploaded : .pending, uploadedAt: aadhaarUploaded ? Date() : nil),
-                LoanDocument(id: "DOC-BS-\(Int(Date().timeIntervalSince1970))", type: .bankStatement, label: "Bank Statement",
-                             status: bankUploaded ? .uploaded : .pending, uploadedAt: bankUploaded ? Date() : nil)
-            ],
+            documents: newDocuments.map { doc in
+                LoanDocument(
+                    id: UUID().uuidString,
+                    type: doc.type,
+                    label: doc.label,
+                    status: doc.isUploaded ? .uploaded : .pending,
+                    uploadedAt: doc.isUploaded ? Date() : nil
+                )
+            },
             verification: [],
             notes: [],
             internalRemarks: [],
-            status: draft ? .assigned : .new,
+            status: draft ? .pending : .underReview,
             assignedTo: "LO-001",
             branch: "Mumbai Central",
             riskLevel: .medium,

@@ -32,42 +32,34 @@ enum UserRole: String, CaseIterable, Identifiable, Codable {
 }
 
 // MARK: - Application Status
+// STRICT: Only these four statuses are allowed across the entire app.
 
 enum ApplicationStatus: String, CaseIterable, Identifiable, Codable {
-    case new = "new"
-    case assigned = "assigned"
-    case underReview = "under_review"
-    case recommended = "recommended"
-    case approved = "approved"
-    case rejected = "rejected"
-    case sentBack = "sent_back"
-    
+    case pending     = "pending"       // New / not yet reviewed
+    case underReview = "under_review"  // Sent to manager
+    case approved    = "approved"
+    case rejected    = "rejected"
+
     var id: String { rawValue }
-    
+
     var displayName: String {
         switch self {
-        case .new: return "New"
-        case .assigned: return "Assigned"
+        case .pending:     return "Pending"
         case .underReview: return "Under Review"
-        case .recommended: return "Recommended"
-        case .approved: return "Approved"
-        case .rejected: return "Rejected"
-        case .sentBack: return "Sent Back"
+        case .approved:    return "Approved"
+        case .rejected:    return "Rejected"
         }
     }
-    
+
     var color: Color {
         switch self {
-        case .new: return Theme.Colors.primary
-        case .assigned: return Theme.Colors.primary
+        case .pending:     return Theme.Colors.secondary
         case .underReview: return Theme.Colors.warning
-        case .recommended: return Color(hex: "6F42C1")
-        case .approved: return Theme.Colors.success
-        case .rejected: return Theme.Colors.critical
-        case .sentBack: return Theme.Colors.warning
+        case .approved:    return Theme.Colors.success
+        case .rejected:    return Theme.Colors.critical
         }
     }
-    
+
     var backgroundColor: Color {
         color.opacity(0.12)
     }
@@ -119,6 +111,7 @@ enum DocumentType: String, CaseIterable, Identifiable, Codable {
     case bankStatement = "bank_statement"
     case salarySlip = "salary_slip"
     case itr = "itr"
+    case other = "other"
     
     var id: String { rawValue }
     
@@ -129,6 +122,7 @@ enum DocumentType: String, CaseIterable, Identifiable, Codable {
         case .bankStatement: return "Bank Statement"
         case .salarySlip: return "Salary Slip"
         case .itr: return "ITR"
+        case .other: return "Other Document"
         }
     }
     
@@ -139,6 +133,7 @@ enum DocumentType: String, CaseIterable, Identifiable, Codable {
         case .bankStatement: return "building.columns"
         case .salarySlip: return "indianrupeesign.circle"
         case .itr: return "doc.text"
+        case .other: return "paperclip"
         }
     }
 }
@@ -194,7 +189,7 @@ enum LoanType: String, CaseIterable, Identifiable, Codable {
 // MARK: - Application Action
 
 enum ApplicationAction: String, Codable {
-    case recommend = "recommend"
+    case sendToManager = "send_to_manager"
     case reject = "reject"
     case requestDocs = "request_docs"
     case approve = "approve"

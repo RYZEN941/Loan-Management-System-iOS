@@ -11,6 +11,7 @@ struct Conversation: Identifiable, Codable, Hashable {
     let id: String
     var participantName: String
     var participantRole: String
+    var participantEmail: String
     var lastMessage: String
     var lastMessageTime: Date
     var unreadCount: Int

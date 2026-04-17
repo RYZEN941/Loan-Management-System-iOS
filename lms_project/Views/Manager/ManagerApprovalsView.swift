@@ -43,6 +43,101 @@ struct ManagerApprovalsView: View {
             } message: {
                 Text(applicationsVM.actionMessage ?? "")
             }
+            .sheet(isPresented: $applicationsVM.showRejectionRemarksSheet) {
+                NavigationStack {
+                    VStack(spacing: Theme.Spacing.md) {
+                        Text("Rejection Remarks")
+                            .font(Theme.Typography.headline)
+                            .padding(.top)
+                        
+                        Text("Please provide a reason for rejecting this application.")
+                            .font(Theme.Typography.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                        
+                        TextEditor(text: $applicationsVM.rejectionRemarksText)
+                            .font(Theme.Typography.body)
+                            .padding()
+                            .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .frame(height: 150)
+                            .padding(.horizontal)
+                        
+                        Button {
+                            applicationsVM.confirmRejectWithRemarks()
+                        } label: {
+                            Text("Reject Application")
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Theme.Colors.critical)
+                                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
+                        }
+                        .padding()
+                        .disabled(applicationsVM.rejectionRemarksText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        
+                        Spacer()
+                    }
+                    .navigationTitle("Reject")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") {
+                                applicationsVM.showRejectionRemarksSheet = false
+                            }
+                        }
+                    }
+                }
+                .presentationDetents([.medium])
+            }
+            .sheet(isPresented: $applicationsVM.showSendBackSheet) {
+                NavigationStack {
+                    Form {
+                        Section("Reason for Sending Back") {
+                            Picker("Select Reason", selection: $applicationsVM.sendBackReason) {
+                                Text("Incomplete documentation").tag("Incomplete documentation")
+                                Text("Income mismatch detected").tag("Income mismatch detected")
+                                Text("Property documents unclear").tag("Property documents unclear")
+                                Text("Re-evaluate eligibility").tag("Re-evaluate eligibility")
+                                Text("Other").tag("Other")
+                            }
+                            .pickerStyle(.menu)
+                            
+                            if applicationsVM.sendBackReason == "Other" {
+                                TextField("Enter custom remark", text: $applicationsVM.sendBackCustomRemark)
+                            } else {
+                                TextField("Additional remarks (optional)", text: $applicationsVM.sendBackCustomRemark)
+                            }
+                        }
+                        
+                        Button {
+                            applicationsVM.confirmSendBack()
+                        } label: {
+                            Text("Send Back Application")
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Theme.Colors.warning)
+                                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
+                        }
+                        .listRowBackground(Color.clear)
+                        .disabled(applicationsVM.sendBackReason == "Other" && applicationsVM.sendBackCustomRemark.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                    .navigationTitle("Send Back")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") {
+                                applicationsVM.showSendBackSheet = false
+                            }
+                        }
+                    }
+                }
+                .presentationDetents([.medium])
+            }
         }
     }
     
@@ -54,7 +149,7 @@ struct ManagerApprovalsView: View {
                 Text("Approval Queue")
                     .font(Theme.Typography.headline)
                 Spacer()
-                let count = recommendedApps.count
+                let count = pendingApprovalsCount
                 Text("\(count)")
                     .font(Theme.Typography.caption2)
                     .foregroundStyle(.secondary)
@@ -69,8 +164,8 @@ struct ManagerApprovalsView: View {
             Divider()
             
             HStack(spacing: Theme.Spacing.sm) {
-                FilterChip(label: "Recommended", isSelected: applicationsVM.filterStatus == .recommended) {
-                    applicationsVM.filterStatus = .recommended
+                FilterChip(label: "Under Review", isSelected: applicationsVM.filterStatus == .underReview) {
+                    applicationsVM.filterStatus = .underReview
                 }
                 FilterChip(label: "All", isSelected: applicationsVM.filterStatus == nil) {
                     applicationsVM.filterStatus = nil
@@ -100,8 +195,8 @@ struct ManagerApprovalsView: View {
         .background(Theme.Colors.adaptiveSurface(colorScheme))
     }
     
-    private var recommendedApps: [LoanApplication] {
-        applicationsVM.applications.filter { $0.status == .recommended }
+    private var pendingApprovalsCount: Int {
+        applicationsVM.applications.filter { $0.status == .underReview }.count
     }
     
     // MARK: - Approval Detail
@@ -145,11 +240,11 @@ struct ManagerApprovalsView: View {
                 }
                 .background(Theme.Colors.adaptiveBackground(colorScheme))
                 .safeAreaInset(edge: .bottom) {
-                    if app.status == .recommended {
+                    if app.status == .underReview {
                         ManagerActionPanel(
                             onApprove: { applicationsVM.approveApplication(app) },
-                            onReject: { applicationsVM.rejectApplication(app) },
-                            onSendBack: { applicationsVM.sendBackApplication(app) }
+                            onRejectWithRemarks: { applicationsVM.beginRejectWithRemarks(app) },
+                            onSendBack: { applicationsVM.beginSendBack(app) }
                         )
                         .background(Theme.Colors.adaptiveSurface(colorScheme))
                     }

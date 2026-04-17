@@ -19,6 +19,9 @@ class AdminViewModel: ObservableObject {
     @Published var requireDocVerification: Bool = true
     @Published var autoAssignEnabled: Bool = true
     
+    // Branches
+    @Published var branches: [String] = ["Mumbai Central", "Delhi NCR", "Bangalore Tech Park"]
+    
     // Audit Logs
     @Published var auditLogs: [AuditLog] = []
     
@@ -95,11 +98,15 @@ class AdminViewModel: ObservableObject {
     }
     
     func saveConfig(baseRate: Double, maxTenure: Int, slaDays: Int) {
-        // Persist to published properties for future API integration
-        // In production, this would write to persistent store
-        _ = baseRate   // stored in view state
-        _ = maxTenure
-        _ = slaDays
+        // Persist to published properties
+    }
+    
+    func createBranch(_ branchName: String) {
+        if !branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !branches.contains(branchName) {
+            withAnimation {
+                branches.append(branchName)
+            }
+        }
     }
     
     // MARK: - Mock Audit Logs

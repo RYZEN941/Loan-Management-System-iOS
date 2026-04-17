@@ -27,16 +27,37 @@ final class UserStore: ObservableObject {
     @Published private(set) var credentials: [StoredCredential] = []
 
     private init() {
-        // Default admin account
-        credentials.append(
-            StoredCredential(
-                id: "ADM-001",
-                email: "admin@gmail.com",
-                password: "admin",
-                phone: "",
-                role: .admin
-            )
-        )
+        // Admin
+        credentials.append(StoredCredential(
+            id: "ADM-001",
+            email: "admin@gmail.com",
+            password: "admin",
+            phone: "+91-9876543212",
+            role: .admin
+        ))
+        // Loan Officer
+        credentials.append(StoredCredential(
+            id: "LO-001",
+            email: "loan@gmail.com",
+            password: "loan",
+            phone: "+91-9876543210",
+            role: .loanOfficer
+        ))
+        credentials.append(StoredCredential(
+            id: "LO-002",
+            email: "neha.kapoor@bank.com",
+            password: "loan",
+            phone: "+91-9876543213",
+            role: .loanOfficer
+        ))
+        // Manager
+        credentials.append(StoredCredential(
+            id: "MGR-001",
+            email: "manager@gmail.com",
+            password: "manager",
+            phone: "+91-9876543211",
+            role: .manager
+        ))
     }
 
     // MARK: - Authenticate

@@ -20,7 +20,7 @@ class DashboardViewModel: ObservableObject {
     }
     
     var pendingReviewCount: Int {
-        applications.filter { $0.status == .underReview || $0.status == .new || $0.status == .assigned }.count
+        applications.filter { $0.status == .underReview || $0.status == .pending }.count
     }
     
     var highRiskCount: Int {
@@ -29,7 +29,7 @@ class DashboardViewModel: ObservableObject {
     
     // Manager KPIs
     var pendingApprovals: Int {
-        applications.filter { $0.status == .recommended }.count
+        applications.filter { $0.status == .underReview }.count
     }
     
     var approvedThisMonth: Int {

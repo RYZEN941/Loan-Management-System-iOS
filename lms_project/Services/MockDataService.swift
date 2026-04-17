@@ -15,6 +15,7 @@ protocol LMSDataService {
     func fetchUsers() -> [User]
     func currentUser(role: UserRole) -> User
     func fetchApplicationMessages(applicationId: String) -> [ApplicationMessage]
+    func findUser(emailOrPhone: String) -> User?
 }
 
 // MARK: - Mock Data Service
@@ -32,7 +33,7 @@ class MockDataService: LMSDataService {
             return User(
                 id: "LO-001",
                 name: "Amit Singh",
-                email: "amit.singh@bank.com",
+                email: "loan@gmail.com",
                 role: .loanOfficer,
                 branch: "Mumbai Central",
                 phone: "+91-9876543210",
@@ -43,7 +44,7 @@ class MockDataService: LMSDataService {
             return User(
                 id: "MGR-001",
                 name: "Deepak Mehta",
-                email: "deepak.mehta@bank.com",
+                email: "manager@gmail.com",
                 role: .manager,
                 branch: "Mumbai Central",
                 phone: "+91-9876543211",
@@ -54,7 +55,7 @@ class MockDataService: LMSDataService {
             return User(
                 id: "ADM-001",
                 name: "Sunita Patel",
-                email: "sunita.patel@bank.com",
+                email: "admin@gmail.com",
                 role: .admin,
                 branch: "Head Office",
                 phone: "+91-9876543212",
@@ -76,13 +77,13 @@ class MockDataService: LMSDataService {
             ),
             makeApplication(
                 id: "APP-2024-002", name: "Priya Sharma", employer: "Infosys",
-                amount: 500000, type: .personalLoan, status: .new,
+                amount: 500000, type: .personalLoan, status: .pending,
                 risk: .low, cibil: 785, income: 95000, dti: 0.15,
                 daysFromNow: 7
             ),
             makeApplication(
                 id: "APP-2024-003", name: "Vikram Desai", employer: "Reliance Industries",
-                amount: 8000000, type: .homeLoan, status: .recommended,
+                amount: 8000000, type: .homeLoan, status: .underReview,
                 risk: .low, cibil: 810, income: 250000, dti: 0.22,
                 daysFromNow: 3
             ),
@@ -106,19 +107,20 @@ class MockDataService: LMSDataService {
             ),
             makeApplication(
                 id: "APP-2024-007", name: "Karan Malhotra", employer: "Startup Inc",
-                amount: 3500000, type: .homeLoan, status: .sentBack,
+                amount: 3500000, type: .homeLoan, status: .rejected,
                 risk: .high, cibil: 660, income: 150000, dti: 0.40,
-                daysFromNow: 4
+                daysFromNow: 4,
+                rejectionRemarks: "CIBIL score below threshold and high DTI ratio. Additional collateral required before reapplication."
             ),
             makeApplication(
                 id: "APP-2024-008", name: "Fatima Sheikh", employer: "Government",
-                amount: 2000000, type: .homeLoan, status: .recommended,
+                amount: 2000000, type: .homeLoan, status: .underReview,
                 risk: .low, cibil: 760, income: 105000, dti: 0.25,
                 daysFromNow: 6
             ),
             makeApplication(
                 id: "APP-2024-009", name: "Arjun Patel", employer: "Amazon India",
-                amount: 1000000, type: .educationLoan, status: .new,
+                amount: 1000000, type: .educationLoan, status: .pending,
                 risk: .low, cibil: 750, income: 0, dti: 0.0,
                 daysFromNow: 8
             ),
@@ -126,7 +128,8 @@ class MockDataService: LMSDataService {
                 id: "APP-2024-010", name: "Divya Krishnan", employer: "HCL Technologies",
                 amount: 4500000, type: .homeLoan, status: .rejected,
                 risk: .high, cibil: 580, income: 95000, dti: 0.52,
-                daysFromNow: -5
+                daysFromNow: -5,
+                rejectionRemarks: "Income does not meet minimum eligibility. Insufficient bank balance and very high DTI ratio."
             ),
             makeApplication(
                 id: "APP-2024-011", name: "Rohan Gupta", employer: "Google India",
@@ -136,7 +139,7 @@ class MockDataService: LMSDataService {
             ),
             makeApplication(
                 id: "APP-2024-012", name: "Sneha Iyer", employer: "Deloitte",
-                amount: 750000, type: .personalLoan, status: .assigned,
+                amount: 750000, type: .personalLoan, status: .pending,
                 risk: .medium, cibil: 710, income: 90000, dti: 0.28,
                 daysFromNow: 6
             )
@@ -151,19 +154,19 @@ class MockDataService: LMSDataService {
     
     func fetchConversations() -> [Conversation] {
         return [
-            Conversation(id: "CONV-001", participantName: "Rajesh Kumar", participantRole: "Borrower",
+            Conversation(id: "CONV-001", participantName: "Rajesh Kumar", participantRole: "Borrower", participantEmail: "rajesh.kumar@email.com",
                          lastMessage: "I have uploaded the bank statement.", lastMessageTime: Date().addingTimeInterval(-3600),
                          unreadCount: 2, isOnline: true),
-            Conversation(id: "CONV-002", participantName: "Priya Sharma", participantRole: "Borrower",
+            Conversation(id: "CONV-002", participantName: "Priya Sharma", participantRole: "Borrower", participantEmail: "priya.sharma@email.com",
                          lastMessage: "When will I receive an update?", lastMessageTime: Date().addingTimeInterval(-7200),
                          unreadCount: 1, isOnline: false),
-            Conversation(id: "CONV-003", participantName: "Neha Kapoor", participantRole: "Loan Officer",
+            Conversation(id: "CONV-003", participantName: "Neha Kapoor", participantRole: "Loan Officer", participantEmail: "neha.kapoor@bank.com",
                          lastMessage: "Can you review APP-2024-005?", lastMessageTime: Date().addingTimeInterval(-14400),
                          unreadCount: 0, isOnline: true),
-            Conversation(id: "CONV-004", participantName: "Vikram Desai", participantRole: "Borrower",
+            Conversation(id: "CONV-004", participantName: "Vikram Desai", participantRole: "Borrower", participantEmail: "vikram.desai@email.com",
                          lastMessage: "Thank you for the update.", lastMessageTime: Date().addingTimeInterval(-86400),
                          unreadCount: 0, isOnline: false),
-            Conversation(id: "CONV-005", participantName: "Ravi Shankar", participantRole: "Loan Officer",
+            Conversation(id: "CONV-005", participantName: "Ravi Shankar", participantRole: "Loan Officer", participantEmail: "ravi.shankar@bank.com",
                          lastMessage: "Meeting at 3 PM today.", lastMessageTime: Date().addingTimeInterval(-28800),
                          unreadCount: 0, isOnline: true)
         ]
@@ -204,7 +207,7 @@ class MockDataService: LMSDataService {
     
     func fetchUsers() -> [User] {
         return [
-            User(id: "LO-001", name: "Amit Singh", email: "amit.singh@bank.com", role: .loanOfficer,
+            User(id: "LO-001", name: "Amit Singh", email: "loan@gmail.com", role: .loanOfficer,
                  branch: "Mumbai Central", phone: "+91-9876543210", isActive: true,
                  joinedAt: Calendar.current.date(byAdding: .year, value: -2, to: Date())!),
             User(id: "LO-002", name: "Neha Kapoor", email: "neha.kapoor@bank.com", role: .loanOfficer,
@@ -213,19 +216,29 @@ class MockDataService: LMSDataService {
             User(id: "LO-003", name: "Ravi Shankar", email: "ravi.shankar@bank.com", role: .loanOfficer,
                  branch: "Delhi North", phone: "+91-9876543214", isActive: true,
                  joinedAt: Calendar.current.date(byAdding: .month, value: -8, to: Date())!),
-            User(id: "MGR-001", name: "Deepak Mehta", email: "deepak.mehta@bank.com", role: .manager,
+            User(id: "MGR-001", name: "Deepak Mehta", email: "manager@gmail.com", role: .manager,
                  branch: "Mumbai Central", phone: "+91-9876543211", isActive: true,
                  joinedAt: Calendar.current.date(byAdding: .year, value: -5, to: Date())!),
             User(id: "MGR-002", name: "Lakshmi Rao", email: "lakshmi.rao@bank.com", role: .manager,
                  branch: "Bangalore South", phone: "+91-9876543215", isActive: true,
                  joinedAt: Calendar.current.date(byAdding: .year, value: -4, to: Date())!),
-            User(id: "ADM-001", name: "Sunita Patel", email: "sunita.patel@bank.com", role: .admin,
+            User(id: "ADM-001", name: "Sunita Patel", email: "admin@gmail.com", role: .admin,
                  branch: "Head Office", phone: "+91-9876543212", isActive: true,
                  joinedAt: Calendar.current.date(byAdding: .year, value: -8, to: Date())!),
             User(id: "LO-004", name: "Prakash Jha", email: "prakash.jha@bank.com", role: .loanOfficer,
                  branch: "Delhi North", phone: "+91-9876543216", isActive: false,
                  joinedAt: Calendar.current.date(byAdding: .year, value: -3, to: Date())!)
         ]
+    }
+    
+    // MARK: - Find User (for Add User in Chat)
+    
+    func findUser(emailOrPhone: String) -> User? {
+        let query = emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return fetchUsers().first {
+            $0.email.lowercased() == query ||
+            $0.phone.replacingOccurrences(of: " ", with: "").contains(query.replacingOccurrences(of: " ", with: ""))
+        }
     }
     
     // MARK: - Application Messages (Per-Application Chat)
@@ -260,7 +273,7 @@ class MockDataService: LMSDataService {
             isFromCurrentUser: true
         ))
         
-        // Manager remark (only for recommended/approved/rejected/sentBack apps)
+        // Manager remark for certain apps
         if ["APP-2024-003", "APP-2024-006", "APP-2024-007", "APP-2024-008"].contains(applicationId) {
             msgs.append(ApplicationMessage(
                 id: "\(applicationId)-AM-04", applicationId: applicationId,
@@ -289,7 +302,8 @@ class MockDataService: LMSDataService {
         id: String, name: String, employer: String,
         amount: Double, type: LoanType, status: ApplicationStatus,
         risk: RiskLevel, cibil: Int, income: Double, dti: Double,
-        daysFromNow: Int
+        daysFromNow: Int,
+        rejectionRemarks: String? = nil
     ) -> LoanApplication {
         let createdAt = Calendar.current.date(byAdding: .day, value: -7, to: Date())!
         let slaDeadline = Calendar.current.date(byAdding: .day, value: daysFromNow, to: Date())!
@@ -324,10 +338,10 @@ class MockDataService: LMSDataService {
             ),
             documents: [
                 LoanDocument(id: "\(id)-DOC-1", type: .panCard, label: "PAN Card",
-                             status: status == .new ? .pending : .verified,
-                             uploadedAt: status == .new ? nil : createdAt),
+                             status: status == .pending ? .pending : .verified,
+                             uploadedAt: status == .pending ? nil : createdAt),
                 LoanDocument(id: "\(id)-DOC-2", type: .aadhaar, label: "Aadhaar Card",
-                             status: status == .new ? .pending : (risk == .high ? .pending : .verified),
+                             status: status == .pending ? .pending : (risk == .high ? .pending : .verified),
                              uploadedAt: risk == .high ? nil : createdAt),
                 LoanDocument(id: "\(id)-DOC-3", type: .bankStatement, label: "Bank Statement",
                              status: risk == .high ? .pending : .uploaded,
@@ -356,7 +370,8 @@ class MockDataService: LMSDataService {
             branch: "Mumbai Central",
             riskLevel: risk,
             createdAt: createdAt,
-            slaDeadline: slaDeadline
+            slaDeadline: slaDeadline,
+            rejectionRemarks: rejectionRemarks
         )
     }
 }

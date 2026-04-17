@@ -31,11 +31,57 @@ struct LOMessagesView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        messagesVM.resetAddUser()
+                        messagesVM.showAddUser = true
+                    } label: {
+                        Image(systemName: "person.badge.plus")
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
                     ProfileNavButton(showProfile: $showProfile)
                 }
             }
             .onAppear {
                 messagesVM.loadConversations()
+            }
+            .sheet(isPresented: $messagesVM.showAddUser) {
+                NavigationStack {
+                    VStack(spacing: Theme.Spacing.md) {
+                        Text("Start New Conversation")
+                            .font(Theme.Typography.headline)
+                            .padding(.top)
+                        
+                        TextField("Enter email or phone number", text: $messagesVM.addUserInput)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .padding(.horizontal)
+                        
+                        if let error = messagesVM.addUserError {
+                            Text(error)
+                                .font(Theme.Typography.caption)
+                                .foregroundColor(Theme.Colors.critical)
+                        }
+                        
+                        Button("Add User") {
+                            messagesVM.submitAddUser()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(Theme.Colors.primary)
+                        .padding(.top)
+                        
+                        Spacer()
+                    }
+                    .navigationTitle("Add User")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") {
+                                messagesVM.showAddUser = false
+                            }
+                        }
+                    }
+                }
+                .presentationDetents([.medium])
             }
         }
     }

@@ -13,6 +13,12 @@ class MessagesViewModel: ObservableObject {
     @Published var messageText = ""
     @Published var isLoading = false
     
+    // Add User
+    @Published var showAddUser = false
+    @Published var addUserInput = ""
+    @Published var addUserError: String? = nil
+    @Published var addUserSuccess = false
+    
     private let dataService = MockDataService.shared
     
     var totalUnread: Int {
@@ -82,5 +88,55 @@ class MessagesViewModel: ObservableObject {
     func sendQuickReply(_ template: QuickReplyTemplate) {
         messageText = template.text
         sendMessage()
+    }
+    
+    // MARK: - Add User to Chat
+    
+    func submitAddUser() {
+        addUserError = nil
+        let query = addUserInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else {
+            addUserError = "Please enter an email or phone number."
+            return
+        }
+        
+        // Check if conversation already exists
+        let alreadyExists = conversations.contains {
+            $0.participantEmail.lowercased() == query.lowercased()
+        }
+        if alreadyExists {
+            addUserError = "A conversation with this user already exists."
+            return
+        }
+        
+        // Attempt to find user in mock data
+        if let user = dataService.findUser(emailOrPhone: query) {
+            let newConversation = Conversation(
+                id: "CONV-\(UUID().uuidString.prefix(6))",
+                participantName: user.name,
+                participantRole: user.role.displayName,
+                participantEmail: user.email,
+                lastMessage: "New conversation started.",
+                lastMessageTime: Date(),
+                unreadCount: 0,
+                isOnline: false
+            )
+            withAnimation {
+                conversations.insert(newConversation, at: 0)
+                selectedConversation = newConversation
+                messages = []
+            }
+            addUserInput = ""
+            addUserSuccess = true
+            showAddUser = false
+        } else {
+            addUserError = "User not found. Please check the email or phone number."
+        }
+    }
+    
+    func resetAddUser() {
+        addUserInput = ""
+        addUserError = nil
+        addUserSuccess = false
     }
 }

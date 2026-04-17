@@ -22,7 +22,9 @@ struct LoanApplication: Identifiable, Codable, Hashable {
     var riskLevel: RiskLevel
     var createdAt: Date
     var slaDeadline: Date
-    
+    /// Populated when manager rejects — saved with the application
+    var rejectionRemarks: String?
+
     var slaStatus: SLAStatus {
         let days = slaDeadline.daysRemaining
         if days < 0 { return .overdue }
@@ -30,6 +32,7 @@ struct LoanApplication: Identifiable, Codable, Hashable {
         return .onTrack
     }
 }
+
 
 // MARK: - Internal Remark
 

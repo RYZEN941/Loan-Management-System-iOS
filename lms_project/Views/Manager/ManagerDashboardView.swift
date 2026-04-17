@@ -93,7 +93,7 @@ struct ManagerDashboardView: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             SectionHeader(title: "Pending Approvals", icon: "clock.fill")
             
-            let recommended = dashboardVM.applications.filter { $0.status == .recommended }
+            let recommended = dashboardVM.applications.filter { $0.status == .pending }
             
             if recommended.isEmpty {
                 HStack {

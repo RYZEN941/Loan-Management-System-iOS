@@ -8,13 +8,11 @@ import SwiftUI
 // MARK: - Loan Officer Action Panel
 
 struct LOActionPanel: View {
-    let onRecommend: () -> Void
+    let onSendToManager: () -> Void
     let onReject: () -> Void
     let onRequestDocs: () -> Void
     
     @State private var showRejectAlert = false
-    @State private var isFraud = false
-    
     @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
@@ -49,9 +47,9 @@ struct LOActionPanel: View {
                 }
                 .buttonStyle(.plain)
                 
-                // Recommend
-                Button(action: onRecommend) {
-                    Label("Recommend", systemImage: "arrow.up.circle.fill")
+                // Send to Manager
+                Button(action: onSendToManager) {
+                    Label("Send to Manager", systemImage: "arrow.up.circle.fill")
                         .font(Theme.Typography.subheadline)
                         .fontWeight(.semibold)
                         .foregroundStyle(.white)
@@ -67,12 +65,8 @@ struct LOActionPanel: View {
         .alert("Reject Application", isPresented: $showRejectAlert) {
             Button("Cancel", role: .cancel) {}
             Button("Reject", role: .destructive) { onReject() }
-            Button("Reject as Fraud", role: .destructive) {
-                isFraud = true
-                onReject()
-            }
         } message: {
-            Text("Are you sure you want to reject this application? You can also flag it as potential fraud.")
+            Text("Are you sure you want to reject this application?")
         }
     }
 }
@@ -81,7 +75,7 @@ struct LOActionPanel: View {
 
 struct ManagerActionPanel: View {
     let onApprove: () -> Void
-    let onReject: () -> Void
+    let onRejectWithRemarks: () -> Void   // triggers remarks sheet
     let onSendBack: () -> Void
     
     @Environment(\.colorScheme) private var colorScheme
@@ -103,8 +97,8 @@ struct ManagerActionPanel: View {
                 }
                 .buttonStyle(.plain)
                 
-                // Reject
-                Button(action: onReject) {
+                // Reject (opens remarks sheet)
+                Button(action: onRejectWithRemarks) {
                     Label("Reject", systemImage: "xmark.circle")
                         .font(Theme.Typography.subheadline)
                         .fontWeight(.medium)

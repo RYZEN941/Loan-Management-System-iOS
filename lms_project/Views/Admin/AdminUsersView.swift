@@ -11,7 +11,6 @@ struct AdminUsersView: View {
     @Binding var showProfile: Bool
     
     @State private var showCreateUser = false
-    @State private var showEditUser = false
     @State private var editingUser: User? = nil
     
     var body: some View {
@@ -50,10 +49,8 @@ struct AdminUsersView: View {
             .sheet(isPresented: $showCreateUser) {
                 CreateUserSheet(adminVM: adminVM)
             }
-            .sheet(isPresented: $showEditUser) {
-                if let user = editingUser {
-                    EditUserSheet(adminVM: adminVM, user: user)
-                }
+            .sheet(item: $editingUser) { user in
+                EditUserSheet(adminVM: adminVM, user: user)
             }
         }
     }
@@ -163,7 +160,6 @@ struct AdminUsersView: View {
                             
                             Button {
                                 editingUser = user
-                                showEditUser = true
                             } label: {
                                 Label("Edit User", systemImage: "pencil")
                                     .font(Theme.Typography.subheadline)
@@ -310,9 +306,17 @@ struct EditUserSheet: View {
     let user: User
     @Environment(\.dismiss) private var dismiss
     
-    @State private var name: String = ""
-    @State private var selectedRole: UserRole = .loanOfficer
-    @State private var branch: String = ""
+    @State private var name: String
+    @State private var selectedRole: UserRole
+    @State private var branch: String
+    
+    init(adminVM: AdminViewModel, user: User) {
+        self.adminVM = adminVM
+        self.user = user
+        _name = State(initialValue: user.name)
+        _selectedRole = State(initialValue: user.role)
+        _branch = State(initialValue: user.branch)
+    }
     
     var body: some View {
         NavigationStack {
@@ -327,22 +331,31 @@ struct EditUserSheet: View {
                     TextField("Branch", text: $branch)
                 }
                 
-                Section("Account") {
+                Section("Account (Read-only)") {
                     HStack {
                         Text("Email")
                             .foregroundStyle(.secondary)
                         Spacer()
                         Text(user.email)
+                            .foregroundStyle(.primary)
                     }
                     HStack {
                         Text("Employee ID")
                             .foregroundStyle(.secondary)
                         Spacer()
                         Text(user.id)
+                            .foregroundStyle(.primary)
+                    }
+                    HStack {
+                        Text("Phone")
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text(user.phone)
+                            .foregroundStyle(.primary)
                     }
                 }
             }
-            .navigationTitle("Edit User")
+            .navigationTitle("Edit: \(user.name)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -353,12 +366,8 @@ struct EditUserSheet: View {
                         adminVM.updateUser(userId: user.id, name: name, role: selectedRole, branch: branch)
                         dismiss()
                     }
+                    .fontWeight(.semibold)
                 }
-            }
-            .onAppear {
-                name = user.name
-                selectedRole = user.role
-                branch = user.branch
             }
         }
     }

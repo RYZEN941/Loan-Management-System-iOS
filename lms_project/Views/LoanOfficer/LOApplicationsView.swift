@@ -9,6 +9,7 @@ struct LOApplicationsView: View {
     @EnvironmentObject var applicationsVM: ApplicationsViewModel
     @Environment(\.colorScheme) private var colorScheme
     @Binding var showProfile: Bool
+    @State private var showNewApplication = false
     
     var body: some View {
         NavigationStack {
@@ -33,6 +34,15 @@ struct LOApplicationsView: View {
             .navigationTitle("Applications")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showNewApplication = true
+                    } label: {
+                        Label("New", systemImage: "plus")
+                            .font(Theme.Typography.subheadline)
+                            .fontWeight(.medium)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     ProfileNavButton(showProfile: $showProfile)
                 }
@@ -47,6 +57,9 @@ struct LOApplicationsView: View {
             }
             .sheet(isPresented: $applicationsVM.showXMLUploadResult) {
                 xmlResultSheet
+            }
+            .sheet(isPresented: $showNewApplication) {
+                CreateApplicationSheet(applicationsVM: applicationsVM)
             }
         }
     }
@@ -366,44 +379,64 @@ struct LOApplicationsView: View {
     }
     
     private func appMessageBubble(_ msg: ApplicationMessage) -> some View {
-        HStack(alignment: .bottom, spacing: Theme.Spacing.sm) {
-            if msg.isFromCurrentUser { Spacer(minLength: 60) }
-            
-            VStack(alignment: msg.isFromCurrentUser ? .trailing : .leading, spacing: 2) {
-                // Manager remark styled differently
-                if msg.type == .managerRemark {
+        // Manager remarks: center-aligned system-style message
+        if msg.type == .managerRemark {
+            return AnyView(
+                VStack(spacing: 4) {
                     HStack(spacing: Theme.Spacing.xs) {
                         Image(systemName: "shield.checkered")
                             .font(.system(size: 11))
-                        Text("Manager: \(msg.senderName)")
+                        Text("Manager \(msg.senderName)")
                             .font(Theme.Typography.caption2)
+                            .fontWeight(.semibold)
                     }
                     .foregroundStyle(Color(hex: "6F42C1"))
-                } else if !msg.isFromCurrentUser {
-                    Text(msg.senderName)
+                    
+                    Text(msg.text)
+                        .font(Theme.Typography.subheadline)
+                        .foregroundStyle(Color(hex: "6F42C1"))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color(hex: "6F42C1").opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    
+                    Text(msg.timestamp.timeFormatted)
                         .font(Theme.Typography.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.tertiary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 2)
+            )
+        }
+        // Regular bubbles
+        return AnyView(
+            HStack(alignment: .bottom, spacing: Theme.Spacing.sm) {
+                if msg.isFromCurrentUser { Spacer(minLength: 60) }
+                
+                VStack(alignment: msg.isFromCurrentUser ? .trailing : .leading, spacing: 2) {
+                    if !msg.isFromCurrentUser {
+                        Text(msg.senderName)
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    
+                    Text(msg.text)
+                        .font(Theme.Typography.subheadline)
+                        .foregroundStyle(msg.isFromCurrentUser ? .white : .primary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(msg.isFromCurrentUser ? Theme.Colors.primary : Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    
+                    Text(msg.timestamp.timeFormatted)
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(.tertiary)
                 }
                 
-                Text(msg.text)
-                    .font(Theme.Typography.subheadline)
-                    .foregroundStyle(msg.type == .managerRemark ? Color(hex: "6F42C1") : (msg.isFromCurrentUser ? .white : .primary))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(
-                        msg.type == .managerRemark
-                        ? Color(hex: "6F42C1").opacity(0.1)
-                        : (msg.isFromCurrentUser ? Theme.Colors.primary : Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                
-                Text(msg.timestamp.timeFormatted)
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(.tertiary)
+                if !msg.isFromCurrentUser { Spacer(minLength: 60) }
             }
-            
-            if !msg.isFromCurrentUser { Spacer(minLength: 60) }
-        }
+        )
     }
     
     // MARK: - XML Result Sheet
@@ -550,5 +583,202 @@ struct FilterChip: View {
                 )
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Create Application Sheet
+
+struct CreateApplicationSheet: View {
+    @ObservedObject var applicationsVM: ApplicationsViewModel
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    
+    // Borrower Info
+    @State private var borrowerName = ""
+    @State private var borrowerPhone = ""
+    @State private var borrowerEmail = ""
+    @State private var borrowerAddress = ""
+    
+    // Loan Details
+    @State private var selectedLoanType: LoanType = .homeLoan
+    @State private var loanAmountText = ""
+    @State private var tenureText = ""
+    
+    // Financial Info
+    @State private var monthlyIncomeText = ""
+    @State private var existingEMIText = ""
+    
+    // Document flags
+    @State private var panUploaded = false
+    @State private var aadhaarUploaded = false
+    @State private var bankStatementUploaded = false
+    @State private var xmlUploaded = false
+    @State private var xmlParsed = false
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                // SECTION 1: Borrower Info
+                Section("Borrower Information") {
+                    TextField("Full Name", text: $borrowerName)
+                    TextField("Phone Number", text: $borrowerPhone)
+                        .keyboardType(.phonePad)
+                    TextField("Email Address", text: $borrowerEmail)
+                        .keyboardType(.emailAddress)
+                        .autocapitalization(.none)
+                    TextField("Address", text: $borrowerAddress, axis: .vertical)
+                        .lineLimit(2...4)
+                }
+                
+                // SECTION 2: Loan Details
+                Section("Loan Details") {
+                    Picker("Loan Type", selection: $selectedLoanType) {
+                        ForEach(LoanType.allCases) { type in
+                            Text(type.displayName).tag(type)
+                        }
+                    }
+                    TextField("Loan Amount (₹)", text: $loanAmountText)
+                        .keyboardType(.numberPad)
+                    TextField("Tenure (months)", text: $tenureText)
+                        .keyboardType(.numberPad)
+                }
+                
+                // SECTION 3: Financial Info
+                Section("Financial Information") {
+                    TextField("Monthly Income (₹)", text: $monthlyIncomeText)
+                        .keyboardType(.numberPad)
+                    TextField("Existing EMI (₹)", text: $existingEMIText)
+                        .keyboardType(.numberPad)
+                    if xmlParsed {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Theme.Colors.success)
+                            Text("Income auto-filled from XML")
+                                .font(Theme.Typography.caption)
+                                .foregroundStyle(Theme.Colors.success)
+                        }
+                    }
+                }
+                
+                // SECTION 4: Documents
+                Section("Documents") {
+                    documentToggleRow(label: "PAN Card", icon: "creditcard", isUploaded: $panUploaded)
+                    documentToggleRow(label: "Aadhaar Card", icon: "person.text.rectangle", isUploaded: $aadhaarUploaded)
+                    documentToggleRow(label: "Bank Statement", icon: "building.columns", isUploaded: $bankStatementUploaded)
+                    
+                    Button {
+                        // Simulate XML upload + parse
+                        applicationsVM.simulateXMLUpload()
+                        xmlUploaded = true
+                        xmlParsed = true
+                        // Auto-fill income from parsed result
+                        if let result = applicationsVM.xmlParseResult {
+                            monthlyIncomeText = String(Int(result.monthlyIncome))
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: xmlUploaded ? "checkmark.circle.fill" : "arrow.up.doc")
+                                .foregroundStyle(xmlUploaded ? Theme.Colors.success : Theme.Colors.primary)
+                            Text(xmlUploaded ? "XML Uploaded & Parsed" : "Upload XML Bank Statement")
+                                .foregroundStyle(xmlUploaded ? Theme.Colors.success : Theme.Colors.primary)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("New Application")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Menu {
+                        Button("Save Draft") {
+                            submitApplication(asDraft: true)
+                        }
+                        Button("Submit Application") {
+                            submitApplication(asDraft: false)
+                        }
+                    } label: {
+                        Text("Save")
+                            .fontWeight(.semibold)
+                    }
+                    .disabled(borrowerName.isEmpty || loanAmountText.isEmpty)
+                }
+            }
+        }
+    }
+    
+    private func documentToggleRow(label: String, icon: String, isUploaded: Binding<Bool>) -> some View {
+        HStack {
+            Image(systemName: icon)
+                .foregroundStyle(Theme.Colors.primary)
+                .frame(width: 24)
+            Text(label)
+            Spacer()
+            Button {
+                isUploaded.wrappedValue.toggle()
+            } label: {
+                Image(systemName: isUploaded.wrappedValue ? "checkmark.circle.fill" : "icloud.and.arrow.up")
+                    .foregroundStyle(isUploaded.wrappedValue ? Theme.Colors.success : .secondary)
+                    .font(.system(size: 18))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+    
+    private func submitApplication(asDraft: Bool) {
+        let amount = Double(loanAmountText) ?? 0
+        let tenure = Int(tenureText) ?? 12
+        let income = Double(monthlyIncomeText) ?? 0
+        let emi = Double(existingEMIText) ?? 0
+        
+        let newApp = LoanApplication(
+            id: "APP-\(Date().timeIntervalSince1970.rounded())",
+            borrower: Borrower(
+                name: borrowerName,
+                dob: Calendar.current.date(byAdding: .year, value: -30, to: Date())!,
+                address: borrowerAddress.isEmpty ? "Address TBD" : borrowerAddress,
+                employer: "To be verified",
+                employmentType: "Salaried",
+                phone: borrowerPhone,
+                email: borrowerEmail
+            ),
+            loan: LoanDetails(
+                amount: amount,
+                type: selectedLoanType,
+                tenure: tenure,
+                interestRate: selectedLoanType == .homeLoan ? 8.5 : 12.0,
+                emi: amount * 0.008
+            ),
+            financials: Financials(
+                monthlyIncome: income,
+                annualIncome: income * 12,
+                existingEMI: emi,
+                dtiRatio: income > 0 ? (emi / income) : 0,
+                cibilScore: 0,
+                bankBalance: 0
+            ),
+            documents: [
+                LoanDocument(id: "DOC-PAN", type: .panCard, label: "PAN Card",
+                             status: panUploaded ? .uploaded : .pending, uploadedAt: panUploaded ? Date() : nil),
+                LoanDocument(id: "DOC-AAD", type: .aadhaar, label: "Aadhaar Card",
+                             status: aadhaarUploaded ? .uploaded : .pending, uploadedAt: aadhaarUploaded ? Date() : nil),
+                LoanDocument(id: "DOC-BS", type: .bankStatement, label: "Bank Statement",
+                             status: bankStatementUploaded ? .uploaded : .pending, uploadedAt: bankStatementUploaded ? Date() : nil)
+            ],
+            verification: [],
+            notes: [],
+            status: asDraft ? .assigned : .new,
+            assignedTo: "LO-001",
+            branch: "Mumbai Central",
+            riskLevel: .medium,
+            createdAt: Date(),
+            slaDeadline: Calendar.current.date(byAdding: .day, value: 7, to: Date())!
+        )
+        
+        applicationsVM.applications.insert(newApp, at: 0)
+        applicationsVM.selectedApplication = newApp
+        dismiss()
     }
 }

@@ -88,6 +88,14 @@ class AdminViewModel: ObservableObject {
         }
     }
     
+    func saveConfig(baseRate: Double, maxTenure: Int, slaDays: Int) {
+        // Persist to published properties for future API integration
+        // In production, this would write to persistent store
+        _ = baseRate   // stored in view state
+        _ = maxTenure
+        _ = slaDays
+    }
+    
     // MARK: - Mock Audit Logs
     
     static func mockAuditLogs() -> [AuditLog] {

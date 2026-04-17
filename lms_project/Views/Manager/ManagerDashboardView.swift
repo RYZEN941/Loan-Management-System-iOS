@@ -71,17 +71,20 @@ struct ManagerDashboardView: View {
     // MARK: - KPI Strip (with NPA Rate)
     
     private var kpiStrip: some View {
-        KPIStripView(cards: [
-            KPIData(title: "Pending Approvals", value: "\(dashboardVM.pendingApprovals)",
-                    icon: "checkmark.circle.fill", color: Theme.Colors.warning),
-            KPIData(title: "Approved This Month", value: "\(dashboardVM.approvedThisMonth)",
-                    icon: "checkmark.seal.fill", color: Theme.Colors.success),
-            KPIData(title: "Portfolio Value", value: dashboardVM.totalPortfolioValue.compactFormatted,
-                    icon: "chart.line.uptrend.xyaxis", color: Theme.Colors.primary),
-            KPIData(title: "NPA Rate", value: "2.4%",
+        LazyVGrid(
+            columns: [GridItem(.flexible(), spacing: Theme.Spacing.md), GridItem(.flexible(), spacing: Theme.Spacing.md)],
+            spacing: Theme.Spacing.md
+        ) {
+            KPICard(title: "Pending Approvals", value: "\(dashboardVM.pendingApprovals)",
+                    icon: "checkmark.circle.fill", color: Theme.Colors.warning)
+            KPICard(title: "Approved This Month", value: "\(dashboardVM.approvedThisMonth)",
+                    icon: "checkmark.seal.fill", color: Theme.Colors.success)
+            KPICard(title: "Portfolio Value", value: dashboardVM.totalPortfolioValue.compactFormatted,
+                    icon: "chart.line.uptrend.xyaxis", color: Theme.Colors.primary)
+            KPICard(title: "NPA Rate", value: "2.4%",
                     icon: "exclamationmark.triangle.fill", color: Theme.Colors.critical,
                     subtitle: "↓ 0.3% from last month")
-        ])
+        }
     }
     
     // MARK: - Pending Approvals

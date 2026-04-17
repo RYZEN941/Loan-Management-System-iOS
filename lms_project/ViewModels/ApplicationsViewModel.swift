@@ -101,6 +101,8 @@ class ApplicationsViewModel: ObservableObject {
         showXMLUploadResult = true
     }
     
+    /// Parse XML silently (no result sheet) — used by CreateApplicationSheet for autofill
+    /// 
     func parseXMLFile(_ data: Data) {
         xmlParseResult = xmlService.parseXMLData(data)
         showXMLUploadResult = true

@@ -21,7 +21,6 @@ struct ManagerPortfolioView: View {
                         portfolioSummary
                         loanDistribution
                         riskOverview
-                        statusBreakdown
                     }
                     .padding(.horizontal, Theme.Spacing.lg)
                     .padding(.vertical, Theme.Spacing.md)
@@ -157,31 +156,5 @@ struct ManagerPortfolioView: View {
         .cardStyle(colorScheme: colorScheme)
     }
     
-    private var statusBreakdown: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "Status Breakdown", icon: "list.bullet.circle")
-            
-            VStack(spacing: 0) {
-                ForEach(ApplicationStatus.allCases) { status in
-                    let count = dashboardVM.applications.filter { $0.status == status }.count
-                    if count > 0 {
-                        HStack {
-                            StatusBadge(status: status)
-                            Spacer()
-                            Text("\(count)")
-                                .font(Theme.Typography.headline)
-                                .foregroundStyle(.primary)
-                        }
-                        .padding(.horizontal, Theme.Spacing.md)
-                        .padding(.vertical, 12)
-                        
-                        if status != ApplicationStatus.allCases.last {
-                            Divider().padding(.leading, Theme.Spacing.md)
-                        }
-                    }
-                }
-            }
-            .cardStyle(colorScheme: colorScheme)
-        }
-    }
 }
+

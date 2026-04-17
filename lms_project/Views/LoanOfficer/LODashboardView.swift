@@ -61,18 +61,7 @@ struct LODashboardView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            
             Spacer()
-            
-            // User avatar
-            ZStack {
-                Circle()
-                    .fill(Theme.Colors.primary.opacity(0.12))
-                    .frame(width: 44, height: 44)
-                Text(authVM.currentUser?.initials ?? "AS")
-                    .font(Theme.Typography.headline)
-                    .foregroundStyle(Theme.Colors.primary)
-            }
         }
         .padding(.horizontal, Theme.Spacing.lg)
         .padding(.vertical, Theme.Spacing.md)
@@ -108,15 +97,15 @@ struct LODashboardView: View {
             
             GeometryReader { geometry in
                 HStack(spacing: 1) {
-                    // LEFT: Application List (40%)
+                    // LEFT: Application List (35%)
                     applicationList
-                        .frame(width: geometry.size.width * Theme.Layout.splitLeftRatio)
+                        .frame(width: geometry.size.width * 0.35)
                     
                     Divider()
                     
-                    // RIGHT: Preview Panel (60%)
+                    // RIGHT: Preview Panel (65%)
                     previewPanel
-                        .frame(width: geometry.size.width * Theme.Layout.splitRightRatio - 1)
+                        .frame(width: geometry.size.width * 0.65 - 1)
                 }
                 .background(Theme.Colors.adaptiveSurface(colorScheme))
                 .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))

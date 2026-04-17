@@ -13,8 +13,14 @@ struct AdminSystemControlView: View {
     @State private var selectedSection = 0
     @State private var baseInterestRate = 8.5
     @State private var maxTenure = 30
+    @State private var maxLoanAmountMillions = 50.0
     @State private var panOCRMatch = true
     @State private var coApplicantRule = true
+    @State private var slaDays = 7
+    @State private var minCIBIL = 600
+    @State private var maxDTI = 50.0
+    @State private var autoFlagHighRisk = true
+    @State private var configSaved = false
     
     var body: some View {
         NavigationStack {
@@ -63,50 +69,92 @@ struct AdminSystemControlView: View {
         }
     }
     
-    // MARK: - Global Loan Configuration
+    // MARK: - Global Loan Configuration (Editable)
     
     private var loanConfigsSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             SectionHeader(title: "Global Loan Configuration", icon: "slider.horizontal.3")
             
             VStack(spacing: 0) {
-                configRow(label: "Base Interest Rate") {
-                    Text("\(baseInterestRate, specifier: "%.1f")%")
-                        .font(Theme.Typography.mono)
-                        .foregroundStyle(Theme.Colors.primary)
+                // Editable: Base Interest Rate
+                editableConfigRow(label: "Base Interest Rate") {
+                    HStack {
+                        Button { if baseInterestRate > 5.0 { baseInterestRate -= 0.5 } } label: {
+                            Image(systemName: "minus.circle").foregroundStyle(Theme.Colors.primary)
+                        }.buttonStyle(.plain)
+                        Text("\(baseInterestRate, specifier: "%.1f")%")
+                            .font(Theme.Typography.mono)
+                            .foregroundStyle(Theme.Colors.primary)
+                            .frame(minWidth: 48)
+                        Button { if baseInterestRate < 20.0 { baseInterestRate += 0.5 } } label: {
+                            Image(systemName: "plus.circle").foregroundStyle(Theme.Colors.primary)
+                        }.buttonStyle(.plain)
+                    }
                 }
                 Divider().padding(.leading, Theme.Spacing.md)
                 
-                configRow(label: "Max Tenure (Years)") {
-                    Text("\(maxTenure)")
-                        .font(Theme.Typography.mono)
-                        .foregroundStyle(Theme.Colors.primary)
+                // Editable: Max Tenure
+                editableConfigRow(label: "Max Tenure (Years)") {
+                    HStack {
+                        Button { if maxTenure > 5 { maxTenure -= 5 } } label: {
+                            Image(systemName: "minus.circle").foregroundStyle(Theme.Colors.primary)
+                        }.buttonStyle(.plain)
+                        Text("\(maxTenure) yrs")
+                            .font(Theme.Typography.mono)
+                            .foregroundStyle(Theme.Colors.primary)
+                            .frame(minWidth: 56)
+                        Button { if maxTenure < 40 { maxTenure += 5 } } label: {
+                            Image(systemName: "plus.circle").foregroundStyle(Theme.Colors.primary)
+                        }.buttonStyle(.plain)
+                    }
                 }
                 Divider().padding(.leading, Theme.Spacing.md)
                 
-                configRow(label: "Maximum Loan Amount") {
-                    Text(adminVM.maxLoanAmount.currencyFormatted)
-                        .font(Theme.Typography.mono)
-                        .foregroundStyle(Theme.Colors.primary)
+                // Editable: SLA
+                editableConfigRow(label: "SLA Duration") {
+                    HStack {
+                        Button { if slaDays > 3 { slaDays -= 1 } } label: {
+                            Image(systemName: "minus.circle").foregroundStyle(Theme.Colors.primary)
+                        }.buttonStyle(.plain)
+                        Text("\(slaDays) days")
+                            .font(Theme.Typography.mono)
+                            .foregroundStyle(Theme.Colors.primary)
+                            .frame(minWidth: 56)
+                        Button { if slaDays < 30 { slaDays += 1 } } label: {
+                            Image(systemName: "plus.circle").foregroundStyle(Theme.Colors.primary)
+                        }.buttonStyle(.plain)
+                    }
                 }
                 Divider().padding(.leading, Theme.Spacing.md)
                 
-                configRow(label: "Auto-Assign to LO") {
+                editableConfigRow(label: "Auto-Assign to LO") {
                     Toggle("", isOn: $adminVM.autoAssignEnabled)
                         .labelsHidden()
                         .tint(Theme.Colors.primary)
                 }
-                Divider().padding(.leading, Theme.Spacing.md)
-                
-                configRow(label: "SLA Duration") {
-                    Text("7 days")
-                        .font(Theme.Typography.mono)
-                        .foregroundStyle(Theme.Colors.primary)
-                }
             }
             .cardStyle(colorScheme: colorScheme)
             
-            // Loan Types
+            // Save Button
+            Button {
+                adminVM.saveConfig(baseRate: baseInterestRate, maxTenure: maxTenure, slaDays: slaDays)
+                withAnimation { configSaved = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { configSaved = false }
+            } label: {
+                HStack {
+                    Image(systemName: configSaved ? "checkmark.circle.fill" : "square.and.arrow.down")
+                    Text(configSaved ? "Saved!" : "Save Configuration")
+                        .fontWeight(.medium)
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: Theme.Layout.buttonHeight)
+                .background(configSaved ? Theme.Colors.success : Theme.Colors.primary)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
+            }
+            .buttonStyle(.plain)
+            
+            // Active Loan Types
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                 Text("Active Loan Types")
                     .font(Theme.Typography.headline)
@@ -190,34 +238,74 @@ struct AdminSystemControlView: View {
         }
     }
     
-    // MARK: - Risk Rules
+    // MARK: - Risk Rules (Editable)
     
     private var riskRulesSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             SectionHeader(title: "Risk Assessment Rules", icon: "exclamationmark.shield")
             
             VStack(spacing: 0) {
-                configRow(label: "Minimum CIBIL Score") {
-                    Text("\(adminVM.minCIBILScore)")
-                        .font(Theme.Typography.mono)
-                        .foregroundStyle(Theme.Colors.primary)
+                // Editable: Min CIBIL
+                editableConfigRow(label: "Minimum CIBIL Score") {
+                    HStack {
+                        Button { if minCIBIL > 500 { minCIBIL -= 10 } } label: {
+                            Image(systemName: "minus.circle").foregroundStyle(Theme.Colors.primary)
+                        }.buttonStyle(.plain)
+                        Text("\(minCIBIL)")
+                            .font(Theme.Typography.mono)
+                            .foregroundStyle(Theme.Colors.primary)
+                            .frame(minWidth: 44)
+                        Button { if minCIBIL < 800 { minCIBIL += 10 } } label: {
+                            Image(systemName: "plus.circle").foregroundStyle(Theme.Colors.primary)
+                        }.buttonStyle(.plain)
+                    }
                 }
                 Divider().padding(.leading, Theme.Spacing.md)
                 
-                configRow(label: "Maximum DTI Ratio") {
-                    Text(adminVM.maxDTIRatio.percentFormatted)
-                        .font(Theme.Typography.mono)
-                        .foregroundStyle(Theme.Colors.primary)
+                // Editable: Max DTI
+                editableConfigRow(label: "Maximum DTI Ratio") {
+                    HStack {
+                        Button { if maxDTI > 20 { maxDTI -= 5 } } label: {
+                            Image(systemName: "minus.circle").foregroundStyle(Theme.Colors.primary)
+                        }.buttonStyle(.plain)
+                        Text("\(Int(maxDTI))%")
+                            .font(Theme.Typography.mono)
+                            .foregroundStyle(Theme.Colors.primary)
+                            .frame(minWidth: 44)
+                        Button { if maxDTI < 70 { maxDTI += 5 } } label: {
+                            Image(systemName: "plus.circle").foregroundStyle(Theme.Colors.primary)
+                        }.buttonStyle(.plain)
+                    }
                 }
                 Divider().padding(.leading, Theme.Spacing.md)
                 
-                configRow(label: "Auto-Flag High Risk") {
-                    Text("Enabled")
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(Theme.Colors.success)
+                editableConfigRow(label: "Auto-Flag High Risk") {
+                    Toggle("", isOn: $autoFlagHighRisk)
+                        .labelsHidden()
+                        .tint(Theme.Colors.primary)
                 }
             }
             .cardStyle(colorScheme: colorScheme)
+            
+            // Save Risk Rules
+            Button {
+                adminVM.minCIBILScore = minCIBIL
+                adminVM.maxDTIRatio = maxDTI / 100.0
+                withAnimation { configSaved = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { configSaved = false }
+            } label: {
+                HStack {
+                    Image(systemName: configSaved ? "checkmark.circle.fill" : "square.and.arrow.down")
+                    Text(configSaved ? "Saved!" : "Save Risk Rules")
+                        .fontWeight(.medium)
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: Theme.Layout.buttonHeight)
+                .background(configSaved ? Theme.Colors.success : Theme.Colors.primary)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
+            }
+            .buttonStyle(.plain)
             
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                 Text("Risk Level Thresholds")
@@ -355,7 +443,7 @@ struct AdminSystemControlView: View {
         .cardStyle(colorScheme: colorScheme)
     }
     
-    // MARK: - Config Row Helper
+    // MARK: - Config Row Helpers
     
     private func configRow<Content: View>(label: String, @ViewBuilder value: () -> Content) -> some View {
         HStack {
@@ -366,5 +454,16 @@ struct AdminSystemControlView: View {
         }
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.vertical, 14)
+    }
+    
+    private func editableConfigRow<Content: View>(label: String, @ViewBuilder value: () -> Content) -> some View {
+        HStack {
+            Text(label)
+                .font(Theme.Typography.subheadline)
+            Spacer()
+            value()
+        }
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.vertical, 12)
     }
 }

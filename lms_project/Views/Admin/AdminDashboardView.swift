@@ -2,6 +2,9 @@
 //  AdminDashboardView.swift
 //  lms_project
 //
+//  TAB 1 — Enhanced Admin Dashboard
+//  Provides high-level overview: KPIs, funnel, alerts, activity, SLA, quick actions.
+//
 
 import SwiftUI
 
@@ -9,24 +12,46 @@ struct AdminDashboardView: View {
     @EnvironmentObject var dashboardVM: DashboardViewModel
     @EnvironmentObject var adminVM: AdminViewModel
     @EnvironmentObject var authVM: AuthViewModel
+    @EnvironmentObject var loansVM: AdminLoansViewModel
     @Environment(\.colorScheme) private var colorScheme
     @Binding var showProfile: Bool
-    
+    @Binding var selectedTab: Int
+
+    // MARK: - Mock executive data
+    private let portfolioValue    = "₹2,450 Cr"
+    private let collectionEff     = 94.7
+    private let npaRatio          = 2.4
+    private let dailyDisbursement: [Double] = [12.4, 15.1, 9.8, 18.2, 14.6, 22.0, 16.8]
+    private let weeklyDisbursement: [Double] = [72.0, 85.0, 68.5, 91.2]
+
+    @State private var refreshTimer: Timer?
+    @State private var lastRefresh = Date()
+    @State private var showQuickAction = false
+    @State private var quickActionType: QuickActionType = .approve
+
+    enum QuickActionType {
+        case approve, reject, escalate
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
                 Theme.Colors.adaptiveBackground(colorScheme)
                     .ignoresSafeArea()
-                
+
                 ScrollView {
                     VStack(spacing: Theme.Spacing.lg) {
                         greetingBar
-                        kpiStrip
-                        systemAlertsSection
-                        userSummarySection
+                        topSummaryCards
+                        metricsSection
+                        applicationFunnel
+                        alertsFlagsPanel
+                        recentActivityFeed
+                        slaTrackingSection
+                        quickActionsPanel
                     }
                     .padding(.horizontal, Theme.Spacing.lg)
-                    .padding(.bottom, Theme.Spacing.lg)
+                    .padding(.bottom, Theme.Spacing.xxl)
                 }
             }
             .navigationTitle("Dashboard")
@@ -35,14 +60,56 @@ struct AdminDashboardView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     ProfileNavButton(showProfile: $showProfile)
                 }
+                ToolbarItem(placement: .topBarLeading) {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(Theme.Colors.success)
+                            .frame(width: 8, height: 8)
+                        Text("Live")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Theme.Colors.success)
+                    }
+                }
             }
             .onAppear {
                 dashboardVM.loadData()
                 adminVM.loadData()
+                loansVM.loadData()
+                startAutoRefresh()
+            }
+            .onDisappear { stopAutoRefresh() }
+            .alert("Quick Action", isPresented: $showQuickAction) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(quickActionMessage)
             }
         }
     }
-    
+
+    private var quickActionMessage: String {
+        switch quickActionType {
+        case .approve: return "Loan approved successfully."
+        case .reject: return "Loan rejected."
+        case .escalate: return "Loan escalated to senior management."
+        }
+    }
+
+    // MARK: - Auto Refresh
+
+    private func startAutoRefresh() {
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
+            lastRefresh = Date()
+            dashboardVM.loadData()
+        }
+    }
+
+    private func stopAutoRefresh() {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+    }
+
+    // MARK: - Greeting Bar
+
     private var greetingBar: some View {
         HStack {
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
@@ -58,79 +125,485 @@ struct AdminDashboardView: View {
                 }
             }
             Spacer()
+            VStack(alignment: .trailing, spacing: 2) {
+                Text("Updated \(lastRefresh.relativeFormatted)")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding(.top, Theme.Spacing.sm)
     }
-    
-    private var kpiStrip: some View {
-        KPIStripView(cards: [
-            KPIData(title: "Active Users", value: "\(adminVM.activeUsersCount)",
-                    icon: "person.3.fill", color: Theme.Colors.primary),
-            KPIData(title: "Processed Today", value: "\(dashboardVM.processedTodayCount)",
-                    icon: "doc.text.fill", color: Theme.Colors.success),
-            KPIData(title: "Total Applications", value: "\(dashboardVM.applications.count)",
-                    icon: "tray.full.fill", color: Theme.Colors.warning)
-        ])
+
+    // MARK: - Top Summary Cards
+
+    private var topSummaryCards: some View {
+        HStack(spacing: Theme.Spacing.md) {
+            DashboardKPICard(
+                label: "Total Loan Value",
+                value: portfolioValue,
+                icon: "building.columns.fill",
+                color: Theme.Colors.primary,
+                trend: "+4.2%",
+                trendPositive: true,
+                colorScheme: colorScheme
+            )
+
+            DashboardKPICard(
+                label: "Active Loans",
+                value: "\(dashboardVM.applications.filter { $0.status != .rejected }.count)",
+                icon: "doc.text.fill",
+                color: Theme.Colors.success,
+                trend: "+3",
+                trendPositive: true,
+                colorScheme: colorScheme
+            )
+
+            DashboardKPICard(
+                label: "Closed Loans",
+                value: "\(dashboardVM.applications.filter { $0.status == .rejected }.count + 24)",
+                icon: "checkmark.circle.fill",
+                color: Theme.Colors.neutral,
+                trend: "+2",
+                trendPositive: true,
+                colorScheme: colorScheme
+            )
+        }
     }
-    
-    // MARK: - System Alerts (replaced System Healthy)
-    
-    private var systemAlertsSection: some View {
+
+    // MARK: - Metrics Section
+
+    private var metricsSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "System Alerts", icon: "bell.badge")
-            
+            SectionHeader(title: "Key Metrics", icon: "chart.xyaxis.line")
+
+            // Disbursement Chart
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                Text("Daily Disbursement (₹ Cr)")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.secondary)
+
+                HStack(alignment: .bottom, spacing: 6) {
+                    ForEach(Array(dailyDisbursement.enumerated()), id: \.offset) { index, value in
+                        VStack(spacing: 4) {
+                            Text(String(format: "%.0f", value))
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(.secondary)
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Theme.Colors.primary, Theme.Colors.secondary],
+                                        startPoint: .bottom,
+                                        endPoint: .top
+                                    )
+                                )
+                                .frame(height: CGFloat(value) * 4)
+                            Text(dayLabel(index))
+                                .font(.system(size: 9))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+                .frame(height: 120)
+                .padding(.horizontal, Theme.Spacing.sm)
+            }
+            .padding(Theme.Spacing.md)
+            .cardStyle(colorScheme: colorScheme)
+
+            // Collection Efficiency & NPA
+            HStack(spacing: Theme.Spacing.md) {
+                metricGaugeCard(
+                    title: "Collection Efficiency",
+                    value: collectionEff,
+                    suffix: "%",
+                    color: Theme.Colors.success,
+                    icon: "checkmark.seal.fill"
+                )
+                metricGaugeCard(
+                    title: "NPA Ratio",
+                    value: npaRatio,
+                    suffix: "%",
+                    color: Theme.Colors.critical,
+                    icon: "exclamationmark.triangle.fill"
+                )
+            }
+        }
+    }
+
+    private func dayLabel(_ index: Int) -> String {
+        let days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+        return days[index % days.count]
+    }
+
+    private func metricGaugeCard(title: String, value: Double, suffix: String, color: Color, icon: String) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                    .foregroundStyle(color)
+                Text(title)
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.secondary)
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Text(String(format: "%.1f", value))
+                    .font(.system(size: 32, weight: .bold, design: .rounded))
+                    .foregroundStyle(color)
+                Text(suffix)
+                    .font(Theme.Typography.subheadline)
+                    .foregroundStyle(color.opacity(0.7))
+            }
+            // Mini progress bar
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(color.opacity(0.12))
+                        .frame(height: 6)
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(color)
+                        .frame(width: geo.size.width * min(value / 100, 1.0), height: 6)
+                }
+            }
+            .frame(height: 6)
+        }
+        .padding(Theme.Spacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardStyle(colorScheme: colorScheme)
+    }
+
+    // MARK: - Application Funnel
+
+    private var applicationFunnel: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            SectionHeader(title: "Application Funnel", icon: "arrow.right.arrow.left")
+
+            let submitted = loansVM.totalCount
+            let underReview = loansVM.underReviewCount
+            let approved = loansVM.approvedCount
+
+            VStack(spacing: Theme.Spacing.sm) {
+                funnelBar(label: "Submitted", count: submitted, total: max(submitted, 1), color: Theme.Colors.primary)
+                funnelBar(label: "Under Review", count: underReview, total: max(submitted, 1), color: Theme.Colors.warning)
+                funnelBar(label: "Approved", count: approved, total: max(submitted, 1), color: Theme.Colors.success)
+            }
+            .padding(Theme.Spacing.md)
+            .cardStyle(colorScheme: colorScheme)
+        }
+    }
+
+    private func funnelBar(label: String, count: Int, total: Int, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(label)
+                    .font(Theme.Typography.subheadline)
+                Spacer()
+                Text("\(count)")
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundStyle(color)
+            }
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(color.opacity(0.12))
+                        .frame(height: 10)
+                    RoundedRectangle(cornerRadius: 5)
+                        .fill(color)
+                        .frame(width: geo.size.width * CGFloat(count) / CGFloat(total), height: 10)
+                }
+            }
+            .frame(height: 10)
+        }
+    }
+
+    // MARK: - Alerts & Flags Panel
+
+    private var alertsFlagsPanel: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            SectionHeader(title: "Alerts & Flags", icon: "bell.badge")
+
             VStack(spacing: 0) {
-                alertRow(icon: "banknote", label: "Pending Disbursals", value: "3", color: Theme.Colors.warning)
+                alertFlagRow(
+                    icon: "percent",
+                    label: "High FOIR Cases",
+                    detail: "3 applications with FOIR > 50%",
+                    count: "3",
+                    color: Theme.Colors.warning
+                )
                 Divider().padding(.leading, Theme.Spacing.md)
-                alertRow(icon: "xmark.shield", label: "Failed Verifications", value: "2", color: Theme.Colors.critical)
+                alertFlagRow(
+                    icon: "chart.bar.fill",
+                    label: "Low CIBIL Approvals",
+                    detail: "2 approved with CIBIL < 650",
+                    count: "2",
+                    color: Theme.Colors.warning
+                )
                 Divider().padding(.leading, Theme.Spacing.md)
-                alertRow(icon: "exclamationmark.triangle", label: "Rule Conflicts", value: "1", color: Theme.Colors.warning)
+                alertFlagRow(
+                    icon: "exclamationmark.triangle.fill",
+                    label: "Fraud Flags",
+                    detail: "1 suspicious application detected",
+                    count: "1",
+                    color: Theme.Colors.critical,
+                    isCritical: true
+                )
             }
             .cardStyle(colorScheme: colorScheme)
         }
     }
-    
-    private func alertRow(icon: String, label: String, value: String, color: Color) -> some View {
-        HStack {
+
+    private func alertFlagRow(icon: String, label: String, detail: String, count: String, color: Color, isCritical: Bool = false) -> some View {
+        HStack(spacing: Theme.Spacing.md) {
+            ZStack {
+                RoundedRectangle(cornerRadius: Theme.Radius.sm)
+                    .fill(color.opacity(0.12))
+                    .frame(width: 36, height: 36)
+                Image(systemName: icon)
+                    .font(.system(size: 15))
+                    .foregroundStyle(color)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(Theme.Typography.subheadline)
+                    .fontWeight(.medium)
+                Text(detail)
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text(count)
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundStyle(color)
+        }
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.vertical, 12)
+        .background(isCritical ? color.opacity(0.04) : Color.clear)
+    }
+
+    // MARK: - Recent Activity Feed
+
+    private var recentActivityFeed: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            SectionHeader(title: "Recent Activity", icon: "clock.arrow.circlepath")
+
+            VStack(spacing: 0) {
+                activityRow(
+                    icon: "checkmark.circle.fill",
+                    label: "Loan APP-2024-006 approved",
+                    actor: "Deepak Mehta",
+                    time: Date().addingTimeInterval(-1800),
+                    color: Theme.Colors.success
+                )
+                Divider().padding(.leading, 48)
+                activityRow(
+                    icon: "xmark.circle.fill",
+                    label: "Loan APP-2024-010 rejected",
+                    actor: "Sunita Patel",
+                    time: Date().addingTimeInterval(-5400),
+                    color: Theme.Colors.critical
+                )
+                Divider().padding(.leading, 48)
+                activityRow(
+                    icon: "indianrupeesign.circle.fill",
+                    label: "₹42L disbursed for APP-2024-003",
+                    actor: "System",
+                    time: Date().addingTimeInterval(-10800),
+                    color: Theme.Colors.primary
+                )
+                Divider().padding(.leading, 48)
+                activityRow(
+                    icon: "arrow.up.circle.fill",
+                    label: "APP-2024-005 escalated to Admin",
+                    actor: "Neha Kapoor",
+                    time: Date().addingTimeInterval(-18000),
+                    color: Theme.Colors.warning
+                )
+                Divider().padding(.leading, 48)
+                activityRow(
+                    icon: "person.badge.plus",
+                    label: "New user Ravi Shankar created",
+                    actor: "Sunita Patel",
+                    time: Date().addingTimeInterval(-43200),
+                    color: Theme.Colors.secondary
+                )
+            }
+            .cardStyle(colorScheme: colorScheme)
+        }
+    }
+
+    private func activityRow(icon: String, label: String, actor: String, time: Date, color: Color) -> some View {
+        HStack(spacing: Theme.Spacing.md) {
             Image(systemName: icon)
                 .font(.system(size: 16))
                 .foregroundStyle(color)
                 .frame(width: 24)
-            Text(label)
-                .font(Theme.Typography.subheadline)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(Theme.Typography.subheadline)
+                HStack(spacing: Theme.Spacing.sm) {
+                    Text("by \(actor)")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(.secondary)
+                    Text("·")
+                        .foregroundStyle(.tertiary)
+                    Text(time.relativeFormatted)
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
             Spacer()
-            Text(value)
-                .font(Theme.Typography.headline)
-                .foregroundStyle(color)
         }
         .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, 14)
+        .padding(.vertical, 12)
     }
-    
-    // MARK: - User Summary
-    
-    private var userSummarySection: some View {
+
+    // MARK: - SLA Tracking
+
+    private var slaTrackingSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "User Summary", icon: "person.3")
-            
-            HStack(spacing: Theme.Spacing.md) {
-                ForEach(UserRole.allCases) { role in
-                    let count = adminVM.usersByRole[role] ?? 0
-                    VStack(spacing: Theme.Spacing.sm) {
-                        Image(systemName: role.icon)
-                            .font(.system(size: 20))
-                            .foregroundStyle(Theme.Colors.primary)
-                        Text("\(count)")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
-                        Text(role.displayName + "s")
-                            .font(Theme.Typography.caption)
-                            .foregroundStyle(.secondary)
+            SectionHeader(title: "SLA Tracking", icon: "timer")
+
+            let slaData: [(stage: String, avgHours: Double, targetHours: Double)] = [
+                ("Application Intake",  4.2,  8.0),
+                ("Document Review",     12.5, 24.0),
+                ("Risk Assessment",     6.8,  8.0),
+                ("Manager Approval",    18.4, 16.0),
+                ("Disbursement",        8.0,  12.0),
+            ]
+
+            VStack(spacing: 0) {
+                ForEach(slaData, id: \.stage) { item in
+                    let isDelayed = item.avgHours > item.targetHours
+                    HStack(spacing: Theme.Spacing.md) {
+                        Image(systemName: isDelayed ? "exclamationmark.circle.fill" : "checkmark.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(isDelayed ? Theme.Colors.critical : Theme.Colors.success)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(item.stage)
+                                .font(Theme.Typography.subheadline)
+                                .foregroundStyle(isDelayed ? Theme.Colors.critical : .primary)
+                            Text("Avg: \(String(format: "%.1f", item.avgHours))h / Target: \(String(format: "%.0f", item.targetHours))h")
+                                .font(Theme.Typography.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        if isDelayed {
+                            GenericBadge(text: "Delayed", color: Theme.Colors.critical)
+                        } else {
+                            GenericBadge(text: "On Track", color: Theme.Colors.success)
+                        }
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(Theme.Spacing.md)
-                    .cardStyle(colorScheme: colorScheme)
+                    .padding(.horizontal, Theme.Spacing.md)
+                    .padding(.vertical, 12)
+                    .background(isDelayed ? Theme.Colors.critical.opacity(0.04) : Color.clear)
+
+                    if item.stage != slaData.last?.stage {
+                        Divider().padding(.leading, Theme.Spacing.md)
+                    }
+                }
+            }
+            .cardStyle(colorScheme: colorScheme)
+        }
+    }
+
+    // MARK: - Quick Actions
+
+    private var quickActionsPanel: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            SectionHeader(title: "Quick Actions", icon: "bolt.circle")
+
+            HStack(spacing: Theme.Spacing.md) {
+                quickActionButton(
+                    label: "Approve",
+                    icon: "checkmark.circle.fill",
+                    color: Theme.Colors.success
+                ) {
+                    quickActionType = .approve
+                    showQuickAction = true
+                }
+                quickActionButton(
+                    label: "Reject",
+                    icon: "xmark.circle.fill",
+                    color: Theme.Colors.critical
+                ) {
+                    quickActionType = .reject
+                    showQuickAction = true
+                }
+                quickActionButton(
+                    label: "Escalate",
+                    icon: "arrowshape.up.circle.fill",
+                    color: Theme.Colors.warning
+                ) {
+                    quickActionType = .escalate
+                    showQuickAction = true
+                }
+                quickActionButton(
+                    label: "View Loans",
+                    icon: "doc.text.magnifyingglass",
+                    color: Theme.Colors.primary
+                ) {
+                    selectedTab = 1
                 }
             }
         }
+    }
+
+    private func quickActionButton(label: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: Theme.Spacing.sm) {
+                Image(systemName: icon)
+                    .font(.system(size: 24))
+                    .foregroundStyle(color)
+                Text(label)
+                    .font(Theme.Typography.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(.primary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(Theme.Spacing.md)
+            .cardStyle(colorScheme: colorScheme)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Dashboard KPI Card
+
+private struct DashboardKPICard: View {
+    let label: String
+    let value: String
+    let icon: String
+    let color: Color
+    let trend: String
+    let trendPositive: Bool
+    let colorScheme: ColorScheme
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(color)
+                    .frame(width: 30, height: 30)
+                    .background(color.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
+                Spacer()
+                Text(trend)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(trendPositive ? Theme.Colors.success : Theme.Colors.critical)
+            }
+            Spacer()
+            Text(value)
+                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+            Text(label)
+                .font(Theme.Typography.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(Theme.Spacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: 130)
+        .cardStyle(colorScheme: colorScheme)
     }
 }

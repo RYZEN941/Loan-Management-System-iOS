@@ -2,468 +2,533 @@
 //  AdminSystemControlView.swift
 //  lms_project
 //
+//  TAB 5 — System Control with 7 sidebar sections
+//
 
 import SwiftUI
 
 struct AdminSystemControlView: View {
     @EnvironmentObject var adminVM: AdminViewModel
+    @EnvironmentObject var messagesVM: MessagesViewModel
     @Environment(\.colorScheme) private var colorScheme
     @Binding var showProfile: Bool
-    
-    @State private var selectedSection = 0
-    @State private var baseInterestRate = 8.5
-    @State private var maxTenure = 30
-    @State private var maxLoanAmountMillions = 50.0
-    @State private var panOCRMatch = true
-    @State private var coApplicantRule = true
-    @State private var slaDays = 7
-    @State private var minCIBIL = 600
-    @State private var maxDTI = 50.0
-    @State private var autoFlagHighRisk = true
+
+    @State private var selectedSection: SystemSection = .userManagement
+    @State private var showCreateUser = false
+    @State private var editingUser: User? = nil
     @State private var configSaved = false
-    
+
+    // Policy config state
+    @State private var foirLimit = 50.0
+    @State private var cibilThreshold = 600
+    @State private var ltvLimit = 80.0
+    @State private var baseInterestRate = 8.5
+    @State private var maxLoanAmountMil = 50.0
+
+    // Workflow state
+    @State private var managerApprovalThreshold = 10.0
+    @State private var autoApprovalEnabled = false
+    @State private var autoApprovalCIBIL = 800
+
+    // Verification state
+    @State private var panOCR = true
+    @State private var aadhaarKYC = true
+    @State private var faceMatch = true
+    @State private var faceMatchThreshold = 85.0
+    @State private var videoKYC = false
+
+    // Notification state
+    @State private var npaEmailAlert = true
+    @State private var smsDocRequest = true
+    @State private var dailySummary = true
+    @State private var slaBreachAlert = true
+
+    enum SystemSection: String, CaseIterable, Identifiable {
+        case userManagement = "User Management"
+        case policyConfig = "Policy Config"
+        case workflowConfig = "Workflow"
+        case verificationSettings = "Verification"
+        case notifications = "Notifications"
+        case auditCompliance = "Audit & Compliance"
+        case integrations = "Integrations"
+        var id: String { rawValue }
+        var icon: String {
+            switch self {
+            case .userManagement: return "person.3.fill"
+            case .policyConfig: return "shield.righthalf.filled"
+            case .workflowConfig: return "arrow.triangle.branch"
+            case .verificationSettings: return "checkmark.seal"
+            case .notifications: return "bell.badge"
+            case .auditCompliance: return "list.bullet.rectangle.portrait"
+            case .integrations: return "network"
+            }
+        }
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.Colors.adaptiveBackground(colorScheme)
-                    .ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    Picker("Section", selection: $selectedSection) {
-                        Text("Loan Config").tag(0)
-                        Text("Doc Rules").tag(1)
-                        Text("Risk Rules").tag(2)
-                        Text("Audit Logs").tag(3)
-                        Text("Alerts").tag(4)
-                    }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal, Theme.Spacing.lg)
-                    .padding(.vertical, Theme.Spacing.md)
-                    
-                    ScrollView {
-                        VStack(spacing: Theme.Spacing.lg) {
-                            switch selectedSection {
-                            case 0: loanConfigsSection
-                            case 1: documentRulesSection
-                            case 2: riskRulesSection
-                            case 3: auditLogsSection
-                            case 4: systemAlertsSection
-                            default: EmptyView()
-                            }
-                        }
-                        .padding(.horizontal, Theme.Spacing.lg)
-                        .padding(.bottom, Theme.Spacing.lg)
+                Theme.Colors.adaptiveBackground(colorScheme).ignoresSafeArea()
+                GeometryReader { geo in
+                    HStack(spacing: 1) {
+                        sidebar.frame(width: geo.size.width * 0.28)
+                        Divider()
+                        contentPanel.frame(width: geo.size.width * 0.72 - 1)
                     }
                 }
             }
-            .navigationTitle("System Control")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("System Control").navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    ProfileNavButton(showProfile: $showProfile)
-                }
+                ToolbarItem(placement: .topBarTrailing) { ProfileNavButton(showProfile: $showProfile) }
             }
-            .onAppear {
-                adminVM.loadData()
-            }
+            .onAppear { adminVM.loadData() }
+            .sheet(isPresented: $showCreateUser) { CreateUserSheet(adminVM: adminVM) }
+            .sheet(item: $editingUser) { user in EditUserSheet(adminVM: adminVM, user: user) }
         }
     }
-    
-    // MARK: - Global Loan Configuration (Editable)
-    
-    private var loanConfigsSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "Global Loan Configuration", icon: "slider.horizontal.3")
-            
+
+    // MARK: - Sidebar
+    private var sidebar: some View {
+        ScrollView {
             VStack(spacing: 0) {
-                // Editable: Base Interest Rate
-                editableConfigRow(label: "Base Interest Rate") {
-                    HStack {
-                        Button { if baseInterestRate > 5.0 { baseInterestRate -= 0.5 } } label: {
-                            Image(systemName: "minus.circle").foregroundStyle(Theme.Colors.primary)
-                        }.buttonStyle(.plain)
-                        Text("\(baseInterestRate, specifier: "%.1f")%")
-                            .font(Theme.Typography.mono)
-                            .foregroundStyle(Theme.Colors.primary)
-                            .frame(minWidth: 48)
-                        Button { if baseInterestRate < 20.0 { baseInterestRate += 0.5 } } label: {
-                            Image(systemName: "plus.circle").foregroundStyle(Theme.Colors.primary)
-                        }.buttonStyle(.plain)
-                    }
-                }
-                Divider().padding(.leading, Theme.Spacing.md)
-                
-                // Editable: Max Tenure
-                editableConfigRow(label: "Max Tenure (Years)") {
-                    HStack {
-                        Button { if maxTenure > 5 { maxTenure -= 5 } } label: {
-                            Image(systemName: "minus.circle").foregroundStyle(Theme.Colors.primary)
-                        }.buttonStyle(.plain)
-                        Text("\(maxTenure) yrs")
-                            .font(Theme.Typography.mono)
-                            .foregroundStyle(Theme.Colors.primary)
-                            .frame(minWidth: 56)
-                        Button { if maxTenure < 40 { maxTenure += 5 } } label: {
-                            Image(systemName: "plus.circle").foregroundStyle(Theme.Colors.primary)
-                        }.buttonStyle(.plain)
-                    }
-                }
-                Divider().padding(.leading, Theme.Spacing.md)
-                
-                // Editable: SLA
-                editableConfigRow(label: "SLA Duration") {
-                    HStack {
-                        Button { if slaDays > 3 { slaDays -= 1 } } label: {
-                            Image(systemName: "minus.circle").foregroundStyle(Theme.Colors.primary)
-                        }.buttonStyle(.plain)
-                        Text("\(slaDays) days")
-                            .font(Theme.Typography.mono)
-                            .foregroundStyle(Theme.Colors.primary)
-                            .frame(minWidth: 56)
-                        Button { if slaDays < 30 { slaDays += 1 } } label: {
-                            Image(systemName: "plus.circle").foregroundStyle(Theme.Colors.primary)
-                        }.buttonStyle(.plain)
-                    }
-                }
-                Divider().padding(.leading, Theme.Spacing.md)
-                
-                editableConfigRow(label: "Auto-Assign to LO") {
-                    Toggle("", isOn: $adminVM.autoAssignEnabled)
-                        .labelsHidden()
-                        .tint(Theme.Colors.primary)
-                }
-            }
-            .cardStyle(colorScheme: colorScheme)
-            
-            // Save Button
-            Button {
-                adminVM.saveConfig(baseRate: baseInterestRate, maxTenure: maxTenure, slaDays: slaDays)
-                withAnimation { configSaved = true }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { configSaved = false }
-            } label: {
-                HStack {
-                    Image(systemName: configSaved ? "checkmark.circle.fill" : "square.and.arrow.down")
-                    Text(configSaved ? "Saved!" : "Save Configuration")
-                        .fontWeight(.medium)
-                }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: Theme.Layout.buttonHeight)
-                .background(configSaved ? Theme.Colors.success : Theme.Colors.primary)
-                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
-            }
-            .buttonStyle(.plain)
-            
-            // Active Loan Types
-            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                Text("Active Loan Types")
-                    .font(Theme.Typography.headline)
-                
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())],
-                           spacing: Theme.Spacing.sm) {
-                    ForEach(LoanType.allCases) { type in
+                ForEach(SystemSection.allCases) { section in
+                    let isSelected = selectedSection == section
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) { selectedSection = section }
+                    } label: {
                         HStack(spacing: Theme.Spacing.sm) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 14))
-                                .foregroundStyle(Theme.Colors.success)
-                            Text(type.displayName)
-                                .font(Theme.Typography.subheadline)
-                        }
-                        .padding(10)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
-                        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
-                    }
-                }
-            }
-        }
-    }
-    
-    // MARK: - Document Rules
-    
-    private var documentRulesSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "Document Requirements", icon: "doc.badge.gearshape")
-            
-            VStack(spacing: 0) {
-                configRow(label: "PAN OCR Match") {
-                    Toggle("", isOn: $panOCRMatch)
-                        .labelsHidden()
-                        .tint(Theme.Colors.primary)
-                }
-                Divider().padding(.leading, Theme.Spacing.md)
-                
-                configRow(label: "Co-applicant Required (>₹15L)") {
-                    Toggle("", isOn: $coApplicantRule)
-                        .labelsHidden()
-                        .tint(Theme.Colors.primary)
-                }
-                Divider().padding(.leading, Theme.Spacing.md)
-                
-                configRow(label: "Require Doc Verification") {
-                    Toggle("", isOn: $adminVM.requireDocVerification)
-                        .labelsHidden()
-                        .tint(Theme.Colors.primary)
-                }
-            }
-            .cardStyle(colorScheme: colorScheme)
-            
-            // Required docs per type
-            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                Text("Mandatory Documents")
-                    .font(Theme.Typography.headline)
-                
-                VStack(spacing: 0) {
-                    ForEach(DocumentType.allCases) { docType in
-                        HStack {
-                            Image(systemName: docType.icon)
-                                .font(.system(size: 16))
-                                .foregroundStyle(Theme.Colors.primary)
-                                .frame(width: 24)
-                            Text(docType.displayName)
-                                .font(Theme.Typography.subheadline)
+                            Image(systemName: section.icon)
+                                .font(.system(size: 15))
+                                .foregroundStyle(isSelected ? Theme.Colors.primary : .secondary)
+                                .frame(width: 22)
+                            Text(section.rawValue)
+                                .font(Theme.Typography.caption)
+                                .fontWeight(isSelected ? .semibold : .regular)
+                                .foregroundStyle(isSelected ? .primary : .secondary)
+                                .lineLimit(1)
                             Spacer()
-                            GenericBadge(text: "Required", color: Theme.Colors.primary)
                         }
                         .padding(.horizontal, Theme.Spacing.md)
-                        .padding(.vertical, 12)
-                        
-                        if docType != DocumentType.allCases.last {
-                            Divider().padding(.leading, 48)
-                        }
+                        .padding(.vertical, 14)
+                        .background(isSelected ? Theme.Colors.primaryLight.opacity(colorScheme == .dark ? 0.15 : 0.8) : Color.clear)
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
                 }
-                .cardStyle(colorScheme: colorScheme)
             }
+            .padding(.top, Theme.Spacing.md)
         }
+        .background(Theme.Colors.adaptiveSurface(colorScheme))
     }
-    
-    // MARK: - Risk Rules (Editable)
-    
-    private var riskRulesSection: some View {
+
+    // MARK: - Content Panel
+    private var contentPanel: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                Text(selectedSection.rawValue).font(Theme.Typography.titleLarge)
+                switch selectedSection {
+                case .userManagement: userManagementContent
+                case .policyConfig: policyConfigContent
+                case .workflowConfig: workflowConfigContent
+                case .verificationSettings: verificationContent
+                case .notifications: notificationsContent
+                case .auditCompliance: auditContent
+                case .integrations: integrationsContent
+                }
+            }
+            .padding(Theme.Spacing.lg)
+        }
+        .background(Theme.Colors.adaptiveBackground(colorScheme))
+    }
+
+    // MARK: - 1. User Management
+    private var userManagementContent: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "Risk Assessment Rules", icon: "exclamationmark.shield")
-            
+            HStack {
+                Text("\(adminVM.activeUsersCount) active · \(adminVM.users.count) total")
+                    .font(Theme.Typography.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button { showCreateUser = true } label: {
+                    Label("Add User", systemImage: "plus.circle.fill")
+                        .font(Theme.Typography.subheadline).fontWeight(.medium)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 16).padding(.vertical, 8)
+                        .background(Theme.Colors.primary)
+                        .clipShape(Capsule())
+                }.buttonStyle(.plain)
+            }
+
+            // Role summary
+            HStack(spacing: Theme.Spacing.md) {
+                ForEach(UserRole.allCases) { role in
+                    let count = adminVM.usersByRole[role] ?? 0
+                    VStack(spacing: Theme.Spacing.sm) {
+                        Image(systemName: role.icon).font(.system(size: 18)).foregroundStyle(Theme.Colors.primary)
+                        Text("\(count)").font(.system(size: 22, weight: .bold, design: .rounded))
+                        Text(role.displayName).font(Theme.Typography.caption).foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity).padding(Theme.Spacing.sm).cardStyle(colorScheme: colorScheme)
+                }
+            }
+
+            // User list
             VStack(spacing: 0) {
-                // Editable: Min CIBIL
-                editableConfigRow(label: "Minimum CIBIL Score") {
-                    HStack {
-                        Button { if minCIBIL > 500 { minCIBIL -= 10 } } label: {
-                            Image(systemName: "minus.circle").foregroundStyle(Theme.Colors.primary)
+                ForEach(adminVM.filteredUsers) { user in
+                    HStack(spacing: Theme.Spacing.md) {
+                        ZStack {
+                            Circle().fill(user.isActive ? Theme.Colors.primary.opacity(0.12) : Theme.Colors.neutral.opacity(0.12)).frame(width: 36, height: 36)
+                            Text(user.initials).font(Theme.Typography.caption2).foregroundStyle(user.isActive ? Theme.Colors.primary : Theme.Colors.neutral)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(user.name).font(Theme.Typography.subheadline).fontWeight(.medium)
+                            Text("\(user.role.displayName) · \(user.branch)").font(Theme.Typography.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        // Actions
+                        Button { editingUser = user } label: {
+                            Image(systemName: "pencil.circle").font(.system(size: 18)).foregroundStyle(Theme.Colors.primary)
                         }.buttonStyle(.plain)
-                        Text("\(minCIBIL)")
-                            .font(Theme.Typography.mono)
-                            .foregroundStyle(Theme.Colors.primary)
-                            .frame(minWidth: 44)
-                        Button { if minCIBIL < 800 { minCIBIL += 10 } } label: {
-                            Image(systemName: "plus.circle").foregroundStyle(Theme.Colors.primary)
+
+                        Button { adminVM.toggleUserStatus(user) } label: {
+                            Image(systemName: user.isActive ? "person.slash" : "person.badge.plus")
+                                .font(.system(size: 16))
+                                .foregroundStyle(user.isActive ? Theme.Colors.critical : Theme.Colors.success)
                         }.buttonStyle(.plain)
+
+                        GenericBadge(text: user.isActive ? "Active" : "Inactive", color: user.isActive ? Theme.Colors.success : Theme.Colors.neutral)
                     }
-                }
-                Divider().padding(.leading, Theme.Spacing.md)
-                
-                // Editable: Max DTI
-                editableConfigRow(label: "Maximum DTI Ratio") {
-                    HStack {
-                        Button { if maxDTI > 20 { maxDTI -= 5 } } label: {
-                            Image(systemName: "minus.circle").foregroundStyle(Theme.Colors.primary)
-                        }.buttonStyle(.plain)
-                        Text("\(Int(maxDTI))%")
-                            .font(Theme.Typography.mono)
-                            .foregroundStyle(Theme.Colors.primary)
-                            .frame(minWidth: 44)
-                        Button { if maxDTI < 70 { maxDTI += 5 } } label: {
-                            Image(systemName: "plus.circle").foregroundStyle(Theme.Colors.primary)
-                        }.buttonStyle(.plain)
-                    }
-                }
-                Divider().padding(.leading, Theme.Spacing.md)
-                
-                editableConfigRow(label: "Auto-Flag High Risk") {
-                    Toggle("", isOn: $autoFlagHighRisk)
-                        .labelsHidden()
-                        .tint(Theme.Colors.primary)
+                    .padding(.horizontal, Theme.Spacing.md).padding(.vertical, 10)
+                    if user.id != adminVM.filteredUsers.last?.id { Divider().padding(.leading, 56) }
                 }
             }
             .cardStyle(colorScheme: colorScheme)
-            
-            // Save Risk Rules
-            Button {
-                adminVM.minCIBILScore = minCIBIL
-                adminVM.maxDTIRatio = maxDTI / 100.0
-                withAnimation { configSaved = true }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2) { configSaved = false }
-            } label: {
-                HStack {
-                    Image(systemName: configSaved ? "checkmark.circle.fill" : "square.and.arrow.down")
-                    Text(configSaved ? "Saved!" : "Save Risk Rules")
-                        .fontWeight(.medium)
-                }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: Theme.Layout.buttonHeight)
-                .background(configSaved ? Theme.Colors.success : Theme.Colors.primary)
-                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
-            }
-            .buttonStyle(.plain)
-            
-            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                Text("Risk Level Thresholds")
-                    .font(Theme.Typography.headline)
-                
-                VStack(spacing: Theme.Spacing.sm) {
-                    thresholdRow(level: "Low", criteria: "CIBIL ≥ 750, DTI ≤ 30%", color: Theme.Colors.success)
-                    thresholdRow(level: "Medium", criteria: "CIBIL 650-749, DTI 30-40%", color: Theme.Colors.warning)
-                    thresholdRow(level: "High", criteria: "CIBIL < 650 or DTI > 40%", color: Theme.Colors.critical)
-                }
-            }
         }
     }
-    
-    private func thresholdRow(level: String, criteria: String, color: Color) -> some View {
+
+    // MARK: - 2. Policy Configuration
+    private var policyConfigContent: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            VStack(spacing: 0) {
+                editRow("FOIR Limit") { stepper(value: $foirLimit, range: 20...70, step: 5, suffix: "%") }
+                Divider().padding(.leading, Theme.Spacing.md)
+                editRow("Min CIBIL Threshold") { stepper(value: Binding(get:{Double(cibilThreshold)},set:{cibilThreshold=Int($0)}), range: 500...800, step: 10, suffix: "") }
+                Divider().padding(.leading, Theme.Spacing.md)
+                editRow("LTV Limit") { stepper(value: $ltvLimit, range: 50...95, step: 5, suffix: "%") }
+                Divider().padding(.leading, Theme.Spacing.md)
+                editRow("Base Interest Rate") { stepper(value: $baseInterestRate, range: 5...20, step: 0.5, suffix: "%") }
+                Divider().padding(.leading, Theme.Spacing.md)
+                editRow("Max Loan Amount") { stepper(value: $maxLoanAmountMil, range: 10...200, step: 10, suffix: "L") }
+            }.cardStyle(colorScheme: colorScheme)
+
+            saveButton("Save Policy Config") {
+                adminVM.minCIBILScore = cibilThreshold
+                adminVM.maxDTIRatio = foirLimit / 100.0
+            }
+
+            // Eligibility rules
+            SectionHeader(title: "Loan Eligibility Rules", icon: "checklist")
+            VStack(spacing: 0) {
+                ruleInfoRow("Min income ₹25,000/month for Personal Loan")
+                Divider().padding(.leading, Theme.Spacing.md)
+                ruleInfoRow("Co-applicant required for loans > ₹15L")
+                Divider().padding(.leading, Theme.Spacing.md)
+                ruleInfoRow("Max 3 active loans per borrower")
+                Divider().padding(.leading, Theme.Spacing.md)
+                ruleInfoRow("Employment tenure ≥ 1 year")
+            }.cardStyle(colorScheme: colorScheme)
+        }
+    }
+
+    // MARK: - 3. Workflow Configuration
+    private var workflowConfigContent: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            SectionHeader(title: "Approval Flow", icon: "arrow.right.arrow.left")
+            VStack(spacing: 0) {
+                flowStepRow(step: "1", title: "Loan Officer", desc: "Initial review & document collection", icon: "person.text.rectangle")
+                Divider().padding(.leading, Theme.Spacing.md)
+                flowStepRow(step: "2", title: "Manager", desc: "Credit assessment & approval/rejection", icon: "person.badge.shield.checkmark")
+                Divider().padding(.leading, Theme.Spacing.md)
+                flowStepRow(step: "3", title: "Admin", desc: "Final override & escalation handling", icon: "gearshape.2")
+            }.cardStyle(colorScheme: colorScheme)
+
+            SectionHeader(title: "Escalation Rules", icon: "exclamationmark.arrow.triangle.2.circlepath")
+            VStack(spacing: 0) {
+                escRow(trigger: "Loan > ₹50L", to: "Branch Manager", priority: "High")
+                Divider().padding(.leading, Theme.Spacing.md)
+                escRow(trigger: "CIBIL < 600", to: "Risk Committee", priority: "High")
+                Divider().padding(.leading, Theme.Spacing.md)
+                escRow(trigger: "SLA Breach > 7 days", to: "Admin", priority: "Medium")
+                Divider().padding(.leading, Theme.Spacing.md)
+                escRow(trigger: "3 consecutive rejects", to: "Fraud Team", priority: "Critical")
+            }.cardStyle(colorScheme: colorScheme)
+
+            SectionHeader(title: "Auto-Approval", icon: "bolt.circle")
+            VStack(spacing: 0) {
+                editRow("Enable Auto-Approval") { Toggle("", isOn: $autoApprovalEnabled).labelsHidden().tint(Theme.Colors.primary) }
+                if autoApprovalEnabled {
+                    Divider().padding(.leading, Theme.Spacing.md)
+                    editRow("Min CIBIL for Auto") { stepper(value: Binding(get:{Double(autoApprovalCIBIL)},set:{autoApprovalCIBIL=Int($0)}), range: 750...900, step: 10, suffix: "") }
+                    Divider().padding(.leading, Theme.Spacing.md)
+                    editRow("Manager Threshold (₹L)") { stepper(value: $managerApprovalThreshold, range: 5...100, step: 5, suffix: "L") }
+                }
+            }.cardStyle(colorScheme: colorScheme)
+        }
+    }
+
+    // MARK: - 4. Verification Settings
+    private var verificationContent: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            SectionHeader(title: "KYC Requirements", icon: "person.badge.shield.checkmark.fill")
+            VStack(spacing: 0) {
+                toggleConfigRow("PAN Card OCR Verification", isOn: $panOCR)
+                Divider().padding(.leading, Theme.Spacing.md)
+                toggleConfigRow("Aadhaar eKYC Integration", isOn: $aadhaarKYC)
+                Divider().padding(.leading, Theme.Spacing.md)
+                toggleConfigRow("Face Liveness Check", isOn: $faceMatch)
+                Divider().padding(.leading, Theme.Spacing.md)
+                toggleConfigRow("Video KYC (High Value)", isOn: $videoKYC)
+            }.cardStyle(colorScheme: colorScheme)
+
+            SectionHeader(title: "Document Checklist", icon: "doc.badge.gearshape")
+            VStack(spacing: 0) {
+                ForEach(DocumentType.allCases) { docType in
+                    HStack {
+                        Image(systemName: docType.icon).font(.system(size: 16)).foregroundStyle(Theme.Colors.primary).frame(width: 24)
+                        Text(docType.displayName).font(Theme.Typography.subheadline)
+                        Spacer()
+                        GenericBadge(text: "Required", color: Theme.Colors.primary)
+                    }
+                    .padding(.horizontal, Theme.Spacing.md).padding(.vertical, 12)
+                    if docType != DocumentType.allCases.last { Divider().padding(.leading, 48) }
+                }
+            }.cardStyle(colorScheme: colorScheme)
+
+            SectionHeader(title: "Face Match Threshold", icon: "face.smiling")
+            VStack(spacing: 0) {
+                editRow("Match Confidence") { stepper(value: $faceMatchThreshold, range: 70...99, step: 1, suffix: "%") }
+            }.cardStyle(colorScheme: colorScheme)
+
+            saveButton("Save Verification Settings") {}
+        }
+    }
+
+    // MARK: - 5. Notifications
+    private var notificationsContent: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            SectionHeader(title: "Alert Configuration", icon: "bell.badge")
+            VStack(spacing: 0) {
+                toggleConfigRow("Email alerts for NPA accounts", isOn: $npaEmailAlert)
+                Divider().padding(.leading, Theme.Spacing.md)
+                toggleConfigRow("SMS for document requests", isOn: $smsDocRequest)
+                Divider().padding(.leading, Theme.Spacing.md)
+                toggleConfigRow("Daily summary report emails", isOn: $dailySummary)
+                Divider().padding(.leading, Theme.Spacing.md)
+                toggleConfigRow("SLA breach notifications", isOn: $slaBreachAlert)
+            }.cardStyle(colorScheme: colorScheme)
+
+            SectionHeader(title: "Email/SMS Templates", icon: "envelope.badge")
+            VStack(spacing: 0) {
+                templateRow(name: "Loan Approved", channel: "Email + SMS", status: "Active")
+                Divider().padding(.leading, Theme.Spacing.md)
+                templateRow(name: "Document Request", channel: "Email", status: "Active")
+                Divider().padding(.leading, Theme.Spacing.md)
+                templateRow(name: "EMI Reminder", channel: "SMS", status: "Active")
+                Divider().padding(.leading, Theme.Spacing.md)
+                templateRow(name: "NPA Notice", channel: "Email", status: "Draft")
+            }.cardStyle(colorScheme: colorScheme)
+
+            saveButton("Save Notification Settings") {}
+        }
+    }
+
+    private func templateRow(name: String, channel: String, status: String) -> some View {
         HStack {
-            Circle().fill(color).frame(width: 8, height: 8)
-            Text(level)
-                .font(Theme.Typography.subheadline)
-                .fontWeight(.medium)
-                .frame(width: 70, alignment: .leading)
-            Text(criteria)
-                .font(Theme.Typography.caption)
-                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name).font(Theme.Typography.subheadline)
+                Text(channel).font(Theme.Typography.caption).foregroundStyle(.secondary)
+            }
             Spacer()
+            GenericBadge(text: status, color: status == "Active" ? Theme.Colors.success : Theme.Colors.warning)
         }
-        .padding(12)
-        .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
+        .padding(.horizontal, Theme.Spacing.md).padding(.vertical, 13)
     }
-    
-    // MARK: - Audit Logs
-    
-    private var auditLogsSection: some View {
+
+    // MARK: - 6. Audit & Compliance
+    private var auditContent: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             HStack {
                 SectionHeader(title: "Audit Logs", icon: "list.bullet.rectangle")
                 Spacer()
-                Button {
-                    // Export CSV action
-                } label: {
-                    Label("Export CSV", systemImage: "square.and.arrow.up")
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(Theme.Colors.primary)
-                }
-                .buttonStyle(.plain)
+                Button {} label: {
+                    Label("Export CSV", systemImage: "square.and.arrow.up").font(Theme.Typography.caption).foregroundStyle(Theme.Colors.primary)
+                }.buttonStyle(.plain)
             }
-            
             VStack(spacing: 0) {
                 ForEach(adminVM.auditLogs) { log in
                     HStack(alignment: .top, spacing: Theme.Spacing.md) {
-                        Image(systemName: "clock")
-                            .font(.system(size: 14))
-                            .foregroundStyle(.secondary)
-                            .padding(.top, 2)
-                        
+                        Image(systemName: "clock").font(.system(size: 14)).foregroundStyle(.secondary).padding(.top, 2)
                         VStack(alignment: .leading, spacing: 2) {
                             HStack {
-                                Text(log.action)
-                                    .font(Theme.Typography.subheadline)
-                                    .fontWeight(.medium)
+                                Text(log.action).font(Theme.Typography.subheadline).fontWeight(.medium)
                                 Spacer()
-                                Text(log.timestamp.relativeFormatted)
-                                    .font(Theme.Typography.caption)
-                                    .foregroundStyle(.tertiary)
+                                Text(log.timestamp.relativeFormatted).font(Theme.Typography.caption).foregroundStyle(.tertiary)
                             }
-                            Text(log.detail)
-                                .font(Theme.Typography.subheadline)
-                                .foregroundStyle(.secondary)
-                            Text("by \(log.user)")
-                                .font(Theme.Typography.caption)
-                                .foregroundStyle(.tertiary)
+                            Text(log.detail).font(Theme.Typography.subheadline).foregroundStyle(.secondary)
+                            Text("by \(log.user)").font(Theme.Typography.caption).foregroundStyle(.tertiary)
                         }
                     }
-                    .padding(.horizontal, Theme.Spacing.md)
-                    .padding(.vertical, 12)
-                    
-                    if log.id != adminVM.auditLogs.last?.id {
-                        Divider().padding(.leading, 48)
-                    }
+                    .padding(.horizontal, Theme.Spacing.md).padding(.vertical, 12)
+                    if log.id != adminVM.auditLogs.last?.id { Divider().padding(.leading, 48) }
                 }
-            }
-            .cardStyle(colorScheme: colorScheme)
+            }.cardStyle(colorScheme: colorScheme)
+
+            SectionHeader(title: "Data Access Logs", icon: "lock.doc")
+            VStack(spacing: 0) {
+                accessLogRow(user: "Sunita Patel", action: "Viewed loan APP-2024-006", time: "2 min ago")
+                Divider().padding(.leading, Theme.Spacing.md)
+                accessLogRow(user: "Deepak Mehta", action: "Exported Portfolio Report", time: "15 min ago")
+                Divider().padding(.leading, Theme.Spacing.md)
+                accessLogRow(user: "Neha Kapoor", action: "Accessed borrower PII data", time: "1 hr ago")
+            }.cardStyle(colorScheme: colorScheme)
         }
     }
-    
-    // MARK: - System Alerts (replaced System Healthy)
-    
-    private var systemAlertsSection: some View {
+
+    private func accessLogRow(user: String, action: String, time: String) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(action).font(Theme.Typography.subheadline)
+                Text("by \(user)").font(Theme.Typography.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text(time).font(Theme.Typography.caption).foregroundStyle(.tertiary)
+        }.padding(.horizontal, Theme.Spacing.md).padding(.vertical, 12)
+    }
+
+    // MARK: - 7. Integrations
+    private var integrationsContent: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "System Alerts", icon: "bell.badge")
-            
-            VStack(spacing: Theme.Spacing.md) {
-                alertCard(icon: "banknote", title: "Pending Disbursals",
-                          description: "3 approved loans awaiting disbursal processing",
-                          count: "3", color: Theme.Colors.warning)
-                
-                alertCard(icon: "xmark.shield", title: "Failed Verifications",
-                          description: "2 OCR verification failures in last 24 hours",
-                          count: "2", color: Theme.Colors.critical)
-                
-                alertCard(icon: "exclamationmark.triangle", title: "Rule Conflicts",
-                          description: "1 application flagged with conflicting risk rules",
-                          count: "1", color: Theme.Colors.warning)
+            SectionHeader(title: "API Configuration", icon: "antenna.radiowaves.left.and.right")
+            VStack(spacing: Theme.Spacing.sm) {
+                apiCard(name: "CIBIL API", endpoint: "api.cibil.com", status: .healthy, latency: "180ms")
+                apiCard(name: "UIDAI (Aadhaar)", endpoint: "uidai.gov.in/api", status: .healthy, latency: "95ms")
+                apiCard(name: "GSTN API", endpoint: "api.gst.gov.in", status: .healthy, latency: "120ms")
+                apiCard(name: "Core Banking", endpoint: "cbs.bank.internal", status: .healthy, latency: "42ms")
+                apiCard(name: "Notification Service", endpoint: "notify.bank.internal", status: .degraded, latency: "820ms")
             }
+
+            SectionHeader(title: "Failed API Calls", icon: "exclamationmark.arrow.circlepath")
+            VStack(spacing: 0) {
+                failedCallRow(api: "Notification Service", error: "Timeout after 5000ms", time: "12 min ago", retryable: true)
+                Divider().padding(.leading, Theme.Spacing.md)
+                failedCallRow(api: "GSTN API", error: "Rate limit exceeded", time: "2 hr ago", retryable: false)
+            }.cardStyle(colorScheme: colorScheme)
         }
     }
-    
-    private func alertCard(icon: String, title: String, description: String, count: String, color: Color) -> some View {
+
+    private func apiCard(name: String, endpoint: String, status: SystemHealth, latency: String) -> some View {
+        HStack(spacing: Theme.Spacing.md) {
+            Circle().fill(status.color).frame(width: 10, height: 10)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name).font(Theme.Typography.subheadline)
+                Text(endpoint).font(Theme.Typography.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(status.displayName).font(Theme.Typography.caption2).foregroundStyle(status.color).fontWeight(.semibold)
+                Text(latency).font(Theme.Typography.caption).foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, Theme.Spacing.md).padding(.vertical, 13).cardStyle(colorScheme: colorScheme)
+    }
+
+    private func failedCallRow(api: String, error: String, time: String, retryable: Bool) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(api).font(Theme.Typography.subheadline).fontWeight(.medium)
+                Text(error).font(Theme.Typography.caption).foregroundStyle(Theme.Colors.critical)
+                Text(time).font(Theme.Typography.caption).foregroundStyle(.tertiary)
+            }
+            Spacer()
+            if retryable {
+                Button {  } label: {
+                    Label("Retry", systemImage: "arrow.clockwise").font(.system(size: 12, weight: .semibold)).foregroundStyle(Theme.Colors.primary)
+                }.buttonStyle(.plain)
+            }
+        }.padding(.horizontal, Theme.Spacing.md).padding(.vertical, 12)
+    }
+
+    // MARK: - Shared Helpers
+    private func editRow<Content: View>(_ label: String, @ViewBuilder value: () -> Content) -> some View {
+        HStack { Text(label).font(Theme.Typography.subheadline); Spacer(); value() }
+            .padding(.horizontal, Theme.Spacing.md).padding(.vertical, 12)
+    }
+
+    private func toggleConfigRow(_ label: String, isOn: Binding<Bool>) -> some View {
+        HStack { Text(label).font(Theme.Typography.subheadline); Spacer(); Toggle("", isOn: isOn).labelsHidden().tint(Theme.Colors.primary) }
+            .padding(.horizontal, Theme.Spacing.md).padding(.vertical, 10)
+    }
+
+    private func stepper(value: Binding<Double>, range: ClosedRange<Double>, step: Double, suffix: String) -> some View {
+        HStack {
+            Button { if value.wrappedValue > range.lowerBound { value.wrappedValue -= step } } label: {
+                Image(systemName: "minus.circle").foregroundStyle(Theme.Colors.primary)
+            }.buttonStyle(.plain)
+            Text(step >= 1 ? "\(Int(value.wrappedValue))\(suffix)" : String(format: "%.1f\(suffix)", value.wrappedValue))
+                .font(Theme.Typography.mono).foregroundStyle(Theme.Colors.primary).frame(minWidth: 48)
+            Button { if value.wrappedValue < range.upperBound { value.wrappedValue += step } } label: {
+                Image(systemName: "plus.circle").foregroundStyle(Theme.Colors.primary)
+            }.buttonStyle(.plain)
+        }
+    }
+
+    private func saveButton(_ label: String, action: @escaping () -> Void) -> some View {
+        Button {
+            action()
+            withAnimation { configSaved = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { configSaved = false }
+        } label: {
+            HStack {
+                Image(systemName: configSaved ? "checkmark.circle.fill" : "square.and.arrow.down")
+                Text(configSaved ? "Saved!" : label).fontWeight(.medium)
+            }
+            .foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: Theme.Layout.buttonHeight)
+            .background(configSaved ? Theme.Colors.success : Theme.Colors.primary)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
+        }.buttonStyle(.plain)
+    }
+
+    private func ruleInfoRow(_ text: String) -> some View {
+        HStack {
+            Image(systemName: "checkmark.circle.fill").font(.system(size: 14)).foregroundStyle(Theme.Colors.success)
+            Text(text).font(Theme.Typography.subheadline)
+            Spacer()
+        }.padding(.horizontal, Theme.Spacing.md).padding(.vertical, 12)
+    }
+
+    private func flowStepRow(step: String, title: String, desc: String, icon: String) -> some View {
         HStack(spacing: Theme.Spacing.md) {
             ZStack {
-                RoundedRectangle(cornerRadius: Theme.Radius.sm)
-                    .fill(color.opacity(0.1))
-                    .frame(width: 44, height: 44)
-                Image(systemName: icon)
-                    .font(.system(size: 18))
-                    .foregroundStyle(color)
+                Circle().fill(Theme.Colors.primary.opacity(0.12)).frame(width: 32, height: 32)
+                Text(step).font(.system(size: 14, weight: .bold)).foregroundStyle(Theme.Colors.primary)
             }
-            
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(Theme.Typography.headline)
-                Text(description)
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(.secondary)
+                Text(title).font(Theme.Typography.subheadline).fontWeight(.medium)
+                Text(desc).font(Theme.Typography.caption).foregroundStyle(.secondary)
             }
-            
             Spacer()
-            
-            Text(count)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundStyle(color)
-        }
-        .padding(Theme.Spacing.md)
-        .cardStyle(colorScheme: colorScheme)
+            Image(systemName: icon).font(.system(size: 16)).foregroundStyle(.secondary)
+        }.padding(.horizontal, Theme.Spacing.md).padding(.vertical, 12)
     }
-    
-    // MARK: - Config Row Helpers
-    
-    private func configRow<Content: View>(label: String, @ViewBuilder value: () -> Content) -> some View {
+
+    private func escRow(trigger: String, to: String, priority: String) -> some View {
         HStack {
-            Text(label)
-                .font(Theme.Typography.subheadline)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(trigger).font(Theme.Typography.subheadline)
+                Text("→ \(to)").font(Theme.Typography.caption).foregroundStyle(.secondary)
+            }
             Spacer()
-            value()
-        }
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, 14)
-    }
-    
-    private func editableConfigRow<Content: View>(label: String, @ViewBuilder value: () -> Content) -> some View {
-        HStack {
-            Text(label)
-                .font(Theme.Typography.subheadline)
-            Spacer()
-            value()
-        }
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, 12)
+            let c: Color = priority == "Critical" ? Theme.Colors.critical : priority == "High" ? Theme.Colors.warning : Theme.Colors.primary
+            GenericBadge(text: priority, color: c)
+        }.padding(.horizontal, Theme.Spacing.md).padding(.vertical, 13)
     }
 }

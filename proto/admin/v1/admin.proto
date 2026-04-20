@@ -7,6 +7,7 @@ option go_package = "github.com/chirag3003/lms-monorepo/services/core-api/intern
 service AdminService {
   rpc CreateAdminAccount(CreateAdminAccountRequest) returns (CreateAdminAccountResponse);
   rpc CreateEmployeeAccount(CreateEmployeeAccountRequest) returns (CreateEmployeeAccountResponse);
+  rpc ListEmployeeAccounts(ListEmployeeAccountsRequest) returns (ListEmployeeAccountsResponse);
   rpc CreateDstAccount(CreateDstAccountRequest) returns (CreateDstAccountResponse);
   rpc CreateBankBranch(CreateBankBranchRequest) returns (CreateBankBranchResponse);
   rpc UpdateBankBranch(UpdateBankBranchRequest) returns (UpdateBankBranchResponse);
@@ -46,6 +47,37 @@ message CreateEmployeeAccountResponse {
   bool success = 1;
   string user_id = 2;
   string profile_id = 3;
+}
+
+enum StaffRole {
+  STAFF_ROLE_UNSPECIFIED = 0;
+  STAFF_ROLE_ADMIN = 1;
+  STAFF_ROLE_MANAGER = 2;
+  STAFF_ROLE_OFFICER = 3;
+}
+
+message EmployeeAccount {
+  string user_id = 1;
+  string name = 2;
+  string email = 3;
+  string phone_number = 4;
+  StaffRole role = 5;
+  bool is_active = 6;
+  bool is_requiring_password_change = 7;
+  string branch_id = 8;
+  string branch_name = 9;
+  string branch_region = 10;
+  string branch_city = 11;
+  string created_at = 12;
+}
+
+message ListEmployeeAccountsRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+}
+
+message ListEmployeeAccountsResponse {
+  repeated EmployeeAccount employees = 1;
 }
 
 message CreateDstAccountRequest {

@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/repository/generated"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/security/argon2"
@@ -19,6 +20,7 @@ type Service interface {
 	CreateEmployeeAccount(ctx context.Context, req *adminv1.CreateEmployeeAccountRequest) (*adminv1.CreateEmployeeAccountResponse, error)
 	CreateDstAccount(ctx context.Context, req *adminv1.CreateDstAccountRequest) (*adminv1.CreateDstAccountResponse, error)
 	CreateBankBranch(ctx context.Context, req *adminv1.CreateBankBranchRequest) (*adminv1.CreateBankBranchResponse, error)
+	ListEmployeeAccounts(ctx context.Context, req *adminv1.ListEmployeeAccountsRequest) (*adminv1.ListEmployeeAccountsResponse, error)
 	UpdateBankBranch(ctx context.Context, req *adminv1.UpdateBankBranchRequest) (*adminv1.UpdateBankBranchResponse, error)
 	UpdateBranchDstCommission(ctx context.Context, req *adminv1.UpdateBranchDstCommissionRequest) (*adminv1.UpdateBranchDstCommissionResponse, error)
 	UpdateEmployeeAccount(ctx context.Context, req *adminv1.UpdateEmployeeAccountRequest) (*adminv1.UpdateEmployeeAccountResponse, error)
@@ -265,6 +267,60 @@ func (s *service) CreateBankBranch(ctx context.Context, req *adminv1.CreateBankB
 		Success:  true,
 		BranchId: branch.ID.String(),
 	}, nil
+}
+
+func (s *service) ListEmployeeAccounts(ctx context.Context, req *adminv1.ListEmployeeAccountsRequest) (*adminv1.ListEmployeeAccountsResponse, error) {
+	if _, ok := interceptors.UserIDFromContext(ctx); !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing user context")
+	}
+
+	role, _ := ctx.Value(interceptors.ContextRoleKey).(string)
+	if role != "admin" {
+		return nil, status.Error(codes.PermissionDenied, "only admin can list employee accounts")
+	}
+
+	limit := req.GetLimit()
+	if limit <= 0 || limit > 500 {
+		limit = 200
+	}
+
+	offset := req.GetOffset()
+	if offset < 0 {
+		offset = 0
+	}
+
+	rows, err := s.queries.ListEmployeeAccounts(ctx, generated.ListEmployeeAccountsParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to list employee accounts")
+	}
+
+	employees := make([]*adminv1.EmployeeAccount, 0, len(rows))
+	for _, row := range rows {
+		createdAt := ""
+		if row.CreatedAt.Valid {
+			createdAt = row.CreatedAt.Time.UTC().Format(time.RFC3339)
+		}
+
+		employees = append(employees, &adminv1.EmployeeAccount{
+			UserId:                    row.UserID.String(),
+			Name:                      row.Name,
+			Email:                     row.Email,
+			PhoneNumber:               row.Phone,
+			Role:                      mapUserRoleToStaffRole(row.Role),
+			IsActive:                  row.IsActive.Valid && row.IsActive.Bool,
+			IsRequiringPasswordChange: row.IsRequiringPasswordChange.Valid && row.IsRequiringPasswordChange.Bool,
+			BranchId:                  nullableUUIDToString(row.BranchID),
+			BranchName:                nullableTextToString(row.BranchName),
+			BranchRegion:              nullableTextToString(row.BranchRegion),
+			BranchCity:                nullableTextToString(row.BranchCity),
+			CreatedAt:                 createdAt,
+		})
+	}
+
+	return &adminv1.ListEmployeeAccountsResponse{Employees: employees}, nil
 }
 
 // UpdateBankBranch updates branch metadata.
@@ -544,4 +600,31 @@ func validatePasswordStrength(password string) error {
 	}
 
 	return nil
+}
+
+func mapUserRoleToStaffRole(role generated.UserRole) adminv1.StaffRole {
+	switch role {
+	case generated.UserRoleAdmin:
+		return adminv1.StaffRole_STAFF_ROLE_ADMIN
+	case generated.UserRoleManager:
+		return adminv1.StaffRole_STAFF_ROLE_MANAGER
+	case generated.UserRoleOfficer:
+		return adminv1.StaffRole_STAFF_ROLE_OFFICER
+	default:
+		return adminv1.StaffRole_STAFF_ROLE_UNSPECIFIED
+	}
+}
+
+func nullableUUIDToString(value pgtype.UUID) string {
+	if !value.Valid {
+		return ""
+	}
+	return value.String()
+}
+
+func nullableTextToString(value pgtype.Text) string {
+	if !value.Valid {
+		return ""
+	}
+	return value.String
 }

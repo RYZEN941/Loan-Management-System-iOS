@@ -47,6 +47,7 @@ type Querier interface {
 	ListBorrowerAadhaarKycHistory(ctx context.Context, arg ListBorrowerAadhaarKycHistoryParams) ([]BorrowerAadhaarKycHistory, error)
 	ListBorrowerPanKycHistory(ctx context.Context, arg ListBorrowerPanKycHistoryParams) ([]BorrowerPanKycHistory, error)
 	ListDstAccountsByBranchID(ctx context.Context, arg ListDstAccountsByBranchIDParams) ([]ListDstAccountsByBranchIDRow, error)
+	ListEmployeeAccounts(ctx context.Context, arg ListEmployeeAccountsParams) ([]ListEmployeeAccountsRow, error)
 	ListMediaFilesByUser(ctx context.Context, arg ListMediaFilesByUserParams) ([]MediaFile, error)
 	MarkBorrowerAadhaarVerified(ctx context.Context, arg MarkBorrowerAadhaarVerifiedParams) error
 	MarkBorrowerPanVerified(ctx context.Context, arg MarkBorrowerPanVerifiedParams) error

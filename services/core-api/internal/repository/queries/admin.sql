@@ -58,6 +58,29 @@ INSERT INTO manager_profiles (
     $3
 ) RETURNING *;
 
+-- name: ListEmployeeAccounts :many
+SELECT
+    u.id AS user_id,
+    COALESCE(mp.name, op.name, 'Administrator') AS name,
+    u.email,
+    u.phone,
+    u.role,
+    u.is_active,
+    u.is_requiring_password_change,
+    COALESCE(mp.branch_id, op.branch_id) AS branch_id,
+    b.name AS branch_name,
+    b.region AS branch_region,
+    b.city AS branch_city,
+    u.created_at
+FROM users u
+LEFT JOIN manager_profiles mp ON mp.user_id = u.id
+LEFT JOIN officer_profiles op ON op.user_id = u.id
+LEFT JOIN bank_branches b ON b.id = COALESCE(mp.branch_id, op.branch_id)
+WHERE u.role IN ('admin', 'manager', 'officer')
+  AND u.is_deleted = false
+ORDER BY u.created_at DESC
+LIMIT $1 OFFSET $2;
+
 -- name: CreateOfficerProfile :one
 INSERT INTO officer_profiles (
     user_id,

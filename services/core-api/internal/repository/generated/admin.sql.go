@@ -537,6 +537,83 @@ func (q *Queries) ListDstAccountsByBranchID(ctx context.Context, arg ListDstAcco
 	return items, nil
 }
 
+const listEmployeeAccounts = `-- name: ListEmployeeAccounts :many
+SELECT
+    u.id AS user_id,
+    COALESCE(mp.name, op.name, 'Administrator') AS name,
+    u.email,
+    u.phone,
+    u.role,
+    u.is_active,
+    u.is_requiring_password_change,
+    COALESCE(mp.branch_id, op.branch_id) AS branch_id,
+    b.name AS branch_name,
+    b.region AS branch_region,
+    b.city AS branch_city,
+    u.created_at
+FROM users u
+LEFT JOIN manager_profiles mp ON mp.user_id = u.id
+LEFT JOIN officer_profiles op ON op.user_id = u.id
+LEFT JOIN bank_branches b ON b.id = COALESCE(mp.branch_id, op.branch_id)
+WHERE u.role IN ('admin', 'manager', 'officer')
+  AND u.is_deleted = false
+ORDER BY u.created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListEmployeeAccountsParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+type ListEmployeeAccountsRow struct {
+	UserID                    pgtype.UUID        `json:"user_id"`
+	Name                      string             `json:"name"`
+	Email                     string             `json:"email"`
+	Phone                     string             `json:"phone"`
+	Role                      UserRole           `json:"role"`
+	IsActive                  pgtype.Bool        `json:"is_active"`
+	IsRequiringPasswordChange pgtype.Bool        `json:"is_requiring_password_change"`
+	BranchID                  pgtype.UUID        `json:"branch_id"`
+	BranchName                pgtype.Text        `json:"branch_name"`
+	BranchRegion              pgtype.Text        `json:"branch_region"`
+	BranchCity                pgtype.Text        `json:"branch_city"`
+	CreatedAt                 pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) ListEmployeeAccounts(ctx context.Context, arg ListEmployeeAccountsParams) ([]ListEmployeeAccountsRow, error) {
+	rows, err := q.db.Query(ctx, listEmployeeAccounts, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListEmployeeAccountsRow
+	for rows.Next() {
+		var i ListEmployeeAccountsRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.Name,
+			&i.Email,
+			&i.Phone,
+			&i.Role,
+			&i.IsActive,
+			&i.IsRequiringPasswordChange,
+			&i.BranchID,
+			&i.BranchName,
+			&i.BranchRegion,
+			&i.BranchCity,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateBankBranch = `-- name: UpdateBankBranch :exec
 UPDATE bank_branches
 SET name = $2,

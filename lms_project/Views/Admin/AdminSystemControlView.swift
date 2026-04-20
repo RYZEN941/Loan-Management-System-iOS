@@ -17,6 +17,7 @@ struct AdminSystemControlView: View {
     @State private var showCreateUser = false
     @State private var editingUser: User? = nil
     @State private var configSaved = false
+    @State private var sidebarCollapsed = false
 
     // Policy config state
     @State private var foirLimit = 50.0
@@ -71,14 +72,26 @@ struct AdminSystemControlView: View {
                 Theme.Colors.adaptiveBackground(colorScheme).ignoresSafeArea()
                 GeometryReader { geo in
                     HStack(spacing: 1) {
-                        sidebar.frame(width: geo.size.width * 0.28)
-                        Divider()
-                        contentPanel.frame(width: geo.size.width * 0.72 - 1)
+                        if !sidebarCollapsed {
+                            sidebar.frame(width: geo.size.width * 0.28)
+                                .transition(.move(edge: .leading).combined(with: .opacity))
+                            Divider()
+                        }
+                        contentPanel.frame(maxWidth: .infinity)
                     }
                 }
             }
             .navigationTitle("System Control").navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.25)) { sidebarCollapsed.toggle() }
+                    } label: {
+                        Image(systemName: "sidebar.left")
+                            .font(.system(size: 16))
+                            .foregroundStyle(Theme.Colors.primary)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) { ProfileNavButton(showProfile: $showProfile) }
             }
             .onAppear { adminVM.loadData() }
@@ -186,7 +199,7 @@ struct AdminSystemControlView: View {
                         Spacer()
                         // Actions
                         Button { editingUser = user } label: {
-                            Image(systemName: "pencil.circle").font(.system(size: 18)).foregroundStyle(Theme.Colors.primary)
+                            Image(systemName: "pencil").font(.system(size: 16)).foregroundStyle(Theme.Colors.primary)
                         }.buttonStyle(.plain)
 
                         Button { adminVM.toggleUserStatus(user) } label: {

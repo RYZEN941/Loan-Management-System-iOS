@@ -75,14 +75,25 @@ struct AdminRiskView: View {
             ZStack {
                 Theme.Colors.adaptiveBackground(colorScheme).ignoresSafeArea()
                 VStack(spacing: 0) {
-                    Picker("Section", selection: $selectedSection) {
-                        Text("Risk Dashboard").tag(0)
-                        Text("Fraud Detection").tag(1)
-                        Text("Collections").tag(2)
-                        Text("NPA").tag(3)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: Theme.Spacing.sm) {
+                            ForEach([("Risk Dashboard", 0), ("Fraud Detection", 1), ("Collections", 2), ("NPA", 3)], id: \.1) { item in
+                                Button {
+                                    withAnimation { selectedSection = item.1 }
+                                } label: {
+                                    Text(item.0)
+                                        .font(Theme.Typography.caption)
+                                        .fontWeight(selectedSection == item.1 ? .semibold : .regular)
+                                        .foregroundStyle(selectedSection == item.1 ? .white : Theme.Colors.primary)
+                                        .padding(.horizontal, 14).padding(.vertical, 8)
+                                        .background(selectedSection == item.1 ? Theme.Colors.primary : Theme.Colors.primary.opacity(0.08))
+                                        .clipShape(Capsule())
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.horizontal, Theme.Spacing.lg)
                     }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal, Theme.Spacing.lg)
                     .padding(.vertical, Theme.Spacing.md)
 
                     ScrollView {
@@ -168,9 +179,24 @@ struct AdminRiskView: View {
                 Spacer()
                 Text("\(filteredFlagged.count) flagged").font(Theme.Typography.caption).foregroundStyle(.secondary)
             }
-            Picker("Risk Level", selection:$riskFilter) {
-                ForEach(RiskFilter.allCases, id:\.self) { Text($0.rawValue).tag($0) }
-            }.pickerStyle(.segmented)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Theme.Spacing.sm) {
+                    ForEach(RiskFilter.allCases, id: \.self) { filter in
+                        Button {
+                            withAnimation { riskFilter = filter }
+                        } label: {
+                            Text(filter.rawValue)
+                                .font(Theme.Typography.caption)
+                                .fontWeight(riskFilter == filter ? .semibold : .regular)
+                                .foregroundStyle(riskFilter == filter ? .white : Theme.Colors.primary)
+                                .padding(.horizontal, 14).padding(.vertical, 8)
+                                .background(riskFilter == filter ? Theme.Colors.primary : Theme.Colors.primary.opacity(0.08))
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
 
             if filteredFlagged.isEmpty {
                 emptyState(icon:"checkmark.shield.fill",text:"No flags in this category")
@@ -210,9 +236,24 @@ struct AdminRiskView: View {
     // MARK: - Collections
     private var collectionsSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-            Picker("DPD Bucket",selection:$dpdBucket) {
-                ForEach(DPDBucket.allCases,id:\.self) { Text($0.rawValue).tag($0) }
-            }.pickerStyle(.segmented)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Theme.Spacing.sm) {
+                    ForEach(DPDBucket.allCases, id: \.self) { bucket in
+                        Button {
+                            withAnimation { dpdBucket = bucket }
+                        } label: {
+                            Text(bucket.rawValue)
+                                .font(Theme.Typography.caption)
+                                .fontWeight(dpdBucket == bucket ? .semibold : .regular)
+                                .foregroundStyle(dpdBucket == bucket ? .white : bucket.color)
+                                .padding(.horizontal, 14).padding(.vertical, 8)
+                                .background(dpdBucket == bucket ? bucket.color : bucket.color.opacity(0.08))
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
 
             // Summary
             HStack(spacing:Theme.Spacing.lg) {

@@ -11,6 +11,8 @@ struct AdminLoansView: View {
     @EnvironmentObject var loansVM: AdminLoansViewModel
     @Binding var showProfile: Bool
     @Environment(\.colorScheme) private var colorScheme
+    @State private var sidebarCollapsed = false
+    @State private var selectedOfficerName = ""
 
     private let filters: [(label: String, status: ApplicationStatus?)] = [
         ("All", nil), ("Pending", .pending), ("Under Review", .underReview),
@@ -23,17 +25,29 @@ struct AdminLoansView: View {
                 Theme.Colors.adaptiveBackground(colorScheme).ignoresSafeArea()
                 GeometryReader { geo in
                     HStack(spacing: 1) {
-                        listPanel
-                            .frame(width: geo.size.width * Theme.Layout.splitLeftRatio)
-                        Divider()
+                        if !sidebarCollapsed {
+                            listPanel
+                                .frame(width: geo.size.width * Theme.Layout.splitLeftRatio)
+                                .transition(.move(edge: .leading).combined(with: .opacity))
+                            Divider()
+                        }
                         detailPanel
-                            .frame(width: geo.size.width * Theme.Layout.splitRightRatio - 1)
+                            .frame(maxWidth: .infinity)
                     }
                 }
             }
             .navigationTitle("Loans")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.25)) { sidebarCollapsed.toggle() }
+                    } label: {
+                        Image(systemName: "sidebar.left")
+                            .font(.system(size: 16))
+                            .foregroundStyle(Theme.Colors.primary)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     ProfileNavButton(showProfile: $showProfile)
                 }
@@ -436,14 +450,22 @@ struct AdminLoansView: View {
         NavigationStack {
             List(loansVM.loanOfficers, id: \.id) { officer in
                 Button {
-                    loansVM.confirmReassign(to: officer.name)
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selectedOfficerName = officer.name
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        loansVM.confirmReassign(to: officer.name)
+                        selectedOfficerName = ""
+                    }
                 } label: {
                     HStack {
                         Image(systemName: "person.circle").foregroundStyle(Theme.Colors.primary)
                         Text(officer.name).font(Theme.Typography.subheadline)
                         Spacer()
-                        if loansVM.selectedApplication?.assignedTo == officer.id {
-                            Image(systemName: "checkmark").foregroundStyle(Theme.Colors.primary)
+                        if selectedOfficerName == officer.name || loansVM.selectedApplication?.assignedTo == officer.name {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Theme.Colors.primary)
+                                .transition(.scale.combined(with: .opacity))
                         }
                     }
                 }

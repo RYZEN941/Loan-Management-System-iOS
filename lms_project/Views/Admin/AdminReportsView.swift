@@ -14,6 +14,7 @@ struct AdminReportsView: View {
 
     @State private var selectedCategory = 0
     @State private var showExportSheet: ReportItem? = nil
+    @State private var previewingReport: ReportItem? = nil
     @State private var showCustomBuilder = false
     @State private var showingBanner = false
     @State private var bannerMessage = ""
@@ -60,6 +61,9 @@ struct AdminReportsView: View {
             .sheet(item:$showExportSheet) { report in
                 ExportOptionsSheet(report:report,onExport:{format in triggerExport(report:report,format:format)})
             }
+            .sheet(item:$previewingReport) { report in
+                ReportPreviewSheet(report:report,onExport:{format in triggerExport(report:report,format:format)})
+            }
             .sheet(isPresented:$showCustomBuilder) { CustomReportBuilderSheet() }
         }
     }
@@ -80,11 +84,9 @@ struct AdminReportsView: View {
     private var filtersSection: some View {
         VStack(alignment:.leading,spacing:Theme.Spacing.md) {
             SectionHeader(title:"Filters",icon:"line.3.horizontal.decrease.circle")
-            HStack(spacing:Theme.Spacing.md) {
+            HStack(spacing:Theme.Spacing.sm) {
                 filterPicker(label:"Date Range",selection:$dateRange,options:dateRanges)
                 filterPicker(label:"Loan Type",selection:$loanTypeFilter,options:loanTypes)
-            }
-            HStack(spacing:Theme.Spacing.md) {
                 filterPicker(label:"Region",selection:$regionFilter,options:regions)
                 filterPicker(label:"Status",selection:$statusFilter,options:statuses)
             }
@@ -130,7 +132,7 @@ struct AdminReportsView: View {
             SectionHeader(title:"Available Reports",icon:"doc.on.doc")
             let filtered = selectedCategory < reports.count ? [reports[selectedCategory]] : reports
             ForEach(filtered) { report in
-                ReportCard(report:report,colorScheme:colorScheme,onExport:{showExportSheet=report})
+                ReportCard(report:report,colorScheme:colorScheme,onExport:{showExportSheet=report},onPreview:{previewingReport=report})
             }
         }
     }
@@ -194,7 +196,7 @@ struct AdminReportsView: View {
 
 // MARK: - Report Card
 private struct ReportCard: View {
-    let report:ReportItem; let colorScheme:ColorScheme; let onExport:()->Void
+    let report:ReportItem; let colorScheme:ColorScheme; let onExport:()->Void; let onPreview:()->Void
     var body: some View {
         VStack(alignment:.leading,spacing:Theme.Spacing.md) {
             HStack(spacing:Theme.Spacing.md) {
@@ -214,8 +216,9 @@ private struct ReportCard: View {
                 Label(report.size,systemImage:"doc").font(Theme.Typography.caption).foregroundStyle(.secondary)
             }
             HStack(spacing:Theme.Spacing.sm) {
-                expBtn(label:"Export PDF",icon:"doc.fill",primary:true,action:onExport)
-                expBtn(label:"Export Excel",icon:"tablecells.fill",primary:false,action:onExport)
+                expBtn(label:"Preview",icon:"eye",primary:false,action:onPreview)
+                expBtn(label:"PDF",icon:"doc.fill",primary:true,action:onExport)
+                expBtn(label:"Excel",icon:"tablecells.fill",primary:false,action:onExport)
                 expBtn(label:"CSV",icon:"list.bullet",primary:false,action:onExport)
             }
         }.padding(Theme.Spacing.md).cardStyle(colorScheme:colorScheme)
@@ -312,4 +315,140 @@ struct ReportItem: Identifiable {
 enum ExportFormat: String, CaseIterable {
     case pdf="pdf",excel="excel",csv="csv"
     var displayName: String { switch self { case .pdf: return "PDF"; case .excel: return "Excel"; case .csv: return "CSV" } }
+}
+
+// MARK: - Report Preview Sheet
+private struct ReportPreviewSheet: View {
+    let report: ReportItem
+    let onExport: (ExportFormat) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+
+    private let sampleColumns = ["Loan ID", "Borrower", "Amount", "Status", "Risk"]
+    private let sampleRows: [[String]] = [
+        ["APP-2024-001", "Rajesh Kumar", "₹25L", "Approved", "Low"],
+        ["APP-2024-002", "Priya Sharma", "₹42L", "Under Review", "Medium"],
+        ["APP-2024-003", "Amit Singh", "₹18L", "Approved", "Low"],
+        ["APP-2024-004", "Kavitha Nair", "₹8.5L", "Pending", "High"],
+        ["APP-2024-005", "Suresh Pillai", "₹55L", "Rejected", "High"],
+        ["APP-2024-006", "Deepa Menon", "₹12L", "Approved", "Low"],
+    ]
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                    // Report header
+                    HStack(spacing: Theme.Spacing.md) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: Theme.Radius.md)
+                                .fill(report.color.opacity(0.12))
+                                .frame(width: 44, height: 44)
+                            Image(systemName: report.icon)
+                                .font(.system(size: 20))
+                                .foregroundStyle(report.color)
+                        }
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(report.title).font(Theme.Typography.headline)
+                            Text(report.description).font(Theme.Typography.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("Last: \(report.lastGenerated)").font(Theme.Typography.caption).foregroundStyle(.secondary)
+                            Text(report.size).font(Theme.Typography.caption).foregroundStyle(.tertiary)
+                        }
+                    }
+                    .padding(Theme.Spacing.md)
+                    .cardStyle(colorScheme: colorScheme)
+
+                    // Data table
+                    VStack(spacing: 0) {
+                        // Table header
+                        HStack(spacing: 0) {
+                            ForEach(sampleColumns, id: \.self) { col in
+                                Text(col)
+                                    .font(Theme.Typography.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 10)
+                            }
+                        }
+                        .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+
+                        // Table rows
+                        ForEach(sampleRows.indices, id: \.self) { rowIdx in
+                            HStack(spacing: 0) {
+                                ForEach(sampleRows[rowIdx].indices, id: \.self) { colIdx in
+                                    Text(sampleRows[rowIdx][colIdx])
+                                        .font(Theme.Typography.caption)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 10)
+                                }
+                            }
+                            if rowIdx < sampleRows.count - 1 {
+                                Divider()
+                            }
+                        }
+                    }
+                    .cardStyle(colorScheme: colorScheme)
+
+                    // Summary stats
+                    HStack(spacing: Theme.Spacing.md) {
+                        previewStat(label: "Total Records", value: "248", color: Theme.Colors.primary)
+                        previewStat(label: "Approved", value: "142", color: Theme.Colors.success)
+                        previewStat(label: "Pending", value: "68", color: Theme.Colors.warning)
+                        previewStat(label: "Rejected", value: "38", color: Theme.Colors.critical)
+                    }
+
+                    // Export buttons
+                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                        Text("Export Full Report").font(Theme.Typography.subheadline).fontWeight(.medium)
+                        HStack(spacing: Theme.Spacing.sm) {
+                            exportButton("PDF", icon: "doc.fill", format: .pdf)
+                            exportButton("Excel", icon: "tablecells.fill", format: .excel)
+                            exportButton("CSV", icon: "list.bullet", format: .csv)
+                        }
+                    }
+                }
+                .padding(Theme.Spacing.lg)
+            }
+            .background(Theme.Colors.adaptiveBackground(colorScheme))
+            .navigationTitle("Preview: \(report.title)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func previewStat(label: String, value: String, color: Color) -> some View {
+        VStack(spacing: 4) {
+            Text(value).font(.system(size: 20, weight: .bold, design: .rounded)).foregroundStyle(color)
+            Text(label).font(Theme.Typography.caption).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(Theme.Spacing.sm)
+        .cardStyle(colorScheme: colorScheme)
+    }
+
+    private func exportButton(_ label: String, icon: String, format: ExportFormat) -> some View {
+        Button {
+            dismiss()
+            onExport(format)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: icon).font(.system(size: 13))
+                Text(label).font(.system(size: 13, weight: .semibold))
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity).padding(.vertical, 10)
+            .background(Theme.Colors.primary)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
+        }
+        .buttonStyle(.plain)
+    }
 }

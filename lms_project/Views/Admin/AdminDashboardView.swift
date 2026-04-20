@@ -190,18 +190,18 @@ struct AdminDashboardView: View {
                             let y = height - (normalizedY * height) + 20
                             
                             Text(String(format: "%.0f", value))
-                                .font(.system(size: 9, weight: .medium))
-                                .foregroundStyle(.secondary)
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(.primary.opacity(0.7))
                                 .position(x: x, y: y - 14)
                             
                             Circle()
                                 .fill(Theme.Colors.primary)
-                                .frame(width: 6, height: 6)
+                                .frame(width: 8, height: 8)
                                 .position(x: x, y: y)
                             
                             Text(dayLabel(index))
-                                .font(.system(size: 9))
-                                .foregroundStyle(.tertiary)
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(.secondary)
                                 .position(x: x, y: height + 30)
                         }
                     }
@@ -345,15 +345,14 @@ struct AdminDashboardView: View {
                     label: "Fraud Flags",
                     detail: "1 suspicious application detected",
                     count: "1",
-                    color: Theme.Colors.critical,
-                    isCritical: true
+                    color: Theme.Colors.critical
                 )
             }
             .cardStyle(colorScheme: colorScheme)
         }
     }
     
-    private func alertFlagRow(icon: String, label: String, detail: String, count: String, color: Color, isCritical: Bool = false) -> some View {
+    private func alertFlagRow(icon: String, label: String, detail: String, count: String, color: Color) -> some View {
         HStack(spacing: Theme.Spacing.md) {
             ZStack {
                 RoundedRectangle(cornerRadius: Theme.Radius.sm)
@@ -378,7 +377,6 @@ struct AdminDashboardView: View {
         }
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.vertical, 12)
-        .background(isCritical ? color.opacity(0.04) : Color.clear)
     }
     
     // MARK: - Recent Activity Feed

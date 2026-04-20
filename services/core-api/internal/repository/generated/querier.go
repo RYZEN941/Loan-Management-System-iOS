@@ -32,6 +32,7 @@ type Querier interface {
 	GetAdminProfileByUserID(ctx context.Context, userID pgtype.UUID) (AdminProfile, error)
 	GetBankBranchByID(ctx context.Context, id pgtype.UUID) (BankBranch, error)
 	GetBorrowerProfileByUserID(ctx context.Context, userID pgtype.UUID) (BorrowerProfile, error)
+	GetDstAccountByUserID(ctx context.Context, userID pgtype.UUID) (GetDstAccountByUserIDRow, error)
 	GetDstProfileByUserID(ctx context.Context, userID pgtype.UUID) (DstProfile, error)
 	GetLatestGrantedConsentByType(ctx context.Context, arg GetLatestGrantedConsentByTypeParams) (UserConsent, error)
 	GetManagerProfileByID(ctx context.Context, id pgtype.UUID) (ManagerProfile, error)
@@ -45,6 +46,7 @@ type Querier interface {
 	GetWebAuthnCredentialsByUserID(ctx context.Context, userID pgtype.UUID) ([]WebauthnCredential, error)
 	ListBorrowerAadhaarKycHistory(ctx context.Context, arg ListBorrowerAadhaarKycHistoryParams) ([]BorrowerAadhaarKycHistory, error)
 	ListBorrowerPanKycHistory(ctx context.Context, arg ListBorrowerPanKycHistoryParams) ([]BorrowerPanKycHistory, error)
+	ListDstAccountsByBranchID(ctx context.Context, arg ListDstAccountsByBranchIDParams) ([]ListDstAccountsByBranchIDRow, error)
 	ListMediaFilesByUser(ctx context.Context, arg ListMediaFilesByUserParams) ([]MediaFile, error)
 	MarkBorrowerAadhaarVerified(ctx context.Context, arg MarkBorrowerAadhaarVerifiedParams) error
 	MarkBorrowerPanVerified(ctx context.Context, arg MarkBorrowerPanVerifiedParams) error

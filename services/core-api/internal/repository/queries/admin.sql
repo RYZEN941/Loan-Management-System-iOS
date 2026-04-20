@@ -113,6 +113,51 @@ SELECT * FROM officer_profiles WHERE user_id = $1 LIMIT 1;
 -- name: GetDstProfileByUserID :one
 SELECT * FROM dst_profiles WHERE user_id = $1 LIMIT 1;
 
+-- name: GetDstAccountByUserID :one
+SELECT
+    u.id AS user_id,
+    d.id AS profile_id,
+    d.name,
+    u.email,
+    u.phone,
+    u.is_active,
+    u.is_requiring_password_change,
+    b.id AS branch_id,
+    b.name AS branch_name,
+    b.region AS branch_region,
+    b.city AS branch_city,
+    d.created_at
+FROM dst_profiles d
+JOIN users u ON u.id = d.user_id
+JOIN bank_branches b ON b.id = d.branch_id
+WHERE d.user_id = $1
+  AND u.role = 'dst'
+  AND u.is_deleted = false
+LIMIT 1;
+
+-- name: ListDstAccountsByBranchID :many
+SELECT
+    u.id AS user_id,
+    d.id AS profile_id,
+    d.name,
+    u.email,
+    u.phone,
+    u.is_active,
+    u.is_requiring_password_change,
+    b.id AS branch_id,
+    b.name AS branch_name,
+    b.region AS branch_region,
+    b.city AS branch_city,
+    d.created_at
+FROM dst_profiles d
+JOIN users u ON u.id = d.user_id
+JOIN bank_branches b ON b.id = d.branch_id
+WHERE d.branch_id = $1
+  AND u.role = 'dst'
+  AND u.is_deleted = false
+ORDER BY d.created_at DESC
+LIMIT $2 OFFSET $3;
+
 -- name: GetManagerProfileByID :one
 SELECT * FROM manager_profiles WHERE id = $1 LIMIT 1;
 

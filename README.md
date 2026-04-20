@@ -1,6 +1,6 @@
 # LMS Monorepo
 
-This repository contains the backend API, protobuf contracts, and client/sdk code for the LMS project.
+This repository contains the backend API, protobuf contracts, and frontend integration docs for the LMS project.
 
 The main runnable service today is `core-api` (Go + gRPC), backed by Postgres and Redis.
 
@@ -8,29 +8,30 @@ The main runnable service today is `core-api` (Go + gRPC), backed by Postgres an
 
 ```text
 lms-monorepo/
-├── apps/
-│   └── borrower_client/             # iOS app workspace (early stage)
 ├── proto/
-│   ├── auth/v1/auth.proto           # Auth service contract
-│   └── loan/v1/loan.proto           # Loan service contract (stub)
+│   ├── admin/v1/admin.proto           # Admin and employee management contract
+│   ├── auth/v1/auth.proto             # Auth and session contract
+│   ├── kyc/v1/kyc.proto               # Borrower KYC contract
+│   ├── media/v1/media.proto           # Media upload/list contract
+│   ├── onboarding/v1/onboarding.proto # Borrower onboarding contract
+│   └── loan/v1/loan.proto             # Loan service contract (stub)
 ├── services/
-│   └── core-api/                    # Go backend (main service)
-├── sdk/
-│   └── swift/                       # Swift SDK workspace/artifacts
-├── docker-compose.yml               # Local infra + core-api
-├── docs/                            # Frontend integration docs (auth/onboarding)
-├── Makefile                         # Helper commands (proto, sqlc, docker)
-└── go.work                          # Go workspace (currently includes core-api)
+│   └── core-api/                      # Go backend (main service)
+├── docker-compose.yml                 # Local infra + core-api
+├── docs/                              # Frontend integration docs
+├── Makefile                           # Helper commands (proto, sqlc, docker)
+└── go.work                            # Go workspace (currently includes core-api)
 ```
 
 Frontend API docs are available in `docs/README.md`.
 
 ## Architecture At A Glance
 
-- Transport: gRPC (`AuthService`) using protobuf definitions from `proto/`
+- Transport: gRPC using protobuf definitions from `proto/`
+- Services: `AuthService`, `AdminService`, `OnboardingService`, `KycService`, `MediaService`
 - Backend: Go service in `services/core-api`
 - Data layer:
-  - Postgres for users, refresh tokens, webauthn credentials
+  - Postgres for users, profiles, refresh tokens, webauthn credentials, KYC history, media metadata
   - Redis for OTP/MFA/session state
 - Auth model:
   - Password (Argon2)
@@ -61,9 +62,9 @@ make docker-up
 
 What starts:
 
-- `postgres` on `localhost:5432`
-- `redis` on `localhost:6379`
-- `core-api` gRPC server on `localhost:8080`
+- `postgres` on `localhost:15432`
+- `redis` on `localhost:16379`
+- `core-api` gRPC server on `localhost:18080`
 
 ### Database initialization
 
@@ -92,7 +93,7 @@ docker compose up -d postgres redis
 
 ```bash
 cd services/core-api
-go run .
+POSTGRES_DSN="postgres://lms:lms@localhost:15432/lms?sslmode=disable" REDIS_ADDR="localhost:16379" go run .
 ```
 
 Default config (if env vars are not set) is defined in `services/core-api/internal/config/config.go`.
@@ -118,6 +119,10 @@ make proto
 Inputs:
 
 - `proto/auth/v1/auth.proto`
+- `proto/admin/v1/admin.proto`
+- `proto/kyc/v1/kyc.proto`
+- `proto/media/v1/media.proto`
+- `proto/onboarding/v1/onboarding.proto`
 - `proto/loan/v1/loan.proto`
 
 ### 2) SQL to Go (sqlc)
@@ -151,6 +156,10 @@ If you are new to this repo, read in this order:
 
 1. Contracts first
    - `proto/auth/v1/auth.proto`
+   - `proto/admin/v1/admin.proto`
+   - `proto/onboarding/v1/onboarding.proto`
+   - `proto/kyc/v1/kyc.proto`
+   - `proto/media/v1/media.proto`
 2. Server entrypoint + wiring
    - `services/core-api/main.go`
    - `services/core-api/cmd/server/run.go`
@@ -179,17 +188,19 @@ Typical call path:
 
 ## gRPC API Surface (Current)
 
-Defined in `proto/auth/v1/auth.proto`:
-
-- Health/demo: `Hello`
-- Signup: `InitiateSignup`, `VerifySignupOTPs`
-- MFA setup/login: `SetupTOTP`, `VerifyTOTPSetup`, `LoginPrimary`, `SelectLoginMFAFactor`, `VerifyLoginMFA`
-- Password/session: `ChangePassword`, `RefreshToken`, `Logout`
-- WebAuthn: begin/finish registration and login methods exist, but finish flows are not fully implemented yet
-
-Defined in `proto/onboarding/v1/onboarding.proto`:
-
-- Borrower onboarding: `CompleteBorrowerOnboarding`
+- `auth.v1.AuthService`
+  - Signup: `InitiateSignup`, `VerifySignupOTPs`
+  - Login/MFA: `LoginPrimary`, `InitiateReopen`, `SelectLoginMFAFactor`, `VerifyLoginMFA`
+  - Account security: `SetupTOTP`, `VerifyTOTPSetup`, `GetMyProfile`, `ChangePassword`, WebAuthn begin/finish methods
+  - Session: `RefreshToken` (returns precondition to use reopen flow), `Logout`
+- `admin.v1.AdminService`
+  - Admin bootstrap, employee creation/update, branch management, DST creation/commission updates
+- `onboarding.v1.OnboardingService`
+  - Borrower onboarding: `CompleteBorrowerOnboarding`
+- `kyc.v1.KycService`
+  - Consent recording, Aadhaar OTP verify flow, PAN verification, borrower KYC status/history
+- `media.v1.MediaService`
+  - Presigned upload init/complete and user media listing
 
 ### Signup behavior
 
@@ -246,7 +257,7 @@ Sample `grpcurl` (replace token):
 grpcurl -plaintext \
   -H "authorization: Bearer <ACCESS_TOKEN>" \
   -d '{"current_password":"CurrentPassword123!","new_password":"NewSecurePassword123!"}' \
-  localhost:8080 auth.v1.AuthService/ChangePassword
+  localhost:18080 auth.v1.AuthService/ChangePassword
 ```
 
 ## Troubleshooting
@@ -258,8 +269,9 @@ grpcurl -plaintext \
 
 ## Current Gaps / Notes
 
-- WebAuthn finish flows are still incomplete.
+- Bootstrap admin creation is currently public by default (`CreateAdminAccount` in `publicMethods`); disable for production.
 - OTP values are currently printed for local debugging.
+- Direct `RefreshToken` rotation is intentionally disabled; clients should use `InitiateReopen` + MFA.
 - Loan service contract exists but implementation is currently a stub.
 
 ## Handy Commands

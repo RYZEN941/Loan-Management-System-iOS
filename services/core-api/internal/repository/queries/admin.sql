@@ -104,6 +104,15 @@ INSERT INTO dst_profiles (
 -- name: GetManagerProfileByUserID :one
 SELECT * FROM manager_profiles WHERE user_id = $1 LIMIT 1;
 
+-- name: GetAdminProfileByUserID :one
+SELECT * FROM admin_profiles WHERE user_id = $1 LIMIT 1;
+
+-- name: GetOfficerProfileByUserID :one
+SELECT * FROM officer_profiles WHERE user_id = $1 LIMIT 1;
+
+-- name: GetDstProfileByUserID :one
+SELECT * FROM dst_profiles WHERE user_id = $1 LIMIT 1;
+
 -- name: GetManagerProfileByID :one
 SELECT * FROM manager_profiles WHERE id = $1 LIMIT 1;
 

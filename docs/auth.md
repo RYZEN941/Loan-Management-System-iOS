@@ -22,6 +22,7 @@ This document explains `auth.v1.AuthService` APIs and the required call order.
 - `FinishWebAuthnRegistration`
 - `BeginWebAuthnLogin`
 - `FinishWebAuthnLogin`
+- `GetMyProfile`
 - `RefreshToken`
 - `Logout`
 
@@ -98,7 +99,7 @@ Frontend action:
 Request:
 
 - `mfa_session_id`
-- `factor` (`totp`, `email_otp`, `phone_otp`)
+- `factor` (`totp`, `email_otp`, `phone_otp`, `webauthn`)
 
 Response:
 
@@ -240,9 +241,49 @@ Current behavior:
 
 Frontend action:
 
-- Replace both old tokens atomically.
+- Do not retry direct `RefreshToken` on `FailedPrecondition`.
+- Start `InitiateReopen`, complete MFA (`SelectLoginMFAFactor` -> `VerifyLoginMFA`), and then replace tokens atomically.
 
-## 6) Logout (Authenticated)
+## 6) Get Current User Profile (Authenticated)
+
+RPC: `GetMyProfile`
+
+Auth: required.
+
+Request:
+
+- empty message (`GetMyProfileRequest {}`)
+
+Response:
+
+- Common user fields (all roles):
+  - `user_id`, `email`, `phone`, `role`
+  - `is_email_verified`, `is_phone_verified`, `is_active`
+  - `is_requiring_password_change`, `has_totp`, `created_at`
+- Role-specific `profile` (oneof):
+  - `admin_profile`
+  - `manager_profile`
+  - `officer_profile`
+  - `borrower_profile`
+  - `dst_profile`
+
+Branch-linked profile payloads (`manager_profile`, `officer_profile`, `dst_profile`) include optional `branch`:
+
+- `branch_id`, `name`, `region`, `city`, `dst_commission`
+
+Borrower profile payload is full and includes:
+
+- `first_name`, `last_name`, `date_of_birth`, `gender`
+- `address_line1`, `city`, `state`, `pincode`
+- `employment_type`, `monthly_income`, `profile_completeness_percent`
+- `is_aadhaar_verified`, `is_pan_verified`, `aadhaar_verified_at`, `pan_verified_at`
+
+Frontend action:
+
+- Call this immediately after successful login MFA to hydrate app state.
+- Use `role` + role-specific `profile` to route to borrower/admin/manager/officer/dst experiences.
+
+## 7) Logout (Authenticated)
 
 RPC: `Logout`
 
@@ -261,7 +302,7 @@ Frontend action:
 
 - Clear local auth state regardless of response retries.
 
-## 7) WebAuthn (Current Status)
+## 8) WebAuthn (Current Status)
 
 - Begin and finish registration/login methods are implemented.
 - Expected client payload format:

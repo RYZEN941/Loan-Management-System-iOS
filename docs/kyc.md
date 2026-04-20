@@ -37,7 +37,7 @@ Verification is marked successful only when provider status is valid and profile
 
 ## gRPC Metadata
 
-- `authorization: <access_token>`
+- `authorization: Bearer <ACCESS_TOKEN>`
 
 ## 1) RecordUserConsent
 

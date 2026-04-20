@@ -304,6 +304,17 @@ func (q *Queries) CreateOfficerProfile(ctx context.Context, arg CreateOfficerPro
 	return i, err
 }
 
+const getAdminProfileByUserID = `-- name: GetAdminProfileByUserID :one
+SELECT id, user_id, created_at FROM admin_profiles WHERE user_id = $1 LIMIT 1
+`
+
+func (q *Queries) GetAdminProfileByUserID(ctx context.Context, userID pgtype.UUID) (AdminProfile, error) {
+	row := q.db.QueryRow(ctx, getAdminProfileByUserID, userID)
+	var i AdminProfile
+	err := row.Scan(&i.ID, &i.UserID, &i.CreatedAt)
+	return i, err
+}
+
 const getBankBranchByID = `-- name: GetBankBranchByID :one
 SELECT id, name, region, city, dst_commission, created_at FROM bank_branches WHERE id = $1 LIMIT 1
 `
@@ -317,6 +328,23 @@ func (q *Queries) GetBankBranchByID(ctx context.Context, id pgtype.UUID) (BankBr
 		&i.Region,
 		&i.City,
 		&i.DstCommission,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getDstProfileByUserID = `-- name: GetDstProfileByUserID :one
+SELECT id, user_id, name, branch_id, created_at FROM dst_profiles WHERE user_id = $1 LIMIT 1
+`
+
+func (q *Queries) GetDstProfileByUserID(ctx context.Context, userID pgtype.UUID) (DstProfile, error) {
+	row := q.db.QueryRow(ctx, getDstProfileByUserID, userID)
+	var i DstProfile
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.BranchID,
 		&i.CreatedAt,
 	)
 	return i, err
@@ -346,6 +374,23 @@ SELECT id, user_id, name, branch_id, created_at FROM manager_profiles WHERE user
 func (q *Queries) GetManagerProfileByUserID(ctx context.Context, userID pgtype.UUID) (ManagerProfile, error) {
 	row := q.db.QueryRow(ctx, getManagerProfileByUserID, userID)
 	var i ManagerProfile
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Name,
+		&i.BranchID,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getOfficerProfileByUserID = `-- name: GetOfficerProfileByUserID :one
+SELECT id, user_id, name, branch_id, created_at FROM officer_profiles WHERE user_id = $1 LIMIT 1
+`
+
+func (q *Queries) GetOfficerProfileByUserID(ctx context.Context, userID pgtype.UUID) (OfficerProfile, error) {
+	row := q.db.QueryRow(ctx, getOfficerProfileByUserID, userID)
+	var i OfficerProfile
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,

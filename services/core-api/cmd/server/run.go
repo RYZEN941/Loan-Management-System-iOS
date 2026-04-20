@@ -92,6 +92,7 @@ func Run() error {
 		"/admin.v1.AdminService/AssignEmployeeBranch":                 {"admin"},
 		"/auth.v1.AuthService/SetupTOTP":                              {"borrower", "officer", "manager", "admin", "dst"},
 		"/auth.v1.AuthService/VerifyTOTPSetup":                        {"borrower", "officer", "manager", "admin", "dst"},
+		"/auth.v1.AuthService/GetMyProfile":                           {"borrower", "officer", "manager", "admin", "dst"},
 		"/auth.v1.AuthService/ChangePassword":                         {"borrower", "officer", "manager", "admin", "dst"},
 		"/kyc.v1.KycService/RecordUserConsent":                        {"borrower"},
 		"/kyc.v1.KycService/InitiateAadhaarKyc":                       {"borrower"},

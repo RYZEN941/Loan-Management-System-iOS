@@ -7,8 +7,10 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,6 +24,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5"
 	"github.com/pquerna/otp/totp"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc/codes"
@@ -39,6 +42,7 @@ type Service interface {
 	SelectLoginMFAFactor(ctx context.Context, req *authv1.SelectLoginMFAFactorRequest) (*authv1.SelectLoginMFAFactorResponse, error)
 	VerifyLoginMFA(ctx context.Context, req *authv1.VerifyLoginMFARequest) (*authv1.AuthTokens, error)
 	ChangePassword(ctx context.Context, req *authv1.ChangePasswordRequest) (*authv1.ChangePasswordResponse, error)
+	GetMyProfile(ctx context.Context, req *authv1.GetMyProfileRequest) (*authv1.GetMyProfileResponse, error)
 	RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequest) (*authv1.AuthTokens, error)
 	Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv1.LogoutResponse, error)
 	BeginWebAuthnRegistration(ctx context.Context, req *authv1.WebAuthnRegRequest) (*authv1.WebAuthnRegResponse, error)
@@ -614,6 +618,133 @@ func (s *service) ChangePassword(ctx context.Context, req *authv1.ChangePassword
 	return &authv1.ChangePasswordResponse{Success: true}, nil
 }
 
+func (s *service) GetMyProfile(ctx context.Context, req *authv1.GetMyProfileRequest) (*authv1.GetMyProfileResponse, error) {
+	_ = req
+
+	userID, ok := interceptors.UserIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing user context")
+	}
+
+	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "user not found")
+	}
+
+	response := &authv1.GetMyProfileResponse{
+		UserId:                    user.ID.String(),
+		Email:                     user.Email,
+		Phone:                     user.Phone,
+		Role:                      mapDBRoleToProto(user.Role),
+		IsEmailVerified:           user.IsEmailVerified.Bool,
+		IsPhoneVerified:           user.IsPhoneVerified.Bool,
+		IsActive:                  user.IsActive.Bool,
+		IsRequiringPasswordChange: user.IsRequiringPasswordChange.Bool,
+		HasTotp:                   user.HasTotp.Bool,
+		CreatedAt:                 timeToString(user.CreatedAt),
+	}
+
+	switch user.Role {
+	case generated.UserRoleAdmin:
+		profile, err := s.queries.GetAdminProfileByUserID(ctx, user.ID)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return nil, status.Error(codes.Internal, "failed to load admin profile")
+		}
+		if err == nil {
+			response.Profile = &authv1.GetMyProfileResponse_AdminProfile{AdminProfile: &authv1.AdminProfile{
+				ProfileId: profile.ID.String(),
+				CreatedAt: timeToString(profile.CreatedAt),
+			}}
+		}
+	case generated.UserRoleManager:
+		profile, err := s.queries.GetManagerProfileByUserID(ctx, user.ID)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return nil, status.Error(codes.Internal, "failed to load manager profile")
+		}
+		if err == nil {
+			response.Profile = &authv1.GetMyProfileResponse_ManagerProfile{ManagerProfile: &authv1.ManagerProfile{
+				ProfileId: profile.ID.String(),
+				Name:      profile.Name,
+				Branch:    s.loadBranchProfile(ctx, profile.BranchID),
+				CreatedAt: timeToString(profile.CreatedAt),
+			}}
+		}
+	case generated.UserRoleOfficer:
+		profile, err := s.queries.GetOfficerProfileByUserID(ctx, user.ID)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return nil, status.Error(codes.Internal, "failed to load officer profile")
+		}
+		if err == nil {
+			response.Profile = &authv1.GetMyProfileResponse_OfficerProfile{OfficerProfile: &authv1.OfficerProfile{
+				ProfileId: profile.ID.String(),
+				Name:      profile.Name,
+				Branch:    s.loadBranchProfile(ctx, profile.BranchID),
+				CreatedAt: timeToString(profile.CreatedAt),
+			}}
+		}
+	case generated.UserRoleBorrower:
+		profile, err := s.queries.GetBorrowerProfileByUserID(ctx, user.ID)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return nil, status.Error(codes.Internal, "failed to load borrower profile")
+		}
+		if err == nil {
+			response.Profile = &authv1.GetMyProfileResponse_BorrowerProfile{BorrowerProfile: &authv1.BorrowerProfile{
+				ProfileId:                  profile.ID.String(),
+				FirstName:                  profile.FirstName,
+				LastName:                   profile.LastName,
+				DateOfBirth:                dateToString(profile.DateOfBirth),
+				Gender:                     string(profile.Gender),
+				AddressLine1:               profile.AddressLine1,
+				City:                       profile.City,
+				State:                      profile.State,
+				Pincode:                    profile.Pincode,
+				EmploymentType:             string(profile.EmploymentType),
+				MonthlyIncome:              numericToString(profile.MonthlyIncome),
+				ProfileCompletenessPercent: profile.ProfileCompletenessPercent,
+				IsAadhaarVerified:          profile.IsAadhaarVerified,
+				IsPanVerified:              profile.IsPanVerified,
+				AadhaarVerifiedAt:          timeToString(profile.AadhaarVerifiedAt),
+				PanVerifiedAt:              timeToString(profile.PanVerifiedAt),
+				CreatedAt:                  timeToString(profile.CreatedAt),
+			}}
+		}
+	case generated.UserRoleDst:
+		profile, err := s.queries.GetDstProfileByUserID(ctx, user.ID)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return nil, status.Error(codes.Internal, "failed to load dst profile")
+		}
+		if err == nil {
+			response.Profile = &authv1.GetMyProfileResponse_DstProfile{DstProfile: &authv1.DstProfile{
+				ProfileId: profile.ID.String(),
+				Name:      profile.Name,
+				Branch:    s.loadBranchProfile(ctx, profile.BranchID),
+				CreatedAt: timeToString(profile.CreatedAt),
+			}}
+		}
+	}
+
+	return response, nil
+}
+
+func (s *service) loadBranchProfile(ctx context.Context, branchID pgtype.UUID) *authv1.BranchProfile {
+	if !branchID.Valid {
+		return nil
+	}
+
+	branch, err := s.queries.GetBankBranchByID(ctx, branchID)
+	if err != nil {
+		return nil
+	}
+
+	return &authv1.BranchProfile{
+		BranchId:      branch.ID.String(),
+		Name:          branch.Name,
+		Region:        branch.Region,
+		City:          branch.City,
+		DstCommission: numericToString(branch.DstCommission),
+	}
+}
+
 // getMFASession loads and validates the MFA session blob from Redis.
 func (s *service) getMFASession(ctx context.Context, sessionID string) (*mfaSessionState, error) {
 	key := fmt.Sprintf("mfa_session:%s", sessionID)
@@ -1138,6 +1269,55 @@ func mapProtoRole(role authv1.UserRole) (generated.UserRole, error) {
 	default:
 		return "", status.Error(codes.InvalidArgument, "invalid role")
 	}
+}
+
+func mapDBRoleToProto(role generated.UserRole) authv1.UserRole {
+	switch role {
+	case generated.UserRoleAdmin:
+		return authv1.UserRole_USER_ROLE_ADMIN
+	case generated.UserRoleManager:
+		return authv1.UserRole_USER_ROLE_MANAGER
+	case generated.UserRoleOfficer:
+		return authv1.UserRole_USER_ROLE_OFFICER
+	case generated.UserRoleBorrower:
+		return authv1.UserRole_USER_ROLE_BORROWER
+	case generated.UserRoleDst:
+		return authv1.UserRole_USER_ROLE_DST
+	default:
+		return authv1.UserRole_USER_ROLE_UNSPECIFIED
+	}
+}
+
+func dateToString(d pgtype.Date) string {
+	if !d.Valid {
+		return ""
+	}
+	return d.Time.UTC().Format("2006-01-02")
+}
+
+func timeToString(t pgtype.Timestamptz) string {
+	if !t.Valid {
+		return ""
+	}
+	return t.Time.UTC().Format(time.RFC3339)
+}
+
+func numericToString(n pgtype.Numeric) string {
+	if !n.Valid {
+		return ""
+	}
+	b, err := n.MarshalJSON()
+	if err == nil {
+		s := strings.Trim(string(b), "\"")
+		if s != "" && s != "null" {
+			return s
+		}
+	}
+	v, err := n.Float64Value()
+	if err != nil || !v.Valid {
+		return ""
+	}
+	return strconv.FormatFloat(v.Float64, 'f', -1, 64)
 }
 
 // validatePasswordStrength enforces minimum complexity for new user passwords.

@@ -24,6 +24,7 @@ service AuthService {
   rpc BeginWebAuthnLogin(WebAuthnLoginRequest) returns (WebAuthnLoginResponse);
   rpc FinishWebAuthnLogin(WebAuthnFinishLoginRequest) returns (AuthTokens);
 
+  rpc GetMyProfile(GetMyProfileRequest) returns (GetMyProfileResponse);
   rpc RefreshToken(RefreshTokenRequest) returns (AuthTokens);
   rpc Logout(LogoutRequest) returns (LogoutResponse);
 }
@@ -156,6 +157,83 @@ message WebAuthnFinishLoginRequest {
   string mfa_session_id = 1;
   bytes assertion = 2;
   string device_id = 3;
+}
+
+message GetMyProfileRequest {}
+
+message BranchProfile {
+  string branch_id = 1;
+  string name = 2;
+  string region = 3;
+  string city = 4;
+  string dst_commission = 5;
+}
+
+message AdminProfile {
+  string profile_id = 1;
+  string created_at = 2;
+}
+
+message ManagerProfile {
+  string profile_id = 1;
+  string name = 2;
+  BranchProfile branch = 3;
+  string created_at = 4;
+}
+
+message OfficerProfile {
+  string profile_id = 1;
+  string name = 2;
+  BranchProfile branch = 3;
+  string created_at = 4;
+}
+
+message DstProfile {
+  string profile_id = 1;
+  string name = 2;
+  BranchProfile branch = 3;
+  string created_at = 4;
+}
+
+message BorrowerProfile {
+  string profile_id = 1;
+  string first_name = 2;
+  string last_name = 3;
+  string date_of_birth = 4;
+  string gender = 5;
+  string address_line1 = 6;
+  string city = 7;
+  string state = 8;
+  string pincode = 9;
+  string employment_type = 10;
+  string monthly_income = 11;
+  int32 profile_completeness_percent = 12;
+  bool is_aadhaar_verified = 13;
+  bool is_pan_verified = 14;
+  string aadhaar_verified_at = 15;
+  string pan_verified_at = 16;
+  string created_at = 17;
+}
+
+message GetMyProfileResponse {
+  string user_id = 1;
+  string email = 2;
+  string phone = 3;
+  UserRole role = 4;
+  bool is_email_verified = 5;
+  bool is_phone_verified = 6;
+  bool is_active = 7;
+  bool is_requiring_password_change = 8;
+  bool has_totp = 9;
+  string created_at = 10;
+
+  oneof profile {
+    AdminProfile admin_profile = 20;
+    ManagerProfile manager_profile = 21;
+    OfficerProfile officer_profile = 22;
+    BorrowerProfile borrower_profile = 23;
+    DstProfile dst_profile = 24;
+  }
 }
 
 message RefreshTokenRequest {

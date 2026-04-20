@@ -23,6 +23,7 @@ type AuthService interface {
 	FinishWebAuthnRegistration(ctx context.Context, req *authv1.WebAuthnFinishRegRequest) (*authv1.AuthTokens, error)
 	BeginWebAuthnLogin(ctx context.Context, req *authv1.WebAuthnLoginRequest) (*authv1.WebAuthnLoginResponse, error)
 	FinishWebAuthnLogin(ctx context.Context, req *authv1.WebAuthnFinishLoginRequest) (*authv1.AuthTokens, error)
+	GetMyProfile(ctx context.Context, req *authv1.GetMyProfileRequest) (*authv1.GetMyProfileResponse, error)
 	RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequest) (*authv1.AuthTokens, error)
 	Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv1.LogoutResponse, error)
 }
@@ -78,6 +79,10 @@ func (h *AuthHandler) VerifyLoginMFA(ctx context.Context, req *authv1.VerifyLogi
 
 func (h *AuthHandler) ChangePassword(ctx context.Context, req *authv1.ChangePasswordRequest) (*authv1.ChangePasswordResponse, error) {
 	return h.authService.ChangePassword(ctx, req)
+}
+
+func (h *AuthHandler) GetMyProfile(ctx context.Context, req *authv1.GetMyProfileRequest) (*authv1.GetMyProfileResponse, error) {
+	return h.authService.GetMyProfile(ctx, req)
 }
 
 func (h *AuthHandler) RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequest) (*authv1.AuthTokens, error) {

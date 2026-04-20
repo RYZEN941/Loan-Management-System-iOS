@@ -67,6 +67,8 @@ In this repository:
 - `000001_init_schema` is baseline schema
 - `000002_branch_profile_refactor` upgrades old branch-manager model
 - `000003_add_dst_and_branch_commission` adds DST role/profile and branch commission field
+- `000004_add_kyc_and_user_consents` adds borrower KYC history/current tables and user consent tracking
+- `000005_add_media_files` adds media metadata storage for R2-backed uploads
 
 ## Docker-based Run (no local migrate install)
 

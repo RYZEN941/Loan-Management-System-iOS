@@ -17,6 +17,7 @@ For Dokploy users, `docs/migrations.md` includes the exact pre-deploy migration 
 ## Current Service Endpoints
 
 - Auth service: `auth.v1.AuthService`
+- Admin service: `admin.v1.AdminService`
 - KYC service: `kyc.v1.KycService`
 - Media service: `media.v1.MediaService`
 - Onboarding service: `onboarding.v1.OnboardingService`

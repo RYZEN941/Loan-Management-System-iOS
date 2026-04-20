@@ -48,6 +48,7 @@ Protected methods (JWT required):
 
 - `AuthService/SetupTOTP`
 - `AuthService/VerifyTOTPSetup`
+- `AuthService/GetMyProfile`
 - `AuthService/ChangePassword`
 - `AuthService/Logout`
 - `OnboardingService/CompleteBorrowerOnboarding`

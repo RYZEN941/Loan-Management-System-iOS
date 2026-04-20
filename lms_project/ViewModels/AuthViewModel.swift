@@ -48,6 +48,13 @@ enum MFAMethod: String, CaseIterable, Identifiable {
         case .sms:   return .phonePad
         }
     }
+
+    var backendFactor: String {
+        switch self {
+        case .email: return "email_otp"
+        case .sms:   return "phone_otp"
+        }
+    }
 }
 
 // MARK: - Auth Step
@@ -61,6 +68,7 @@ enum AuthStep {
 
 // MARK: - AuthViewModel
 
+@MainActor
 class AuthViewModel: ObservableObject {
 
     // Published session state
@@ -73,11 +81,14 @@ class AuthViewModel: ObservableObject {
     @Published var selectedMFAMethod: MFAMethod = .email
     @Published var mfaContact: String = ""   // email or phone entered by user
     @Published var otpError: String? = nil
+    @Published var isLoading: Bool = false
 
     private let dataService = MockDataService.shared
-    private let userStore   = UserStore.shared
+    private let authAPI = AuthAPI()
+    private let sessionStore = SessionStore.shared
 
-    private var pendingCredential: StoredCredential? = nil
+    private var mfaSessionID: String = ""
+    private var allowedMFAMethods: [MFAMethod] = []
 
     var isLoggedIn: Bool { currentRole != nil }
 
@@ -85,17 +96,32 @@ class AuthViewModel: ObservableObject {
 
     func submitCredentials(email: String, password: String) {
         loginError = nil
+        otpError = nil
 
-        guard !email.isEmpty, !password.isEmpty else {
+        let identifier = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        let rawPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !identifier.isEmpty, !rawPassword.isEmpty else {
             loginError = "Please enter your email and password."
             return
         }
 
-        if let credential = userStore.authenticate(email: email, password: password) {
-            pendingCredential = credential
-            authStep = .mfaSelection
-        } else {
-            loginError = "Invalid email or password."
+        isLoading = true
+        Task {
+            do {
+                let response = try await authAPI.loginPrimary(emailOrPhone: identifier, password: rawPassword)
+                let methods = Self.mapAllowedMethods(response.allowedFactors)
+                guard !response.mfaSessionID.isEmpty, !methods.isEmpty else {
+                    throw APIError.failedPrecondition("No supported MFA factor available. Use email OTP or phone OTP.")
+                }
+
+                mfaSessionID = response.mfaSessionID
+                allowedMFAMethods = methods
+                selectedMFAMethod = methods.first ?? .email
+                authStep = .mfaSelection
+            } catch {
+                loginError = (error as? LocalizedError)?.errorDescription ?? "Login failed"
+            }
+            isLoading = false
         }
     }
 
@@ -103,11 +129,36 @@ class AuthViewModel: ObservableObject {
 
     /// contact: the email or phone number typed by the user on the MFA selection screen
     func selectMFA(_ method: MFAMethod, contact: String) {
+        guard !mfaSessionID.isEmpty else {
+            loginError = "Login session expired. Please sign in again."
+            authStep = .credentials
+            return
+        }
+        guard allowedMFAMethods.contains(method) else {
+            loginError = "Selected MFA method is not allowed for this account."
+            return
+        }
+
+        let cleanedContact = contact.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanedContact.isEmpty else {
+            loginError = "Please enter your email or phone number."
+            return
+        }
+
         selectedMFAMethod = method
-        mfaContact = contact
-        // Production: call backend to send OTP to `contact`.
-        // For now, any code entered on the next screen will be accepted.
-        authStep = .mfaVerification
+        mfaContact = cleanedContact
+        loginError = nil
+        isLoading = true
+
+        Task {
+            do {
+                _ = try await authAPI.selectLoginMFAFactor(mfaSessionID: mfaSessionID, factor: method.backendFactor)
+                authStep = .mfaVerification
+            } catch {
+                loginError = (error as? LocalizedError)?.errorDescription ?? "Failed to send OTP"
+            }
+            isLoading = false
+        }
     }
 
     // MARK: - Step 3: Verify OTP (dummy — any input accepted)
@@ -115,18 +166,43 @@ class AuthViewModel: ObservableObject {
     func verifyOTP(_ entered: String) {
         otpError = nil
 
-        // Accept any non-empty input — real backend OTP check added later
-        guard !entered.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        let code = entered.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !code.isEmpty else {
             otpError = "Please enter the verification code."
             return
         }
 
-        guard let credential = pendingCredential else { return }
+        guard !mfaSessionID.isEmpty else {
+            otpError = "Login session expired. Please sign in again."
+            authStep = .credentials
+            return
+        }
 
-        withAnimation(.easeInOut(duration: 0.35)) {
-            currentRole = credential.role
-            currentUser = resolveUser(credential: credential)
-            authStep    = .authenticated
+        isLoading = true
+        Task {
+            do {
+                let tokens = try await authAPI.verifyLoginMFA(
+                    mfaSessionID: mfaSessionID,
+                    method: selectedMFAMethod,
+                    otpCode: code,
+                    deviceID: sessionStore.deviceID
+                )
+                sessionStore.updateTokens(accessToken: tokens.accessToken, refreshToken: tokens.refreshToken)
+
+                let profile = try await authAPI.getMyProfile()
+                guard let mappedRole = Self.mapBackendRole(profile.role) else {
+                    throw APIError.permissionDenied("Only admin, manager, and officer roles are supported in this app.")
+                }
+
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    currentRole = mappedRole
+                    currentUser = Self.mapProfileToUser(profile, role: mappedRole)
+                    authStep = .authenticated
+                }
+            } catch {
+                otpError = (error as? LocalizedError)?.errorDescription ?? "OTP verification failed"
+            }
+            isLoading = false
         }
     }
 
@@ -134,13 +210,28 @@ class AuthViewModel: ObservableObject {
 
     func resendOTP() {
         otpError = nil
-        // Production: re-trigger send.
+        guard !mfaSessionID.isEmpty else {
+            otpError = "Login session expired. Please sign in again."
+            authStep = .credentials
+            return
+        }
+
+        isLoading = true
+        Task {
+            do {
+                _ = try await authAPI.selectLoginMFAFactor(mfaSessionID: mfaSessionID, factor: selectedMFAMethod.backendFactor)
+            } catch {
+                otpError = (error as? LocalizedError)?.errorDescription ?? "Failed to resend OTP"
+            }
+            isLoading = false
+        }
     }
 
     // MARK: - Back Navigation
 
     func backToCredentials() {
-        pendingCredential = nil
+        mfaSessionID = ""
+        allowedMFAMethods = []
         mfaContact  = ""
         loginError  = nil
         otpError    = nil
@@ -155,14 +246,25 @@ class AuthViewModel: ObservableObject {
     // MARK: - Logout
 
     func logout() {
-        withAnimation(.easeInOut(duration: 0.3)) {
-            currentRole       = nil
-            currentUser       = nil
-            pendingCredential = nil
-            mfaContact        = ""
-            loginError        = nil
-            otpError          = nil
-            authStep          = .credentials
+        let access = sessionStore.accessToken
+        let refresh = sessionStore.refreshToken
+
+        Task {
+            if !access.isEmpty || !refresh.isEmpty {
+                _ = try? await authAPI.logout(accessToken: access, refreshToken: refresh)
+            }
+
+            sessionStore.clear()
+            withAnimation(.easeInOut(duration: 0.3)) {
+                currentRole       = nil
+                currentUser       = nil
+                mfaSessionID      = ""
+                allowedMFAMethods = []
+                mfaContact        = ""
+                loginError        = nil
+                otpError          = nil
+                authStep          = .credentials
+            }
         }
     }
 
@@ -177,24 +279,65 @@ class AuthViewModel: ObservableObject {
 
     // MARK: - Private Helpers
 
-    private func resolveUser(credential: StoredCredential) -> User {
-        let allUsers = dataService.fetchUsers()
-        if let match = allUsers.first(where: { $0.id == credential.id }) {
-            return match
+    private static func mapAllowedMethods(_ factors: [String]) -> [MFAMethod] {
+        let normalized = Set(factors.map { $0.lowercased() })
+        return MFAMethod.allCases.filter { normalized.contains($0.backendFactor) }
+    }
+
+    private static func mapBackendRole(_ role: Auth_V1_UserRole) -> UserRole? {
+        switch role {
+        case .admin:
+            return .admin
+        case .manager:
+            return .manager
+        case .officer:
+            return .loanOfficer
+        default:
+            return nil
         }
+    }
+
+    private static func mapProfileToUser(_ profile: Auth_V1_GetMyProfileResponse, role: UserRole) -> User {
+        let name: String
+        let branch: String
+
+        switch profile.profile {
+        case .adminProfile:
+            name = nameFromEmail(profile.email)
+            branch = "Head Office"
+        case .managerProfile(let manager):
+            name = manager.name.isEmpty ? nameFromEmail(profile.email) : manager.name
+            branch = manager.branch.name.isEmpty ? "Unassigned" : manager.branch.name
+        case .officerProfile(let officer):
+            name = officer.name.isEmpty ? nameFromEmail(profile.email) : officer.name
+            branch = officer.branch.name.isEmpty ? "Unassigned" : officer.branch.name
+        default:
+            name = nameFromEmail(profile.email)
+            branch = "Unassigned"
+        }
+
         return User(
-            id: credential.id,
-            name: nameFromEmail(credential.email),
-            email: credential.email,
-            role: credential.role,
-            branch: "Head Office",
-            phone: credential.phone,
-            isActive: true,
-            joinedAt: Date()
+            id: profile.userID,
+            name: name,
+            email: profile.email,
+            role: role,
+            branch: branch,
+            phone: profile.phone,
+            isActive: profile.isActive,
+            joinedAt: parseDate(profile.createdAt)
         )
     }
 
-    private func nameFromEmail(_ email: String) -> String {
+    private static func parseDate(_ raw: String) -> Date {
+        guard !raw.isEmpty else { return Date() }
+        let formatter = ISO8601DateFormatter()
+        if let parsed = formatter.date(from: raw) {
+            return parsed
+        }
+        return Date()
+    }
+
+    private static func nameFromEmail(_ email: String) -> String {
         let base = email.components(separatedBy: "@").first ?? email
         return base.replacingOccurrences(of: ".", with: " ").capitalized
     }

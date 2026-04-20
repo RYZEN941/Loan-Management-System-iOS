@@ -6,10 +6,13 @@
 import SwiftUI
 import Combine
 
+@MainActor
 class AdminViewModel: ObservableObject {
     @Published var users: [User] = []
     @Published var selectedUser: User? = nil
     @Published var isLoading = false
+    @Published var requestError: String? = nil
+    @Published var requestSuccess: String? = nil
     @Published var searchText = ""
     
     // System Control
@@ -26,6 +29,7 @@ class AdminViewModel: ObservableObject {
     @Published var auditLogs: [AuditLog] = []
     
     private let dataService = MockDataService.shared
+    private let adminAPI = AdminAPI()
     
     var filteredUsers: [User] {
         if searchText.isEmpty { return users }
@@ -46,6 +50,8 @@ class AdminViewModel: ObservableObject {
     }
     
     func loadData() {
+        requestError = nil
+        requestSuccess = nil
         isLoading = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             guard let self = self else { return }
@@ -63,26 +69,52 @@ class AdminViewModel: ObservableObject {
             }
         }
     }
-    
+
     func createUser(name: String, email: String, password: String, phone: String, role: UserRole, branch: String, employeeId: String) {
+        requestError = nil
+        requestSuccess = nil
+
+        guard role == .loanOfficer || role == .manager else {
+            requestError = "Only Manager and Officer accounts can be created from this screen."
+            return
+        }
+
         let resolvedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedPhone = phone.trimmingCharacters(in: .whitespacesAndNewlines)
-        let newUser = User(
-            id: employeeId,
-            name: name,
-            email: resolvedEmail.isEmpty ? "\(name.lowercased().replacingOccurrences(of: " ", with: "."))@bank.com" : resolvedEmail,
-            role: role,
-            branch: branch,
-            phone: resolvedPhone.isEmpty ? "+91-0000000000" : resolvedPhone,
-            isActive: true,
-            joinedAt: Date()
-        )
-        // Save login credential so the user can sign in from the login screen
-        UserStore.shared.addCredential(
-            StoredCredential(id: employeeId, email: resolvedEmail, password: password, phone: resolvedPhone, role: role)
-        )
-        withAnimation {
-            users.append(newUser)
+        let finalEmail = resolvedEmail.isEmpty ? "\(name.lowercased().replacingOccurrences(of: " ", with: "."))@bank.com" : resolvedEmail
+        let finalPhone = resolvedPhone.isEmpty ? "+91-0000000000" : resolvedPhone
+
+        isLoading = true
+        Task {
+            do {
+                let response = try await adminAPI.createEmployeeAccount(
+                    name: name,
+                    email: finalEmail,
+                    phoneNumber: finalPhone,
+                    password: password,
+                    role: role,
+                    branchID: nil
+                )
+
+                let newUser = User(
+                    id: response.userID.isEmpty ? employeeId : response.userID,
+                    name: name,
+                    email: finalEmail,
+                    role: role,
+                    branch: branch,
+                    phone: finalPhone,
+                    isActive: true,
+                    joinedAt: Date()
+                )
+
+                withAnimation {
+                    users.append(newUser)
+                }
+                requestSuccess = "User created successfully."
+            } catch {
+                requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to create user"
+            }
+            isLoading = false
         }
     }
     
@@ -102,10 +134,54 @@ class AdminViewModel: ObservableObject {
     }
     
     func createBranch(_ branchName: String) {
-        if !branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !branches.contains(branchName) {
-            withAnimation {
-                branches.append(branchName)
+        let trimmed = branchName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return
+        }
+
+        requestError = nil
+        requestSuccess = nil
+        isLoading = true
+
+        Task {
+            do {
+                _ = try await adminAPI.createBankBranch(name: trimmed, region: "Unknown", city: "Unknown")
+                if !branches.contains(trimmed) {
+                    withAnimation {
+                        branches.append(trimmed)
+                    }
+                }
+                requestSuccess = "Branch created successfully."
+            } catch {
+                requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to create branch"
             }
+            isLoading = false
+        }
+    }
+
+    func createDstAccount(name: String, email: String, phone: String, password: String) async -> Bool {
+        requestError = nil
+        requestSuccess = nil
+        do {
+            _ = try await adminAPI.createDstAccount(name: name, email: email, phoneNumber: phone, password: password)
+            requestSuccess = "DST account created successfully."
+            return true
+        } catch {
+            requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to create DST account"
+            return false
+        }
+    }
+
+    func updateDstCommission(branchID: String, commission: String) async -> Bool {
+        requestError = nil
+        requestSuccess = nil
+        do {
+            _ = try await adminAPI.updateBranchDstCommission(branchID: branchID, dstCommission: commission)
+            requestSuccess = "DST commission updated successfully."
+            return true
+        } catch {
+            requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to update commission"
+            return false
         }
     }
     

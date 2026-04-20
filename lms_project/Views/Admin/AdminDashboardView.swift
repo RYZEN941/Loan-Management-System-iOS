@@ -16,29 +16,23 @@ struct AdminDashboardView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Binding var showProfile: Bool
     @Binding var selectedTab: Int
-
+    
     // MARK: - Mock executive data
     private let portfolioValue    = "₹2,450 Cr"
     private let collectionEff     = 94.7
     private let npaRatio          = 2.4
     private let dailyDisbursement: [Double] = [12.4, 15.1, 9.8, 18.2, 14.6, 22.0, 16.8]
     private let weeklyDisbursement: [Double] = [72.0, 85.0, 68.5, 91.2]
-
+    
     @State private var refreshTimer: Timer?
     @State private var lastRefresh = Date()
-    @State private var showQuickAction = false
-    @State private var quickActionType: QuickActionType = .approve
-
-    enum QuickActionType {
-        case approve, reject, escalate
-    }
-
+    
     var body: some View {
         NavigationStack {
             ZStack {
                 Theme.Colors.adaptiveBackground(colorScheme)
                     .ignoresSafeArea()
-
+                
                 ScrollView {
                     VStack(spacing: Theme.Spacing.lg) {
                         greetingBar
@@ -48,7 +42,6 @@ struct AdminDashboardView: View {
                         alertsFlagsPanel
                         recentActivityFeed
                         slaTrackingSection
-                        quickActionsPanel
                     }
                     .padding(.horizontal, Theme.Spacing.lg)
                     .padding(.bottom, Theme.Spacing.xxl)
@@ -60,16 +53,6 @@ struct AdminDashboardView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     ProfileNavButton(showProfile: $showProfile)
                 }
-                ToolbarItem(placement: .topBarLeading) {
-                    HStack(spacing: 6) {
-                        Circle()
-                            .fill(Theme.Colors.success)
-                            .frame(width: 8, height: 8)
-                        Text("Live")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(Theme.Colors.success)
-                    }
-                }
             }
             .onAppear {
                 dashboardVM.loadData()
@@ -78,38 +61,25 @@ struct AdminDashboardView: View {
                 startAutoRefresh()
             }
             .onDisappear { stopAutoRefresh() }
-            .alert("Quick Action", isPresented: $showQuickAction) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(quickActionMessage)
-            }
         }
     }
-
-    private var quickActionMessage: String {
-        switch quickActionType {
-        case .approve: return "Loan approved successfully."
-        case .reject: return "Loan rejected."
-        case .escalate: return "Loan escalated to senior management."
-        }
-    }
-
+    
     // MARK: - Auto Refresh
-
+    
     private func startAutoRefresh() {
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { _ in
             lastRefresh = Date()
             dashboardVM.loadData()
         }
     }
-
+    
     private func stopAutoRefresh() {
         refreshTimer?.invalidate()
         refreshTimer = nil
     }
-
+    
     // MARK: - Greeting Bar
-
+    
     private var greetingBar: some View {
         HStack {
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
@@ -133,9 +103,9 @@ struct AdminDashboardView: View {
         }
         .padding(.top, Theme.Spacing.sm)
     }
-
+    
     // MARK: - Top Summary Cards
-
+    
     private var topSummaryCards: some View {
         HStack(spacing: Theme.Spacing.md) {
             DashboardKPICard(
@@ -147,7 +117,7 @@ struct AdminDashboardView: View {
                 trendPositive: true,
                 colorScheme: colorScheme
             )
-
+            
             DashboardKPICard(
                 label: "Active Loans",
                 value: "\(dashboardVM.applications.filter { $0.status != .rejected }.count)",
@@ -157,7 +127,7 @@ struct AdminDashboardView: View {
                 trendPositive: true,
                 colorScheme: colorScheme
             )
-
+            
             DashboardKPICard(
                 label: "Closed Loans",
                 value: "\(dashboardVM.applications.filter { $0.status == .rejected }.count + 24)",
@@ -169,39 +139,71 @@ struct AdminDashboardView: View {
             )
         }
     }
-
+    
     // MARK: - Metrics Section
-
+    
     private var metricsSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             SectionHeader(title: "Key Metrics", icon: "chart.xyaxis.line")
-
+            
             // Disbursement Chart
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                 Text("Daily Disbursement (₹ Cr)")
                     .font(Theme.Typography.caption)
                     .foregroundStyle(.secondary)
-
-                HStack(alignment: .bottom, spacing: 6) {
-                    ForEach(Array(dailyDisbursement.enumerated()), id: \.offset) { index, value in
-                        VStack(spacing: 4) {
+                
+                GeometryReader { geo in
+                    let maxVal = dailyDisbursement.max() ?? 1.0
+                    let minVal = dailyDisbursement.min() ?? 0.0
+                    let range = maxVal - minVal
+                    let height = geo.size.height - 40 // Leave room for labels
+                    let stepX = geo.size.width / CGFloat(max(dailyDisbursement.count - 1, 1))
+                    
+                    ZStack {
+                        // The Line
+                        Path { path in
+                            for (index, value) in dailyDisbursement.enumerated() {
+                                let x = CGFloat(index) * stepX
+                                let normalizedY = CGFloat((value - minVal) / (range == 0 ? 1 : range))
+                                let y = height - (normalizedY * height) + 20
+                                
+                                if index == 0 {
+                                    path.move(to: CGPoint(x: x, y: y))
+                                } else {
+                                    path.addLine(to: CGPoint(x: x, y: y))
+                                }
+                            }
+                        }
+                        .stroke(
+                            LinearGradient(
+                                colors: [Theme.Colors.primary, Theme.Colors.secondary],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            ),
+                            style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round)
+                        )
+                        
+                        // Data points and Labels
+                        ForEach(Array(dailyDisbursement.enumerated()), id: \.offset) { index, value in
+                            let x = CGFloat(index) * stepX
+                            let normalizedY = CGFloat((value - minVal) / (range == 0 ? 1 : range))
+                            let y = height - (normalizedY * height) + 20
+                            
                             Text(String(format: "%.0f", value))
                                 .font(.system(size: 9, weight: .medium))
                                 .foregroundStyle(.secondary)
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(
-                                    LinearGradient(
-                                        colors: [Theme.Colors.primary, Theme.Colors.secondary],
-                                        startPoint: .bottom,
-                                        endPoint: .top
-                                    )
-                                )
-                                .frame(height: CGFloat(value) * 4)
+                                .position(x: x, y: y - 14)
+                            
+                            Circle()
+                                .fill(Theme.Colors.primary)
+                                .frame(width: 6, height: 6)
+                                .position(x: x, y: y)
+                            
                             Text(dayLabel(index))
                                 .font(.system(size: 9))
                                 .foregroundStyle(.tertiary)
+                                .position(x: x, y: height + 30)
                         }
-                        .frame(maxWidth: .infinity)
                     }
                 }
                 .frame(height: 120)
@@ -209,7 +211,7 @@ struct AdminDashboardView: View {
             }
             .padding(Theme.Spacing.md)
             .cardStyle(colorScheme: colorScheme)
-
+            
             // Collection Efficiency & NPA
             HStack(spacing: Theme.Spacing.md) {
                 metricGaugeCard(
@@ -229,12 +231,12 @@ struct AdminDashboardView: View {
             }
         }
     }
-
+    
     private func dayLabel(_ index: Int) -> String {
         let days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
         return days[index % days.count]
     }
-
+    
     private func metricGaugeCard(title: String, value: Double, suffix: String, color: Color, icon: String) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             HStack {
@@ -270,17 +272,17 @@ struct AdminDashboardView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardStyle(colorScheme: colorScheme)
     }
-
+    
     // MARK: - Application Funnel
-
+    
     private var applicationFunnel: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             SectionHeader(title: "Application Funnel", icon: "arrow.right.arrow.left")
-
+            
             let submitted = loansVM.totalCount
             let underReview = loansVM.underReviewCount
             let approved = loansVM.approvedCount
-
+            
             VStack(spacing: Theme.Spacing.sm) {
                 funnelBar(label: "Submitted", count: submitted, total: max(submitted, 1), color: Theme.Colors.primary)
                 funnelBar(label: "Under Review", count: underReview, total: max(submitted, 1), color: Theme.Colors.warning)
@@ -290,7 +292,7 @@ struct AdminDashboardView: View {
             .cardStyle(colorScheme: colorScheme)
         }
     }
-
+    
     private func funnelBar(label: String, count: Int, total: Int, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
@@ -314,13 +316,13 @@ struct AdminDashboardView: View {
             .frame(height: 10)
         }
     }
-
+    
     // MARK: - Alerts & Flags Panel
-
+    
     private var alertsFlagsPanel: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             SectionHeader(title: "Alerts & Flags", icon: "bell.badge")
-
+            
             VStack(spacing: 0) {
                 alertFlagRow(
                     icon: "percent",
@@ -350,7 +352,7 @@ struct AdminDashboardView: View {
             .cardStyle(colorScheme: colorScheme)
         }
     }
-
+    
     private func alertFlagRow(icon: String, label: String, detail: String, count: String, color: Color, isCritical: Bool = false) -> some View {
         HStack(spacing: Theme.Spacing.md) {
             ZStack {
@@ -378,13 +380,13 @@ struct AdminDashboardView: View {
         .padding(.vertical, 12)
         .background(isCritical ? color.opacity(0.04) : Color.clear)
     }
-
+    
     // MARK: - Recent Activity Feed
-
+    
     private var recentActivityFeed: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             SectionHeader(title: "Recent Activity", icon: "clock.arrow.circlepath")
-
+            
             VStack(spacing: 0) {
                 activityRow(
                     icon: "checkmark.circle.fill",
@@ -429,7 +431,7 @@ struct AdminDashboardView: View {
             .cardStyle(colorScheme: colorScheme)
         }
     }
-
+    
     private func activityRow(icon: String, label: String, actor: String, time: Date, color: Color) -> some View {
         HStack(spacing: Theme.Spacing.md) {
             Image(systemName: icon)
@@ -455,13 +457,13 @@ struct AdminDashboardView: View {
         .padding(.horizontal, Theme.Spacing.md)
         .padding(.vertical, 12)
     }
-
+    
     // MARK: - SLA Tracking
-
+    
     private var slaTrackingSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             SectionHeader(title: "SLA Tracking", icon: "timer")
-
+            
             let slaData: [(stage: String, avgHours: Double, targetHours: Double)] = [
                 ("Application Intake",  4.2,  8.0),
                 ("Document Review",     12.5, 24.0),
@@ -469,7 +471,7 @@ struct AdminDashboardView: View {
                 ("Manager Approval",    18.4, 16.0),
                 ("Disbursement",        8.0,  12.0),
             ]
-
+            
             VStack(spacing: 0) {
                 ForEach(slaData, id: \.stage) { item in
                     let isDelayed = item.avgHours > item.targetHours
@@ -495,7 +497,7 @@ struct AdminDashboardView: View {
                     .padding(.horizontal, Theme.Spacing.md)
                     .padding(.vertical, 12)
                     .background(isDelayed ? Theme.Colors.critical.opacity(0.04) : Color.clear)
-
+                    
                     if item.stage != slaData.last?.stage {
                         Divider().padding(.leading, Theme.Spacing.md)
                     }
@@ -504,106 +506,50 @@ struct AdminDashboardView: View {
             .cardStyle(colorScheme: colorScheme)
         }
     }
-
-    // MARK: - Quick Actions
-
-    private var quickActionsPanel: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "Quick Actions", icon: "bolt.circle")
-
-            HStack(spacing: Theme.Spacing.md) {
-                quickActionButton(
-                    label: "Approve",
-                    icon: "checkmark.circle.fill",
-                    color: Theme.Colors.success
-                ) {
-                    quickActionType = .approve
-                    showQuickAction = true
+    
+    // Removed Quick Actions
+}
+    
+// MARK: - Dashboard KPI Card
+    
+    private struct DashboardKPICard: View {
+        let label: String
+        let value: String
+        let icon: String
+        let color: Color
+        let trend: String
+        let trendPositive: Bool
+        let colorScheme: ColorScheme
+        
+        var body: some View {
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                HStack {
+                    Image(systemName: icon)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(color)
+                        .frame(width: 30, height: 30)
+                        .background(color.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
+                    Spacer()
+                    Text(trend)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(trendPositive ? Theme.Colors.success : Theme.Colors.critical)
                 }
-                quickActionButton(
-                    label: "Reject",
-                    icon: "xmark.circle.fill",
-                    color: Theme.Colors.critical
-                ) {
-                    quickActionType = .reject
-                    showQuickAction = true
-                }
-                quickActionButton(
-                    label: "Escalate",
-                    icon: "arrowshape.up.circle.fill",
-                    color: Theme.Colors.warning
-                ) {
-                    quickActionType = .escalate
-                    showQuickAction = true
-                }
-                quickActionButton(
-                    label: "View Loans",
-                    icon: "doc.text.magnifyingglass",
-                    color: Theme.Colors.primary
-                ) {
-                    selectedTab = 1
-                }
-            }
-        }
-    }
-
-    private func quickActionButton(label: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(spacing: Theme.Spacing.sm) {
-                Image(systemName: icon)
-                    .font(.system(size: 24))
-                    .foregroundStyle(color)
+                Spacer()
+                Text(value)
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
                 Text(label)
                     .font(Theme.Typography.caption)
-                    .fontWeight(.medium)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(.secondary)
             }
-            .frame(maxWidth: .infinity)
             .padding(Theme.Spacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: 130)
             .cardStyle(colorScheme: colorScheme)
         }
-        .buttonStyle(.plain)
+        
     }
-}
 
-// MARK: - Dashboard KPI Card
-
-private struct DashboardKPICard: View {
-    let label: String
-    let value: String
-    let icon: String
-    let color: Color
-    let trend: String
-    let trendPositive: Bool
-    let colorScheme: ColorScheme
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            HStack {
-                Image(systemName: icon)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(color)
-                    .frame(width: 30, height: 30)
-                    .background(color.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
-                Spacer()
-                Text(trend)
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(trendPositive ? Theme.Colors.success : Theme.Colors.critical)
-            }
-            Spacer()
-            Text(value)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundStyle(.primary)
-                .minimumScaleFactor(0.7)
-                .lineLimit(1)
-            Text(label)
-                .font(Theme.Typography.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding(Theme.Spacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: 130)
-        .cardStyle(colorScheme: colorScheme)
-    }
-}

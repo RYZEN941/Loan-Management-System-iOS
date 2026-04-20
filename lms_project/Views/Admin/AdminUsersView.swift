@@ -11,7 +11,7 @@ struct AdminUsersView: View {
     @Binding var showProfile: Bool
     
     @State private var showCreateUser = false
-    @State private var editingUser: User? = nil
+    @State private var isEditing = false
     
     var body: some View {
         NavigationStack {
@@ -49,8 +49,8 @@ struct AdminUsersView: View {
             .sheet(isPresented: $showCreateUser) {
                 CreateUserSheet(adminVM: adminVM)
             }
-            .sheet(item: $editingUser) { user in
-                EditUserSheet(adminVM: adminVM, user: user)
+            .sheet(isPresented: $showCreateUser) {
+                CreateUserSheet(adminVM: adminVM)
             }
         }
     }
@@ -92,6 +92,7 @@ struct AdminUsersView: View {
                             .onTapGesture {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     adminVM.selectedUser = user
+                                    isEditing = false
                                 }
                             }
                         Divider().padding(.leading, 64)
@@ -107,75 +108,76 @@ struct AdminUsersView: View {
     private var userDetailPanel: some View {
         Group {
             if let user = adminVM.selectedUser {
-                ScrollView {
-                    VStack(spacing: Theme.Spacing.xl) {
-                        VStack(spacing: Theme.Spacing.md) {
-                            ZStack {
-                                Circle()
-                                    .fill(user.isActive ? Theme.Colors.primary.opacity(0.12) : Theme.Colors.neutral.opacity(0.12))
-                                    .frame(width: 80, height: 80)
-                                Text(user.initials)
-                                    .font(.system(size: 28, weight: .semibold))
-                                    .foregroundStyle(user.isActive ? Theme.Colors.primary : Theme.Colors.neutral)
+                if isEditing {
+                    InlineEditUserView(adminVM: adminVM, user: user, isEditing: $isEditing)
+                } else {
+                    ScrollView {
+                        VStack(spacing: Theme.Spacing.xl) {
+                            HStack {
+                                Spacer()
+                                Button("Edit") {
+                                    withAnimation { isEditing = true }
+                                }
+                                .font(Theme.Typography.subheadline.weight(.medium))
+                                .foregroundStyle(Theme.Colors.primary)
+                                .padding(.top, 8)
+                                .padding(.trailing, 8)
                             }
                             
-                            Text(user.name)
-                                .font(Theme.Typography.title)
-                            
-                            HStack(spacing: Theme.Spacing.sm) {
-                                GenericBadge(text: user.role.displayName, color: Theme.Colors.primary)
-                                GenericBadge(text: user.isActive ? "Active" : "Inactive",
-                                             color: user.isActive ? Theme.Colors.success : Theme.Colors.neutral)
+                            VStack(spacing: Theme.Spacing.md) {
+                                ZStack {
+                                    Circle()
+                                        .fill(user.isActive ? Theme.Colors.primary.opacity(0.12) : Theme.Colors.neutral.opacity(0.12))
+                                        .frame(width: 80, height: 80)
+                                    Text(user.initials)
+                                        .font(.system(size: 28, weight: .semibold))
+                                        .foregroundStyle(user.isActive ? Theme.Colors.primary : Theme.Colors.neutral)
+                                }
+                                
+                                Text(user.name)
+                                    .font(Theme.Typography.title)
+                                
+                                HStack(spacing: Theme.Spacing.sm) {
+                                    GenericBadge(text: user.role.displayName, color: Theme.Colors.primary)
+                                    GenericBadge(text: user.isActive ? "Active" : "Inactive",
+                                                 color: user.isActive ? Theme.Colors.success : Theme.Colors.neutral)
+                                }
                             }
-                        }
-                        
-                        VStack(spacing: 0) {
-                            detailRow(icon: "envelope", label: "Email", value: user.email)
-                            Divider().padding(.leading, 48)
-                            detailRow(icon: "phone", label: "Phone", value: user.phone)
-                            Divider().padding(.leading, 48)
-                            detailRow(icon: "building.2", label: "Branch", value: user.branch)
-                            Divider().padding(.leading, 48)
-                            detailRow(icon: "calendar", label: "Joined", value: user.joinedAt.shortFormatted)
-                        }
-                        .cardStyle(colorScheme: colorScheme)
-                        
-                        HStack(spacing: Theme.Spacing.md) {
-                            Button {
-                                adminVM.toggleUserStatus(user)
-                            } label: {
-                                Label(
-                                    user.isActive ? "Deactivate" : "Activate",
-                                    systemImage: user.isActive ? "person.slash" : "person.badge.plus"
-                                )
-                                .font(Theme.Typography.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundStyle(user.isActive ? Theme.Colors.critical : Theme.Colors.success)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: Theme.Layout.buttonHeight)
-                                .background((user.isActive ? Theme.Colors.critical : Theme.Colors.success).opacity(0.1))
-                                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
-                            }
-                            .buttonStyle(.plain)
                             
-                            Button {
-                                editingUser = user
-                            } label: {
-                                Label("Edit User", systemImage: "pencil")
+                            VStack(spacing: 0) {
+                                detailRow(icon: "envelope", label: "Email", value: user.email)
+                                Divider().padding(.leading, 48)
+                                detailRow(icon: "phone", label: "Phone", value: user.phone)
+                                Divider().padding(.leading, 48)
+                                detailRow(icon: "building.2", label: "Branch", value: user.branch)
+                                Divider().padding(.leading, 48)
+                                detailRow(icon: "calendar", label: "Joined", value: user.joinedAt.shortFormatted)
+                            }
+                            .cardStyle(colorScheme: colorScheme)
+                            
+                            HStack(spacing: Theme.Spacing.md) {
+                                Button {
+                                    adminVM.toggleUserStatus(user)
+                                } label: {
+                                    Label(
+                                        user.isActive ? "Deactivate" : "Activate",
+                                        systemImage: user.isActive ? "person.slash" : "person.badge.plus"
+                                    )
                                     .font(Theme.Typography.subheadline)
                                     .fontWeight(.medium)
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(user.isActive ? Theme.Colors.critical : Theme.Colors.success)
                                     .frame(maxWidth: .infinity)
                                     .frame(height: Theme.Layout.buttonHeight)
-                                    .background(Theme.Colors.primary)
+                                    .background((user.isActive ? Theme.Colors.critical : Theme.Colors.success).opacity(0.1))
                                     .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
+                        .padding(Theme.Spacing.lg)
                     }
-                    .padding(Theme.Spacing.lg)
+                    .background(Theme.Colors.adaptiveBackground(colorScheme))
                 }
-                .background(Theme.Colors.adaptiveBackground(colorScheme))
             } else {
                 VStack(spacing: Theme.Spacing.md) {
                     Image(systemName: "person.circle")
@@ -378,28 +380,57 @@ struct CreateUserSheet: View {
     }
 }
 
-// MARK: - Edit User Sheet
+// MARK: - Inline Edit User View
 
-struct EditUserSheet: View {
+struct InlineEditUserView: View {
     @ObservedObject var adminVM: AdminViewModel
     let user: User
-    @Environment(\.dismiss) private var dismiss
+    @Binding var isEditing: Bool
+    @Environment(\.colorScheme) private var colorScheme
     
     @State private var name: String
     @State private var selectedRole: UserRole
     @State private var branch: String
     @State private var newBranchName = ""
     
-    init(adminVM: AdminViewModel, user: User) {
+    init(adminVM: AdminViewModel, user: User, isEditing: Binding<Bool>) {
         self.adminVM = adminVM
         self.user = user
+        self._isEditing = isEditing
         _name = State(initialValue: user.name)
         _selectedRole = State(initialValue: user.role)
         _branch = State(initialValue: user.branch)
     }
     
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            HStack {
+                Button("Cancel") {
+                    withAnimation { isEditing = false }
+                }
+                .font(Theme.Typography.subheadline)
+                .foregroundStyle(Theme.Colors.critical)
+                
+                Spacer()
+                Text("Edit User")
+                    .font(Theme.Typography.headline)
+                Spacer()
+                
+                Button("Save") {
+                    var finalBranch = branch
+                    if branch == "+ Create New Branch" {
+                        adminVM.createBranch(newBranchName)
+                        finalBranch = newBranchName
+                    }
+                    adminVM.updateUser(userId: user.id, name: name, role: selectedRole, branch: finalBranch)
+                    withAnimation { isEditing = false }
+                }
+                .font(Theme.Typography.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.Colors.primary)
+            }
+            .padding()
+            .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+            
             Form {
                 Section("Edit Information") {
                     TextField("Full Name", text: $name)
@@ -421,47 +452,23 @@ struct EditUserSheet: View {
                 
                 Section("Account (Read-only)") {
                     HStack {
-                        Text("Email")
-                            .foregroundStyle(.secondary)
+                        Text("Email").foregroundStyle(.secondary)
                         Spacer()
-                        Text(user.email)
-                            .foregroundStyle(.primary)
+                        Text(user.email).foregroundStyle(.primary)
                     }
                     HStack {
-                        Text("Employee ID")
-                            .foregroundStyle(.secondary)
+                        Text("Employee ID").foregroundStyle(.secondary)
                         Spacer()
-                        Text(user.id)
-                            .foregroundStyle(.primary)
+                        Text(user.id).foregroundStyle(.primary)
                     }
                     HStack {
-                        Text("Phone")
-                            .foregroundStyle(.secondary)
+                        Text("Phone").foregroundStyle(.secondary)
                         Spacer()
-                        Text(user.phone)
-                            .foregroundStyle(.primary)
+                        Text(user.phone).foregroundStyle(.primary)
                     }
-                }
-            }
-            .navigationTitle("Edit: \(user.name)")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        var finalBranch = branch
-                        if branch == "+ Create New Branch" {
-                            adminVM.createBranch(newBranchName)
-                            finalBranch = newBranchName
-                        }
-                        adminVM.updateUser(userId: user.id, name: name, role: selectedRole, branch: finalBranch)
-                        dismiss()
-                    }
-                    .fontWeight(.semibold)
                 }
             }
         }
+        .background(Theme.Colors.adaptiveBackground(colorScheme))
     }
 }

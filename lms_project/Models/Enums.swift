@@ -53,15 +53,18 @@ enum ApplicationStatus: String, CaseIterable, Identifiable, Codable {
 
     var color: Color {
         switch self {
-        case .pending:     return Theme.Colors.secondary
-        case .underReview: return Theme.Colors.warning
-        case .approved:    return Theme.Colors.success
-        case .rejected:    return Theme.Colors.critical
+        case .pending, .underReview: return Theme.Colors.primary
+        case .approved:              return Theme.Colors.secondary
+        case .rejected:              return Theme.Colors.critical
         }
     }
 
     var backgroundColor: Color {
-        color.opacity(0.12)
+        switch self {
+        case .pending, .underReview: return Theme.Colors.primaryLight
+        case .approved:              return Theme.Colors.primaryLight
+        case .rejected:              return Theme.Colors.critical.opacity(0.12)
+        }
     }
 }
 
@@ -157,9 +160,9 @@ enum RiskLevel: String, CaseIterable, Identifiable, Codable {
     
     var color: Color {
         switch self {
-        case .low: return Theme.Colors.success
-        case .medium: return Theme.Colors.warning
-        case .high: return Theme.Colors.critical
+        case .low:    return Theme.Colors.secondary
+        case .medium: return Theme.Colors.primary
+        case .high:   return Theme.Colors.critical
         }
     }
 }

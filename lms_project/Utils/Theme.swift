@@ -15,27 +15,26 @@ enum Theme {
         // Primary palette (brand colours)
         static let primary      = Color(hex: "002FDC")   // Primary Blue
         static let secondary    = Color(hex: "264BE3")   // Secondary Blue
-        static let primaryDark  = Color(hex: "001BA8")   // Darker tint
-        static let primaryLight = Color(hex: "E8F2FA")   // Background Light (also used for tints)
-        static let accent       = Color(hex: "ED1E48")   // Accent / Reddish-Pink
+        static let primaryLight = Color(hex: "E8F2FA")   // Background Light
+        static let accent       = Color(hex: "ED1E48")   // Accent Red
 
         // Semantic
-        static let critical = Color(hex: "ED1E48")   // Maps accent to critical
-        static let warning  = Color(hex: "F5A623")
-        static let success  = Color(hex: "28A745")
-        static let neutral  = Color(hex: "6B7280")
+        static let critical = Color(hex: "ED1E48")   // Accent Red
+        static let warning  = Color(hex: "264BE3")   // Secondary Blue (instead of yellow)
+        static let success  = Color(hex: "264BE3")   // Secondary Blue (instead of green)
+        static let neutral  = Color(hex: "E8F2FA")   // Background Light (instead of grey)
 
         // Surfaces (light mode)
-        static let background        = Color(hex: "E8F2FA")   // Background Light
+        static let background        = Color(hex: "E8F2FA")
         static let surface           = Color.white
-        static let surfaceSecondary  = Color(hex: "F0F6FC")
-        static let border            = Color(hex: "D0DCF0")
+        static let surfaceSecondary  = Color(hex: "E8F2FA").opacity(0.5)
+        static let border            = Color(hex: "002FDC").opacity(0.15)
 
         // Surfaces (dark mode)
         static let backgroundDark       = Color(hex: "0D1423")
         static let surfaceDark          = Color(hex: "1A2035")
         static let surfaceSecondaryDark = Color(hex: "232E48")
-        static let borderDark           = Color(hex: "2E3E60")
+        static let borderDark           = Color(hex: "002FDC").opacity(0.3)
 
         // Adaptive helpers
         static func adaptiveBackground(_ colorScheme: ColorScheme) -> Color {

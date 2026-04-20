@@ -532,3 +532,84 @@ struct AdminSystemControlView: View {
         }.padding(.horizontal, Theme.Spacing.md).padding(.vertical, 13)
     }
 }
+
+// MARK: - Edit User Sheet (Local to System Control)
+struct EditUserSheet: View {
+    @ObservedObject var adminVM: AdminViewModel
+    let user: User
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var name: String
+    @State private var selectedRole: UserRole
+    @State private var branch: String
+    @State private var newBranchName = ""
+    
+    init(adminVM: AdminViewModel, user: User) {
+        self.adminVM = adminVM
+        self.user = user
+        _name = State(initialValue: user.name)
+        _selectedRole = State(initialValue: user.role)
+        _branch = State(initialValue: user.branch)
+    }
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Edit Information") {
+                    TextField("Full Name", text: $name)
+                    Picker("Role", selection: $selectedRole) {
+                        ForEach(UserRole.allCases) { role in
+                            Text(role.displayName).tag(role)
+                        }
+                    }
+                    Picker("Branch", selection: $branch) {
+                        ForEach(adminVM.branches, id: \.self) { b in
+                            Text(b).tag(b)
+                        }
+                        Text("+ Create New Branch").tag("+ Create New Branch")
+                    }
+                    if branch == "+ Create New Branch" {
+                        TextField("New Branch Name", text: $newBranchName)
+                    }
+                }
+                
+                Section("Account (Read-only)") {
+                    HStack {
+                        Text("Email").foregroundStyle(.secondary)
+                        Spacer()
+                        Text(user.email).foregroundStyle(.primary)
+                    }
+                    HStack {
+                        Text("Employee ID").foregroundStyle(.secondary)
+                        Spacer()
+                        Text(user.id).foregroundStyle(.primary)
+                    }
+                    HStack {
+                        Text("Phone").foregroundStyle(.secondary)
+                        Spacer()
+                        Text(user.phone).foregroundStyle(.primary)
+                    }
+                }
+            }
+            .navigationTitle("Edit: \(user.name)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        var finalBranch = branch
+                        if branch == "+ Create New Branch" {
+                            adminVM.createBranch(newBranchName)
+                            finalBranch = newBranchName
+                        }
+                        adminVM.updateUser(userId: user.id, name: name, role: selectedRole, branch: finalBranch)
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+    }
+}

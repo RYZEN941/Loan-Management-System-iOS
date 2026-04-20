@@ -381,18 +381,7 @@ struct AdminLoansView: View {
     private func actionsSection(_ app: LoanApplication) -> some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             SectionHeader(title: "Actions", icon: "bolt.circle")
-            if app.status != .approved && app.status != .rejected {
-                HStack(spacing: Theme.Spacing.md) {
-                    actionButton(label: "Approve", icon: "checkmark.circle.fill", color: Theme.Colors.success) { loansVM.approve(app) }
-                    actionButton(label: "Reject", icon: "xmark.circle.fill", color: Theme.Colors.critical) { loansVM.reject(app) }
-                }
-                HStack(spacing: Theme.Spacing.md) {
-                    actionButton(label: "Escalate", icon: "arrowshape.up.circle.fill", color: Theme.Colors.warning) { loansVM.beginEscalate(app) }
-                    actionButton(label: "Reassign", icon: "arrow.triangle.2.circlepath", color: Theme.Colors.secondary) { loansVM.beginReassign(app) }
-                }
-            } else {
-                actionButton(label: "Reassign LO", icon: "arrow.triangle.2.circlepath", color: Theme.Colors.secondary) { loansVM.beginReassign(app) }
-            }
+            actionButton(label: "Reassign LO", icon: "arrow.triangle.2.circlepath", color: Theme.Colors.secondary) { loansVM.beginReassign(app) }
         }
     }
 

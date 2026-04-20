@@ -139,6 +139,9 @@ struct OTPBoxRow: View {
                 .onChange(of: otp) { _, value in
                     otp = String(value.filter(\.isNumber).prefix(6))
                 }
+                .accessibilityLabel("One-Time Password Code")
+                .accessibilityValue(otp.isEmpty ? "Empty" : otp.map { String($0) }.joined(separator: ", "))
+                .accessibilityHint("Enter your 6-digit verification code")
 
             HStack(spacing: 10) {
                 ForEach(0..<6, id: \.self) { index in
@@ -169,6 +172,7 @@ struct OTPBoxRow: View {
                     .animation(.spring(response: 0.2), value: character)
                 }
             }
+            .accessibilityHidden(true)
         }
         .onTapGesture {
             focused = true
@@ -338,8 +342,26 @@ struct InfoCard: View {
 }
 
 struct BrandBar: View {
+    var onBack: (() -> Void)? = nil
+
     var body: some View {
         HStack(spacing: 10) {
+            if let onBack {
+                Button(action: onBack) {
+                    ZStack {
+                        Circle()
+                            .fill(.white.opacity(0.82))
+                            .background(.ultraThinMaterial, in: Circle())
+                            .frame(width: 38, height: 38)
+                            .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
+
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(DS.textPrimary)
+                    }
+                }
+            }
+
             ZStack {
                 RoundedRectangle(cornerRadius: 10)
                     .fill(DS.gradient)
@@ -412,25 +434,25 @@ struct TrustBadge: View {
     }
 }
 
-struct FeatureRow: View {
-    let icon: String
-    let text: String
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .foregroundColor(DS.primary)
-                .font(.system(size: 13, weight: .semibold))
-                .frame(width: 30, height: 30)
-                .background(DS.primaryLight)
-                .cornerRadius(8)
-
-            Text(text)
-                .font(.system(size: 14, design: .rounded))
-                .foregroundColor(DS.textSecondary)
-        }
-    }
-}
+//struct FeatureRow: View {
+//    let icon: String
+//    let text: String
+//
+//    var body: some View {
+//        HStack(spacing: 12) {
+//            Image(systemName: icon)
+//                .foregroundColor(DS.primary)
+//                .font(.system(size: 13, weight: .semibold))
+//                .frame(width: 30, height: 30)
+//                .background(DS.primaryLight)
+//                .cornerRadius(8)
+//
+//            Text(text)
+//                .font(.system(size: 14, design: .rounded))
+//                .foregroundColor(DS.textSecondary)
+//        }
+//    }
+//}
 
 struct ConfettiView: View {
     let trigger: Bool

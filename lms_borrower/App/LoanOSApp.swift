@@ -4,8 +4,8 @@
 //
 // ── App flow ─────────────────────────────────────────────────
 // FIRST LAUNCH  ─ Login screen with "Sign Up" link
-// SIGNUP        ─ details → OTP → Passkey (FaceID) → TOTP setup → Home
-// LOGIN         ─ email+password → OTP → Passkey (FaceID) → TOTP → Home
+// SIGNUP        ─ details → OTP → passkey guidance → sign in
+// LOGIN         ─ email+password → OTP/TOTP → Home
 // RETURNING     ─ Quick-login: Face ID  OR  TOTP code  →  Home
 // ─────────────────────────────────────────────────────────────
 
@@ -31,36 +31,53 @@ struct LoanOSApp: App {
 // ═══════════════════════════════════════════════════════════════
 
 /// Top-level coordinator: routes between QuickLoginGate (returning user)
-/// and OnboardingRoot (new / logged-out user).
+/// and WelcomeFlowController (new / logged-out user).
 struct RootView: View {
     @EnvironmentObject var session: SessionStore
 
     var body: some View {
-        if session.isLoggedIn {
-            QuickLoginGate()
-        } else {
-            OnboardingRoot()
+        Group {
+            if session.isLoggedIn {
+                if session.isAppUnlocked {
+                    HomeView()
+                } else {
+                    QuickLoginGate()
+                }
+            } else {
+                WelcomeFlowController()
+            }
+        }
+        .alert("Session Expired", isPresented: $session.showSessionExpiredAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Your session has expired. Please log in again.")
+        }
+        .onOpenURL { url in
+            handleDeepLink(url)
+        }
+    }
+
+    private func handleDeepLink(_ url: URL) {
+        guard url.scheme == "loanos" else { return }
+        if url.host == "kyc" {
+            let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            switch path {
+            case "verifying":
+                session.pendingKYCRoute = .verifying
+            case "verificationFailed":
+                session.pendingKYCRoute = .verificationFailed
+            case "verificationSuccess":
+                session.pendingKYCRoute = .verificationSuccess
+            case "verifyIdentity":
+                session.pendingKYCRoute = .verifyIdentity
+            default:
+                break
+            }
         }
     }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// MARK: - Onboarding Root
-// ═══════════════════════════════════════════════════════════════
 
-/// Coordinator for first-time / logged-out users.
-/// Switches between LoginRoot and SignupRoot.
-struct OnboardingRoot: View {
-    @State private var showSignup = true
-
-    var body: some View {
-        if showSignup {
-            SignupRoot(onBackToLogin: { showSignup = false })
-        } else {
-            LoginRoot(onGoToSignup: { showSignup = true })
-        }
-    }
-}
 
 // ═══════════════════════════════════════════════════════════════
 // MARK: - Previews

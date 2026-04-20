@@ -12,6 +12,7 @@ fileprivate enum LoginField: Hashable {
 struct LoginStep1View: View {
     @Binding var path: NavigationPath
     let onGoToSignup: () -> Void
+    let onBackToWelcome: () -> Void
 
     @State private var contact = ""
     @State private var password = ""
@@ -25,9 +26,7 @@ struct LoginStep1View: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
-                BrandBar()
-
-                StepBar(current: 1, total: 4)
+                BrandBar(onBack: onBackToWelcome)
                     .padding(.bottom, 22)
 
                 VStack(alignment: .leading, spacing: 22) {
@@ -64,50 +63,94 @@ struct LoginStep1View: View {
     }
 
     private var formSection: some View {
-        LoginSectionCard {
-            VStack(spacing: 0) {
-                LoginInputRow(
-                    title: "Email or phone",
-                    placeholder: "name@example.com",
-                    icon: "person.crop.circle",
-                    text: $contact,
-                    keyboardType: .emailAddress,
-                    textContentType: .username,
-                    textInputAutocapitalization: .never,
-                    submitLabel: .next,
-                    isSecure: false,
-                    focusedField: $focusedField,
-                    field: .contact
-                )
+        VStack(alignment: .center, spacing: 16) {
+            LoginSectionCard {
+                VStack(spacing: 0) {
+                    LoginInputRow(
+                        title: "Email or phone",
+                        placeholder: "name@example.com",
+                        icon: "person.crop.circle",
+                        text: $contact,
+                        keyboardType: .emailAddress,
+                        textContentType: .username,
+                        textInputAutocapitalization: .never,
+                        submitLabel: .next,
+                        isSecure: false,
+                        focusedField: $focusedField,
+                        field: .contact
+                    )
 
-                Divider()
-                    .padding(.leading, 52)
+                    Divider()
+                        .padding(.leading, 52)
 
-                LoginInputRow(
-                    title: "Password",
-                    placeholder: "Enter password",
-                    icon: "lock",
-                    text: $password,
-                    keyboardType: .default,
-                    textContentType: .password,
-                    textInputAutocapitalization: .never,
-                    submitLabel: .done,
-                    isSecure: true,
-                    focusedField: $focusedField,
-                    field: .password
-                )
+                    LoginInputRow(
+                        title: "Password",
+                        placeholder: "Enter password",
+                        icon: "lock",
+                        text: $password,
+                        keyboardType: .default,
+                        textContentType: .password,
+                        textInputAutocapitalization: .never,
+                        submitLabel: .done,
+                        isSecure: true,
+                        focusedField: $focusedField,
+                        field: .password
+                    )
+                }
+            }
+
+            if let errorMessage = viewModel.errorMessage {
+                InfoCard(icon: "exclamationmark.triangle.fill", color: DS.danger, text: errorMessage)
+                    .transition(.opacity)
+                    .animation(.easeInOut, value: viewModel.errorMessage)
             }
         }
     }
 
+    @EnvironmentObject private var viewModel: LoginViewModel
+
     private var actionSection: some View {
         VStack(spacing: 14) {
             PrimaryBtn(
-                title: "Continue",
-                disabled: !canProceed
+                title: viewModel.isLoading ? viewModel.loadingActionText : "Continue",
+                disabled: !canProceed || viewModel.isLoading
             ) {
                 focusedField = nil
-                path.append(LoginRoute.otp)
+                Task {
+                    let requiresMFA = await viewModel.loginPrimary(identifier: contact, password: password)
+                    if requiresMFA {
+                        if viewModel.allowedFactors.count > 1 {
+                            path.append(LoginRoute.mfaSelection)
+                        } else {
+                            if viewModel.allowedFactors.contains("totp") {
+                                let success = await viewModel.selectFactor(factor: "totp")
+                                if success {
+                                    path.append(LoginRoute.totp)
+                                }
+                            } else if viewModel.allowedFactors.contains("webauthn") {
+                                let success = await viewModel.selectFactor(factor: "webauthn")
+                                if success {
+                                    path.append(LoginRoute.passkey)
+                                }
+                            } else {
+                                let otpFactors = viewModel.allowedFactors.filter { $0.hasSuffix("_otp") }
+                                if !otpFactors.isEmpty {
+                                    if otpFactors.count == 1 {
+                                        _ = await viewModel.selectFactor(factor: otpFactors[0])
+                                    }
+                                    path.append(LoginRoute.otp(""))
+                                } else if let factor = viewModel.allowedFactors.first {
+                                    _ = await viewModel.selectFactor(factor: factor)
+                                    if factor == "totp" {
+                                        path.append(LoginRoute.totp)
+                                    } else {
+                                        path.append(LoginRoute.passkey)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             Button {

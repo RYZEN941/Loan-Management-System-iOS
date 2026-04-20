@@ -1,7 +1,7 @@
 // Controllers/QuickLoginController.swift
 // LoanOS — Borrower App
-// Controller for returning users — wraps QuickLoginView in a
-// NavigationStack so HomeView can be pushed onto the stack.
+// Controller for returning users — presents quick login until the
+// app session is unlocked, after which RootView switches to HomeView.
 
 import SwiftUI
 
@@ -10,14 +10,11 @@ import SwiftUI
 // ═══════════════════════════════════════════════════════════════
 
 /// Entry point for returning (already-authenticated) users.
-/// Presents Face ID or TOTP quick-login, then pushes HomeView.
+/// Presents Face ID or TOTP quick-login.
 struct QuickLoginGate: View {
-    @State private var goHome = false
-
     var body: some View {
         NavigationStack {
-            QuickLoginView(goHome: $goHome)
-                .navigationDestination(isPresented: $goHome) { HomeView() }
+            QuickLoginView()
         }
         .tint(DS.primary)
     }

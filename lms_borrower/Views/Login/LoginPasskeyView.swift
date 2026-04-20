@@ -1,21 +1,17 @@
 // Views/Login/LoginPasskeyView.swift
 // LoanOS — Borrower App
-// Login Step 3 — Minimal Face ID verification screen.
+// Login Step 3 — Native passkey verification screen.
 
 import SwiftUI
 
 struct LoginPasskeyView: View {
     @Binding var path: NavigationPath
 
-    @State private var isAuthenticating = false
     @State private var errorMessage = ""
-    @State private var isVerified = false
 
     var body: some View {
         VStack(spacing: 0) {
             topBar
-
-            StepBar(current: 3, total: 4)
                 .padding(.bottom, 22)
 
             VStack(alignment: .leading, spacing: 22) {
@@ -67,11 +63,11 @@ struct LoginPasskeyView: View {
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Verify with Face ID")
+            Text("Sign in with passkey")
                 .font(.system(size: 28, weight: .bold, design: .rounded))
                 .foregroundColor(DS.textPrimary)
 
-            Text("Confirm your identity to continue signing in.")
+            Text("Use the native Apple passkey prompt to continue signing in securely.")
                 .font(.system(size: 16))
                 .foregroundColor(DS.textSecondary)
                 .lineSpacing(3)
@@ -86,9 +82,9 @@ struct LoginPasskeyView: View {
                     .background(.ultraThinMaterial, in: Circle())
                     .frame(width: 112, height: 112)
 
-                Image(systemName: isVerified ? "checkmark.circle.fill" : "faceid")
-                    .font(.system(size: isVerified ? 40 : 42, weight: .medium))
-                    .foregroundColor(isVerified ? DS.success : DS.primary)
+                Image(systemName: "faceid")
+                    .font(.system(size: 42, weight: .medium))
+                    .foregroundColor(DS.primary)
             }
 
             VStack(spacing: 6) {
@@ -123,51 +119,57 @@ struct LoginPasskeyView: View {
         .shadow(color: .black.opacity(0.04), radius: 14, x: 0, y: 6)
     }
 
+    @EnvironmentObject private var session: SessionStore
+    @EnvironmentObject private var viewModel: LoginViewModel
+
     private var actionSection: some View {
-        PrimaryBtn(
-            title: isVerified ? "Continue" : "Use Face ID",
-            isLoading: isAuthenticating
-        ) {
-            if isVerified {
-                path.append(LoginRoute.totp)
-            } else {
-                triggerFaceID()
+        VStack(spacing: 16) {
+            PrimaryBtn(
+                title: viewModel.isLoading ? viewModel.loadingActionText : "Use Passkey",
+                isLoading: viewModel.isLoading,
+                disabled: !viewModel.hasWebAuthnRequestOptions && !viewModel.isLoading
+            ) {
+                errorMessage = ""
+                Task {
+                    let success = await viewModel.verifyPasskey()
+                    if success {
+                        AnalyticsManager.shared.logEvent(.loginCompleted)
+                        session.completeSession(contactIdentifier: viewModel.currentLoginIdentifier)
+                    } else if let message = viewModel.errorMessage {
+                        errorMessage = message
+                    }
+                }
+            }
+
+            if !errorMessage.isEmpty {
+                Button {
+                    if viewModel.allowedFactors.contains("totp") {
+                        path.append(LoginRoute.totp)
+                    } else {
+                        path.append(LoginRoute.mfaSelection)
+                    }
+                } label: {
+                    Text("Use Authenticator App Instead")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(DS.primary)
+                }
             }
         }
     }
 
     private var statusTitle: String {
-        if isVerified {
-            return "Verified"
+        if viewModel.isLoading {
+            return "Waiting for your passkey"
         }
-        if isAuthenticating {
-            return "Checking Face ID"
-        }
-        return "Ready to verify"
+        return "Ready to continue"
     }
 
     private var statusSubtitle: String {
-        if isVerified {
-            return "Your identity has been confirmed."
+        if viewModel.isLoading {
+            return "Complete the native Face ID or Touch ID prompt on your device."
         }
-        if isAuthenticating {
-            return "Complete the native Face ID prompt on your device."
-        }
-        return "Use Face ID or Touch ID to continue securely."
-    }
-
-    private func triggerFaceID() {
-        errorMessage = ""
-        isAuthenticating = true
-
-        BiometricAuth.authenticate(reason: "Verify your identity to log in to LoanOS") { ok, err in
-            isAuthenticating = false
-
-            if ok {
-                isVerified = true
-            } else {
-                errorMessage = BiometricAuth.humanMessage(for: err)
-            }
-        }
+        return viewModel.hasWebAuthnRequestOptions
+            ? "Use your saved passkey on this device to finish signing in."
+            : "Passkey options are not available for this session."
     }
 }

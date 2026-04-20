@@ -14,6 +14,7 @@ fileprivate enum SignupField: Hashable {
 struct SignupStep1View: View {
     @Binding var path: NavigationPath
     let onBackToLogin: () -> Void
+    let onBackToWelcome: () -> Void
 
     @State private var fullName = ""
     @State private var email = ""
@@ -56,9 +57,7 @@ struct SignupStep1View: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
-                BrandBar()
-
-                StepBar(current: 1, total: 5)
+                BrandBar(onBack: onBackToWelcome)
                     .padding(.bottom, 22)
 
                 VStack(alignment: .leading, spacing: 22) {
@@ -174,20 +173,38 @@ struct SignupStep1View: View {
                 }
             }
 
-            Text(helperText)
-                .font(.system(size: 13))
-                .foregroundColor(helperColor)
+            if let errorMessage = viewModel.errorMessage {
+                InfoCard(icon: "exclamationmark.triangle.fill", color: DS.danger, text: errorMessage)
+                    .transition(.opacity)
+                    .animation(.easeInOut, value: viewModel.errorMessage)
+            } else {
+                Text(helperText)
+                    .font(.system(size: 13))
+                    .foregroundColor(helperColor)
+            }
         }
     }
+
+    @EnvironmentObject private var viewModel: SignupViewModel
 
     private var actionSection: some View {
         VStack(spacing: 14) {
             PrimaryBtn(
-                title: "Continue",
-                disabled: !canProceed
+                title: viewModel.isLoading ? viewModel.loadingActionText : "Continue",
+                disabled: !canProceed || viewModel.isLoading
             ) {
                 focusedField = nil
-                path.append(SignupRoute.phoneOTP)
+                Task {
+                    let success = await viewModel.initiateSignup(
+                        fullName: trimmedName,
+                        email: trimmedEmail,
+                        phone: phoneNumber,
+                        password: password
+                    )
+                    if success {
+                        path.append(SignupRoute.phoneOTP)
+                    }
+                }
             }
 
             Button {

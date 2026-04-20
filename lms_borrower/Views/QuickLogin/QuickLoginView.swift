@@ -6,16 +6,31 @@ import SwiftUI
 
 struct QuickLoginView: View {
     @EnvironmentObject var session: SessionStore
-    @Binding var goHome: Bool
 
     @State private var isAuthenticating = false
     @State private var bioError = ""
     @State private var showTOTP = false
     @State private var totpCode = ""
     @FocusState private var totpFocused: Bool
+    @State private var retryCount = 0
+    @State private var isBiometricQuickLoginEnabled = true
+    @State private var isAuthenticatorQuickLoginEnabled = true
+
+    private let maxFailedAttempts = 3
 
     private var welcomeText: String {
         session.userName.isEmpty ? "Welcome back" : "Welcome back, \(session.userName)"
+    }
+
+    private var shouldShowTOTPEntry: Bool {
+        if !isBiometricQuickLoginEnabled && isAuthenticatorQuickLoginEnabled {
+            return true
+        }
+        return showTOTP
+    }
+
+    private var hasAnyQuickLoginMethod: Bool {
+        isBiometricQuickLoginEnabled || isAuthenticatorQuickLoginEnabled
     }
 
     var body: some View {
@@ -26,14 +41,18 @@ struct QuickLoginView: View {
 
             Spacer(minLength: 28)
 
-            Group {
-                if showTOTP {
-                    totpSection
-                } else {
-                    biometricSection
-                }
+            if !hasAnyQuickLoginMethod {
+                passwordFallbackSection
+                    .padding(.horizontal, 20)
+            } else if shouldShowTOTPEntry {
+                totpSection
+                    .padding(.horizontal, 20)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            } else {
+                biometricSection
+                    .padding(.horizontal, 20)
+                    .transition(.move(edge: .top).combined(with: .opacity))
             }
-            .padding(.horizontal, 20)
 
             Spacer()
 
@@ -41,6 +60,7 @@ struct QuickLoginView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 34)
         }
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: showTOTP)
         .background(
             LinearGradient(
                 colors: [Color.white, DS.surface],
@@ -50,6 +70,7 @@ struct QuickLoginView: View {
             .ignoresSafeArea()
         )
         .navigationBarHidden(true)
+        .onAppear(perform: refreshQuickLoginPreferences)
     }
 
     private var headerSection: some View {
@@ -98,7 +119,7 @@ struct QuickLoginView: View {
                             .font(.system(size: 20, weight: .semibold))
                             .foregroundColor(DS.textPrimary)
 
-                        Text("Sign in securely with your saved passkey.")
+                        Text("Sign in securely with biometrics.")
                             .font(.system(size: 14))
                             .foregroundColor(DS.textSecondary)
                     }
@@ -125,87 +146,147 @@ struct QuickLoginView: View {
                     .padding(.horizontal, 8)
             }
 
-            Button {
-                showTOTP = true
-                totpCode = ""
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    totpFocused = true
+            if isAuthenticatorQuickLoginEnabled {
+                Button {
+                    bioError = ""
+                    showTOTP = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        totpFocused = true
+                    }
+                } label: {
+                    Text("Use Authenticator App")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(DS.primary)
+                        .padding(.top, 8)
                 }
-            } label: {
-                Text("Use verification code instead")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(DS.primary)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(.white.opacity(0.65))
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(DS.primary.opacity(0.14), lineWidth: 1)
-                    )
             }
-            .buttonStyle(TapScale())
         }
     }
 
     private var totpSection: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Enter verification code")
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .foregroundColor(DS.textPrimary)
+        VStack(spacing: 24) {
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Authenticator Code")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(DS.textSecondary)
 
-                Text("Open your authenticator app and enter the 6-digit code.")
-                    .font(.system(size: 15))
-                    .foregroundColor(DS.textSecondary)
-                    .lineSpacing(2)
-            }
+                    Text("Enter the 6-digit code from your app.")
+                        .font(.system(size: 14))
+                        .foregroundColor(DS.textSecondary)
+                }
 
-            VStack(spacing: 18) {
                 OTPBoxRow(otp: $totpCode, focused: $totpFocused)
-
-                PrimaryBtn(
-                    title: "Continue",
-                    disabled: totpCode.count < 6
-                ) {
-                    goHome = true
-                }
-
-                Button {
-                    showTOTP = false
-                    totpCode = ""
-                } label: {
-                    Text("Back to Face ID")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(DS.primary)
-                        .frame(maxWidth: .infinity)
-                }
             }
             .padding(20)
-            .background(.white.opacity(0.82))
+            .background(.white.opacity(0.84))
             .background(.ultraThinMaterial)
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(.white.opacity(0.9), lineWidth: 1)
+                    .stroke(.white.opacity(0.92), lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.04), radius: 14, x: 0, y: 6)
-        }
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                totpFocused = true
+            
+            if !bioError.isEmpty {
+                Text(bioError)
+                    .font(.system(size: 14))
+                    .foregroundColor(DS.danger)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 8)
+                    .padding(.top, -12)
+            }
+
+            PrimaryBtn(
+                title: isAuthenticating ? "Verifying..." : "Verify",
+                disabled: totpCode.count != 6 || isAuthenticating
+            ) {
+                totpFocused = false
+                isAuthenticating = true
+                bioError = "" // Re-using bioError as a generic alert if needed
+                
+                Task {
+                    do {
+                        let success = try await session.verifyQuickTOTP(code: totpCode)
+                        
+                        try? await Task.sleep(nanoseconds: 300_000_000)
+                        
+                        if success {
+                            session.unlockAppSession()
+                        } else {
+                            if registerFailedAttempt() {
+                                bioError = "Invalid authenticator code."
+                            }
+                        }
+                    } catch {
+                        if registerFailedAttempt() {
+                            bioError = "Invalid authenticator code or connection error."
+                        }
+                    }
+                    isAuthenticating = false
+                }
+            }
+
+            if isBiometricQuickLoginEnabled {
+                Button {
+                    totpCode = ""
+                    showTOTP = false
+                } label: {
+                    Text("Go back to Face ID")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(DS.textSecondary)
+                }
             }
         }
+    }
+
+    private var passwordFallbackSection: some View {
+        VStack(spacing: 18) {
+            Text("Quick login is turned off for this account on this device.")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(DS.textPrimary)
+                .multilineTextAlignment(.center)
+
+            Text("Use your password to continue.")
+                .font(.system(size: 14))
+                .foregroundColor(DS.textSecondary)
+
+            PrimaryBtn(title: "Use Password") {
+                session.logout()
+            }
+        }
+        .padding(24)
+        .background(.white.opacity(0.84))
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(.white.opacity(0.92), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.04), radius: 14, x: 0, y: 6)
     }
 
     private var footerSection: some View {
         Button {
             session.logout()
         } label: {
-            Text("Sign in with a different account")
+            Text(hasAnyQuickLoginMethod ? "Sign in with a different account" : "Back to login")
                 .font(.system(size: 14))
                 .foregroundColor(DS.textSecondary)
         }
+    }
+
+    private func refreshQuickLoginPreferences() {
+        guard let accessToken = try? TokenStore.shared.accessToken(),
+              let userID = JWTClaimsDecoder.subject(from: accessToken) else {
+            isBiometricQuickLoginEnabled = true
+            isAuthenticatorQuickLoginEnabled = true
+            return
+        }
+
+        isBiometricQuickLoginEnabled = QuickLoginPreferencesStore.shared.isBiometricEnabled(for: userID)
+        isAuthenticatorQuickLoginEnabled = QuickLoginPreferencesStore.shared.isAuthenticatorEnabled(for: userID)
+        showTOTP = !isBiometricQuickLoginEnabled && isAuthenticatorQuickLoginEnabled
     }
 
     private func triggerFaceID() {
@@ -215,10 +296,23 @@ struct QuickLoginView: View {
         BiometricAuth.authenticate(reason: "Verify your identity to open LoanOS") { ok, err in
             isAuthenticating = false
             if ok {
-                goHome = true
+                session.unlockAppSession()
             } else {
-                bioError = BiometricAuth.humanMessage(for: err)
+                let message = BiometricAuth.humanMessage(for: err)
+                if registerFailedAttempt() {
+                    bioError = message
+                }
             }
         }
+    }
+
+    @discardableResult
+    private func registerFailedAttempt() -> Bool {
+        retryCount += 1
+        if retryCount >= maxFailedAttempts {
+            session.logout(reason: "Too many failed quick-login attempts. Please sign in again.")
+            return false
+        }
+        return true
     }
 }

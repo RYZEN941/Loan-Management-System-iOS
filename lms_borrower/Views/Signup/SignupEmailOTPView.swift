@@ -3,9 +3,11 @@
 // Signup Step 3 — Verify email address.
 
 import SwiftUI
+import Combine
 
 struct SignupEmailOTPView: View {
     @Binding var path: NavigationPath
+    let onBackToLogin: () -> Void
 
     @State private var otp = ""
     @State private var appeared = false
@@ -18,9 +20,6 @@ struct SignupEmailOTPView: View {
     var body: some View {
         VStack(spacing: 0) {
             topBar
-
-            StepBar(current: 3, total: 5)
-
                 .padding(.bottom, 22)
 
             VStack(alignment: .leading, spacing: 22) {
@@ -100,6 +99,9 @@ struct SignupEmailOTPView: View {
         }
     }
 
+    @State private var timeRemaining = 30
+    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
     private var otpCard: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text("One-time code")
@@ -109,12 +111,23 @@ struct SignupEmailOTPView: View {
             OTPBoxRow(otp: $otp, focused: $focused)
 
             Button {
+                guard timeRemaining == 0 else { return }
                 otp = ""
                 focused = true
+                timeRemaining = 30
+                Task {
+                    await viewModel.resendOTP()
+                }
             } label: {
-                Text("Resend code")
+                Text(timeRemaining > 0 ? "Resend code in \(timeRemaining)s" : "Resend code")
                     .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(DS.primary)
+                    .foregroundColor(timeRemaining > 0 ? DS.textSecondary : DS.primary)
+            }
+            .disabled(timeRemaining > 0)
+            .onReceive(timer) { _ in
+                if timeRemaining > 0 {
+                    timeRemaining -= 1
+                }
             }
         }
         .padding(18)
@@ -128,12 +141,23 @@ struct SignupEmailOTPView: View {
         .shadow(color: .black.opacity(0.04), radius: 14, x: 0, y: 6)
     }
 
+    @EnvironmentObject private var viewModel: SignupViewModel
+//    let onBackToLogin: () -> Void
+
     private var actionSection: some View {
         PrimaryBtn(
-            title: "Continue",
-            disabled: !canContinue
+            title: viewModel.isLoading ? viewModel.loadingActionText : "Verify",
+            disabled: !canContinue || viewModel.isLoading
         ) {
-            path.append(SignupRoute.passkey)
+            focused = false
+            Task {
+                guard let phoneOTP = viewModel.tempPhoneOTP else { return }
+                let success = await viewModel.verifyOTPs(emailCode: otp, phoneCode: phoneOTP)
+                if success {
+                    AnalyticsManager.shared.logEvent(.signupCompleted)
+                    path.append(SignupRoute.personalDetails)
+                }
+            }
         }
     }
 }

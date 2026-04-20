@@ -1,23 +1,21 @@
 // Views/Signup/SignupPasskeyView.swift
 // LoanOS — Borrower App
-// Signup Step 4 — Minimal passkey setup screen.
+// Signup Step 4 — Face ID prompt screen.
 
 import SwiftUI
 
 struct SignupPasskeyView: View {
     @Binding var path: NavigationPath
 
-    @State private var isAuthenticating = false
-    @State private var success = false
-    @State private var failed = false
-    @State private var message = ""
     @State private var appeared = false
+    @State private var isEnablingFaceID = false
+    @State private var errorMessage = ""
+
+    @EnvironmentObject private var viewModel: SignupViewModel
 
     var body: some View {
         VStack(spacing: 0) {
             topBar
-
-            StepBar(current: 4, total: 5)
                 .padding(.bottom, 22)
 
             VStack(spacing: 28) {
@@ -87,21 +85,19 @@ struct SignupPasskeyView: View {
                     .background(.ultraThinMaterial, in: Circle())
                     .frame(width: 112, height: 112)
 
-                Image(systemName: success ? "checkmark.circle.fill" : "faceid")
-                    .font(.system(size: success ? 42 : 44, weight: .medium))
-                    .foregroundColor(success ? DS.success : DS.primary)
+                Image(systemName: "faceid")
+                    .font(.system(size: 44, weight: .medium))
+                    .foregroundColor(DS.primary)
             }
             .shadow(color: .black.opacity(0.04), radius: 14, x: 0, y: 8)
 
             VStack(spacing: 8) {
-                Text(success ? "Passkey is ready" : "Set up Passkey")
+                Text("Enable Face ID")
                     .font(.system(size: 28, weight: .bold, design: .rounded))
                     .foregroundColor(DS.textPrimary)
                     .multilineTextAlignment(.center)
 
-                Text(success
-                     ? "You can now sign in securely with Face ID or Touch ID."
-                     : "Use Face ID or Touch ID for faster, more secure sign in.")
+                Text("Turn on Face ID now so this device can offer faster sign in later.")
                     .font(.system(size: 16))
                     .foregroundColor(DS.textSecondary)
                     .multilineTextAlignment(.center)
@@ -113,33 +109,37 @@ struct SignupPasskeyView: View {
 
     private var contentCard: some View {
         VStack(spacing: 18) {
-            if failed && !message.isEmpty {
-                Text(message)
-                    .font(.system(size: 14))
-                    .foregroundColor(DS.danger)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 8)
-            }
-
             VStack(spacing: 8) {
-                Text(success ? "Authentication completed." : "Authentication is required once to enable passkey on this device.")
+                Text("We’ll ask the system to verify your identity now, then continue to authenticator setup.")
                     .font(.system(size: 15))
                     .foregroundColor(DS.textPrimary)
                     .multilineTextAlignment(.center)
 
-                if !success {
-                    Text("You’ll see the native Face ID or Touch ID prompt next.")
-                        .font(.system(size: 13))
-                        .foregroundColor(DS.textSecondary)
-                        .multilineTextAlignment(.center)
-                }
+                Text("You can skip this for now and enable it later from Settings.")
+                    .font(.system(size: 13))
+                    .foregroundColor(DS.textSecondary)
+                    .multilineTextAlignment(.center)
             }
 
             PrimaryBtn(
-                title: success ? "Continue" : "Set Up Passkey",
-                isLoading: isAuthenticating
+                title: isEnablingFaceID ? "Checking Face ID..." : "Enable Face ID",
+                isLoading: isEnablingFaceID
             ) {
-                success ? continueFlow() : trigger()
+                enableFaceID()
+            }
+
+            SecondaryBtn(
+                title: "Not Now"
+            ) {
+                QuickLoginPreferencesStore.shared.stageBiometricEnabled(false, for: viewModel.stagedBiometricIdentifiers)
+                path.append(SignupRoute.totpPrompt)
+            }
+
+            if !errorMessage.isEmpty {
+                Text(errorMessage)
+                    .font(.system(size: 13))
+                    .foregroundColor(DS.danger)
+                    .multilineTextAlignment(.center)
             }
         }
         .padding(22)
@@ -153,27 +153,17 @@ struct SignupPasskeyView: View {
         .shadow(color: .black.opacity(0.04), radius: 14, x: 0, y: 6)
     }
 
-    private func continueFlow() {
-        path.append(SignupRoute.totp)
-    }
+    private func enableFaceID() {
+        errorMessage = ""
+        isEnablingFaceID = true
 
-    private func trigger() {
-        failed = false
-        message = ""
-        isAuthenticating = true
-
-        BiometricAuth.authenticate(reason: "Set up Face ID for your LoanOS account") { ok, err in
-            isAuthenticating = false
-
+        BiometricAuth.authenticate(reason: "Verify your identity to enable Face ID for sign in.") { ok, err in
+            isEnablingFaceID = false
             if ok {
-                withAnimation(.spring(response: 0.35)) {
-                    success = true
-                }
+                QuickLoginPreferencesStore.shared.stageBiometricEnabled(true, for: viewModel.stagedBiometricIdentifiers)
+                path.append(SignupRoute.totpPrompt)
             } else {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    failed = true
-                }
-                message = BiometricAuth.humanMessage(for: err)
+                errorMessage = BiometricAuth.humanMessage(for: err)
             }
         }
     }

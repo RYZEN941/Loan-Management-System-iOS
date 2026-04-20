@@ -6,7 +6,9 @@ import SwiftUI
 
 struct LoginTOTPView: View {
     @Binding var path: NavigationPath
-    @EnvironmentObject var session: SessionStore
+    
+    @EnvironmentObject private var viewModel: LoginViewModel
+    @EnvironmentObject private var session: SessionStore
 
     @State private var code = ""
     @FocusState private var focused: Bool
@@ -18,8 +20,6 @@ struct LoginTOTPView: View {
     var body: some View {
         VStack(spacing: 0) {
             topBar
-
-            StepBar(current: 4, total: 4)
                 .padding(.bottom, 22)
 
             VStack(alignment: .leading, spacing: 22) {
@@ -100,6 +100,7 @@ struct LoginTOTPView: View {
             }
 
             OTPBoxRow(otp: $code, focused: $focused)
+                .disabled(viewModel.isLoading)
         }
         .padding(20)
         .background(.white.opacity(0.84))
@@ -112,13 +113,46 @@ struct LoginTOTPView: View {
         .shadow(color: .black.opacity(0.04), radius: 14, x: 0, y: 6)
     }
 
+    @State private var isVerifying = false
+
     private var actionSection: some View {
-        PrimaryBtn(
-            title: "Continue",
-            disabled: !canContinue
-        ) {
-            session.completeSession()
-            path.append(LoginRoute.home)
+        VStack(spacing: 16) {
+            PrimaryBtn(
+                title: (viewModel.isLoading || isVerifying) ? viewModel.loadingActionText : "Verify",
+                disabled: !canContinue || viewModel.isLoading || isVerifying
+            ) {
+                focused = false
+                isVerifying = true
+                Task {
+                    let success = await viewModel.verifyMFA(code: code)
+                    if success {
+                        AnalyticsManager.shared.logEvent(.loginCompleted)
+                        session.completeSession(contactIdentifier: viewModel.currentLoginIdentifier)
+                    }
+                    isVerifying = false
+                }
+            }
+
+            if viewModel.allowedFactors.count > 1 {
+                Button {
+                    // Navigate back to selection screen by finding its index
+                    // Simplest is to pop to root or pop 2 levels. 
+                    // Usually, path has: [mfaSelection (maybe), passkey, totp] or [passkey, totp]
+                    // If we just remove all until mfaSelection...
+                    // Let's just pop the path back to empty, which brings us to LoginStep1, 
+                    // or let's pop to mfaSelection. Since path is a NavigationPath, it's opaque.
+                    // We can just clear the path, or let the user use the back button.
+                    // Actually, since we know mfaSelection is the first route if there are > 1 factors:
+                    // we remove until path count is 1.
+                    while path.count > 1 {
+                        path.removeLast()
+                    }
+                } label: {
+                    Text("Try another method")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(DS.primary)
+                }
+            }
         }
     }
 }

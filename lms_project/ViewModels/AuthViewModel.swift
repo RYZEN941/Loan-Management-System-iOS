@@ -30,8 +30,8 @@ enum MFAMethod: String, CaseIterable, Identifiable {
 
     var description: String {
         switch self {
-        case .email: return "Enter your email to receive a code"
-        case .sms:   return "Enter your phone number to receive a code"
+        case .email: return "Receive a one-time code by email"
+        case .sms:   return "Receive a one-time code by SMS"
         }
     }
 
@@ -61,8 +61,9 @@ enum MFAMethod: String, CaseIterable, Identifiable {
 
 enum AuthStep {
     case credentials       // email + password screen
-    case mfaSelection      // choose MFA method + enter contact
-    case mfaVerification   // enter OTP (any input accepted)
+    case mfaSelection      // choose MFA method
+    case mfaVerification   // enter OTP
+    case forcePasswordChange
     case authenticated     // logged in
 }
 
@@ -79,8 +80,10 @@ class AuthViewModel: ObservableObject {
     @Published var authStep: AuthStep = .credentials
     @Published var loginError: String? = nil
     @Published var selectedMFAMethod: MFAMethod = .email
-    @Published var mfaContact: String = ""   // email or phone entered by user
+    @Published var mfaContact: String = ""   // challenge target from backend
     @Published var otpError: String? = nil
+    @Published var passwordChangeError: String? = nil
+    @Published var authNotice: String? = nil
     @Published var isLoading: Bool = false
 
     private let dataService = MockDataService.shared
@@ -89,14 +92,20 @@ class AuthViewModel: ObservableObject {
 
     private var mfaSessionID: String = ""
     private var allowedMFAMethods: [MFAMethod] = []
+    private var pendingCurrentPassword: String = ""
 
     var isLoggedIn: Bool { currentRole != nil }
+    var availableMFAMethods: [MFAMethod] {
+        allowedMFAMethods.isEmpty ? MFAMethod.allCases : allowedMFAMethods
+    }
 
     // MARK: - Step 1: Validate Credentials
 
     func submitCredentials(email: String, password: String) {
         loginError = nil
         otpError = nil
+        passwordChangeError = nil
+        authNotice = nil
 
         let identifier = email.trimmingCharacters(in: .whitespacesAndNewlines)
         let rawPassword = password.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -117,6 +126,7 @@ class AuthViewModel: ObservableObject {
                 mfaSessionID = response.mfaSessionID
                 allowedMFAMethods = methods
                 selectedMFAMethod = methods.first ?? .email
+                pendingCurrentPassword = rawPassword
                 authStep = .mfaSelection
             } catch {
                 loginError = (error as? LocalizedError)?.errorDescription ?? "Login failed"
@@ -125,10 +135,9 @@ class AuthViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Step 2: Select MFA + Enter Contact
+    // MARK: - Step 2: Select MFA
 
-    /// contact: the email or phone number typed by the user on the MFA selection screen
-    func selectMFA(_ method: MFAMethod, contact: String) {
+    func selectMFA(_ method: MFAMethod) {
         guard !mfaSessionID.isEmpty else {
             loginError = "Login session expired. Please sign in again."
             authStep = .credentials
@@ -139,20 +148,15 @@ class AuthViewModel: ObservableObject {
             return
         }
 
-        let cleanedContact = contact.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanedContact.isEmpty else {
-            loginError = "Please enter your email or phone number."
-            return
-        }
-
         selectedMFAMethod = method
-        mfaContact = cleanedContact
+        mfaContact = ""
         loginError = nil
         isLoading = true
 
         Task {
             do {
-                _ = try await authAPI.selectLoginMFAFactor(mfaSessionID: mfaSessionID, factor: method.backendFactor)
+                let response = try await authAPI.selectLoginMFAFactor(mfaSessionID: mfaSessionID, factor: method.backendFactor)
+                mfaContact = response.challengeTarget
                 authStep = .mfaVerification
             } catch {
                 loginError = (error as? LocalizedError)?.errorDescription ?? "Failed to send OTP"
@@ -190,6 +194,13 @@ class AuthViewModel: ObservableObject {
                 sessionStore.updateTokens(accessToken: tokens.accessToken, refreshToken: tokens.refreshToken)
 
                 let profile = try await authAPI.getMyProfile()
+                if profile.isRequiringPasswordChange {
+                    withAnimation(.easeInOut(duration: 0.35)) {
+                        authStep = .forcePasswordChange
+                    }
+                    return
+                }
+
                 guard let mappedRole = Self.mapBackendRole(profile.role) else {
                     throw APIError.permissionDenied("Only admin, manager, and officer roles are supported in this app.")
                 }
@@ -219,7 +230,8 @@ class AuthViewModel: ObservableObject {
         isLoading = true
         Task {
             do {
-                _ = try await authAPI.selectLoginMFAFactor(mfaSessionID: mfaSessionID, factor: selectedMFAMethod.backendFactor)
+                let response = try await authAPI.selectLoginMFAFactor(mfaSessionID: mfaSessionID, factor: selectedMFAMethod.backendFactor)
+                mfaContact = response.challengeTarget
             } catch {
                 otpError = (error as? LocalizedError)?.errorDescription ?? "Failed to resend OTP"
             }
@@ -233,8 +245,11 @@ class AuthViewModel: ObservableObject {
         mfaSessionID = ""
         allowedMFAMethods = []
         mfaContact  = ""
+        pendingCurrentPassword = ""
         loginError  = nil
         otpError    = nil
+        passwordChangeError = nil
+        authNotice = nil
         authStep    = .credentials
     }
 
@@ -261,10 +276,75 @@ class AuthViewModel: ObservableObject {
                 mfaSessionID      = ""
                 allowedMFAMethods = []
                 mfaContact        = ""
+                pendingCurrentPassword = ""
                 loginError        = nil
                 otpError          = nil
+                passwordChangeError = nil
+                authNotice = nil
                 authStep          = .credentials
             }
+        }
+    }
+
+    func submitForcedPasswordChange(newPassword: String, confirmPassword: String) {
+        passwordChangeError = nil
+        authNotice = nil
+
+        let trimmedNew = newPassword.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedConfirm = confirmPassword.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedNew.isEmpty, !trimmedConfirm.isEmpty else {
+            passwordChangeError = "Please enter and confirm your new password."
+            return
+        }
+
+        guard trimmedNew == trimmedConfirm else {
+            passwordChangeError = "New password and confirmation do not match."
+            return
+        }
+
+        guard !pendingCurrentPassword.isEmpty else {
+            passwordChangeError = "Session expired. Please sign in again."
+            authStep = .credentials
+            return
+        }
+
+        isLoading = true
+        Task {
+            do {
+                let response = try await authAPI.changePassword(
+                    currentPassword: pendingCurrentPassword,
+                    newPassword: trimmedNew
+                )
+
+                if !response.success {
+                    throw APIError.unknown("Password change was not accepted. Please try again.")
+                }
+
+                let access = sessionStore.accessToken
+                let refresh = sessionStore.refreshToken
+                if !access.isEmpty || !refresh.isEmpty {
+                    _ = try? await authAPI.logout(accessToken: access, refreshToken: refresh)
+                }
+
+                sessionStore.clear()
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    currentRole = nil
+                    currentUser = nil
+                    mfaSessionID = ""
+                    allowedMFAMethods = []
+                    mfaContact = ""
+                    pendingCurrentPassword = ""
+                    loginError = nil
+                    otpError = nil
+                    passwordChangeError = nil
+                    authNotice = "Password changed successfully. Please sign in again."
+                    authStep = .credentials
+                }
+            } catch {
+                passwordChangeError = (error as? LocalizedError)?.errorDescription ?? "Failed to change password"
+            }
+            isLoading = false
         }
     }
 

@@ -81,6 +81,12 @@ struct LoginView: View {
                     insertion: .opacity.combined(with: .move(edge: .trailing)),
                     removal:   .opacity.combined(with: .move(edge: .leading))
                 ))
+        case .forcePasswordChange:
+            ForcePasswordChangeStep()
+                .transition(.asymmetric(
+                    insertion: .opacity.combined(with: .move(edge: .trailing)),
+                    removal:   .opacity.combined(with: .move(edge: .leading))
+                ))
         case .authenticated:
             Color.clear
         }
@@ -275,6 +281,16 @@ struct CredentialsStep: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
                 }
 
+                if let notice = authVM.authNotice {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill").font(.system(size: 13))
+                        Text(notice).font(.system(size: 13))
+                    }
+                    .foregroundStyle(Theme.Colors.success)
+                    .padding(.top, 10)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+
                 // Sign In button — fixed iPad-appropriate width
                 Button(action: submit) {
                     Text("Sign In")
@@ -309,20 +325,14 @@ struct CredentialsStep: View {
     }
 }
 
-// MARK: - Step 2: MFA Selection + Contact Entry
+// MARK: - Step 2: MFA Selection
 
 struct MFASelectionStep: View {
     @EnvironmentObject var authVM: AuthViewModel
     @Environment(\.colorScheme) private var colorScheme
 
     @State private var selected      : MFAMethod = .email
-    @State private var contactInput  = ""          // email or phone typed by user
     @State private var appeared      = false
-    @FocusState private var inputFocused: Bool
-
-    private var canProceed: Bool {
-        !contactInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
 
     var body: some View {
         ScrollView {
@@ -374,11 +384,10 @@ struct MFASelectionStep: View {
 
                 // Method cards
                 VStack(spacing: 12) {
-                    ForEach(MFAMethod.allCases) { method in
+                    ForEach(authVM.availableMFAMethods) { method in
                         MFAMethodCard(method: method, isSelected: selected == method) {
                             withAnimation(.easeInOut(duration: 0.16)) {
                                 selected = method
-                                contactInput = ""
                             }
                         }
                     }
@@ -386,56 +395,18 @@ struct MFASelectionStep: View {
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 16)
 
-                // Contact input
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(selected == .email ? "Your email address" : "Your phone number")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.secondary)
-
-                    TextField(
-                        selected.inputPlaceholder,
-                        text: $contactInput
-                    )
-                    .font(.system(size: 16))
-                    .keyboardType(selected.inputKeyboardType)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                    .focused($inputFocused)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(colorScheme == .dark ? Color(hex: "2C2C2E") : Color.white)
-                            .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .strokeBorder(
-                                inputFocused ? Theme.Colors.primary.opacity(0.7) : Color.clear,
-                                lineWidth: 1.5
-                            )
-                    )
-                }
-                .padding(.top, 20)
-                .opacity(appeared ? 1 : 0)
-
                 // Receive OTP button — fixed width
                 Button {
-                    inputFocused = false
-                    authVM.selectMFA(selected, contact: contactInput)
+                    authVM.selectMFA(selected)
                 } label: {
                     Text("Receive OTP")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(width: 280, height: 50)
-                        .background(canProceed
-                            ? LinearGradient(colors: [Theme.Colors.primary, Color(hex: "0047BB")], startPoint: .topLeading, endPoint: .bottomTrailing)
-                            : LinearGradient(colors: [Color.secondary.opacity(0.35), Color.secondary.opacity(0.35)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                        )
+                        .background(LinearGradient(colors: [Theme.Colors.primary, Color(hex: "0047BB")], startPoint: .topLeading, endPoint: .bottomTrailing))
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 .buttonStyle(.plain)
-                .disabled(!canProceed)
                 .padding(.top, 20)
                 .opacity(appeared ? 1 : 0)
 
@@ -446,6 +417,7 @@ struct MFASelectionStep: View {
             .frame(maxWidth: .infinity)
         }
         .onAppear {
+            selected = authVM.availableMFAMethods.first ?? .email
             withAnimation(.easeOut(duration: 0.48).delay(0.05)) { appeared = true }
         }
     }
@@ -507,7 +479,7 @@ private struct MFAMethodCard: View {
     }
 }
 
-// MARK: - Step 3: OTP Entry (any 6-digit code passes)
+// MARK: - Step 3: OTP Entry
 
 struct MFAVerificationStep: View {
     @EnvironmentObject var authVM: AuthViewModel
@@ -559,7 +531,7 @@ struct MFAVerificationStep: View {
                         .foregroundStyle(colorScheme == .dark ? .white : Color(hex: "1A1A2E"))
                         .opacity(appeared ? 1 : 0)
 
-                    // Show the contact info the user entered
+                    // Show the masked/target contact returned by backend
                     Group {
                         if !authVM.mfaContact.isEmpty {
                             Text("Code sent to \(authVM.mfaContact)")
@@ -641,6 +613,169 @@ struct MFAVerificationStep: View {
                     authVM.verifyOTP(newValue)
                 }
             }
+        }
+    }
+}
+
+// MARK: - Step 4: Forced Password Change
+
+struct ForcePasswordChangeStep: View {
+    @EnvironmentObject var authVM: AuthViewModel
+    @Environment(\.colorScheme) private var colorScheme
+
+    @State private var newPassword = ""
+    @State private var confirmPassword = ""
+    @State private var showNewPassword = false
+    @State private var showConfirmPassword = false
+    @State private var appeared = false
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                Spacer().frame(height: 72)
+
+                VStack(spacing: 10) {
+                    ZStack {
+                        Circle()
+                            .fill(Theme.Colors.warning.opacity(0.14))
+                            .frame(width: 64, height: 64)
+                        Image(systemName: "lock.rotation")
+                            .font(.system(size: 26, weight: .semibold))
+                            .foregroundStyle(Theme.Colors.warning)
+                    }
+                    .scaleEffect(appeared ? 1 : 0.7)
+                    .opacity(appeared ? 1 : 0)
+
+                    Text("Password Update Required")
+                        .font(.system(size: 26, weight: .bold))
+                        .foregroundStyle(colorScheme == .dark ? .white : Color(hex: "1A1A2E"))
+                        .multilineTextAlignment(.center)
+                        .opacity(appeared ? 1 : 0)
+
+                    Text("For security, you must set a new password before continuing.")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .opacity(appeared ? 1 : 0)
+                }
+                .padding(.bottom, 32)
+
+                VStack(spacing: 0) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "lock")
+                            .font(.system(size: 15))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 22)
+                            .padding(.leading, 16)
+
+                        Group {
+                            if showNewPassword {
+                                TextField("New password", text: $newPassword)
+                                    .autocorrectionDisabled()
+                                    .textInputAutocapitalization(.never)
+                            } else {
+                                SecureField("New password", text: $newPassword)
+                            }
+                        }
+                        .font(.system(size: 16))
+                        .padding(.vertical, 16)
+
+                        Button {
+                            showNewPassword.toggle()
+                        } label: {
+                            Image(systemName: showNewPassword ? "eye.slash" : "eye")
+                                .font(.system(size: 15))
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.trailing, 14)
+                    }
+
+                    Divider().padding(.leading, 52)
+
+                    HStack(spacing: 12) {
+                        Image(systemName: "checkmark.shield")
+                            .font(.system(size: 15))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 22)
+                            .padding(.leading, 16)
+
+                        Group {
+                            if showConfirmPassword {
+                                TextField("Confirm new password", text: $confirmPassword)
+                                    .autocorrectionDisabled()
+                                    .textInputAutocapitalization(.never)
+                            } else {
+                                SecureField("Confirm new password", text: $confirmPassword)
+                            }
+                        }
+                        .font(.system(size: 16))
+                        .padding(.vertical, 16)
+
+                        Button {
+                            showConfirmPassword.toggle()
+                        } label: {
+                            Image(systemName: showConfirmPassword ? "eye.slash" : "eye")
+                                .font(.system(size: 15))
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.trailing, 14)
+                    }
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 14)
+                        .fill(colorScheme == .dark ? Color(hex: "2C2C2E") : Color.white)
+                        .shadow(color: .black.opacity(colorScheme == .dark ? 0.3 : 0.07), radius: 14, x: 0, y: 4)
+                )
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 16)
+
+                if let err = authVM.passwordChangeError {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.circle.fill").font(.system(size: 13))
+                        Text(err).font(.system(size: 13))
+                    }
+                    .foregroundStyle(Theme.Colors.critical)
+                    .padding(.top, 10)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+                }
+
+                Button {
+                    authVM.submitForcedPasswordChange(newPassword: newPassword, confirmPassword: confirmPassword)
+                } label: {
+                    Group {
+                        if authVM.isLoading {
+                            ProgressView()
+                                .progressViewStyle(.circular)
+                                .tint(.white)
+                        } else {
+                            Text("Change Password")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                    }
+                    .foregroundStyle(.white)
+                    .frame(width: 280, height: 50)
+                    .background(LinearGradient(
+                        colors: [Theme.Colors.primary, Color(hex: "0047BB")],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .buttonStyle(.plain)
+                .disabled(authVM.isLoading)
+                .padding(.top, 20)
+                .opacity(appeared ? 1 : 0)
+
+                Spacer().frame(height: 60)
+            }
+            .padding(.horizontal, 48)
+            .frame(maxWidth: 480)
+            .frame(maxWidth: .infinity)
+        }
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.48).delay(0.05)) { appeared = true }
         }
     }
 }

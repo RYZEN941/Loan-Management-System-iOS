@@ -80,6 +80,24 @@ struct AuthAPI {
         }
     }
 
+    func changePassword(currentPassword: String, newPassword: String) async throws -> Auth_V1_ChangePasswordResponse {
+        let request: Auth_V1_ChangePasswordRequest = {
+            var req = Auth_V1_ChangePasswordRequest()
+            req.currentPassword = currentPassword
+            req.newPassword = newPassword
+            return req
+        }()
+
+        do {
+            return try await CoreAPIClient.withClient { client in
+                let auth = Auth_V1_AuthService.Client(wrapping: client)
+                return try await auth.changePassword(request, metadata: await CoreAPIClient.authorizedMetadata())
+            }
+        } catch {
+            throw APIError.from(error)
+        }
+    }
+
     func logout(accessToken: String, refreshToken: String) async throws -> Auth_V1_LogoutResponse {
         let request: Auth_V1_LogoutRequest = {
             var req = Auth_V1_LogoutRequest()

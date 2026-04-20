@@ -54,6 +54,7 @@ struct AdminGlobalSettingsView: View {
 
                     ScrollView {
                         VStack(spacing: Theme.Spacing.lg) {
+                            requestBanner
                             switch selectedSection {
                             case .userManagement: userManagementSection
                             case .configurations: configurationsSection
@@ -84,6 +85,29 @@ struct AdminGlobalSettingsView: View {
                     }
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var requestBanner: some View {
+        if let error = adminVM.requestError {
+            Label(error, systemImage: "exclamationmark.triangle.fill")
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Theme.Colors.critical)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, Theme.Spacing.md)
+                .padding(.vertical, Theme.Spacing.sm)
+                .background(Theme.Colors.critical.opacity(0.10))
+                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
+        } else if let success = adminVM.requestSuccess {
+            Label(success, systemImage: "checkmark.circle.fill")
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Theme.Colors.success)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, Theme.Spacing.md)
+                .padding(.vertical, Theme.Spacing.sm)
+                .background(Theme.Colors.success.opacity(0.10))
+                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
         }
     }
 

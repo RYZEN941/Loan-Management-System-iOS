@@ -18,14 +18,18 @@ struct AdminUsersView: View {
             ZStack {
                 Theme.Colors.adaptiveBackground(colorScheme)
                     .ignoresSafeArea()
-                
-                GeometryReader { geometry in
-                    HStack(spacing: 1) {
-                        userListPanel
-                            .frame(width: geometry.size.width * Theme.Layout.splitLeftRatio)
-                        Divider()
-                        userDetailPanel
-                            .frame(width: geometry.size.width * Theme.Layout.splitRightRatio - 1)
+
+                VStack(spacing: 0) {
+                    requestBanner
+
+                    GeometryReader { geometry in
+                        HStack(spacing: 1) {
+                            userListPanel
+                                .frame(width: geometry.size.width * Theme.Layout.splitLeftRatio)
+                            Divider()
+                            userDetailPanel
+                                .frame(width: geometry.size.width * Theme.Layout.splitRightRatio - 1)
+                        }
                     }
                 }
             }
@@ -49,9 +53,27 @@ struct AdminUsersView: View {
             .sheet(isPresented: $showCreateUser) {
                 CreateUserSheet(adminVM: adminVM)
             }
-            .sheet(isPresented: $showCreateUser) {
-                CreateUserSheet(adminVM: adminVM)
-            }
+        }
+    }
+
+    @ViewBuilder
+    private var requestBanner: some View {
+        if let error = adminVM.requestError {
+            Label(error, systemImage: "exclamationmark.triangle.fill")
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Theme.Colors.critical)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, Theme.Spacing.md)
+                .padding(.vertical, Theme.Spacing.sm)
+                .background(Theme.Colors.critical.opacity(0.10))
+        } else if let success = adminVM.requestSuccess {
+            Label(success, systemImage: "checkmark.circle.fill")
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Theme.Colors.success)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, Theme.Spacing.md)
+                .padding(.vertical, Theme.Spacing.sm)
+                .background(Theme.Colors.success.opacity(0.10))
         }
     }
     

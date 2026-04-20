@@ -8,6 +8,7 @@ This folder contains frontend-focused integration docs for the gRPC backend.
 - `docs/auth.md` - all auth APIs with exact call order for signup, login, MFA, password change, refresh, and logout.
 - `docs/onboarding.md` - borrower onboarding API and when to call it in the app lifecycle.
 - `docs/admin.md` - admin-only APIs for creating employee accounts and bank branches.
+- `docs/dst.md` - DST account retrieval APIs for admin/manager scoped views.
 - `docs/kyc.md` - borrower KYC APIs (consent, Aadhaar OTP KYC, PAN verification, status/history).
 - `docs/media.md` - general media upload APIs using Cloudflare R2 with optional notes.
 - `docs/migrations.md` - how to run `golang-migrate` locally and in deployment.
@@ -18,6 +19,7 @@ For Dokploy users, `docs/migrations.md` includes the exact pre-deploy migration 
 
 - Auth service: `auth.v1.AuthService`
 - Admin service: `admin.v1.AdminService`
+- DST service: `dst.v1.DstService`
 - KYC service: `kyc.v1.KycService`
 - Media service: `media.v1.MediaService`
 - Onboarding service: `onboarding.v1.OnboardingService`

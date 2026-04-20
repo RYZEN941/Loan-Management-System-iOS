@@ -15,11 +15,13 @@ import (
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/repository/generated"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/admin"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/auth"
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/dst"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/kyc"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/media"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/onboarding"
 	adminv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/adminv1"
 	authv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/authv1"
+	dstv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/dstv1"
 	kycv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/kycv1"
 	mediav1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/mediav1"
 	onboardingv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/onboardingv1"
@@ -54,6 +56,7 @@ func Run() error {
 
 	adminService := admin.NewService(queries)
 	authService := auth.NewService(queries, redisClient, cfg)
+	dstService := dst.NewService(queries)
 	sandboxKYCClient := sandbox.NewKYCClient(cfg.SandboxBaseURL, cfg.SandboxAPIKey, cfg.SandboxSecret)
 	kycService := kyc.NewService(pgPool, queries, sandboxKYCClient)
 	r2Client, err := r2.NewClient(context.Background(), cfg.R2AccountID, cfg.R2AccessKeyID, cfg.R2SecretAccessKey, cfg.R2BucketName, cfg.R2PublicBaseURL)
@@ -62,7 +65,7 @@ func Run() error {
 	}
 	mediaService := media.NewService(queries, r2Client, time.Duration(cfg.R2UploadURLTTLSecs)*time.Second, cfg.MediaMaxUploadSize)
 	onboardingService := onboarding.NewService(queries)
-	application := app.New(adminService, authService, kycService, mediaService, onboardingService)
+	application := app.New(adminService, authService, dstService, kycService, mediaService, onboardingService)
 
 	publicMethods := map[string]struct{}{
 		// BOOTSTRAP ADMIN ONLY:
@@ -85,13 +88,13 @@ func Run() error {
 	rbacPolicy := grpcinterceptors.RBACPolicy{
 		"/admin.v1.AdminService/CreateEmployeeAccount":                {"admin"},
 		"/admin.v1.AdminService/CreateDstAccount":                     {"manager"},
-		"/admin.v1.AdminService/GetDstAccount":                        {"manager", "admin"},
-		"/admin.v1.AdminService/ListDstAccounts":                      {"manager", "admin"},
 		"/admin.v1.AdminService/CreateBankBranch":                     {"admin"},
 		"/admin.v1.AdminService/UpdateBankBranch":                     {"admin"},
 		"/admin.v1.AdminService/UpdateBranchDstCommission":            {"manager", "admin"},
 		"/admin.v1.AdminService/UpdateEmployeeAccount":                {"admin"},
 		"/admin.v1.AdminService/AssignEmployeeBranch":                 {"admin"},
+		"/dst.v1.DstService/GetDstAccount":                            {"manager", "admin"},
+		"/dst.v1.DstService/ListDstAccounts":                          {"manager", "admin"},
 		"/auth.v1.AuthService/SetupTOTP":                              {"borrower", "officer", "manager", "admin", "dst"},
 		"/auth.v1.AuthService/VerifyTOTPSetup":                        {"borrower", "officer", "manager", "admin", "dst"},
 		"/auth.v1.AuthService/GetMyProfile":                           {"borrower", "officer", "manager", "admin", "dst"},
@@ -129,6 +132,7 @@ func Run() error {
 
 	adminv1.RegisterAdminServiceServer(grpcServer, application.AdminHandler)
 	authv1.RegisterAuthServiceServer(grpcServer, application.AuthHandler)
+	dstv1.RegisterDstServiceServer(grpcServer, application.DstHandler)
 	kycv1.RegisterKycServiceServer(grpcServer, application.KycHandler)
 	mediav1.RegisterMediaServiceServer(grpcServer, application.MediaHandler)
 	onboardingv1.RegisterOnboardingServiceServer(grpcServer, application.OnboardingHandler)

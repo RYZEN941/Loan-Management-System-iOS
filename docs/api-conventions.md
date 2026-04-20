@@ -51,6 +51,8 @@ Protected methods (JWT required):
 - `AuthService/GetMyProfile`
 - `AuthService/ChangePassword`
 - `AuthService/Logout`
+- `DstService/GetDstAccount`
+- `DstService/ListDstAccounts`
 - `OnboardingService/CompleteBorrowerOnboarding`
 
 ## Token Model

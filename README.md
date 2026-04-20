@@ -11,6 +11,7 @@ lms-monorepo/
 ├── proto/
 │   ├── admin/v1/admin.proto           # Admin and employee management contract
 │   ├── auth/v1/auth.proto             # Auth and session contract
+│   ├── dst/v1/dst.proto               # DST account retrieval contract
 │   ├── kyc/v1/kyc.proto               # Borrower KYC contract
 │   ├── media/v1/media.proto           # Media upload/list contract
 │   ├── onboarding/v1/onboarding.proto # Borrower onboarding contract
@@ -28,7 +29,7 @@ Frontend API docs are available in `docs/README.md`.
 ## Architecture At A Glance
 
 - Transport: gRPC using protobuf definitions from `proto/`
-- Services: `AuthService`, `AdminService`, `OnboardingService`, `KycService`, `MediaService`
+- Services: `AuthService`, `AdminService`, `DstService`, `OnboardingService`, `KycService`, `MediaService`
 - Backend: Go service in `services/core-api`
 - Data layer:
   - Postgres for users, profiles, refresh tokens, webauthn credentials, KYC history, media metadata
@@ -120,6 +121,7 @@ Inputs:
 
 - `proto/auth/v1/auth.proto`
 - `proto/admin/v1/admin.proto`
+- `proto/dst/v1/dst.proto`
 - `proto/kyc/v1/kyc.proto`
 - `proto/media/v1/media.proto`
 - `proto/onboarding/v1/onboarding.proto`
@@ -157,6 +159,7 @@ If you are new to this repo, read in this order:
 1. Contracts first
    - `proto/auth/v1/auth.proto`
    - `proto/admin/v1/admin.proto`
+   - `proto/dst/v1/dst.proto`
    - `proto/onboarding/v1/onboarding.proto`
    - `proto/kyc/v1/kyc.proto`
    - `proto/media/v1/media.proto`
@@ -195,6 +198,8 @@ Typical call path:
   - Session: `RefreshToken` (returns precondition to use reopen flow), `Logout`
 - `admin.v1.AdminService`
   - Admin bootstrap, employee creation/update, branch management, DST creation/commission updates
+- `dst.v1.DstService`
+  - DST account retrieval for admin/manager views: `GetDstAccount`, `ListDstAccounts`
 - `onboarding.v1.OnboardingService`
   - Borrower onboarding: `CompleteBorrowerOnboarding`
 - `kyc.v1.KycService`

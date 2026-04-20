@@ -134,47 +134,7 @@ Response:
 - `user_id`
 - `profile_id`
 
-## 7) Get DST Account (Admin/Manager)
-
-RPC: `GetDstAccount`
-
-Request fields:
-
-- `user_id` (required DST user UUID)
-
-Response:
-
-- `account`
-  - `user_id`, `profile_id`, `name`, `email`, `phone_number`
-  - `is_active`, `is_requiring_password_change`
-  - `branch_id`, `branch_name`, `branch_region`, `branch_city`
-  - `created_at`
-
-Behavior:
-
-- admin can fetch any DST account.
-- manager can fetch only DST accounts from their own branch.
-
-## 8) List DST Accounts (Admin/Manager)
-
-RPC: `ListDstAccounts`
-
-Request fields:
-
-- `branch_id` (optional for admin, ignored/validated against manager scope)
-- `limit` (optional, default `20`, max `100`)
-- `offset` (optional, default `0`)
-
-Response:
-
-- `items[]` of DST account objects (same shape as `GetDstAccountResponse.account`)
-
-Behavior:
-
-- admin can list by any branch.
-- manager can list only their own branch.
-
-## 9) Update Branch DST Commission (Admin/Manager)
+## 7) Update Branch DST Commission (Admin/Manager)
 
 RPC: `UpdateBranchDstCommission`
 
@@ -191,3 +151,11 @@ Behavior:
 Response:
 
 - `success`
+
+## DST Retrieval APIs
+
+DST retrieval APIs were moved to `dst.v1.DstService`.
+
+- See `docs/dst.md` for:
+  - `GetDstAccount`
+  - `ListDstAccounts`

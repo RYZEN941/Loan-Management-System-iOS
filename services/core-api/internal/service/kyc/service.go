@@ -103,7 +103,7 @@ func (s *service) InitiateAadhaarKyc(ctx context.Context, req *kycv1.InitiateAad
 		return nil, err
 	}
 
-	aadhaarNumber := strings.TrimSpace(req.GetAadhaarNumber())
+	aadhaarNumber := strings.ReplaceAll(strings.TrimSpace(req.GetAadhaarNumber()), " ", "")
 	if aadhaarNumber == "" {
 		return nil, status.Error(codes.InvalidArgument, "aadhaar_number is required")
 	}

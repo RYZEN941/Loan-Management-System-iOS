@@ -119,6 +119,7 @@ func (s *service) InitiateAadhaarKyc(ctx context.Context, req *kycv1.InitiateAad
 		Reason:        reason,
 	})
 	if err != nil {
+		fmt.Printf("ERROR: sandbox GenerateAadhaarOTP failed: %v | raw response: %s\n", err, string(raw))
 		return nil, status.Error(codes.Unavailable, "failed to initiate aadhaar verification")
 	}
 
@@ -165,6 +166,7 @@ func (s *service) VerifyAadhaarKycOtp(ctx context.Context, req *kycv1.VerifyAadh
 		OTP:         otp,
 	})
 	if err != nil {
+		fmt.Printf("ERROR: sandbox VerifyAadhaarOTP failed: %v | raw response: %s\n", err, string(raw))
 		return nil, status.Error(codes.Unavailable, "failed to verify aadhaar otp")
 	}
 
@@ -272,6 +274,7 @@ func (s *service) VerifyPanKyc(ctx context.Context, req *kycv1.VerifyPanKycReque
 		Reason:       reason,
 	})
 	if err != nil {
+		fmt.Printf("ERROR: sandbox VerifyPAN failed: %v | raw response: %s\n", err, string(raw))
 		return nil, status.Error(codes.Unavailable, "failed to verify pan")
 	}
 

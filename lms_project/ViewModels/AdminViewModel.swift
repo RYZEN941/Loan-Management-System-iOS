@@ -28,7 +28,6 @@ class AdminViewModel: ObservableObject {
     // Audit Logs
     @Published var auditLogs: [AuditLog] = []
     
-    private let dataService = MockDataService.shared
     private let adminAPI = AdminAPI()
     
     var filteredUsers: [User] {
@@ -53,11 +52,27 @@ class AdminViewModel: ObservableObject {
         requestError = nil
         requestSuccess = nil
         isLoading = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-            guard let self = self else { return }
-            self.users = self.dataService.fetchUsers()
-            self.auditLogs = Self.mockAuditLogs()
-            self.isLoading = false
+        Task {
+            do {
+                let employees = try await adminAPI.listEmployeeAccounts(limit: 200, offset: 0)
+                let mappedUsers = employees.compactMap(Self.mapEmployeeAccount)
+                withAnimation {
+                    users = mappedUsers
+                    if let selectedID = selectedUser?.id {
+                        selectedUser = mappedUsers.first(where: { $0.id == selectedID })
+                    }
+                }
+                let branchNames = Set(mappedUsers.map(\.branch).filter { !$0.isEmpty })
+                if !branchNames.isEmpty {
+                    branches = Array(branchNames).sorted()
+                }
+                auditLogs = Self.mockAuditLogs()
+            } catch {
+                users = []
+                requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to load users"
+                auditLogs = Self.mockAuditLogs()
+            }
+            isLoading = false
         }
     }
     
@@ -111,6 +126,7 @@ class AdminViewModel: ObservableObject {
                     users.append(newUser)
                 }
                 requestSuccess = "User created successfully."
+                loadData()
             } catch {
                 requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to create user"
             }
@@ -200,6 +216,49 @@ class AdminViewModel: ObservableObject {
             AuditLog(id: "AUD-005", action: "Rule Modified", user: "Sunita Patel", detail: "Min CIBIL score changed from 650 to 600",
                      timestamp: Date().addingTimeInterval(-259200))
         ]
+    }
+
+    private static func mapEmployeeAccount(_ account: Admin_V1_EmployeeAccount) -> User? {
+        guard let role = mapStaffRole(account.role) else {
+            return nil
+        }
+
+        let joinedAt: Date = {
+            guard !account.createdAt.isEmpty else { return Date() }
+            let formatter = ISO8601DateFormatter()
+            return formatter.date(from: account.createdAt) ?? Date()
+        }()
+
+        let resolvedName = account.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = resolvedName.isEmpty
+            ? account.email.components(separatedBy: "@").first?.replacingOccurrences(of: ".", with: " ").capitalized ?? "Unknown"
+            : resolvedName
+
+        let branchName = account.branchName.isEmpty ? "Unassigned" : account.branchName
+
+        return User(
+            id: account.userID,
+            name: name,
+            email: account.email,
+            role: role,
+            branch: branchName,
+            phone: account.phoneNumber,
+            isActive: account.isActive,
+            joinedAt: joinedAt
+        )
+    }
+
+    private static func mapStaffRole(_ role: Admin_V1_StaffRole) -> UserRole? {
+        switch role {
+        case .admin:
+            return .admin
+        case .manager:
+            return .manager
+        case .officer:
+            return .loanOfficer
+        default:
+            return nil
+        }
     }
 }
 

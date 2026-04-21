@@ -44,6 +44,18 @@ internal enum Admin_V1_AdminService {
                 method: "CreateEmployeeAccount"
             )
         }
+        /// Namespace for "ListEmployeeAccounts" metadata.
+        internal enum ListEmployeeAccounts {
+            /// Request type for "ListEmployeeAccounts".
+            internal typealias Input = Admin_V1_ListEmployeeAccountsRequest
+            /// Response type for "ListEmployeeAccounts".
+            internal typealias Output = Admin_V1_ListEmployeeAccountsResponse
+            /// Descriptor for "ListEmployeeAccounts".
+            internal static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "admin.v1.AdminService"),
+                method: "ListEmployeeAccounts"
+            )
+        }
         /// Namespace for "CreateDstAccount" metadata.
         internal enum CreateDstAccount {
             /// Request type for "CreateDstAccount".
@@ -120,6 +132,7 @@ internal enum Admin_V1_AdminService {
         internal static let descriptors: [GRPCCore.MethodDescriptor] = [
             CreateAdminAccount.descriptor,
             CreateEmployeeAccount.descriptor,
+            ListEmployeeAccounts.descriptor,
             CreateDstAccount.descriptor,
             CreateBankBranch.descriptor,
             UpdateBankBranch.descriptor,
@@ -178,6 +191,20 @@ extension Admin_V1_AdminService {
             request: GRPCCore.StreamingServerRequest<Admin_V1_CreateEmployeeAccountRequest>,
             context: GRPCCore.ServerContext
         ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_CreateEmployeeAccountResponse>
+
+        /// Handle the "ListEmployeeAccounts" method.
+        ///
+        /// - Parameters:
+        ///   - request: A streaming request of `Admin_V1_ListEmployeeAccountsRequest` messages.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A streaming response of `Admin_V1_ListEmployeeAccountsResponse` messages.
+        func listEmployeeAccounts(
+            request: GRPCCore.StreamingServerRequest<Admin_V1_ListEmployeeAccountsRequest>,
+            context: GRPCCore.ServerContext
+        ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_ListEmployeeAccountsResponse>
 
         /// Handle the "CreateDstAccount" method.
         ///
@@ -300,6 +327,20 @@ extension Admin_V1_AdminService {
             context: GRPCCore.ServerContext
         ) async throws -> GRPCCore.ServerResponse<Admin_V1_CreateEmployeeAccountResponse>
 
+        /// Handle the "ListEmployeeAccounts" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Admin_V1_ListEmployeeAccountsRequest` message.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A response containing a single `Admin_V1_ListEmployeeAccountsResponse` message.
+        func listEmployeeAccounts(
+            request: GRPCCore.ServerRequest<Admin_V1_ListEmployeeAccountsRequest>,
+            context: GRPCCore.ServerContext
+        ) async throws -> GRPCCore.ServerResponse<Admin_V1_ListEmployeeAccountsResponse>
+
         /// Handle the "CreateDstAccount" method.
         ///
         /// - Parameters:
@@ -419,6 +460,20 @@ extension Admin_V1_AdminService {
             context: GRPCCore.ServerContext
         ) async throws -> Admin_V1_CreateEmployeeAccountResponse
 
+        /// Handle the "ListEmployeeAccounts" method.
+        ///
+        /// - Parameters:
+        ///   - request: A `Admin_V1_ListEmployeeAccountsRequest` message.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A `Admin_V1_ListEmployeeAccountsResponse` to respond with.
+        func listEmployeeAccounts(
+            request: Admin_V1_ListEmployeeAccountsRequest,
+            context: GRPCCore.ServerContext
+        ) async throws -> Admin_V1_ListEmployeeAccountsResponse
+
         /// Handle the "CreateDstAccount" method.
         ///
         /// - Parameters:
@@ -532,6 +587,17 @@ extension Admin_V1_AdminService.StreamingServiceProtocol {
             }
         )
         router.registerHandler(
+            forMethod: Admin_V1_AdminService.Method.ListEmployeeAccounts.descriptor,
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Admin_V1_ListEmployeeAccountsRequest>(),
+            serializer: GRPCProtobuf.ProtobufSerializer<Admin_V1_ListEmployeeAccountsResponse>(),
+            handler: { request, context in
+                try await self.listEmployeeAccounts(
+                    request: request,
+                    context: context
+                )
+            }
+        )
+        router.registerHandler(
             forMethod: Admin_V1_AdminService.Method.CreateDstAccount.descriptor,
             deserializer: GRPCProtobuf.ProtobufDeserializer<Admin_V1_CreateDstAccountRequest>(),
             serializer: GRPCProtobuf.ProtobufSerializer<Admin_V1_CreateDstAccountResponse>(),
@@ -619,6 +685,17 @@ extension Admin_V1_AdminService.ServiceProtocol {
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_CreateEmployeeAccountResponse> {
         let response = try await self.createEmployeeAccount(
+            request: GRPCCore.ServerRequest(stream: request),
+            context: context
+        )
+        return GRPCCore.StreamingServerResponse(single: response)
+    }
+
+    internal func listEmployeeAccounts(
+        request: GRPCCore.StreamingServerRequest<Admin_V1_ListEmployeeAccountsRequest>,
+        context: GRPCCore.ServerContext
+    ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_ListEmployeeAccountsResponse> {
+        let response = try await self.listEmployeeAccounts(
             request: GRPCCore.ServerRequest(stream: request),
             context: context
         )
@@ -714,6 +791,19 @@ extension Admin_V1_AdminService.SimpleServiceProtocol {
     ) async throws -> GRPCCore.ServerResponse<Admin_V1_CreateEmployeeAccountResponse> {
         return GRPCCore.ServerResponse<Admin_V1_CreateEmployeeAccountResponse>(
             message: try await self.createEmployeeAccount(
+                request: request.message,
+                context: context
+            ),
+            metadata: [:]
+        )
+    }
+
+    internal func listEmployeeAccounts(
+        request: GRPCCore.ServerRequest<Admin_V1_ListEmployeeAccountsRequest>,
+        context: GRPCCore.ServerContext
+    ) async throws -> GRPCCore.ServerResponse<Admin_V1_ListEmployeeAccountsResponse> {
+        return GRPCCore.ServerResponse<Admin_V1_ListEmployeeAccountsResponse>(
+            message: try await self.listEmployeeAccounts(
                 request: request.message,
                 context: context
             ),
@@ -845,6 +935,25 @@ extension Admin_V1_AdminService {
             deserializer: some GRPCCore.MessageDeserializer<Admin_V1_CreateEmployeeAccountResponse>,
             options: GRPCCore.CallOptions,
             onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_CreateEmployeeAccountResponse>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
+
+        /// Call the "ListEmployeeAccounts" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Admin_V1_ListEmployeeAccountsRequest` message.
+        ///   - serializer: A serializer for `Admin_V1_ListEmployeeAccountsRequest` messages.
+        ///   - deserializer: A deserializer for `Admin_V1_ListEmployeeAccountsResponse` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response, the result of which is
+        ///       returned to the caller. Returning from the closure will cancel the RPC if it
+        ///       hasn't already finished.
+        /// - Returns: The result of `handleResponse`.
+        func listEmployeeAccounts<Result>(
+            request: GRPCCore.ClientRequest<Admin_V1_ListEmployeeAccountsRequest>,
+            serializer: some GRPCCore.MessageSerializer<Admin_V1_ListEmployeeAccountsRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Admin_V1_ListEmployeeAccountsResponse>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_ListEmployeeAccountsResponse>) async throws -> Result
         ) async throws -> Result where Result: Sendable
 
         /// Call the "CreateDstAccount" method.
@@ -1031,6 +1140,36 @@ extension Admin_V1_AdminService {
             try await self.client.unary(
                 request: request,
                 descriptor: Admin_V1_AdminService.Method.CreateEmployeeAccount.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
+
+        /// Call the "ListEmployeeAccounts" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Admin_V1_ListEmployeeAccountsRequest` message.
+        ///   - serializer: A serializer for `Admin_V1_ListEmployeeAccountsRequest` messages.
+        ///   - deserializer: A deserializer for `Admin_V1_ListEmployeeAccountsResponse` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response, the result of which is
+        ///       returned to the caller. Returning from the closure will cancel the RPC if it
+        ///       hasn't already finished.
+        /// - Returns: The result of `handleResponse`.
+        internal func listEmployeeAccounts<Result>(
+            request: GRPCCore.ClientRequest<Admin_V1_ListEmployeeAccountsRequest>,
+            serializer: some GRPCCore.MessageSerializer<Admin_V1_ListEmployeeAccountsRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Admin_V1_ListEmployeeAccountsResponse>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_ListEmployeeAccountsResponse>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Admin_V1_AdminService.Method.ListEmployeeAccounts.descriptor,
                 serializer: serializer,
                 deserializer: deserializer,
                 options: options,
@@ -1273,6 +1412,31 @@ extension Admin_V1_AdminService.ClientProtocol {
         )
     }
 
+    /// Call the "ListEmployeeAccounts" method.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `Admin_V1_ListEmployeeAccountsRequest` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response, the result of which is
+    ///       returned to the caller. Returning from the closure will cancel the RPC if it
+    ///       hasn't already finished.
+    /// - Returns: The result of `handleResponse`.
+    internal func listEmployeeAccounts<Result>(
+        request: GRPCCore.ClientRequest<Admin_V1_ListEmployeeAccountsRequest>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_ListEmployeeAccountsResponse>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.listEmployeeAccounts(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<Admin_V1_ListEmployeeAccountsRequest>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Admin_V1_ListEmployeeAccountsResponse>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
     /// Call the "CreateDstAccount" method.
     ///
     /// - Parameters:
@@ -1479,6 +1643,35 @@ extension Admin_V1_AdminService.ClientProtocol {
             metadata: metadata
         )
         return try await self.createEmployeeAccount(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "ListEmployeeAccounts" method.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response, the result of which is
+    ///       returned to the caller. Returning from the closure will cancel the RPC if it
+    ///       hasn't already finished.
+    /// - Returns: The result of `handleResponse`.
+    internal func listEmployeeAccounts<Result>(
+        _ message: Admin_V1_ListEmployeeAccountsRequest,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_ListEmployeeAccountsResponse>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<Admin_V1_ListEmployeeAccountsRequest>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.listEmployeeAccounts(
             request: request,
             options: options,
             onResponse: handleResponse

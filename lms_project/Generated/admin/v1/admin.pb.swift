@@ -58,6 +58,48 @@ enum Admin_V1_EmployeeType: SwiftProtobuf.Enum, Swift.CaseIterable {
 
 }
 
+enum Admin_V1_StaffRole: SwiftProtobuf.Enum, Swift.CaseIterable {
+  typealias RawValue = Int
+  case unspecified // = 0
+  case admin // = 1
+  case manager // = 2
+  case officer // = 3
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .unspecified
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .unspecified
+    case 1: self = .admin
+    case 2: self = .manager
+    case 3: self = .officer
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .unspecified: return 0
+    case .admin: return 1
+    case .manager: return 2
+    case .officer: return 3
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static let allCases: [Admin_V1_StaffRole] = [
+    .unspecified,
+    .admin,
+    .manager,
+    .officer,
+  ]
+
+}
+
 struct Admin_V1_CreateAdminAccountRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -122,6 +164,66 @@ struct Admin_V1_CreateEmployeeAccountResponse: Sendable {
   var userID: String = String()
 
   var profileID: String = String()
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+struct Admin_V1_EmployeeAccount: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var userID: String = String()
+
+  var name: String = String()
+
+  var email: String = String()
+
+  var phoneNumber: String = String()
+
+  var role: Admin_V1_StaffRole = .unspecified
+
+  var isActive: Bool = false
+
+  var isRequiringPasswordChange: Bool = false
+
+  var branchID: String = String()
+
+  var branchName: String = String()
+
+  var branchRegion: String = String()
+
+  var branchCity: String = String()
+
+  var createdAt: String = String()
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+struct Admin_V1_ListEmployeeAccountsRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var limit: Int32 = 0
+
+  var offset: Int32 = 0
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+struct Admin_V1_ListEmployeeAccountsResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var employees: [Admin_V1_EmployeeAccount] = []
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -314,6 +416,10 @@ extension Admin_V1_EmployeeType: SwiftProtobuf._ProtoNameProviding {
   static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0EMPLOYEE_TYPE_UNSPECIFIED\0\u{1}EMPLOYEE_TYPE_MANAGER\0\u{1}EMPLOYEE_TYPE_OFFICER\0")
 }
 
+extension Admin_V1_StaffRole: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0STAFF_ROLE_UNSPECIFIED\0\u{1}STAFF_ROLE_ADMIN\0\u{1}STAFF_ROLE_MANAGER\0\u{1}STAFF_ROLE_OFFICER\0")
+}
+
 extension Admin_V1_CreateAdminAccountRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".CreateAdminAccountRequest"
   static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}email\0\u{3}phone_number\0\u{1}password\0")
@@ -484,6 +590,156 @@ extension Admin_V1_CreateEmployeeAccountResponse: SwiftProtobuf.Message, SwiftPr
     if lhs.success != rhs.success {return false}
     if lhs.userID != rhs.userID {return false}
     if lhs.profileID != rhs.profileID {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Admin_V1_EmployeeAccount: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".EmployeeAccount"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{1}name\0\u{1}email\0\u{3}phone_number\0\u{1}role\0\u{3}is_active\0\u{3}is_requiring_password_change\0\u{3}branch_id\0\u{3}branch_name\0\u{3}branch_region\0\u{3}branch_city\0\u{3}created_at\0")
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.userID) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.email) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.phoneNumber) }()
+      case 5: try { try decoder.decodeSingularEnumField(value: &self.role) }()
+      case 6: try { try decoder.decodeSingularBoolField(value: &self.isActive) }()
+      case 7: try { try decoder.decodeSingularBoolField(value: &self.isRequiringPasswordChange) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.branchID) }()
+      case 9: try { try decoder.decodeSingularStringField(value: &self.branchName) }()
+      case 10: try { try decoder.decodeSingularStringField(value: &self.branchRegion) }()
+      case 11: try { try decoder.decodeSingularStringField(value: &self.branchCity) }()
+      case 12: try { try decoder.decodeSingularStringField(value: &self.createdAt) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.userID.isEmpty {
+      try visitor.visitSingularStringField(value: self.userID, fieldNumber: 1)
+    }
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 2)
+    }
+    if !self.email.isEmpty {
+      try visitor.visitSingularStringField(value: self.email, fieldNumber: 3)
+    }
+    if !self.phoneNumber.isEmpty {
+      try visitor.visitSingularStringField(value: self.phoneNumber, fieldNumber: 4)
+    }
+    if self.role != .unspecified {
+      try visitor.visitSingularEnumField(value: self.role, fieldNumber: 5)
+    }
+    if self.isActive != false {
+      try visitor.visitSingularBoolField(value: self.isActive, fieldNumber: 6)
+    }
+    if self.isRequiringPasswordChange != false {
+      try visitor.visitSingularBoolField(value: self.isRequiringPasswordChange, fieldNumber: 7)
+    }
+    if !self.branchID.isEmpty {
+      try visitor.visitSingularStringField(value: self.branchID, fieldNumber: 8)
+    }
+    if !self.branchName.isEmpty {
+      try visitor.visitSingularStringField(value: self.branchName, fieldNumber: 9)
+    }
+    if !self.branchRegion.isEmpty {
+      try visitor.visitSingularStringField(value: self.branchRegion, fieldNumber: 10)
+    }
+    if !self.branchCity.isEmpty {
+      try visitor.visitSingularStringField(value: self.branchCity, fieldNumber: 11)
+    }
+    if !self.createdAt.isEmpty {
+      try visitor.visitSingularStringField(value: self.createdAt, fieldNumber: 12)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Admin_V1_EmployeeAccount, rhs: Admin_V1_EmployeeAccount) -> Bool {
+    if lhs.userID != rhs.userID {return false}
+    if lhs.name != rhs.name {return false}
+    if lhs.email != rhs.email {return false}
+    if lhs.phoneNumber != rhs.phoneNumber {return false}
+    if lhs.role != rhs.role {return false}
+    if lhs.isActive != rhs.isActive {return false}
+    if lhs.isRequiringPasswordChange != rhs.isRequiringPasswordChange {return false}
+    if lhs.branchID != rhs.branchID {return false}
+    if lhs.branchName != rhs.branchName {return false}
+    if lhs.branchRegion != rhs.branchRegion {return false}
+    if lhs.branchCity != rhs.branchCity {return false}
+    if lhs.createdAt != rhs.createdAt {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Admin_V1_ListEmployeeAccountsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".ListEmployeeAccountsRequest"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}limit\0\u{1}offset\0")
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularInt32Field(value: &self.limit) }()
+      case 2: try { try decoder.decodeSingularInt32Field(value: &self.offset) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.limit != 0 {
+      try visitor.visitSingularInt32Field(value: self.limit, fieldNumber: 1)
+    }
+    if self.offset != 0 {
+      try visitor.visitSingularInt32Field(value: self.offset, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Admin_V1_ListEmployeeAccountsRequest, rhs: Admin_V1_ListEmployeeAccountsRequest) -> Bool {
+    if lhs.limit != rhs.limit {return false}
+    if lhs.offset != rhs.offset {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Admin_V1_ListEmployeeAccountsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".ListEmployeeAccountsResponse"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}employees\0")
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.employees) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.employees.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.employees, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Admin_V1_ListEmployeeAccountsResponse, rhs: Admin_V1_ListEmployeeAccountsResponse) -> Bool {
+    if lhs.employees != rhs.employees {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

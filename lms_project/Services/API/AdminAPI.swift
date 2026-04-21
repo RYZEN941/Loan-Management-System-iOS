@@ -2,6 +2,25 @@ import Foundation
 
 @available(iOS 18.0, *)
 struct AdminAPI {
+    func listEmployeeAccounts(limit: Int32 = 200, offset: Int32 = 0) async throws -> [Admin_V1_EmployeeAccount] {
+        let request: Admin_V1_ListEmployeeAccountsRequest = {
+            var req = Admin_V1_ListEmployeeAccountsRequest()
+            req.limit = limit
+            req.offset = offset
+            return req
+        }()
+
+        do {
+            return try await CoreAPIClient.withClient { client in
+                let admin = Admin_V1_AdminService.Client(wrapping: client)
+                let response = try await admin.listEmployeeAccounts(request, metadata: await CoreAPIClient.authorizedMetadata())
+                return response.employees
+            }
+        } catch {
+            throw APIError.from(error)
+        }
+    }
+
     func createEmployeeAccount(
         name: String,
         email: String,

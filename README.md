@@ -194,10 +194,11 @@ Typical call path:
 - `auth.v1.AuthService`
   - Signup: `InitiateSignup`, `VerifySignupOTPs`
   - Login/MFA: `LoginPrimary`, `InitiateReopen`, `SelectLoginMFAFactor`, `VerifyLoginMFA`
-  - Account security: `SetupTOTP`, `VerifyTOTPSetup`, `GetMyProfile`, `ChangePassword`, WebAuthn begin/finish methods
+  - Account security: `SetupTOTP`, `VerifyTOTPSetup`, `GetMyProfile`, `ChangePassword`, forgot-password flow, WebAuthn begin/finish methods
   - Session: `RefreshToken` (returns precondition to use reopen flow), `Logout`
 - `admin.v1.AdminService`
   - Admin bootstrap, employee creation/update, branch management, DST creation/commission updates
+  - Employee accounts include immutable `employee_serial` + 6-digit `employee_code` for manager/officer
 - `dst.v1.DstService`
   - DST account retrieval for admin/manager views: `GetDstAccount`, `ListDstAccounts`
 - `onboarding.v1.OnboardingService`

@@ -42,6 +42,9 @@ Public methods (no JWT needed):
 - `AuthService/InitiateReopen`
 - `AuthService/SelectLoginMFAFactor`
 - `AuthService/VerifyLoginMFA`
+- `AuthService/InitiateForgotPassword`
+- `AuthService/VerifyForgotPasswordOTPs`
+- `AuthService/ResetForgotPassword`
 - `AuthService/RefreshToken`
 
 Protected methods (JWT required):

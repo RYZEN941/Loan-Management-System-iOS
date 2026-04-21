@@ -29,6 +29,9 @@ const (
 	AuthService_SelectLoginMFAFactor_FullMethodName       = "/auth.v1.AuthService/SelectLoginMFAFactor"
 	AuthService_VerifyLoginMFA_FullMethodName             = "/auth.v1.AuthService/VerifyLoginMFA"
 	AuthService_ChangePassword_FullMethodName             = "/auth.v1.AuthService/ChangePassword"
+	AuthService_InitiateForgotPassword_FullMethodName     = "/auth.v1.AuthService/InitiateForgotPassword"
+	AuthService_VerifyForgotPasswordOTPs_FullMethodName   = "/auth.v1.AuthService/VerifyForgotPasswordOTPs"
+	AuthService_ResetForgotPassword_FullMethodName        = "/auth.v1.AuthService/ResetForgotPassword"
 	AuthService_BeginWebAuthnRegistration_FullMethodName  = "/auth.v1.AuthService/BeginWebAuthnRegistration"
 	AuthService_FinishWebAuthnRegistration_FullMethodName = "/auth.v1.AuthService/FinishWebAuthnRegistration"
 	AuthService_BeginWebAuthnLogin_FullMethodName         = "/auth.v1.AuthService/BeginWebAuthnLogin"
@@ -52,6 +55,9 @@ type AuthServiceClient interface {
 	SelectLoginMFAFactor(ctx context.Context, in *SelectLoginMFAFactorRequest, opts ...grpc.CallOption) (*SelectLoginMFAFactorResponse, error)
 	VerifyLoginMFA(ctx context.Context, in *VerifyLoginMFARequest, opts ...grpc.CallOption) (*AuthTokens, error)
 	ChangePassword(ctx context.Context, in *ChangePasswordRequest, opts ...grpc.CallOption) (*ChangePasswordResponse, error)
+	InitiateForgotPassword(ctx context.Context, in *InitiateForgotPasswordRequest, opts ...grpc.CallOption) (*InitiateForgotPasswordResponse, error)
+	VerifyForgotPasswordOTPs(ctx context.Context, in *VerifyForgotPasswordOTPsRequest, opts ...grpc.CallOption) (*VerifyForgotPasswordOTPsResponse, error)
+	ResetForgotPassword(ctx context.Context, in *ResetForgotPasswordRequest, opts ...grpc.CallOption) (*ResetForgotPasswordResponse, error)
 	BeginWebAuthnRegistration(ctx context.Context, in *WebAuthnRegRequest, opts ...grpc.CallOption) (*WebAuthnRegResponse, error)
 	FinishWebAuthnRegistration(ctx context.Context, in *WebAuthnFinishRegRequest, opts ...grpc.CallOption) (*AuthTokens, error)
 	BeginWebAuthnLogin(ctx context.Context, in *WebAuthnLoginRequest, opts ...grpc.CallOption) (*WebAuthnLoginResponse, error)
@@ -169,6 +175,36 @@ func (c *authServiceClient) ChangePassword(ctx context.Context, in *ChangePasswo
 	return out, nil
 }
 
+func (c *authServiceClient) InitiateForgotPassword(ctx context.Context, in *InitiateForgotPasswordRequest, opts ...grpc.CallOption) (*InitiateForgotPasswordResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InitiateForgotPasswordResponse)
+	err := c.cc.Invoke(ctx, AuthService_InitiateForgotPassword_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) VerifyForgotPasswordOTPs(ctx context.Context, in *VerifyForgotPasswordOTPsRequest, opts ...grpc.CallOption) (*VerifyForgotPasswordOTPsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VerifyForgotPasswordOTPsResponse)
+	err := c.cc.Invoke(ctx, AuthService_VerifyForgotPasswordOTPs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) ResetForgotPassword(ctx context.Context, in *ResetForgotPasswordRequest, opts ...grpc.CallOption) (*ResetForgotPasswordResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResetForgotPasswordResponse)
+	err := c.cc.Invoke(ctx, AuthService_ResetForgotPassword_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authServiceClient) BeginWebAuthnRegistration(ctx context.Context, in *WebAuthnRegRequest, opts ...grpc.CallOption) (*WebAuthnRegResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(WebAuthnRegResponse)
@@ -253,6 +289,9 @@ type AuthServiceServer interface {
 	SelectLoginMFAFactor(context.Context, *SelectLoginMFAFactorRequest) (*SelectLoginMFAFactorResponse, error)
 	VerifyLoginMFA(context.Context, *VerifyLoginMFARequest) (*AuthTokens, error)
 	ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error)
+	InitiateForgotPassword(context.Context, *InitiateForgotPasswordRequest) (*InitiateForgotPasswordResponse, error)
+	VerifyForgotPasswordOTPs(context.Context, *VerifyForgotPasswordOTPsRequest) (*VerifyForgotPasswordOTPsResponse, error)
+	ResetForgotPassword(context.Context, *ResetForgotPasswordRequest) (*ResetForgotPasswordResponse, error)
 	BeginWebAuthnRegistration(context.Context, *WebAuthnRegRequest) (*WebAuthnRegResponse, error)
 	FinishWebAuthnRegistration(context.Context, *WebAuthnFinishRegRequest) (*AuthTokens, error)
 	BeginWebAuthnLogin(context.Context, *WebAuthnLoginRequest) (*WebAuthnLoginResponse, error)
@@ -299,6 +338,15 @@ func (UnimplementedAuthServiceServer) VerifyLoginMFA(context.Context, *VerifyLog
 }
 func (UnimplementedAuthServiceServer) ChangePassword(context.Context, *ChangePasswordRequest) (*ChangePasswordResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ChangePassword not implemented")
+}
+func (UnimplementedAuthServiceServer) InitiateForgotPassword(context.Context, *InitiateForgotPasswordRequest) (*InitiateForgotPasswordResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InitiateForgotPassword not implemented")
+}
+func (UnimplementedAuthServiceServer) VerifyForgotPasswordOTPs(context.Context, *VerifyForgotPasswordOTPsRequest) (*VerifyForgotPasswordOTPsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method VerifyForgotPasswordOTPs not implemented")
+}
+func (UnimplementedAuthServiceServer) ResetForgotPassword(context.Context, *ResetForgotPasswordRequest) (*ResetForgotPasswordResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResetForgotPassword not implemented")
 }
 func (UnimplementedAuthServiceServer) BeginWebAuthnRegistration(context.Context, *WebAuthnRegRequest) (*WebAuthnRegResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BeginWebAuthnRegistration not implemented")
@@ -522,6 +570,60 @@ func _AuthService_ChangePassword_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_InitiateForgotPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InitiateForgotPasswordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).InitiateForgotPassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_InitiateForgotPassword_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).InitiateForgotPassword(ctx, req.(*InitiateForgotPasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_VerifyForgotPasswordOTPs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VerifyForgotPasswordOTPsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).VerifyForgotPasswordOTPs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_VerifyForgotPasswordOTPs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).VerifyForgotPasswordOTPs(ctx, req.(*VerifyForgotPasswordOTPsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_ResetForgotPassword_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResetForgotPasswordRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).ResetForgotPassword(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_ResetForgotPassword_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).ResetForgotPassword(ctx, req.(*ResetForgotPasswordRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AuthService_BeginWebAuthnRegistration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(WebAuthnRegRequest)
 	if err := dec(in); err != nil {
@@ -694,6 +796,18 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ChangePassword",
 			Handler:    _AuthService_ChangePassword_Handler,
+		},
+		{
+			MethodName: "InitiateForgotPassword",
+			Handler:    _AuthService_InitiateForgotPassword_Handler,
+		},
+		{
+			MethodName: "VerifyForgotPasswordOTPs",
+			Handler:    _AuthService_VerifyForgotPasswordOTPs_Handler,
+		},
+		{
+			MethodName: "ResetForgotPassword",
+			Handler:    _AuthService_ResetForgotPassword_Handler,
 		},
 		{
 			MethodName: "BeginWebAuthnRegistration",

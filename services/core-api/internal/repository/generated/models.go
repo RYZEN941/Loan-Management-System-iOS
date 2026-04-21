@@ -337,11 +337,13 @@ type DstProfile struct {
 }
 
 type ManagerProfile struct {
-	ID        pgtype.UUID        `json:"id"`
-	UserID    pgtype.UUID        `json:"user_id"`
-	Name      string             `json:"name"`
-	BranchID  pgtype.UUID        `json:"branch_id"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ID             pgtype.UUID        `json:"id"`
+	UserID         pgtype.UUID        `json:"user_id"`
+	Name           string             `json:"name"`
+	EmployeeSerial int64              `json:"employee_serial"`
+	EmployeeCode   pgtype.Text        `json:"employee_code"`
+	BranchID       pgtype.UUID        `json:"branch_id"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
 type MediaFile struct {
@@ -363,11 +365,13 @@ type MediaFile struct {
 }
 
 type OfficerProfile struct {
-	ID        pgtype.UUID        `json:"id"`
-	UserID    pgtype.UUID        `json:"user_id"`
-	Name      string             `json:"name"`
-	BranchID  pgtype.UUID        `json:"branch_id"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ID             pgtype.UUID        `json:"id"`
+	UserID         pgtype.UUID        `json:"user_id"`
+	Name           string             `json:"name"`
+	EmployeeSerial int64              `json:"employee_serial"`
+	EmployeeCode   pgtype.Text        `json:"employee_code"`
+	BranchID       pgtype.UUID        `json:"branch_id"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
 type RefreshToken struct {

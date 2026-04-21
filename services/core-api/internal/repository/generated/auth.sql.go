@@ -200,6 +200,24 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 	return i, err
 }
 
+const resetUserPassword = `-- name: ResetUserPassword :exec
+UPDATE users
+SET password_hash = $2,
+    is_requiring_password_change = false
+WHERE id = $1
+  AND is_deleted = false
+`
+
+type ResetUserPasswordParams struct {
+	ID           pgtype.UUID `json:"id"`
+	PasswordHash string      `json:"password_hash"`
+}
+
+func (q *Queries) ResetUserPassword(ctx context.Context, arg ResetUserPasswordParams) error {
+	_, err := q.db.Exec(ctx, resetUserPassword, arg.ID, arg.PasswordHash)
+	return err
+}
+
 const revokeRefreshToken = `-- name: RevokeRefreshToken :exec
 UPDATE refresh_tokens 
 SET is_revoked = true 

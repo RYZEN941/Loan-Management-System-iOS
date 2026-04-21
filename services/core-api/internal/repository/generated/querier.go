@@ -51,6 +51,7 @@ type Querier interface {
 	ListMediaFilesByUser(ctx context.Context, arg ListMediaFilesByUserParams) ([]MediaFile, error)
 	MarkBorrowerAadhaarVerified(ctx context.Context, arg MarkBorrowerAadhaarVerifiedParams) error
 	MarkBorrowerPanVerified(ctx context.Context, arg MarkBorrowerPanVerifiedParams) error
+	ResetUserPassword(ctx context.Context, arg ResetUserPasswordParams) error
 	RevokeRefreshToken(ctx context.Context, hashedToken string) error
 	RevokeRefreshTokensForUserDevice(ctx context.Context, arg RevokeRefreshTokensForUserDeviceParams) error
 	SetTOTPSecret(ctx context.Context, arg SetTOTPSecretParams) error

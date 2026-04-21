@@ -141,6 +141,8 @@ func (s *service) CreateEmployeeAccount(ctx context.Context, req *adminv1.Create
 	}
 
 	profileID := ""
+	employeeSerial := int64(0)
+	employeeCode := ""
 	switch role {
 	case generated.UserRoleManager:
 		managerProfile, err := s.queries.CreateManagerProfile(ctx, generated.CreateManagerProfileParams{
@@ -152,6 +154,8 @@ func (s *service) CreateEmployeeAccount(ctx context.Context, req *adminv1.Create
 			return nil, status.Error(codes.Internal, "failed to create manager profile")
 		}
 		profileID = managerProfile.ID.String()
+		employeeSerial = managerProfile.EmployeeSerial
+		employeeCode = nullableTextToString(managerProfile.EmployeeCode)
 	case generated.UserRoleOfficer:
 		officerProfile, err := s.queries.CreateOfficerProfile(ctx, generated.CreateOfficerProfileParams{
 			UserID:   user.ID,
@@ -162,14 +166,18 @@ func (s *service) CreateEmployeeAccount(ctx context.Context, req *adminv1.Create
 			return nil, status.Error(codes.Internal, "failed to create officer profile")
 		}
 		profileID = officerProfile.ID.String()
+		employeeSerial = officerProfile.EmployeeSerial
+		employeeCode = nullableTextToString(officerProfile.EmployeeCode)
 	default:
 		return nil, status.Error(codes.InvalidArgument, "invalid employee role")
 	}
 
 	return &adminv1.CreateEmployeeAccountResponse{
-		Success:   true,
-		UserId:    user.ID.String(),
-		ProfileId: profileID,
+		Success:        true,
+		UserId:         user.ID.String(),
+		ProfileId:      profileID,
+		EmployeeSerial: employeeSerial,
+		EmployeeCode:   employeeCode,
 	}, nil
 }
 
@@ -317,6 +325,8 @@ func (s *service) ListEmployeeAccounts(ctx context.Context, req *adminv1.ListEmp
 			BranchRegion:              nullableTextToString(row.BranchRegion),
 			BranchCity:                nullableTextToString(row.BranchCity),
 			CreatedAt:                 createdAt,
+			EmployeeSerial:            row.EmployeeSerial,
+			EmployeeCode:              nullableTextToString(row.EmployeeCode),
 		})
 	}
 

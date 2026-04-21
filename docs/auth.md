@@ -18,6 +18,9 @@ This document explains `auth.v1.AuthService` APIs and the required call order.
 - `SelectLoginMFAFactor`
 - `VerifyLoginMFA`
 - `ChangePassword`
+- `InitiateForgotPassword`
+- `VerifyForgotPasswordOTPs`
+- `ResetForgotPassword`
 - `BeginWebAuthnRegistration`
 - `FinishWebAuthnRegistration`
 - `BeginWebAuthnLogin`
@@ -244,7 +247,61 @@ Frontend action:
 - Do not retry direct `RefreshToken` on `FailedPrecondition`.
 - Start `InitiateReopen`, complete MFA (`SelectLoginMFAFactor` -> `VerifyLoginMFA`), and then replace tokens atomically.
 
-## 6) Get Current User Profile (Authenticated)
+## 6) Forgot Password (Public)
+
+Use this flow when user cannot provide current password.
+
+1. `InitiateForgotPassword`
+2. `VerifyForgotPasswordOTPs`
+3. `ResetForgotPassword`
+
+### 6.1 InitiateForgotPassword
+
+Request:
+
+- `email_or_phone`
+
+Response:
+
+- `reset_session_id`
+- `challenge_sent`
+- `masked_email`
+- `masked_phone`
+
+Current OTP behavior (temporary):
+
+- both email OTP and phone OTP are fixed to `123456` in backend for development.
+
+### 6.2 VerifyForgotPasswordOTPs
+
+Request:
+
+- `reset_session_id`
+- `email_code`
+- `phone_code`
+
+Response:
+
+- `verified`
+
+### 6.3 ResetForgotPassword
+
+Request:
+
+- `reset_session_id`
+- `new_password`
+
+Response:
+
+- `success`
+
+Backend behavior:
+
+- reset session must be OTP-verified first.
+- `new_password` follows same strength rules as `ChangePassword`.
+- on success, `is_requiring_password_change=false` for the user.
+
+## 7) Get Current User Profile (Authenticated)
 
 RPC: `GetMyProfile`
 
@@ -283,7 +340,7 @@ Frontend action:
 - Call this immediately after successful login MFA to hydrate app state.
 - Use `role` + role-specific `profile` to route to borrower/admin/manager/officer/dst experiences.
 
-## 7) Logout (Authenticated)
+## 8) Logout (Authenticated)
 
 RPC: `Logout`
 
@@ -302,7 +359,7 @@ Frontend action:
 
 - Clear local auth state regardless of response retries.
 
-## 8) WebAuthn (Current Status)
+## 9) WebAuthn (Current Status)
 
 - Begin and finish registration/login methods are implemented.
 - Expected client payload format:

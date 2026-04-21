@@ -251,7 +251,7 @@ INSERT INTO manager_profiles (
     $1,
     $2,
     $3
-) RETURNING id, user_id, name, branch_id, created_at
+) RETURNING id, user_id, name, employee_serial, employee_code, branch_id, created_at
 `
 
 type CreateManagerProfileParams struct {
@@ -267,6 +267,8 @@ func (q *Queries) CreateManagerProfile(ctx context.Context, arg CreateManagerPro
 		&i.ID,
 		&i.UserID,
 		&i.Name,
+		&i.EmployeeSerial,
+		&i.EmployeeCode,
 		&i.BranchID,
 		&i.CreatedAt,
 	)
@@ -282,7 +284,7 @@ INSERT INTO officer_profiles (
     $1,
     $2,
     $3
-) RETURNING id, user_id, name, branch_id, created_at
+) RETURNING id, user_id, name, employee_serial, employee_code, branch_id, created_at
 `
 
 type CreateOfficerProfileParams struct {
@@ -298,6 +300,8 @@ func (q *Queries) CreateOfficerProfile(ctx context.Context, arg CreateOfficerPro
 		&i.ID,
 		&i.UserID,
 		&i.Name,
+		&i.EmployeeSerial,
+		&i.EmployeeCode,
 		&i.BranchID,
 		&i.CreatedAt,
 	)
@@ -409,7 +413,7 @@ func (q *Queries) GetDstProfileByUserID(ctx context.Context, userID pgtype.UUID)
 }
 
 const getManagerProfileByID = `-- name: GetManagerProfileByID :one
-SELECT id, user_id, name, branch_id, created_at FROM manager_profiles WHERE id = $1 LIMIT 1
+SELECT id, user_id, name, employee_serial, employee_code, branch_id, created_at FROM manager_profiles WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetManagerProfileByID(ctx context.Context, id pgtype.UUID) (ManagerProfile, error) {
@@ -419,6 +423,8 @@ func (q *Queries) GetManagerProfileByID(ctx context.Context, id pgtype.UUID) (Ma
 		&i.ID,
 		&i.UserID,
 		&i.Name,
+		&i.EmployeeSerial,
+		&i.EmployeeCode,
 		&i.BranchID,
 		&i.CreatedAt,
 	)
@@ -426,7 +432,7 @@ func (q *Queries) GetManagerProfileByID(ctx context.Context, id pgtype.UUID) (Ma
 }
 
 const getManagerProfileByUserID = `-- name: GetManagerProfileByUserID :one
-SELECT id, user_id, name, branch_id, created_at FROM manager_profiles WHERE user_id = $1 LIMIT 1
+SELECT id, user_id, name, employee_serial, employee_code, branch_id, created_at FROM manager_profiles WHERE user_id = $1 LIMIT 1
 `
 
 func (q *Queries) GetManagerProfileByUserID(ctx context.Context, userID pgtype.UUID) (ManagerProfile, error) {
@@ -436,6 +442,8 @@ func (q *Queries) GetManagerProfileByUserID(ctx context.Context, userID pgtype.U
 		&i.ID,
 		&i.UserID,
 		&i.Name,
+		&i.EmployeeSerial,
+		&i.EmployeeCode,
 		&i.BranchID,
 		&i.CreatedAt,
 	)
@@ -443,7 +451,7 @@ func (q *Queries) GetManagerProfileByUserID(ctx context.Context, userID pgtype.U
 }
 
 const getOfficerProfileByUserID = `-- name: GetOfficerProfileByUserID :one
-SELECT id, user_id, name, branch_id, created_at FROM officer_profiles WHERE user_id = $1 LIMIT 1
+SELECT id, user_id, name, employee_serial, employee_code, branch_id, created_at FROM officer_profiles WHERE user_id = $1 LIMIT 1
 `
 
 func (q *Queries) GetOfficerProfileByUserID(ctx context.Context, userID pgtype.UUID) (OfficerProfile, error) {
@@ -453,6 +461,8 @@ func (q *Queries) GetOfficerProfileByUserID(ctx context.Context, userID pgtype.U
 		&i.ID,
 		&i.UserID,
 		&i.Name,
+		&i.EmployeeSerial,
+		&i.EmployeeCode,
 		&i.BranchID,
 		&i.CreatedAt,
 	)
@@ -541,6 +551,8 @@ const listEmployeeAccounts = `-- name: ListEmployeeAccounts :many
 SELECT
     u.id AS user_id,
     COALESCE(mp.name, op.name, 'Administrator') AS name,
+    COALESCE(mp.employee_serial, op.employee_serial) AS employee_serial,
+    COALESCE(mp.employee_code, op.employee_code) AS employee_code,
     u.email,
     u.phone,
     u.role,
@@ -569,6 +581,8 @@ type ListEmployeeAccountsParams struct {
 type ListEmployeeAccountsRow struct {
 	UserID                    pgtype.UUID        `json:"user_id"`
 	Name                      string             `json:"name"`
+	EmployeeSerial            int64              `json:"employee_serial"`
+	EmployeeCode              pgtype.Text        `json:"employee_code"`
 	Email                     string             `json:"email"`
 	Phone                     string             `json:"phone"`
 	Role                      UserRole           `json:"role"`
@@ -593,6 +607,8 @@ func (q *Queries) ListEmployeeAccounts(ctx context.Context, arg ListEmployeeAcco
 		if err := rows.Scan(
 			&i.UserID,
 			&i.Name,
+			&i.EmployeeSerial,
+			&i.EmployeeCode,
 			&i.Email,
 			&i.Phone,
 			&i.Role,

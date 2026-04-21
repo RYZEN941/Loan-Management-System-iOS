@@ -3,6 +3,8 @@ CREATE TYPE borrower_gender AS ENUM ('MALE', 'FEMALE', 'OTHER');
 CREATE TYPE borrower_employment_type AS ENUM ('SALARIED', 'SELF_EMPLOYED', 'BUSINESS');
 CREATE TYPE consent_type_enum AS ENUM ('aadhar_kyc', 'pan_kyc');
 
+CREATE SEQUENCE employee_serial_seq START 1;
+
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -43,6 +45,8 @@ CREATE TABLE manager_profiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
+    employee_serial BIGINT NOT NULL UNIQUE DEFAULT nextval('employee_serial_seq'),
+    employee_code CHAR(6) GENERATED ALWAYS AS (LPAD(employee_serial::text, 6, '0')) STORED,
     branch_id UUID REFERENCES bank_branches(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -51,6 +55,8 @@ CREATE TABLE officer_profiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
+    employee_serial BIGINT NOT NULL UNIQUE DEFAULT nextval('employee_serial_seq'),
+    employee_code CHAR(6) GENERATED ALWAYS AS (LPAD(employee_serial::text, 6, '0')) STORED,
     branch_id UUID REFERENCES bank_branches(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

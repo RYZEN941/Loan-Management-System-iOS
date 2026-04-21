@@ -19,6 +19,9 @@ type AuthService interface {
 	SelectLoginMFAFactor(ctx context.Context, req *authv1.SelectLoginMFAFactorRequest) (*authv1.SelectLoginMFAFactorResponse, error)
 	VerifyLoginMFA(ctx context.Context, req *authv1.VerifyLoginMFARequest) (*authv1.AuthTokens, error)
 	ChangePassword(ctx context.Context, req *authv1.ChangePasswordRequest) (*authv1.ChangePasswordResponse, error)
+	InitiateForgotPassword(ctx context.Context, req *authv1.InitiateForgotPasswordRequest) (*authv1.InitiateForgotPasswordResponse, error)
+	VerifyForgotPasswordOTPs(ctx context.Context, req *authv1.VerifyForgotPasswordOTPsRequest) (*authv1.VerifyForgotPasswordOTPsResponse, error)
+	ResetForgotPassword(ctx context.Context, req *authv1.ResetForgotPasswordRequest) (*authv1.ResetForgotPasswordResponse, error)
 	BeginWebAuthnRegistration(ctx context.Context, req *authv1.WebAuthnRegRequest) (*authv1.WebAuthnRegResponse, error)
 	FinishWebAuthnRegistration(ctx context.Context, req *authv1.WebAuthnFinishRegRequest) (*authv1.AuthTokens, error)
 	BeginWebAuthnLogin(ctx context.Context, req *authv1.WebAuthnLoginRequest) (*authv1.WebAuthnLoginResponse, error)
@@ -79,6 +82,18 @@ func (h *AuthHandler) VerifyLoginMFA(ctx context.Context, req *authv1.VerifyLogi
 
 func (h *AuthHandler) ChangePassword(ctx context.Context, req *authv1.ChangePasswordRequest) (*authv1.ChangePasswordResponse, error) {
 	return h.authService.ChangePassword(ctx, req)
+}
+
+func (h *AuthHandler) InitiateForgotPassword(ctx context.Context, req *authv1.InitiateForgotPasswordRequest) (*authv1.InitiateForgotPasswordResponse, error) {
+	return h.authService.InitiateForgotPassword(ctx, req)
+}
+
+func (h *AuthHandler) VerifyForgotPasswordOTPs(ctx context.Context, req *authv1.VerifyForgotPasswordOTPsRequest) (*authv1.VerifyForgotPasswordOTPsResponse, error) {
+	return h.authService.VerifyForgotPasswordOTPs(ctx, req)
+}
+
+func (h *AuthHandler) ResetForgotPassword(ctx context.Context, req *authv1.ResetForgotPasswordRequest) (*authv1.ResetForgotPasswordResponse, error) {
+	return h.authService.ResetForgotPassword(ctx, req)
 }
 
 func (h *AuthHandler) GetMyProfile(ctx context.Context, req *authv1.GetMyProfileRequest) (*authv1.GetMyProfileResponse, error) {

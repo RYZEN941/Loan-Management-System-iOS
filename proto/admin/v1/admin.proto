@@ -47,6 +47,8 @@ message CreateEmployeeAccountResponse {
   bool success = 1;
   string user_id = 2;
   string profile_id = 3;
+  int64 employee_serial = 4;
+  string employee_code = 5;
 }
 
 enum StaffRole {
@@ -69,6 +71,8 @@ message EmployeeAccount {
   string branch_region = 10;
   string branch_city = 11;
   string created_at = 12;
+  int64 employee_serial = 13;
+  string employee_code = 14;
 }
 
 message ListEmployeeAccountsRequest {

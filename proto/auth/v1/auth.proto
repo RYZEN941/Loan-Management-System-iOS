@@ -18,6 +18,9 @@ service AuthService {
   rpc SelectLoginMFAFactor(SelectLoginMFAFactorRequest) returns (SelectLoginMFAFactorResponse);
   rpc VerifyLoginMFA(VerifyLoginMFARequest) returns (AuthTokens);
   rpc ChangePassword(ChangePasswordRequest) returns (ChangePasswordResponse);
+  rpc InitiateForgotPassword(InitiateForgotPasswordRequest) returns (InitiateForgotPasswordResponse);
+  rpc VerifyForgotPasswordOTPs(VerifyForgotPasswordOTPsRequest) returns (VerifyForgotPasswordOTPsResponse);
+  rpc ResetForgotPassword(ResetForgotPasswordRequest) returns (ResetForgotPasswordResponse);
 
   rpc BeginWebAuthnRegistration(WebAuthnRegRequest) returns (WebAuthnRegResponse);
   rpc FinishWebAuthnRegistration(WebAuthnFinishRegRequest) returns (AuthTokens);
@@ -130,6 +133,36 @@ message ChangePasswordResponse {
   bool success = 1;
 }
 
+message InitiateForgotPasswordRequest {
+  string email_or_phone = 1;
+}
+
+message InitiateForgotPasswordResponse {
+  string reset_session_id = 1;
+  bool challenge_sent = 2;
+  string masked_email = 3;
+  string masked_phone = 4;
+}
+
+message VerifyForgotPasswordOTPsRequest {
+  string reset_session_id = 1;
+  string email_code = 2;
+  string phone_code = 3;
+}
+
+message VerifyForgotPasswordOTPsResponse {
+  bool verified = 1;
+}
+
+message ResetForgotPasswordRequest {
+  string reset_session_id = 1;
+  string new_password = 2;
+}
+
+message ResetForgotPasswordResponse {
+  bool success = 1;
+}
+
 message WebAuthnRegRequest {
   string user_id = 1;
 }
@@ -179,6 +212,8 @@ message ManagerProfile {
   string name = 2;
   BranchProfile branch = 3;
   string created_at = 4;
+  int64 employee_serial = 5;
+  string employee_code = 6;
 }
 
 message OfficerProfile {
@@ -186,6 +221,8 @@ message OfficerProfile {
   string name = 2;
   BranchProfile branch = 3;
   string created_at = 4;
+  int64 employee_serial = 5;
+  string employee_code = 6;
 }
 
 message DstProfile {

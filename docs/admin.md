@@ -51,6 +51,17 @@ Behavior:
 - creates active+verified user.
 - sets `is_requiring_password_change=true`.
 - if `branch_id` provided, stores it in profile.
+- employee identity is system-generated and immutable:
+  - `employee_serial` (global serial for manager/officer)
+  - `employee_code` (6-digit, zero-padded string)
+
+Response fields:
+
+- `success`
+- `user_id`
+- `profile_id`
+- `employee_serial`
+- `employee_code`
 
 ## 2) Create Bank Branch (Admin)
 

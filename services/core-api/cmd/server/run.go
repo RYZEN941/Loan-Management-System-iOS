@@ -72,17 +72,20 @@ func Run() error {
 		// Keep this line uncommented only for initial setup environments where the first admin
 		// must be created without authentication. Comment this line in production to disable
 		// unauthenticated admin bootstrap account creation.
-		"/admin.v1.AdminService/CreateAdminAccount": {},
-		"/auth.v1.AuthService/Hello":                {},
-		"/auth.v1.AuthService/InitiateSignup":       {},
-		"/auth.v1.AuthService/VerifySignupOTPs":     {},
-		"/auth.v1.AuthService/LoginPrimary":         {},
-		"/auth.v1.AuthService/InitiateReopen":       {},
-		"/auth.v1.AuthService/SelectLoginMFAFactor": {},
-		"/auth.v1.AuthService/VerifyLoginMFA":       {},
-		"/auth.v1.AuthService/RefreshToken":         {},
-		"/grpc.health.v1.Health/Check":              {},
-		"/grpc.health.v1.Health/Watch":              {},
+		"/admin.v1.AdminService/CreateAdminAccount":     {},
+		"/auth.v1.AuthService/Hello":                    {},
+		"/auth.v1.AuthService/InitiateSignup":           {},
+		"/auth.v1.AuthService/VerifySignupOTPs":         {},
+		"/auth.v1.AuthService/LoginPrimary":             {},
+		"/auth.v1.AuthService/InitiateReopen":           {},
+		"/auth.v1.AuthService/SelectLoginMFAFactor":     {},
+		"/auth.v1.AuthService/VerifyLoginMFA":           {},
+		"/auth.v1.AuthService/InitiateForgotPassword":   {},
+		"/auth.v1.AuthService/VerifyForgotPasswordOTPs": {},
+		"/auth.v1.AuthService/ResetForgotPassword":      {},
+		"/auth.v1.AuthService/RefreshToken":             {},
+		"/grpc.health.v1.Health/Check":                  {},
+		"/grpc.health.v1.Health/Watch":                  {},
 	}
 
 	rbacPolicy := grpcinterceptors.RBACPolicy{

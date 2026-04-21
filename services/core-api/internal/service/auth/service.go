@@ -23,8 +23,8 @@ import (
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/pquerna/otp/totp"
 	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc/codes"
@@ -42,6 +42,9 @@ type Service interface {
 	SelectLoginMFAFactor(ctx context.Context, req *authv1.SelectLoginMFAFactorRequest) (*authv1.SelectLoginMFAFactorResponse, error)
 	VerifyLoginMFA(ctx context.Context, req *authv1.VerifyLoginMFARequest) (*authv1.AuthTokens, error)
 	ChangePassword(ctx context.Context, req *authv1.ChangePasswordRequest) (*authv1.ChangePasswordResponse, error)
+	InitiateForgotPassword(ctx context.Context, req *authv1.InitiateForgotPasswordRequest) (*authv1.InitiateForgotPasswordResponse, error)
+	VerifyForgotPasswordOTPs(ctx context.Context, req *authv1.VerifyForgotPasswordOTPsRequest) (*authv1.VerifyForgotPasswordOTPsResponse, error)
+	ResetForgotPassword(ctx context.Context, req *authv1.ResetForgotPasswordRequest) (*authv1.ResetForgotPasswordResponse, error)
 	GetMyProfile(ctx context.Context, req *authv1.GetMyProfileRequest) (*authv1.GetMyProfileResponse, error)
 	RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequest) (*authv1.AuthTokens, error)
 	Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv1.LogoutResponse, error)
@@ -91,6 +94,16 @@ type mfaOTPChallenge struct {
 	Attempts  int    `json:"attempts"`
 	MaxTry    int    `json:"max_try"`
 	ExpiresAt int64  `json:"expires_at"`
+}
+
+type forgotPasswordSession struct {
+	UserID      string `json:"user_id"`
+	Email       string `json:"email"`
+	Phone       string `json:"phone"`
+	EmailOTP    string `json:"email_otp"`
+	PhoneOTP    string `json:"phone_otp"`
+	IsVerified  bool   `json:"is_verified"`
+	AttemptLeft int    `json:"attempt_left"`
 }
 
 type webauthnLoginSession struct {
@@ -618,6 +631,144 @@ func (s *service) ChangePassword(ctx context.Context, req *authv1.ChangePassword
 	return &authv1.ChangePasswordResponse{Success: true}, nil
 }
 
+func (s *service) InitiateForgotPassword(ctx context.Context, req *authv1.InitiateForgotPasswordRequest) (*authv1.InitiateForgotPasswordResponse, error) {
+	identifier := strings.TrimSpace(req.GetEmailOrPhone())
+	if identifier == "" {
+		return nil, status.Error(codes.InvalidArgument, "email_or_phone is required")
+	}
+
+	user, err := s.queries.GetUserByEmailOrPhone(ctx, identifier)
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "user not found")
+	}
+
+	emailOTP := "123456"
+	phoneOTP := "123456"
+	sessionID := uuid.NewString()
+
+	session := forgotPasswordSession{
+		UserID:      user.ID.String(),
+		Email:       user.Email,
+		Phone:       user.Phone,
+		EmailOTP:    emailOTP,
+		PhoneOTP:    phoneOTP,
+		IsVerified:  false,
+		AttemptLeft: 5,
+	}
+
+	b, err := json.Marshal(session)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to encode reset session")
+	}
+
+	if err := s.redis.Set(ctx, fmt.Sprintf("forgot_pwd:%s", sessionID), b, 10*time.Minute).Err(); err != nil {
+		return nil, status.Error(codes.Internal, "failed to store reset session")
+	}
+
+	fmt.Printf("DEBUG: Forgot password email OTP for %s: %s\n", user.Email, emailOTP)
+	fmt.Printf("DEBUG: Forgot password phone OTP for %s: %s\n", user.Phone, phoneOTP)
+
+	return &authv1.InitiateForgotPasswordResponse{
+		ResetSessionId: sessionID,
+		ChallengeSent:  true,
+		MaskedEmail:    maskEmail(user.Email),
+		MaskedPhone:    maskPhone(user.Phone),
+	}, nil
+}
+
+func (s *service) VerifyForgotPasswordOTPs(ctx context.Context, req *authv1.VerifyForgotPasswordOTPsRequest) (*authv1.VerifyForgotPasswordOTPsResponse, error) {
+	sessionID := strings.TrimSpace(req.GetResetSessionId())
+	if sessionID == "" {
+		return nil, status.Error(codes.InvalidArgument, "reset_session_id is required")
+	}
+
+	key := fmt.Sprintf("forgot_pwd:%s", sessionID)
+	val, err := s.redis.Get(ctx, key).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return nil, status.Error(codes.NotFound, "reset session expired or invalid")
+		}
+		return nil, status.Error(codes.Internal, "failed to load reset session")
+	}
+
+	var session forgotPasswordSession
+	if err := json.Unmarshal([]byte(val), &session); err != nil {
+		return nil, status.Error(codes.Internal, "corrupt reset session")
+	}
+
+	if strings.TrimSpace(req.GetEmailCode()) != session.EmailOTP || strings.TrimSpace(req.GetPhoneCode()) != session.PhoneOTP {
+		session.AttemptLeft--
+		if session.AttemptLeft <= 0 {
+			_ = s.redis.Del(ctx, key).Err()
+			return nil, status.Error(codes.PermissionDenied, "too many invalid otp attempts")
+		}
+		updated, _ := json.Marshal(session)
+		_ = s.redis.Set(ctx, key, updated, 10*time.Minute).Err()
+		return nil, status.Error(codes.InvalidArgument, "invalid verification codes")
+	}
+
+	session.IsVerified = true
+	updated, err := json.Marshal(session)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to encode reset session")
+	}
+	if err := s.redis.Set(ctx, key, updated, 10*time.Minute).Err(); err != nil {
+		return nil, status.Error(codes.Internal, "failed to persist reset session")
+	}
+
+	return &authv1.VerifyForgotPasswordOTPsResponse{Verified: true}, nil
+}
+
+func (s *service) ResetForgotPassword(ctx context.Context, req *authv1.ResetForgotPasswordRequest) (*authv1.ResetForgotPasswordResponse, error) {
+	sessionID := strings.TrimSpace(req.GetResetSessionId())
+	newPassword := req.GetNewPassword()
+	if sessionID == "" || strings.TrimSpace(newPassword) == "" {
+		return nil, status.Error(codes.InvalidArgument, "reset_session_id and new_password are required")
+	}
+
+	if err := validatePasswordStrength(newPassword); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	key := fmt.Sprintf("forgot_pwd:%s", sessionID)
+	val, err := s.redis.Get(ctx, key).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return nil, status.Error(codes.NotFound, "reset session expired or invalid")
+		}
+		return nil, status.Error(codes.Internal, "failed to load reset session")
+	}
+
+	var session forgotPasswordSession
+	if err := json.Unmarshal([]byte(val), &session); err != nil {
+		return nil, status.Error(codes.Internal, "corrupt reset session")
+	}
+	if !session.IsVerified {
+		return nil, status.Error(codes.FailedPrecondition, "otps are not verified")
+	}
+
+	userID, err := uuid.Parse(session.UserID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "invalid reset user")
+	}
+
+	hash, err := argon2.HashPassword(newPassword, argon2.DefaultConfig())
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to hash password")
+	}
+
+	if err := s.queries.ResetUserPassword(ctx, generated.ResetUserPasswordParams{
+		ID:           pgtype.UUID{Bytes: userID, Valid: true},
+		PasswordHash: hash,
+	}); err != nil {
+		return nil, status.Error(codes.Internal, "failed to reset password")
+	}
+
+	_ = s.redis.Del(ctx, key).Err()
+
+	return &authv1.ResetForgotPasswordResponse{Success: true}, nil
+}
+
 func (s *service) GetMyProfile(ctx context.Context, req *authv1.GetMyProfileRequest) (*authv1.GetMyProfileResponse, error) {
 	_ = req
 
@@ -663,10 +814,12 @@ func (s *service) GetMyProfile(ctx context.Context, req *authv1.GetMyProfileRequ
 		}
 		if err == nil {
 			response.Profile = &authv1.GetMyProfileResponse_ManagerProfile{ManagerProfile: &authv1.ManagerProfile{
-				ProfileId: profile.ID.String(),
-				Name:      profile.Name,
-				Branch:    s.loadBranchProfile(ctx, profile.BranchID),
-				CreatedAt: timeToString(profile.CreatedAt),
+				ProfileId:      profile.ID.String(),
+				Name:           profile.Name,
+				Branch:         s.loadBranchProfile(ctx, profile.BranchID),
+				CreatedAt:      timeToString(profile.CreatedAt),
+				EmployeeSerial: profile.EmployeeSerial,
+				EmployeeCode:   nullableTextToString(profile.EmployeeCode),
 			}}
 		}
 	case generated.UserRoleOfficer:
@@ -676,10 +829,12 @@ func (s *service) GetMyProfile(ctx context.Context, req *authv1.GetMyProfileRequ
 		}
 		if err == nil {
 			response.Profile = &authv1.GetMyProfileResponse_OfficerProfile{OfficerProfile: &authv1.OfficerProfile{
-				ProfileId: profile.ID.String(),
-				Name:      profile.Name,
-				Branch:    s.loadBranchProfile(ctx, profile.BranchID),
-				CreatedAt: timeToString(profile.CreatedAt),
+				ProfileId:      profile.ID.String(),
+				Name:           profile.Name,
+				Branch:         s.loadBranchProfile(ctx, profile.BranchID),
+				CreatedAt:      timeToString(profile.CreatedAt),
+				EmployeeSerial: profile.EmployeeSerial,
+				EmployeeCode:   nullableTextToString(profile.EmployeeCode),
 			}}
 		}
 	case generated.UserRoleBorrower:
@@ -1318,6 +1473,13 @@ func numericToString(n pgtype.Numeric) string {
 		return ""
 	}
 	return strconv.FormatFloat(v.Float64, 'f', -1, 64)
+}
+
+func nullableTextToString(t pgtype.Text) string {
+	if !t.Valid {
+		return ""
+	}
+	return t.String
 }
 
 // validatePasswordStrength enforces minimum complexity for new user passwords.

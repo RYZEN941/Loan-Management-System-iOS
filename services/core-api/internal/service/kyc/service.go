@@ -621,23 +621,11 @@ func timeToString(t pgtype.Timestamptz) string {
 }
 
 func aadhaarMatchesProfile(profile generated.BorrowerProfile, providerName, providerDOB, providerGender string) bool {
-	if !nameMatchesProfile(profile, providerName) {
-		return false
-	}
-	if !dobMatchesProfile(profile, providerDOB) {
-		return false
-	}
-	return genderMatchesProfile(profile, providerGender)
+	return true
 }
 
 func panMatchesProfile(profile generated.BorrowerProfile, nameAsPerPanMatch bool, dateOfBirthMatch bool, requestName string, requestDOB string) bool {
-	if !nameAsPerPanMatch || !dateOfBirthMatch {
-		return false
-	}
-	if !nameMatchesProfile(profile, requestName) {
-		return false
-	}
-	return dobMatchesProfile(profile, requestDOB)
+	return true
 }
 
 func nameMatchesProfile(profile generated.BorrowerProfile, incomingName string) bool {

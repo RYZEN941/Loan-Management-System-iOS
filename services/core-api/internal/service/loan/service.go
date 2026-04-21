@@ -505,6 +505,42 @@ func (s *service) UpdateLoanApplicationStatus(ctx context.Context, req *loanv1.U
 	if err := validateApplicationStatusTransition(appRow.Status, statusValue, role); err != nil {
 		return nil, err
 	}
+
+	if statusValue == generated.LoanApplicationStatusSUBMITTED {
+		product, err := s.queries.GetLoanProductByID(ctx, appRow.LoanProductID)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed to fetch loan product")
+		}
+
+		if product.IsRequiringCollateral {
+			_, err := s.queries.GetApplicationCollateralByApplicationID(ctx, appRow.ID)
+			if err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					return nil, status.Error(codes.FailedPrecondition, "collateral is required for this product")
+				}
+				return nil, status.Error(codes.Internal, "failed to fetch collateral details")
+			}
+		}
+
+		if product.Category == generated.LoanProductCategoryVEHICLE {
+			_, err := s.queries.GetLoanVehicleByApplicationID(ctx, appRow.ID)
+			if err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					return nil, status.Error(codes.FailedPrecondition, "vehicle details are required for vehicle loans")
+				}
+				return nil, status.Error(codes.Internal, "failed to fetch vehicle details")
+			}
+		} else if product.Category == generated.LoanProductCategoryHOME {
+			_, err := s.queries.GetLoanRealEstateByApplicationID(ctx, appRow.ID)
+			if err != nil {
+				if errors.Is(err, pgx.ErrNoRows) {
+					return nil, status.Error(codes.FailedPrecondition, "real estate details are required for home loans")
+				}
+				return nil, status.Error(codes.Internal, "failed to fetch real estate details")
+			}
+		}
+	}
+
 	if err := s.queries.UpdateLoanApplicationStatus(ctx, generated.UpdateLoanApplicationStatusParams{
 		ID:     appRow.ID,
 		Status: statusValue,
@@ -657,6 +693,15 @@ func (s *service) UpsertApplicationCollateral(ctx context.Context, req *loanv1.U
 	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID); err != nil {
 		return nil, err
 	}
+
+	product, err := s.queries.GetLoanProductByID(ctx, appRow.LoanProductID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to fetch loan product")
+	}
+	if product.Category == generated.LoanProductCategoryVEHICLE {
+		return nil, status.Error(codes.FailedPrecondition, "manual collateral creation is not allowed for vehicle loans, use vehicle details instead")
+	}
+
 	estimated, err := parseNumeric(req.GetEstimatedValue(), "estimated_value")
 	if err != nil {
 		return nil, err
@@ -708,6 +753,18 @@ func (s *service) UpsertLoanVehicle(ctx context.Context, req *loanv1.UpsertLoanV
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to save vehicle details")
 	}
+
+	_, err = s.queries.UpsertApplicationCollateral(ctx, generated.UpsertApplicationCollateralParams{
+		ApplicationID:      appRow.ID,
+		AssetType:          generated.CollateralAssetTypeVEHICLE,
+		EstimatedValue:     price,
+		VerificationStatus: generated.CollateralVerificationStatusPENDING,
+		CollateralDetails:  []byte("{}"),
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to auto-create collateral for vehicle")
+	}
+
 	return &loanv1.UpsertLoanVehicleResponse{Vehicle: mapVehicle(row)}, nil
 }
 

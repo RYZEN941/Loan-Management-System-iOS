@@ -41,6 +41,7 @@ const (
 	LoanService_AddBureauScore_FullMethodName                        = "/loan.v1.LoanService/AddBureauScore"
 	LoanService_CreateLoan_FullMethodName                            = "/loan.v1.LoanService/CreateLoan"
 	LoanService_GetLoan_FullMethodName                               = "/loan.v1.LoanService/GetLoan"
+	LoanService_ListLoans_FullMethodName                             = "/loan.v1.LoanService/ListLoans"
 	LoanService_AddEmiScheduleItem_FullMethodName                    = "/loan.v1.LoanService/AddEmiScheduleItem"
 	LoanService_ListEmiSchedule_FullMethodName                       = "/loan.v1.LoanService/ListEmiSchedule"
 	LoanService_RecordPayment_FullMethodName                         = "/loan.v1.LoanService/RecordPayment"
@@ -73,6 +74,7 @@ type LoanServiceClient interface {
 	AddBureauScore(ctx context.Context, in *AddBureauScoreRequest, opts ...grpc.CallOption) (*AddBureauScoreResponse, error)
 	CreateLoan(ctx context.Context, in *CreateLoanRequest, opts ...grpc.CallOption) (*CreateLoanResponse, error)
 	GetLoan(ctx context.Context, in *GetLoanRequest, opts ...grpc.CallOption) (*GetLoanResponse, error)
+	ListLoans(ctx context.Context, in *ListLoansRequest, opts ...grpc.CallOption) (*ListLoansResponse, error)
 	AddEmiScheduleItem(ctx context.Context, in *AddEmiScheduleItemRequest, opts ...grpc.CallOption) (*AddEmiScheduleItemResponse, error)
 	ListEmiSchedule(ctx context.Context, in *ListEmiScheduleRequest, opts ...grpc.CallOption) (*ListEmiScheduleResponse, error)
 	RecordPayment(ctx context.Context, in *RecordPaymentRequest, opts ...grpc.CallOption) (*RecordPaymentResponse, error)
@@ -307,6 +309,16 @@ func (c *loanServiceClient) GetLoan(ctx context.Context, in *GetLoanRequest, opt
 	return out, nil
 }
 
+func (c *loanServiceClient) ListLoans(ctx context.Context, in *ListLoansRequest, opts ...grpc.CallOption) (*ListLoansResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListLoansResponse)
+	err := c.cc.Invoke(ctx, LoanService_ListLoans_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *loanServiceClient) AddEmiScheduleItem(ctx context.Context, in *AddEmiScheduleItemRequest, opts ...grpc.CallOption) (*AddEmiScheduleItemResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(AddEmiScheduleItemResponse)
@@ -373,6 +385,7 @@ type LoanServiceServer interface {
 	AddBureauScore(context.Context, *AddBureauScoreRequest) (*AddBureauScoreResponse, error)
 	CreateLoan(context.Context, *CreateLoanRequest) (*CreateLoanResponse, error)
 	GetLoan(context.Context, *GetLoanRequest) (*GetLoanResponse, error)
+	ListLoans(context.Context, *ListLoansRequest) (*ListLoansResponse, error)
 	AddEmiScheduleItem(context.Context, *AddEmiScheduleItemRequest) (*AddEmiScheduleItemResponse, error)
 	ListEmiSchedule(context.Context, *ListEmiScheduleRequest) (*ListEmiScheduleResponse, error)
 	RecordPayment(context.Context, *RecordPaymentRequest) (*RecordPaymentResponse, error)
@@ -452,6 +465,9 @@ func (UnimplementedLoanServiceServer) CreateLoan(context.Context, *CreateLoanReq
 }
 func (UnimplementedLoanServiceServer) GetLoan(context.Context, *GetLoanRequest) (*GetLoanResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetLoan not implemented")
+}
+func (UnimplementedLoanServiceServer) ListLoans(context.Context, *ListLoansRequest) (*ListLoansResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListLoans not implemented")
 }
 func (UnimplementedLoanServiceServer) AddEmiScheduleItem(context.Context, *AddEmiScheduleItemRequest) (*AddEmiScheduleItemResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddEmiScheduleItem not implemented")
@@ -882,6 +898,24 @@ func _LoanService_GetLoan_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _LoanService_ListLoans_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListLoansRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).ListLoans(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_ListLoans_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).ListLoans(ctx, req.(*ListLoansRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _LoanService_AddEmiScheduleItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(AddEmiScheduleItemRequest)
 	if err := dec(in); err != nil {
@@ -1048,6 +1082,10 @@ var LoanService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetLoan",
 			Handler:    _LoanService_GetLoan_Handler,
+		},
+		{
+			MethodName: "ListLoans",
+			Handler:    _LoanService_ListLoans_Handler,
 		},
 		{
 			MethodName: "AddEmiScheduleItem",

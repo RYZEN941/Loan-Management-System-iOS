@@ -613,6 +613,28 @@ func (q *Queries) GetApplicationCollateralByApplicationID(ctx context.Context, a
 	return i, err
 }
 
+const getEmiScheduleByID = `-- name: GetEmiScheduleByID :one
+SELECT id, loan_id, installment_number, due_date, emi_amount, status, created_at
+FROM emi_schedules
+WHERE id = $1
+LIMIT 1
+`
+
+func (q *Queries) GetEmiScheduleByID(ctx context.Context, id pgtype.UUID) (EmiSchedule, error) {
+	row := q.db.QueryRow(ctx, getEmiScheduleByID, id)
+	var i EmiSchedule
+	err := row.Scan(
+		&i.ID,
+		&i.LoanID,
+		&i.InstallmentNumber,
+		&i.DueDate,
+		&i.EmiAmount,
+		&i.Status,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getLatestActiveBureauScoreByBorrowerProfile = `-- name: GetLatestActiveBureauScoreByBorrowerProfile :one
 SELECT id, borrower_profile_id, application_id, provider, score, fetched_at, expires_at
 FROM bureau_scores
@@ -760,6 +782,53 @@ func (q *Queries) GetLoanByApplicationID(ctx context.Context, applicationID pgty
 	return i, err
 }
 
+const getLoanByApplicationIDWithApplication = `-- name: GetLoanByApplicationIDWithApplication :one
+SELECT
+    l.id, l.application_id, l.principal_amount, l.interest_rate, l.emi_amount, l.outstanding_balance, l.status, l.created_at, l.updated_at,
+    la.primary_borrower_profile_id,
+    la.branch_id,
+    la.assigned_officer_user_id
+FROM loans l
+JOIN loan_applications la ON la.id = l.application_id
+WHERE l.application_id = $1
+LIMIT 1
+`
+
+type GetLoanByApplicationIDWithApplicationRow struct {
+	ID                       pgtype.UUID        `json:"id"`
+	ApplicationID            pgtype.UUID        `json:"application_id"`
+	PrincipalAmount          pgtype.Numeric     `json:"principal_amount"`
+	InterestRate             pgtype.Numeric     `json:"interest_rate"`
+	EmiAmount                pgtype.Numeric     `json:"emi_amount"`
+	OutstandingBalance       pgtype.Numeric     `json:"outstanding_balance"`
+	Status                   LoanStatus         `json:"status"`
+	CreatedAt                pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
+	PrimaryBorrowerProfileID pgtype.UUID        `json:"primary_borrower_profile_id"`
+	BranchID                 pgtype.UUID        `json:"branch_id"`
+	AssignedOfficerUserID    pgtype.UUID        `json:"assigned_officer_user_id"`
+}
+
+func (q *Queries) GetLoanByApplicationIDWithApplication(ctx context.Context, applicationID pgtype.UUID) (GetLoanByApplicationIDWithApplicationRow, error) {
+	row := q.db.QueryRow(ctx, getLoanByApplicationIDWithApplication, applicationID)
+	var i GetLoanByApplicationIDWithApplicationRow
+	err := row.Scan(
+		&i.ID,
+		&i.ApplicationID,
+		&i.PrincipalAmount,
+		&i.InterestRate,
+		&i.EmiAmount,
+		&i.OutstandingBalance,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PrimaryBorrowerProfileID,
+		&i.BranchID,
+		&i.AssignedOfficerUserID,
+	)
+	return i, err
+}
+
 const getLoanByID = `-- name: GetLoanByID :one
 SELECT id, application_id, principal_amount, interest_rate, emi_amount, outstanding_balance, status, created_at, updated_at
 FROM loans
@@ -780,6 +849,53 @@ func (q *Queries) GetLoanByID(ctx context.Context, id pgtype.UUID) (Loan, error)
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getLoanByIDWithApplication = `-- name: GetLoanByIDWithApplication :one
+SELECT
+    l.id, l.application_id, l.principal_amount, l.interest_rate, l.emi_amount, l.outstanding_balance, l.status, l.created_at, l.updated_at,
+    la.primary_borrower_profile_id,
+    la.branch_id,
+    la.assigned_officer_user_id
+FROM loans l
+JOIN loan_applications la ON la.id = l.application_id
+WHERE l.id = $1
+LIMIT 1
+`
+
+type GetLoanByIDWithApplicationRow struct {
+	ID                       pgtype.UUID        `json:"id"`
+	ApplicationID            pgtype.UUID        `json:"application_id"`
+	PrincipalAmount          pgtype.Numeric     `json:"principal_amount"`
+	InterestRate             pgtype.Numeric     `json:"interest_rate"`
+	EmiAmount                pgtype.Numeric     `json:"emi_amount"`
+	OutstandingBalance       pgtype.Numeric     `json:"outstanding_balance"`
+	Status                   LoanStatus         `json:"status"`
+	CreatedAt                pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
+	PrimaryBorrowerProfileID pgtype.UUID        `json:"primary_borrower_profile_id"`
+	BranchID                 pgtype.UUID        `json:"branch_id"`
+	AssignedOfficerUserID    pgtype.UUID        `json:"assigned_officer_user_id"`
+}
+
+func (q *Queries) GetLoanByIDWithApplication(ctx context.Context, id pgtype.UUID) (GetLoanByIDWithApplicationRow, error) {
+	row := q.db.QueryRow(ctx, getLoanByIDWithApplication, id)
+	var i GetLoanByIDWithApplicationRow
+	err := row.Scan(
+		&i.ID,
+		&i.ApplicationID,
+		&i.PrincipalAmount,
+		&i.InterestRate,
+		&i.EmiAmount,
+		&i.OutstandingBalance,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PrimaryBorrowerProfileID,
+		&i.BranchID,
+		&i.AssignedOfficerUserID,
 	)
 	return i, err
 }
@@ -909,6 +1025,58 @@ func (q *Queries) GetProductEligibilityRuleByProductID(ctx context.Context, loan
 	return i, err
 }
 
+const getProductRequiredDocumentByIDAndProduct = `-- name: GetProductRequiredDocumentByIDAndProduct :one
+SELECT id, loan_product_id, requirement_type, is_mandatory, created_at
+FROM product_required_documents
+WHERE id = $1
+  AND loan_product_id = $2
+LIMIT 1
+`
+
+type GetProductRequiredDocumentByIDAndProductParams struct {
+	ID            pgtype.UUID `json:"id"`
+	LoanProductID pgtype.UUID `json:"loan_product_id"`
+}
+
+func (q *Queries) GetProductRequiredDocumentByIDAndProduct(ctx context.Context, arg GetProductRequiredDocumentByIDAndProductParams) (ProductRequiredDocument, error) {
+	row := q.db.QueryRow(ctx, getProductRequiredDocumentByIDAndProduct, arg.ID, arg.LoanProductID)
+	var i ProductRequiredDocument
+	err := row.Scan(
+		&i.ID,
+		&i.LoanProductID,
+		&i.RequirementType,
+		&i.IsMandatory,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const isApplicationBorrowerParticipant = `-- name: IsApplicationBorrowerParticipant :one
+SELECT EXISTS (
+    SELECT 1
+    FROM loan_applications la
+    WHERE la.id = $1
+      AND la.primary_borrower_profile_id = $2
+    UNION ALL
+    SELECT 1
+    FROM application_coapplicants ac
+    WHERE ac.application_id = $1
+      AND ac.borrower_profile_id = $2
+) AS is_participant
+`
+
+type IsApplicationBorrowerParticipantParams struct {
+	ID                       pgtype.UUID `json:"id"`
+	PrimaryBorrowerProfileID pgtype.UUID `json:"primary_borrower_profile_id"`
+}
+
+func (q *Queries) IsApplicationBorrowerParticipant(ctx context.Context, arg IsApplicationBorrowerParticipantParams) (bool, error) {
+	row := q.db.QueryRow(ctx, isApplicationBorrowerParticipant, arg.ID, arg.PrimaryBorrowerProfileID)
+	var is_participant bool
+	err := row.Scan(&is_participant)
+	return is_participant, err
+}
+
 const listAllLoanApplications = `-- name: ListAllLoanApplications :many
 SELECT
     la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at,
@@ -975,6 +1143,48 @@ func (q *Queries) ListAllLoanApplications(ctx context.Context, arg ListAllLoanAp
 			&i.UpdatedAt,
 			&i.ProductName,
 			&i.BranchName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAllLoans = `-- name: ListAllLoans :many
+SELECT id, application_id, principal_amount, interest_rate, emi_amount, outstanding_balance, status, created_at, updated_at
+FROM loans
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2
+`
+
+type ListAllLoansParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) ListAllLoans(ctx context.Context, arg ListAllLoansParams) ([]Loan, error) {
+	rows, err := q.db.Query(ctx, listAllLoans, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Loan
+	for rows.Next() {
+		var i Loan
+		if err := rows.Scan(
+			&i.ID,
+			&i.ApplicationID,
+			&i.PrincipalAmount,
+			&i.InterestRate,
+			&i.EmiAmount,
+			&i.OutstandingBalance,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -1320,6 +1530,141 @@ func (q *Queries) ListLoanProducts(ctx context.Context, arg ListLoanProductsPara
 			&i.IsRequiringCollateral,
 			&i.IsActive,
 			&i.IsDeleted,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listLoansForAssignedOfficer = `-- name: ListLoansForAssignedOfficer :many
+SELECT l.id, l.application_id, l.principal_amount, l.interest_rate, l.emi_amount, l.outstanding_balance, l.status, l.created_at, l.updated_at
+FROM loans l
+JOIN loan_applications la ON la.id = l.application_id
+WHERE la.assigned_officer_user_id = $1
+ORDER BY l.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListLoansForAssignedOfficerParams struct {
+	AssignedOfficerUserID pgtype.UUID `json:"assigned_officer_user_id"`
+	Limit                 int32       `json:"limit"`
+	Offset                int32       `json:"offset"`
+}
+
+func (q *Queries) ListLoansForAssignedOfficer(ctx context.Context, arg ListLoansForAssignedOfficerParams) ([]Loan, error) {
+	rows, err := q.db.Query(ctx, listLoansForAssignedOfficer, arg.AssignedOfficerUserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Loan
+	for rows.Next() {
+		var i Loan
+		if err := rows.Scan(
+			&i.ID,
+			&i.ApplicationID,
+			&i.PrincipalAmount,
+			&i.InterestRate,
+			&i.EmiAmount,
+			&i.OutstandingBalance,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listLoansForBorrowerProfile = `-- name: ListLoansForBorrowerProfile :many
+SELECT l.id, l.application_id, l.principal_amount, l.interest_rate, l.emi_amount, l.outstanding_balance, l.status, l.created_at, l.updated_at
+FROM loans l
+JOIN loan_applications la ON la.id = l.application_id
+WHERE la.primary_borrower_profile_id = $1
+ORDER BY l.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListLoansForBorrowerProfileParams struct {
+	PrimaryBorrowerProfileID pgtype.UUID `json:"primary_borrower_profile_id"`
+	Limit                    int32       `json:"limit"`
+	Offset                   int32       `json:"offset"`
+}
+
+func (q *Queries) ListLoansForBorrowerProfile(ctx context.Context, arg ListLoansForBorrowerProfileParams) ([]Loan, error) {
+	rows, err := q.db.Query(ctx, listLoansForBorrowerProfile, arg.PrimaryBorrowerProfileID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Loan
+	for rows.Next() {
+		var i Loan
+		if err := rows.Scan(
+			&i.ID,
+			&i.ApplicationID,
+			&i.PrincipalAmount,
+			&i.InterestRate,
+			&i.EmiAmount,
+			&i.OutstandingBalance,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listLoansForBranch = `-- name: ListLoansForBranch :many
+SELECT l.id, l.application_id, l.principal_amount, l.interest_rate, l.emi_amount, l.outstanding_balance, l.status, l.created_at, l.updated_at
+FROM loans l
+JOIN loan_applications la ON la.id = l.application_id
+WHERE la.branch_id = $1
+ORDER BY l.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListLoansForBranchParams struct {
+	BranchID pgtype.UUID `json:"branch_id"`
+	Limit    int32       `json:"limit"`
+	Offset   int32       `json:"offset"`
+}
+
+func (q *Queries) ListLoansForBranch(ctx context.Context, arg ListLoansForBranchParams) ([]Loan, error) {
+	rows, err := q.db.Query(ctx, listLoansForBranch, arg.BranchID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Loan
+	for rows.Next() {
+		var i Loan
+		if err := rows.Scan(
+			&i.ID,
+			&i.ApplicationID,
+			&i.PrincipalAmount,
+			&i.InterestRate,
+			&i.EmiAmount,
+			&i.OutstandingBalance,
+			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

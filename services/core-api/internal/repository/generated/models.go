@@ -529,13 +529,19 @@ func (ns NullFeeCalcMethod) Value() (driver.Value, error) {
 type LoanApplicationStatus string
 
 const (
-	LoanApplicationStatusDRAFT       LoanApplicationStatus = "DRAFT"
-	LoanApplicationStatusSUBMITTED   LoanApplicationStatus = "SUBMITTED"
-	LoanApplicationStatusUNDERREVIEW LoanApplicationStatus = "UNDER_REVIEW"
-	LoanApplicationStatusAPPROVED    LoanApplicationStatus = "APPROVED"
-	LoanApplicationStatusREJECTED    LoanApplicationStatus = "REJECTED"
-	LoanApplicationStatusDISBURSED   LoanApplicationStatus = "DISBURSED"
-	LoanApplicationStatusCANCELLED   LoanApplicationStatus = "CANCELLED"
+	LoanApplicationStatusDRAFT           LoanApplicationStatus = "DRAFT"
+	LoanApplicationStatusSUBMITTED       LoanApplicationStatus = "SUBMITTED"
+	LoanApplicationStatusUNDERREVIEW     LoanApplicationStatus = "UNDER_REVIEW"
+	LoanApplicationStatusAPPROVED        LoanApplicationStatus = "APPROVED"
+	LoanApplicationStatusREJECTED        LoanApplicationStatus = "REJECTED"
+	LoanApplicationStatusDISBURSED       LoanApplicationStatus = "DISBURSED"
+	LoanApplicationStatusCANCELLED       LoanApplicationStatus = "CANCELLED"
+	LoanApplicationStatusOFFICERREVIEW   LoanApplicationStatus = "OFFICER_REVIEW"
+	LoanApplicationStatusOFFICERAPPROVED LoanApplicationStatus = "OFFICER_APPROVED"
+	LoanApplicationStatusOFFICERREJECTED LoanApplicationStatus = "OFFICER_REJECTED"
+	LoanApplicationStatusMANAGERREVIEW   LoanApplicationStatus = "MANAGER_REVIEW"
+	LoanApplicationStatusMANAGERAPPROVED LoanApplicationStatus = "MANAGER_APPROVED"
+	LoanApplicationStatusMANAGERREJECTED LoanApplicationStatus = "MANAGER_REJECTED"
 )
 
 func (e *LoanApplicationStatus) Scan(src interface{}) error {

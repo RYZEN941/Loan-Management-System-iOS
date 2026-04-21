@@ -250,6 +250,19 @@ FROM application_coapplicants
 WHERE application_id = $1
 ORDER BY created_at ASC;
 
+-- name: IsApplicationBorrowerParticipant :one
+SELECT EXISTS (
+    SELECT 1
+    FROM loan_applications la
+    WHERE la.id = $1
+      AND la.primary_borrower_profile_id = $2
+    UNION ALL
+    SELECT 1
+    FROM application_coapplicants ac
+    WHERE ac.application_id = $1
+      AND ac.borrower_profile_id = $2
+) AS is_participant;
+
 -- name: UpsertApplicationCollateral :one
 INSERT INTO application_collateral (
     application_id,
@@ -377,6 +390,13 @@ INSERT INTO application_documents (
     $7
 ) RETURNING *;
 
+-- name: GetProductRequiredDocumentByIDAndProduct :one
+SELECT *
+FROM product_required_documents
+WHERE id = $1
+  AND loan_product_id = $2
+LIMIT 1;
+
 -- name: UpdateApplicationDocumentVerification :exec
 UPDATE application_documents
 SET verification_status = $2,
@@ -458,6 +478,58 @@ FROM loans
 WHERE application_id = $1
 LIMIT 1;
 
+-- name: GetLoanByIDWithApplication :one
+SELECT
+    l.*,
+    la.primary_borrower_profile_id,
+    la.branch_id,
+    la.assigned_officer_user_id
+FROM loans l
+JOIN loan_applications la ON la.id = l.application_id
+WHERE l.id = $1
+LIMIT 1;
+
+-- name: GetLoanByApplicationIDWithApplication :one
+SELECT
+    l.*,
+    la.primary_borrower_profile_id,
+    la.branch_id,
+    la.assigned_officer_user_id
+FROM loans l
+JOIN loan_applications la ON la.id = l.application_id
+WHERE l.application_id = $1
+LIMIT 1;
+
+-- name: ListLoansForBorrowerProfile :many
+SELECT l.*
+FROM loans l
+JOIN loan_applications la ON la.id = l.application_id
+WHERE la.primary_borrower_profile_id = $1
+ORDER BY l.created_at DESC
+LIMIT $2 OFFSET $3;
+
+-- name: ListLoansForAssignedOfficer :many
+SELECT l.*
+FROM loans l
+JOIN loan_applications la ON la.id = l.application_id
+WHERE la.assigned_officer_user_id = $1
+ORDER BY l.created_at DESC
+LIMIT $2 OFFSET $3;
+
+-- name: ListLoansForBranch :many
+SELECT l.*
+FROM loans l
+JOIN loan_applications la ON la.id = l.application_id
+WHERE la.branch_id = $1
+ORDER BY l.created_at DESC
+LIMIT $2 OFFSET $3;
+
+-- name: ListAllLoans :many
+SELECT *
+FROM loans
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2;
+
 -- name: UpdateLoanStatusAndOutstanding :exec
 UPDATE loans
 SET status = $2,
@@ -485,6 +557,12 @@ SELECT *
 FROM emi_schedules
 WHERE loan_id = $1
 ORDER BY installment_number ASC;
+
+-- name: GetEmiScheduleByID :one
+SELECT *
+FROM emi_schedules
+WHERE id = $1
+LIMIT 1;
 
 -- name: UpdateEmiScheduleStatus :exec
 UPDATE emi_schedules

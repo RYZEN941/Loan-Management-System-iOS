@@ -41,6 +41,7 @@ type Service interface {
 	AddBureauScore(ctx context.Context, req *loanv1.AddBureauScoreRequest) (*loanv1.AddBureauScoreResponse, error)
 	CreateLoan(ctx context.Context, req *loanv1.CreateLoanRequest) (*loanv1.CreateLoanResponse, error)
 	GetLoan(ctx context.Context, req *loanv1.GetLoanRequest) (*loanv1.GetLoanResponse, error)
+	ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) (*loanv1.ListLoansResponse, error)
 	AddEmiScheduleItem(ctx context.Context, req *loanv1.AddEmiScheduleItemRequest) (*loanv1.AddEmiScheduleItemResponse, error)
 	ListEmiSchedule(ctx context.Context, req *loanv1.ListEmiScheduleRequest) (*loanv1.ListEmiScheduleResponse, error)
 	RecordPayment(ctx context.Context, req *loanv1.RecordPaymentRequest) (*loanv1.RecordPaymentResponse, error)
@@ -471,6 +472,10 @@ func (s *service) ListLoanApplications(ctx context.Context, req *loanv1.ListLoan
 }
 
 func (s *service) UpdateLoanApplicationStatus(ctx context.Context, req *loanv1.UpdateLoanApplicationStatusRequest) (*loanv1.UpdateLoanApplicationStatusResponse, error) {
+	callerUserID, role, err := requireUserAndRole(ctx)
+	if err != nil {
+		return nil, err
+	}
 	applicationID, err := parseUUID(req.GetApplicationId(), "application_id")
 	if err != nil {
 		return nil, err
@@ -488,6 +493,14 @@ func (s *service) UpdateLoanApplicationStatus(ctx context.Context, req *loanv1.U
 	statusValue := toDBApplicationStatus(req.GetStatus())
 	if statusValue == generated.LoanApplicationStatus("") {
 		return nil, status.Error(codes.InvalidArgument, "status is required")
+	}
+	if role == "officer" {
+		if !appRow.AssignedOfficerUserID.Valid || appRow.AssignedOfficerUserID.Bytes != callerUserID {
+			return nil, status.Error(codes.PermissionDenied, "officer can only update assigned applications")
+		}
+	}
+	if err := validateApplicationStatusTransition(appRow.Status, statusValue, role); err != nil {
+		return nil, err
 	}
 	if err := s.queries.UpdateLoanApplicationStatus(ctx, generated.UpdateLoanApplicationStatusParams{
 		ID:     appRow.ID,
@@ -703,6 +716,16 @@ func (s *service) AddApplicationDocument(ctx context.Context, req *loanv1.AddApp
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "borrower_profile_id not found")
 	}
+	participantCheck, err := s.queries.IsApplicationBorrowerParticipant(ctx, generated.IsApplicationBorrowerParticipantParams{
+		ID:                       appRow.ID,
+		PrimaryBorrowerProfileID: uuidToPg(borrowerProfileID),
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to validate borrower participation")
+	}
+	if !participantCheck {
+		return nil, status.Error(codes.InvalidArgument, "borrower_profile_id is not part of this application")
+	}
 	if _, err := s.queries.GetActiveMediaFileByIDAndUser(ctx, generated.GetActiveMediaFileByIDAndUserParams{
 		ID:     uuidToPg(mediaFileID),
 		UserID: borrowerProfile.UserID,
@@ -717,6 +740,15 @@ func (s *service) AddApplicationDocument(ctx context.Context, req *loanv1.AddApp
 		docID, err := parseUUID(req.GetRequiredDocId(), "required_doc_id")
 		if err != nil {
 			return nil, err
+		}
+		if _, err := s.queries.GetProductRequiredDocumentByIDAndProduct(ctx, generated.GetProductRequiredDocumentByIDAndProductParams{
+			ID:            uuidToPg(docID),
+			LoanProductID: appRow.LoanProductID,
+		}); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, status.Error(codes.InvalidArgument, "required_doc_id is not valid for this application product")
+			}
+			return nil, status.Error(codes.Internal, "failed to validate required document")
 		}
 		requiredDocID = uuidToPg(docID)
 	}
@@ -781,9 +813,40 @@ func (s *service) AddBureauScore(ctx context.Context, req *loanv1.AddBureauScore
 }
 
 func (s *service) CreateLoan(ctx context.Context, req *loanv1.CreateLoanRequest) (*loanv1.CreateLoanResponse, error) {
+	callerUserID, role, err := requireUserAndRole(ctx)
+	if err != nil {
+		return nil, err
+	}
 	applicationID, err := parseUUID(req.GetApplicationId(), "application_id")
 	if err != nil {
 		return nil, err
+	}
+	appRow, err := s.queries.GetLoanApplicationByID(ctx, uuidToPg(applicationID))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, status.Error(codes.NotFound, "loan application not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to fetch application")
+	}
+	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID); err != nil {
+		return nil, err
+	}
+	if role == "manager" {
+		branchID, err := s.branchForUserRole(ctx, callerUserID, role)
+		if err != nil {
+			return nil, err
+		}
+		if branchID != uuid.UUID(appRow.BranchID.Bytes) {
+			return nil, status.Error(codes.PermissionDenied, "manager can only create loans for own branch")
+		}
+	}
+	if appRow.Status != generated.LoanApplicationStatusMANAGERAPPROVED {
+		return nil, status.Error(codes.FailedPrecondition, "loan can be created only after manager approval")
+	}
+	if _, err := s.queries.GetLoanByApplicationID(ctx, appRow.ID); err == nil {
+		return nil, status.Error(codes.FailedPrecondition, "loan already exists for this application")
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		return nil, status.Error(codes.Internal, "failed to validate existing loan")
 	}
 	principal, err := parseNumeric(req.GetPrincipalAmount(), "principal_amount")
 	if err != nil {
@@ -812,26 +875,74 @@ func (s *service) CreateLoan(ctx context.Context, req *loanv1.CreateLoanRequest)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to create loan")
 	}
+	if err := s.queries.UpdateLoanApplicationStatus(ctx, generated.UpdateLoanApplicationStatusParams{
+		ID:     appRow.ID,
+		Status: generated.LoanApplicationStatusDISBURSED,
+	}); err != nil {
+		return nil, status.Error(codes.Internal, "failed to mark application disbursed")
+	}
 	return &loanv1.CreateLoanResponse{Loan: mapLoan(loanRow)}, nil
 }
 
 func (s *service) GetLoan(ctx context.Context, req *loanv1.GetLoanRequest) (*loanv1.GetLoanResponse, error) {
 	var (
-		row generated.Loan
-		err error
+		loanRow generated.Loan
+		meta   generated.GetLoanByIDWithApplicationRow
+		err    error
 	)
 	if strings.TrimSpace(req.GetLoanId()) != "" {
 		loanID, parseErr := parseUUID(req.GetLoanId(), "loan_id")
 		if parseErr != nil {
 			return nil, parseErr
 		}
-		row, err = s.queries.GetLoanByID(ctx, uuidToPg(loanID))
+		meta, err = s.queries.GetLoanByIDWithApplication(ctx, uuidToPg(loanID))
+		if err == nil {
+			loanRow = generated.Loan{
+				ID:                 meta.ID,
+				ApplicationID:      meta.ApplicationID,
+				PrincipalAmount:    meta.PrincipalAmount,
+				InterestRate:       meta.InterestRate,
+				EmiAmount:          meta.EmiAmount,
+				OutstandingBalance: meta.OutstandingBalance,
+				Status:             meta.Status,
+				CreatedAt:          meta.CreatedAt,
+				UpdatedAt:          meta.UpdatedAt,
+			}
+		}
 	} else if strings.TrimSpace(req.GetApplicationId()) != "" {
 		applicationID, parseErr := parseUUID(req.GetApplicationId(), "application_id")
 		if parseErr != nil {
 			return nil, parseErr
 		}
-		row, err = s.queries.GetLoanByApplicationID(ctx, uuidToPg(applicationID))
+		rowByApp, qErr := s.queries.GetLoanByApplicationIDWithApplication(ctx, uuidToPg(applicationID))
+		err = qErr
+		if err == nil {
+			meta = generated.GetLoanByIDWithApplicationRow{
+				ID:                       rowByApp.ID,
+				ApplicationID:            rowByApp.ApplicationID,
+				PrincipalAmount:          rowByApp.PrincipalAmount,
+				InterestRate:             rowByApp.InterestRate,
+				EmiAmount:                rowByApp.EmiAmount,
+				OutstandingBalance:       rowByApp.OutstandingBalance,
+				Status:                   rowByApp.Status,
+				CreatedAt:                rowByApp.CreatedAt,
+				UpdatedAt:                rowByApp.UpdatedAt,
+				PrimaryBorrowerProfileID: rowByApp.PrimaryBorrowerProfileID,
+				BranchID:                 rowByApp.BranchID,
+				AssignedOfficerUserID:    rowByApp.AssignedOfficerUserID,
+			}
+			loanRow = generated.Loan{
+				ID:                 rowByApp.ID,
+				ApplicationID:      rowByApp.ApplicationID,
+				PrincipalAmount:    rowByApp.PrincipalAmount,
+				InterestRate:       rowByApp.InterestRate,
+				EmiAmount:          rowByApp.EmiAmount,
+				OutstandingBalance: rowByApp.OutstandingBalance,
+				Status:             rowByApp.Status,
+				CreatedAt:          rowByApp.CreatedAt,
+				UpdatedAt:          rowByApp.UpdatedAt,
+			}
+		}
 	} else {
 		return nil, status.Error(codes.InvalidArgument, "loan_id or application_id is required")
 	}
@@ -841,12 +952,83 @@ func (s *service) GetLoan(ctx context.Context, req *loanv1.GetLoanRequest) (*loa
 		}
 		return nil, status.Error(codes.Internal, "failed to fetch loan")
 	}
-	return &loanv1.GetLoanResponse{Loan: mapLoan(row)}, nil
+	if err := s.ensureCanAccessLoan(ctx, meta.PrimaryBorrowerProfileID, meta.BranchID, meta.AssignedOfficerUserID); err != nil {
+		return nil, err
+	}
+	return &loanv1.GetLoanResponse{Loan: mapLoan(loanRow)}, nil
+}
+
+func (s *service) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) (*loanv1.ListLoansResponse, error) {
+	callerUserID, role, err := requireUserAndRole(ctx)
+	if err != nil {
+		return nil, err
+	}
+	limit, offset := normalizePagination(req.GetLimit(), req.GetOffset())
+	var rows []generated.Loan
+	switch role {
+	case "borrower":
+		profile, err := s.queries.GetBorrowerProfileByUserID(ctx, uuidToPg(callerUserID))
+		if err != nil {
+			return nil, status.Error(codes.FailedPrecondition, "borrower profile not found")
+		}
+		rows, err = s.queries.ListLoansForBorrowerProfile(ctx, generated.ListLoansForBorrowerProfileParams{
+			PrimaryBorrowerProfileID: profile.ID,
+			Limit:                    limit,
+			Offset:                   offset,
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed to list loans")
+		}
+	case "officer":
+		rows, err = s.queries.ListLoansForAssignedOfficer(ctx, generated.ListLoansForAssignedOfficerParams{
+			AssignedOfficerUserID: uuidToPg(callerUserID),
+			Limit:                 limit,
+			Offset:                offset,
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed to list loans")
+		}
+	case "manager", "dst":
+		branchID, err := s.branchForUserRole(ctx, callerUserID, role)
+		if err != nil {
+			return nil, err
+		}
+		rows, err = s.queries.ListLoansForBranch(ctx, generated.ListLoansForBranchParams{
+			BranchID: uuidToPg(branchID),
+			Limit:    limit,
+			Offset:   offset,
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed to list loans")
+		}
+	case "admin":
+		rows, err = s.queries.ListAllLoans(ctx, generated.ListAllLoansParams{Limit: limit, Offset: offset})
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed to list loans")
+		}
+	default:
+		return nil, status.Error(codes.PermissionDenied, "role cannot list loans")
+	}
+	items := make([]*loanv1.Loan, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, mapLoan(row))
+	}
+	return &loanv1.ListLoansResponse{Items: items}, nil
 }
 
 func (s *service) AddEmiScheduleItem(ctx context.Context, req *loanv1.AddEmiScheduleItemRequest) (*loanv1.AddEmiScheduleItemResponse, error) {
 	loanID, err := parseUUID(req.GetLoanId(), "loan_id")
 	if err != nil {
+		return nil, err
+	}
+	loanMeta, err := s.queries.GetLoanByIDWithApplication(ctx, uuidToPg(loanID))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, status.Error(codes.NotFound, "loan not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to fetch loan")
+	}
+	if err := s.ensureCanAccessLoan(ctx, loanMeta.PrimaryBorrowerProfileID, loanMeta.BranchID, loanMeta.AssignedOfficerUserID); err != nil {
 		return nil, err
 	}
 	dueDate, err := parseDate(req.GetDueDate(), "due_date")
@@ -875,6 +1057,16 @@ func (s *service) ListEmiSchedule(ctx context.Context, req *loanv1.ListEmiSchedu
 	if err != nil {
 		return nil, err
 	}
+	loanMeta, err := s.queries.GetLoanByIDWithApplication(ctx, uuidToPg(loanID))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, status.Error(codes.NotFound, "loan not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to fetch loan")
+	}
+	if err := s.ensureCanAccessLoan(ctx, loanMeta.PrimaryBorrowerProfileID, loanMeta.BranchID, loanMeta.AssignedOfficerUserID); err != nil {
+		return nil, err
+	}
 	rows, err := s.queries.ListEmiScheduleByLoanID(ctx, uuidToPg(loanID))
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to list emi schedule")
@@ -891,6 +1083,16 @@ func (s *service) RecordPayment(ctx context.Context, req *loanv1.RecordPaymentRe
 	if err != nil {
 		return nil, err
 	}
+	loanMeta, err := s.queries.GetLoanByIDWithApplication(ctx, uuidToPg(loanID))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, status.Error(codes.NotFound, "loan not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to fetch loan")
+	}
+	if err := s.ensureCanAccessLoan(ctx, loanMeta.PrimaryBorrowerProfileID, loanMeta.BranchID, loanMeta.AssignedOfficerUserID); err != nil {
+		return nil, err
+	}
 	amount, err := parseNumeric(req.GetAmount(), "amount")
 	if err != nil {
 		return nil, err
@@ -900,6 +1102,16 @@ func (s *service) RecordPayment(ctx context.Context, req *loanv1.RecordPaymentRe
 		id, err := parseUUID(req.GetEmiScheduleId(), "emi_schedule_id")
 		if err != nil {
 			return nil, err
+		}
+		emiRow, err := s.queries.GetEmiScheduleByID(ctx, uuidToPg(id))
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, status.Error(codes.InvalidArgument, "emi_schedule_id not found")
+			}
+			return nil, status.Error(codes.Internal, "failed to validate emi schedule")
+		}
+		if emiRow.LoanID != uuidToPg(loanID) {
+			return nil, status.Error(codes.InvalidArgument, "emi_schedule_id does not belong to loan_id")
 		}
 		emiScheduleID = uuidToPg(id)
 	}
@@ -923,6 +1135,16 @@ func (s *service) RecordPayment(ctx context.Context, req *loanv1.RecordPaymentRe
 func (s *service) ListPayments(ctx context.Context, req *loanv1.ListPaymentsRequest) (*loanv1.ListPaymentsResponse, error) {
 	loanID, err := parseUUID(req.GetLoanId(), "loan_id")
 	if err != nil {
+		return nil, err
+	}
+	loanMeta, err := s.queries.GetLoanByIDWithApplication(ctx, uuidToPg(loanID))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, status.Error(codes.NotFound, "loan not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to fetch loan")
+	}
+	if err := s.ensureCanAccessLoan(ctx, loanMeta.PrimaryBorrowerProfileID, loanMeta.BranchID, loanMeta.AssignedOfficerUserID); err != nil {
 		return nil, err
 	}
 	rows, err := s.queries.ListPaymentsByLoanID(ctx, uuidToPg(loanID))
@@ -961,6 +1183,83 @@ func (s *service) ensureCanAccessApplication(ctx context.Context, borrowerProfil
 		return nil
 	default:
 		return status.Error(codes.PermissionDenied, "access denied")
+	}
+}
+
+func (s *service) ensureCanAccessLoan(ctx context.Context, borrowerProfileID pgtype.UUID, branchID pgtype.UUID, assignedOfficerUserID pgtype.UUID) error {
+	userID, role, err := requireUserAndRole(ctx)
+	if err != nil {
+		return err
+	}
+	switch role {
+	case "admin":
+		return nil
+	case "borrower":
+		profile, err := s.queries.GetBorrowerProfileByUserID(ctx, uuidToPg(userID))
+		if err != nil || profile.ID.Bytes != borrowerProfileID.Bytes {
+			return status.Error(codes.PermissionDenied, "borrower can only access own loans")
+		}
+		return nil
+	case "officer":
+		if !assignedOfficerUserID.Valid || assignedOfficerUserID.Bytes != userID {
+			return status.Error(codes.PermissionDenied, "officer can only access assigned loans")
+		}
+		return nil
+	case "manager", "dst":
+		branch, err := s.branchForUserRole(ctx, userID, role)
+		if err != nil {
+			return err
+		}
+		if branch != uuid.UUID(branchID.Bytes) {
+			return status.Error(codes.PermissionDenied, "cannot access loans outside your branch")
+		}
+		return nil
+	default:
+		return status.Error(codes.PermissionDenied, "access denied")
+	}
+}
+
+func validateApplicationStatusTransition(from, to generated.LoanApplicationStatus, role string) error {
+	if from == to {
+		return nil
+	}
+	switch role {
+	case "admin":
+		return nil
+	case "officer":
+		switch from {
+		case generated.LoanApplicationStatusDRAFT:
+			if to == generated.LoanApplicationStatusSUBMITTED || to == generated.LoanApplicationStatusOFFICERREVIEW {
+				return nil
+			}
+		case generated.LoanApplicationStatusSUBMITTED:
+			if to == generated.LoanApplicationStatusOFFICERREVIEW || to == generated.LoanApplicationStatusOFFICERREJECTED {
+				return nil
+			}
+		case generated.LoanApplicationStatusOFFICERREVIEW:
+			if to == generated.LoanApplicationStatusOFFICERAPPROVED || to == generated.LoanApplicationStatusOFFICERREJECTED {
+				return nil
+			}
+		case generated.LoanApplicationStatusOFFICERAPPROVED:
+			if to == generated.LoanApplicationStatusMANAGERREVIEW {
+				return nil
+			}
+		}
+		return status.Error(codes.FailedPrecondition, "invalid officer status transition")
+	case "manager":
+		switch from {
+		case generated.LoanApplicationStatusOFFICERAPPROVED:
+			if to == generated.LoanApplicationStatusMANAGERREVIEW || to == generated.LoanApplicationStatusMANAGERAPPROVED || to == generated.LoanApplicationStatusMANAGERREJECTED {
+				return nil
+			}
+		case generated.LoanApplicationStatusMANAGERREVIEW:
+			if to == generated.LoanApplicationStatusMANAGERAPPROVED || to == generated.LoanApplicationStatusMANAGERREJECTED {
+				return nil
+			}
+		}
+		return status.Error(codes.FailedPrecondition, "invalid manager status transition")
+	default:
+		return status.Error(codes.PermissionDenied, "role cannot update status")
 	}
 }
 
@@ -1694,6 +1993,18 @@ func toDBApplicationStatus(v loanv1.LoanApplicationStatus) generated.LoanApplica
 		return generated.LoanApplicationStatusDISBURSED
 	case loanv1.LoanApplicationStatus_LOAN_APPLICATION_STATUS_CANCELLED:
 		return generated.LoanApplicationStatusCANCELLED
+	case loanv1.LoanApplicationStatus_LOAN_APPLICATION_STATUS_OFFICER_REVIEW:
+		return generated.LoanApplicationStatusOFFICERREVIEW
+	case loanv1.LoanApplicationStatus_LOAN_APPLICATION_STATUS_OFFICER_APPROVED:
+		return generated.LoanApplicationStatusOFFICERAPPROVED
+	case loanv1.LoanApplicationStatus_LOAN_APPLICATION_STATUS_OFFICER_REJECTED:
+		return generated.LoanApplicationStatusOFFICERREJECTED
+	case loanv1.LoanApplicationStatus_LOAN_APPLICATION_STATUS_MANAGER_REVIEW:
+		return generated.LoanApplicationStatusMANAGERREVIEW
+	case loanv1.LoanApplicationStatus_LOAN_APPLICATION_STATUS_MANAGER_APPROVED:
+		return generated.LoanApplicationStatusMANAGERAPPROVED
+	case loanv1.LoanApplicationStatus_LOAN_APPLICATION_STATUS_MANAGER_REJECTED:
+		return generated.LoanApplicationStatusMANAGERREJECTED
 	default:
 		return generated.LoanApplicationStatus("")
 	}
@@ -1715,6 +2026,18 @@ func toProtoApplicationStatus(v generated.LoanApplicationStatus) loanv1.LoanAppl
 		return loanv1.LoanApplicationStatus_LOAN_APPLICATION_STATUS_DISBURSED
 	case generated.LoanApplicationStatusCANCELLED:
 		return loanv1.LoanApplicationStatus_LOAN_APPLICATION_STATUS_CANCELLED
+	case generated.LoanApplicationStatusOFFICERREVIEW:
+		return loanv1.LoanApplicationStatus_LOAN_APPLICATION_STATUS_OFFICER_REVIEW
+	case generated.LoanApplicationStatusOFFICERAPPROVED:
+		return loanv1.LoanApplicationStatus_LOAN_APPLICATION_STATUS_OFFICER_APPROVED
+	case generated.LoanApplicationStatusOFFICERREJECTED:
+		return loanv1.LoanApplicationStatus_LOAN_APPLICATION_STATUS_OFFICER_REJECTED
+	case generated.LoanApplicationStatusMANAGERREVIEW:
+		return loanv1.LoanApplicationStatus_LOAN_APPLICATION_STATUS_MANAGER_REVIEW
+	case generated.LoanApplicationStatusMANAGERAPPROVED:
+		return loanv1.LoanApplicationStatus_LOAN_APPLICATION_STATUS_MANAGER_APPROVED
+	case generated.LoanApplicationStatusMANAGERREJECTED:
+		return loanv1.LoanApplicationStatus_LOAN_APPLICATION_STATUS_MANAGER_REJECTED
 	default:
 		return loanv1.LoanApplicationStatus_LOAN_APPLICATION_STATUS_UNSPECIFIED
 	}

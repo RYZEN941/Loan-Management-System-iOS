@@ -39,10 +39,28 @@ Read operations:
 
 - Create loan ledger entry (post approval): `CreateLoan`
 - Fetch loan by `loan_id` or `application_id`: `GetLoan`
+- List loans with role scoping: `ListLoans`
 - Add EMI schedule row: `AddEmiScheduleItem`
 - List EMI schedule: `ListEmiSchedule`
 - Record payment: `RecordPayment`
 - List payments: `ListPayments`
+
+## Explicit Approval States
+
+`LoanApplicationStatus` includes explicit approval-chain states:
+
+- `OFFICER_REVIEW`
+- `OFFICER_APPROVED`
+- `OFFICER_REJECTED`
+- `MANAGER_REVIEW`
+- `MANAGER_APPROVED`
+- `MANAGER_REJECTED`
+
+Enforced flow:
+
+- Officer handles officer-stage decisions.
+- Manager can approve/reject only after officer approval.
+- `CreateLoan` is allowed only when application is `MANAGER_APPROVED`.
 
 ## Application Source Tracking
 
@@ -63,6 +81,7 @@ This identifies whether the application was initiated by borrower self-serve, DS
 
 - `application_documents` uses `media_file_id` (FK to `media_files.id`) instead of raw file URL storage.
 - `AddApplicationDocument` validates that the media file exists and belongs to the borrower profile's user.
+- It also validates borrower profile participation in application and required-doc compatibility with application product.
 
 ## Current RBAC Snapshot
 
@@ -70,3 +89,9 @@ This identifies whether the application was initiated by borrower self-serve, DS
 - Application create: `borrower`, `dst`, `officer`
 - Branch/portfolio operations: role-scoped for `dst`/`officer`/`manager`
 - Cross-branch access and full control: `admin`
+- Media upload/list APIs: available for all authenticated roles
+- Loan fetch/list scope:
+  - borrower: own loans
+  - officer: assigned loans
+  - manager: all loans in manager branch
+  - admin: all loans

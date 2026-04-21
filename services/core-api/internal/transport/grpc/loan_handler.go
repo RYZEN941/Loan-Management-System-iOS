@@ -29,6 +29,7 @@ type LoanService interface {
 	AddBureauScore(ctx context.Context, req *loanv1.AddBureauScoreRequest) (*loanv1.AddBureauScoreResponse, error)
 	CreateLoan(ctx context.Context, req *loanv1.CreateLoanRequest) (*loanv1.CreateLoanResponse, error)
 	GetLoan(ctx context.Context, req *loanv1.GetLoanRequest) (*loanv1.GetLoanResponse, error)
+	ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) (*loanv1.ListLoansResponse, error)
 	AddEmiScheduleItem(ctx context.Context, req *loanv1.AddEmiScheduleItemRequest) (*loanv1.AddEmiScheduleItemResponse, error)
 	ListEmiSchedule(ctx context.Context, req *loanv1.ListEmiScheduleRequest) (*loanv1.ListEmiScheduleResponse, error)
 	RecordPayment(ctx context.Context, req *loanv1.RecordPaymentRequest) (*loanv1.RecordPaymentResponse, error)
@@ -109,6 +110,9 @@ func (h *LoanHandler) CreateLoan(ctx context.Context, req *loanv1.CreateLoanRequ
 }
 func (h *LoanHandler) GetLoan(ctx context.Context, req *loanv1.GetLoanRequest) (*loanv1.GetLoanResponse, error) {
 	return h.loanService.GetLoan(ctx, req)
+}
+func (h *LoanHandler) ListLoans(ctx context.Context, req *loanv1.ListLoansRequest) (*loanv1.ListLoansResponse, error) {
+	return h.loanService.ListLoans(ctx, req)
 }
 func (h *LoanHandler) AddEmiScheduleItem(ctx context.Context, req *loanv1.AddEmiScheduleItemRequest) (*loanv1.AddEmiScheduleItemResponse, error) {
 	return h.loanService.AddEmiScheduleItem(ctx, req)

@@ -3,7 +3,21 @@ CREATE TYPE loan_interest_type AS ENUM ('FIXED', 'FLOATING');
 CREATE TYPE product_fee_type AS ENUM ('PROCESSING', 'PREPAYMENT', 'LATE_PAYMENT');
 CREATE TYPE fee_calc_method AS ENUM ('FLAT', 'PERCENTAGE');
 CREATE TYPE document_requirement_type AS ENUM ('IDENTITY', 'ADDRESS', 'INCOME', 'COLLATERAL');
-CREATE TYPE loan_application_status AS ENUM ('DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'DISBURSED', 'CANCELLED');
+CREATE TYPE loan_application_status AS ENUM (
+    'DRAFT',
+    'SUBMITTED',
+    'UNDER_REVIEW',
+    'APPROVED',
+    'REJECTED',
+    'DISBURSED',
+    'CANCELLED',
+    'OFFICER_REVIEW',
+    'OFFICER_APPROVED',
+    'OFFICER_REJECTED',
+    'MANAGER_REVIEW',
+    'MANAGER_APPROVED',
+    'MANAGER_REJECTED'
+);
 CREATE TYPE coapplicant_relationship AS ENUM ('SPOUSE', 'PARENT', 'SIBLING', 'BUSINESS_PARTNER');
 CREATE TYPE collateral_asset_type AS ENUM ('VEHICLE', 'REAL_ESTATE');
 CREATE TYPE collateral_verification_status AS ENUM ('PENDING', 'VERIFIED', 'REJECTED');

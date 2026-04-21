@@ -147,69 +147,42 @@ struct AdminDashboardView: View {
             SectionHeader(title: "Key Metrics", icon: "chart.xyaxis.line")
             
             // Disbursement Chart
-            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                Text("Daily Disbursement (₹ Cr)")
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(.secondary)
-                
-                GeometryReader { geo in
-                    let maxVal = dailyDisbursement.max() ?? 1.0
-                    let minVal = dailyDisbursement.min() ?? 0.0
-                    let range = maxVal - minVal
-                    let height = geo.size.height - 40 // Leave room for labels
-                    let stepX = geo.size.width / CGFloat(max(dailyDisbursement.count - 1, 1))
-                    
-                    ZStack {
-                        // The Line
-                        Path { path in
-                            for (index, value) in dailyDisbursement.enumerated() {
-                                let x = CGFloat(index) * stepX
-                                let normalizedY = CGFloat((value - minVal) / (range == 0 ? 1 : range))
-                                let y = height - (normalizedY * height) + 20
-                                
-                                if index == 0 {
-                                    path.move(to: CGPoint(x: x, y: y))
-                                } else {
-                                    path.addLine(to: CGPoint(x: x, y: y))
-                                }
-                            }
+            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                // High-Fid Header
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Daily Disbursement")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundStyle(.primary)
+                        Text("Transaction volume across the week")
+                            .font(Theme.Typography.subheadline)
+                            .foregroundStyle(.secondary.opacity(0.8))
+                    }
+                    Spacer()
+                    VStack(alignment: .trailing, spacing: 4) {
+                        Text("₹124.5k")
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
+                            .foregroundStyle(Theme.Colors.primary)
+                        HStack(spacing: 4) {
+                            Text("↗")
+                            Text("12.4%")
                         }
-                        .stroke(
-                            LinearGradient(
-                                colors: [Theme.Colors.primary, Theme.Colors.secondary],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            ),
-                            style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round)
-                        )
-                        
-                        // Data points and Labels
-                        ForEach(Array(dailyDisbursement.enumerated()), id: \.offset) { index, value in
-                            let x = CGFloat(index) * stepX
-                            let normalizedY = CGFloat((value - minVal) / (range == 0 ? 1 : range))
-                            let y = height - (normalizedY * height) + 20
-                            
-                            Text(String(format: "%.0f", value))
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(.primary.opacity(0.7))
-                                .position(x: x, y: y - 14)
-                            
-                            Circle()
-                                .fill(Theme.Colors.primary)
-                                .frame(width: 8, height: 8)
-                                .position(x: x, y: y)
-                            
-                            Text(dayLabel(index))
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(.secondary)
-                                .position(x: x, y: height + 30)
-                        }
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(Color.green)
                     }
                 }
-                .frame(height: 120)
-                .padding(.horizontal, Theme.Spacing.sm)
+                .padding(.bottom, Theme.Spacing.xs)
+                
+                PremiumLineChart(
+                    data: dailyDisbursement,
+                    labels: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
+                    accentColor: Theme.Colors.primary,
+                    showPoints: true
+                )
+                .frame(height: 180)
             }
-            .padding(Theme.Spacing.md)
+            .padding(.vertical, Theme.Spacing.lg)
+            .padding(.horizontal, Theme.Spacing.md)
             .cardStyle(colorScheme: colorScheme)
             
             // Collection Efficiency & NPA

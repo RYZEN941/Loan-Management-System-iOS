@@ -7,7 +7,10 @@
 package loanv1
 
 import (
+	context "context"
 	grpc "google.golang.org/grpc"
+	codes "google.golang.org/grpc/codes"
+	status "google.golang.org/grpc/status"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -15,10 +18,65 @@ import (
 // Requires gRPC-Go v1.64.0 or later.
 const _ = grpc.SupportPackageIsVersion9
 
+const (
+	LoanService_CreateLoanProduct_FullMethodName                     = "/loan.v1.LoanService/CreateLoanProduct"
+	LoanService_UpdateLoanProduct_FullMethodName                     = "/loan.v1.LoanService/UpdateLoanProduct"
+	LoanService_DeleteLoanProduct_FullMethodName                     = "/loan.v1.LoanService/DeleteLoanProduct"
+	LoanService_GetLoanProduct_FullMethodName                        = "/loan.v1.LoanService/GetLoanProduct"
+	LoanService_ListLoanProducts_FullMethodName                      = "/loan.v1.LoanService/ListLoanProducts"
+	LoanService_UpsertProductEligibilityRule_FullMethodName          = "/loan.v1.LoanService/UpsertProductEligibilityRule"
+	LoanService_ReplaceProductFees_FullMethodName                    = "/loan.v1.LoanService/ReplaceProductFees"
+	LoanService_ReplaceProductRequiredDocuments_FullMethodName       = "/loan.v1.LoanService/ReplaceProductRequiredDocuments"
+	LoanService_CreateLoanApplication_FullMethodName                 = "/loan.v1.LoanService/CreateLoanApplication"
+	LoanService_GetLoanApplication_FullMethodName                    = "/loan.v1.LoanService/GetLoanApplication"
+	LoanService_ListLoanApplications_FullMethodName                  = "/loan.v1.LoanService/ListLoanApplications"
+	LoanService_UpdateLoanApplicationStatus_FullMethodName           = "/loan.v1.LoanService/UpdateLoanApplicationStatus"
+	LoanService_AssignLoanApplicationOfficer_FullMethodName          = "/loan.v1.LoanService/AssignLoanApplicationOfficer"
+	LoanService_AddApplicationCoapplicant_FullMethodName             = "/loan.v1.LoanService/AddApplicationCoapplicant"
+	LoanService_UpsertApplicationCollateral_FullMethodName           = "/loan.v1.LoanService/UpsertApplicationCollateral"
+	LoanService_UpsertLoanVehicle_FullMethodName                     = "/loan.v1.LoanService/UpsertLoanVehicle"
+	LoanService_UpsertLoanRealEstate_FullMethodName                  = "/loan.v1.LoanService/UpsertLoanRealEstate"
+	LoanService_AddApplicationDocument_FullMethodName                = "/loan.v1.LoanService/AddApplicationDocument"
+	LoanService_UpdateApplicationDocumentVerification_FullMethodName = "/loan.v1.LoanService/UpdateApplicationDocumentVerification"
+	LoanService_AddBureauScore_FullMethodName                        = "/loan.v1.LoanService/AddBureauScore"
+	LoanService_CreateLoan_FullMethodName                            = "/loan.v1.LoanService/CreateLoan"
+	LoanService_GetLoan_FullMethodName                               = "/loan.v1.LoanService/GetLoan"
+	LoanService_AddEmiScheduleItem_FullMethodName                    = "/loan.v1.LoanService/AddEmiScheduleItem"
+	LoanService_ListEmiSchedule_FullMethodName                       = "/loan.v1.LoanService/ListEmiSchedule"
+	LoanService_RecordPayment_FullMethodName                         = "/loan.v1.LoanService/RecordPayment"
+	LoanService_ListPayments_FullMethodName                          = "/loan.v1.LoanService/ListPayments"
+)
+
 // LoanServiceClient is the client API for LoanService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type LoanServiceClient interface {
+	CreateLoanProduct(ctx context.Context, in *CreateLoanProductRequest, opts ...grpc.CallOption) (*CreateLoanProductResponse, error)
+	UpdateLoanProduct(ctx context.Context, in *UpdateLoanProductRequest, opts ...grpc.CallOption) (*UpdateLoanProductResponse, error)
+	DeleteLoanProduct(ctx context.Context, in *DeleteLoanProductRequest, opts ...grpc.CallOption) (*DeleteLoanProductResponse, error)
+	GetLoanProduct(ctx context.Context, in *GetLoanProductRequest, opts ...grpc.CallOption) (*GetLoanProductResponse, error)
+	ListLoanProducts(ctx context.Context, in *ListLoanProductsRequest, opts ...grpc.CallOption) (*ListLoanProductsResponse, error)
+	UpsertProductEligibilityRule(ctx context.Context, in *UpsertProductEligibilityRuleRequest, opts ...grpc.CallOption) (*UpsertProductEligibilityRuleResponse, error)
+	ReplaceProductFees(ctx context.Context, in *ReplaceProductFeesRequest, opts ...grpc.CallOption) (*ReplaceProductFeesResponse, error)
+	ReplaceProductRequiredDocuments(ctx context.Context, in *ReplaceProductRequiredDocumentsRequest, opts ...grpc.CallOption) (*ReplaceProductRequiredDocumentsResponse, error)
+	CreateLoanApplication(ctx context.Context, in *CreateLoanApplicationRequest, opts ...grpc.CallOption) (*CreateLoanApplicationResponse, error)
+	GetLoanApplication(ctx context.Context, in *GetLoanApplicationRequest, opts ...grpc.CallOption) (*GetLoanApplicationResponse, error)
+	ListLoanApplications(ctx context.Context, in *ListLoanApplicationsRequest, opts ...grpc.CallOption) (*ListLoanApplicationsResponse, error)
+	UpdateLoanApplicationStatus(ctx context.Context, in *UpdateLoanApplicationStatusRequest, opts ...grpc.CallOption) (*UpdateLoanApplicationStatusResponse, error)
+	AssignLoanApplicationOfficer(ctx context.Context, in *AssignLoanApplicationOfficerRequest, opts ...grpc.CallOption) (*AssignLoanApplicationOfficerResponse, error)
+	AddApplicationCoapplicant(ctx context.Context, in *AddApplicationCoapplicantRequest, opts ...grpc.CallOption) (*AddApplicationCoapplicantResponse, error)
+	UpsertApplicationCollateral(ctx context.Context, in *UpsertApplicationCollateralRequest, opts ...grpc.CallOption) (*UpsertApplicationCollateralResponse, error)
+	UpsertLoanVehicle(ctx context.Context, in *UpsertLoanVehicleRequest, opts ...grpc.CallOption) (*UpsertLoanVehicleResponse, error)
+	UpsertLoanRealEstate(ctx context.Context, in *UpsertLoanRealEstateRequest, opts ...grpc.CallOption) (*UpsertLoanRealEstateResponse, error)
+	AddApplicationDocument(ctx context.Context, in *AddApplicationDocumentRequest, opts ...grpc.CallOption) (*AddApplicationDocumentResponse, error)
+	UpdateApplicationDocumentVerification(ctx context.Context, in *UpdateApplicationDocumentVerificationRequest, opts ...grpc.CallOption) (*UpdateApplicationDocumentVerificationResponse, error)
+	AddBureauScore(ctx context.Context, in *AddBureauScoreRequest, opts ...grpc.CallOption) (*AddBureauScoreResponse, error)
+	CreateLoan(ctx context.Context, in *CreateLoanRequest, opts ...grpc.CallOption) (*CreateLoanResponse, error)
+	GetLoan(ctx context.Context, in *GetLoanRequest, opts ...grpc.CallOption) (*GetLoanResponse, error)
+	AddEmiScheduleItem(ctx context.Context, in *AddEmiScheduleItemRequest, opts ...grpc.CallOption) (*AddEmiScheduleItemResponse, error)
+	ListEmiSchedule(ctx context.Context, in *ListEmiScheduleRequest, opts ...grpc.CallOption) (*ListEmiScheduleResponse, error)
+	RecordPayment(ctx context.Context, in *RecordPaymentRequest, opts ...grpc.CallOption) (*RecordPaymentResponse, error)
+	ListPayments(ctx context.Context, in *ListPaymentsRequest, opts ...grpc.CallOption) (*ListPaymentsResponse, error)
 }
 
 type loanServiceClient struct {
@@ -29,10 +87,296 @@ func NewLoanServiceClient(cc grpc.ClientConnInterface) LoanServiceClient {
 	return &loanServiceClient{cc}
 }
 
+func (c *loanServiceClient) CreateLoanProduct(ctx context.Context, in *CreateLoanProductRequest, opts ...grpc.CallOption) (*CreateLoanProductResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateLoanProductResponse)
+	err := c.cc.Invoke(ctx, LoanService_CreateLoanProduct_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) UpdateLoanProduct(ctx context.Context, in *UpdateLoanProductRequest, opts ...grpc.CallOption) (*UpdateLoanProductResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateLoanProductResponse)
+	err := c.cc.Invoke(ctx, LoanService_UpdateLoanProduct_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) DeleteLoanProduct(ctx context.Context, in *DeleteLoanProductRequest, opts ...grpc.CallOption) (*DeleteLoanProductResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteLoanProductResponse)
+	err := c.cc.Invoke(ctx, LoanService_DeleteLoanProduct_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) GetLoanProduct(ctx context.Context, in *GetLoanProductRequest, opts ...grpc.CallOption) (*GetLoanProductResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetLoanProductResponse)
+	err := c.cc.Invoke(ctx, LoanService_GetLoanProduct_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) ListLoanProducts(ctx context.Context, in *ListLoanProductsRequest, opts ...grpc.CallOption) (*ListLoanProductsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListLoanProductsResponse)
+	err := c.cc.Invoke(ctx, LoanService_ListLoanProducts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) UpsertProductEligibilityRule(ctx context.Context, in *UpsertProductEligibilityRuleRequest, opts ...grpc.CallOption) (*UpsertProductEligibilityRuleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpsertProductEligibilityRuleResponse)
+	err := c.cc.Invoke(ctx, LoanService_UpsertProductEligibilityRule_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) ReplaceProductFees(ctx context.Context, in *ReplaceProductFeesRequest, opts ...grpc.CallOption) (*ReplaceProductFeesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReplaceProductFeesResponse)
+	err := c.cc.Invoke(ctx, LoanService_ReplaceProductFees_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) ReplaceProductRequiredDocuments(ctx context.Context, in *ReplaceProductRequiredDocumentsRequest, opts ...grpc.CallOption) (*ReplaceProductRequiredDocumentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReplaceProductRequiredDocumentsResponse)
+	err := c.cc.Invoke(ctx, LoanService_ReplaceProductRequiredDocuments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) CreateLoanApplication(ctx context.Context, in *CreateLoanApplicationRequest, opts ...grpc.CallOption) (*CreateLoanApplicationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateLoanApplicationResponse)
+	err := c.cc.Invoke(ctx, LoanService_CreateLoanApplication_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) GetLoanApplication(ctx context.Context, in *GetLoanApplicationRequest, opts ...grpc.CallOption) (*GetLoanApplicationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetLoanApplicationResponse)
+	err := c.cc.Invoke(ctx, LoanService_GetLoanApplication_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) ListLoanApplications(ctx context.Context, in *ListLoanApplicationsRequest, opts ...grpc.CallOption) (*ListLoanApplicationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListLoanApplicationsResponse)
+	err := c.cc.Invoke(ctx, LoanService_ListLoanApplications_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) UpdateLoanApplicationStatus(ctx context.Context, in *UpdateLoanApplicationStatusRequest, opts ...grpc.CallOption) (*UpdateLoanApplicationStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateLoanApplicationStatusResponse)
+	err := c.cc.Invoke(ctx, LoanService_UpdateLoanApplicationStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) AssignLoanApplicationOfficer(ctx context.Context, in *AssignLoanApplicationOfficerRequest, opts ...grpc.CallOption) (*AssignLoanApplicationOfficerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AssignLoanApplicationOfficerResponse)
+	err := c.cc.Invoke(ctx, LoanService_AssignLoanApplicationOfficer_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) AddApplicationCoapplicant(ctx context.Context, in *AddApplicationCoapplicantRequest, opts ...grpc.CallOption) (*AddApplicationCoapplicantResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddApplicationCoapplicantResponse)
+	err := c.cc.Invoke(ctx, LoanService_AddApplicationCoapplicant_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) UpsertApplicationCollateral(ctx context.Context, in *UpsertApplicationCollateralRequest, opts ...grpc.CallOption) (*UpsertApplicationCollateralResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpsertApplicationCollateralResponse)
+	err := c.cc.Invoke(ctx, LoanService_UpsertApplicationCollateral_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) UpsertLoanVehicle(ctx context.Context, in *UpsertLoanVehicleRequest, opts ...grpc.CallOption) (*UpsertLoanVehicleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpsertLoanVehicleResponse)
+	err := c.cc.Invoke(ctx, LoanService_UpsertLoanVehicle_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) UpsertLoanRealEstate(ctx context.Context, in *UpsertLoanRealEstateRequest, opts ...grpc.CallOption) (*UpsertLoanRealEstateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpsertLoanRealEstateResponse)
+	err := c.cc.Invoke(ctx, LoanService_UpsertLoanRealEstate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) AddApplicationDocument(ctx context.Context, in *AddApplicationDocumentRequest, opts ...grpc.CallOption) (*AddApplicationDocumentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddApplicationDocumentResponse)
+	err := c.cc.Invoke(ctx, LoanService_AddApplicationDocument_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) UpdateApplicationDocumentVerification(ctx context.Context, in *UpdateApplicationDocumentVerificationRequest, opts ...grpc.CallOption) (*UpdateApplicationDocumentVerificationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateApplicationDocumentVerificationResponse)
+	err := c.cc.Invoke(ctx, LoanService_UpdateApplicationDocumentVerification_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) AddBureauScore(ctx context.Context, in *AddBureauScoreRequest, opts ...grpc.CallOption) (*AddBureauScoreResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddBureauScoreResponse)
+	err := c.cc.Invoke(ctx, LoanService_AddBureauScore_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) CreateLoan(ctx context.Context, in *CreateLoanRequest, opts ...grpc.CallOption) (*CreateLoanResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateLoanResponse)
+	err := c.cc.Invoke(ctx, LoanService_CreateLoan_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) GetLoan(ctx context.Context, in *GetLoanRequest, opts ...grpc.CallOption) (*GetLoanResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetLoanResponse)
+	err := c.cc.Invoke(ctx, LoanService_GetLoan_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) AddEmiScheduleItem(ctx context.Context, in *AddEmiScheduleItemRequest, opts ...grpc.CallOption) (*AddEmiScheduleItemResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AddEmiScheduleItemResponse)
+	err := c.cc.Invoke(ctx, LoanService_AddEmiScheduleItem_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) ListEmiSchedule(ctx context.Context, in *ListEmiScheduleRequest, opts ...grpc.CallOption) (*ListEmiScheduleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListEmiScheduleResponse)
+	err := c.cc.Invoke(ctx, LoanService_ListEmiSchedule_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) RecordPayment(ctx context.Context, in *RecordPaymentRequest, opts ...grpc.CallOption) (*RecordPaymentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RecordPaymentResponse)
+	err := c.cc.Invoke(ctx, LoanService_RecordPayment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) ListPayments(ctx context.Context, in *ListPaymentsRequest, opts ...grpc.CallOption) (*ListPaymentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListPaymentsResponse)
+	err := c.cc.Invoke(ctx, LoanService_ListPayments_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // LoanServiceServer is the server API for LoanService service.
 // All implementations must embed UnimplementedLoanServiceServer
 // for forward compatibility.
 type LoanServiceServer interface {
+	CreateLoanProduct(context.Context, *CreateLoanProductRequest) (*CreateLoanProductResponse, error)
+	UpdateLoanProduct(context.Context, *UpdateLoanProductRequest) (*UpdateLoanProductResponse, error)
+	DeleteLoanProduct(context.Context, *DeleteLoanProductRequest) (*DeleteLoanProductResponse, error)
+	GetLoanProduct(context.Context, *GetLoanProductRequest) (*GetLoanProductResponse, error)
+	ListLoanProducts(context.Context, *ListLoanProductsRequest) (*ListLoanProductsResponse, error)
+	UpsertProductEligibilityRule(context.Context, *UpsertProductEligibilityRuleRequest) (*UpsertProductEligibilityRuleResponse, error)
+	ReplaceProductFees(context.Context, *ReplaceProductFeesRequest) (*ReplaceProductFeesResponse, error)
+	ReplaceProductRequiredDocuments(context.Context, *ReplaceProductRequiredDocumentsRequest) (*ReplaceProductRequiredDocumentsResponse, error)
+	CreateLoanApplication(context.Context, *CreateLoanApplicationRequest) (*CreateLoanApplicationResponse, error)
+	GetLoanApplication(context.Context, *GetLoanApplicationRequest) (*GetLoanApplicationResponse, error)
+	ListLoanApplications(context.Context, *ListLoanApplicationsRequest) (*ListLoanApplicationsResponse, error)
+	UpdateLoanApplicationStatus(context.Context, *UpdateLoanApplicationStatusRequest) (*UpdateLoanApplicationStatusResponse, error)
+	AssignLoanApplicationOfficer(context.Context, *AssignLoanApplicationOfficerRequest) (*AssignLoanApplicationOfficerResponse, error)
+	AddApplicationCoapplicant(context.Context, *AddApplicationCoapplicantRequest) (*AddApplicationCoapplicantResponse, error)
+	UpsertApplicationCollateral(context.Context, *UpsertApplicationCollateralRequest) (*UpsertApplicationCollateralResponse, error)
+	UpsertLoanVehicle(context.Context, *UpsertLoanVehicleRequest) (*UpsertLoanVehicleResponse, error)
+	UpsertLoanRealEstate(context.Context, *UpsertLoanRealEstateRequest) (*UpsertLoanRealEstateResponse, error)
+	AddApplicationDocument(context.Context, *AddApplicationDocumentRequest) (*AddApplicationDocumentResponse, error)
+	UpdateApplicationDocumentVerification(context.Context, *UpdateApplicationDocumentVerificationRequest) (*UpdateApplicationDocumentVerificationResponse, error)
+	AddBureauScore(context.Context, *AddBureauScoreRequest) (*AddBureauScoreResponse, error)
+	CreateLoan(context.Context, *CreateLoanRequest) (*CreateLoanResponse, error)
+	GetLoan(context.Context, *GetLoanRequest) (*GetLoanResponse, error)
+	AddEmiScheduleItem(context.Context, *AddEmiScheduleItemRequest) (*AddEmiScheduleItemResponse, error)
+	ListEmiSchedule(context.Context, *ListEmiScheduleRequest) (*ListEmiScheduleResponse, error)
+	RecordPayment(context.Context, *RecordPaymentRequest) (*RecordPaymentResponse, error)
+	ListPayments(context.Context, *ListPaymentsRequest) (*ListPaymentsResponse, error)
 	mustEmbedUnimplementedLoanServiceServer()
 }
 
@@ -43,6 +387,84 @@ type LoanServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedLoanServiceServer struct{}
 
+func (UnimplementedLoanServiceServer) CreateLoanProduct(context.Context, *CreateLoanProductRequest) (*CreateLoanProductResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateLoanProduct not implemented")
+}
+func (UnimplementedLoanServiceServer) UpdateLoanProduct(context.Context, *UpdateLoanProductRequest) (*UpdateLoanProductResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateLoanProduct not implemented")
+}
+func (UnimplementedLoanServiceServer) DeleteLoanProduct(context.Context, *DeleteLoanProductRequest) (*DeleteLoanProductResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteLoanProduct not implemented")
+}
+func (UnimplementedLoanServiceServer) GetLoanProduct(context.Context, *GetLoanProductRequest) (*GetLoanProductResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLoanProduct not implemented")
+}
+func (UnimplementedLoanServiceServer) ListLoanProducts(context.Context, *ListLoanProductsRequest) (*ListLoanProductsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListLoanProducts not implemented")
+}
+func (UnimplementedLoanServiceServer) UpsertProductEligibilityRule(context.Context, *UpsertProductEligibilityRuleRequest) (*UpsertProductEligibilityRuleResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpsertProductEligibilityRule not implemented")
+}
+func (UnimplementedLoanServiceServer) ReplaceProductFees(context.Context, *ReplaceProductFeesRequest) (*ReplaceProductFeesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReplaceProductFees not implemented")
+}
+func (UnimplementedLoanServiceServer) ReplaceProductRequiredDocuments(context.Context, *ReplaceProductRequiredDocumentsRequest) (*ReplaceProductRequiredDocumentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReplaceProductRequiredDocuments not implemented")
+}
+func (UnimplementedLoanServiceServer) CreateLoanApplication(context.Context, *CreateLoanApplicationRequest) (*CreateLoanApplicationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateLoanApplication not implemented")
+}
+func (UnimplementedLoanServiceServer) GetLoanApplication(context.Context, *GetLoanApplicationRequest) (*GetLoanApplicationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLoanApplication not implemented")
+}
+func (UnimplementedLoanServiceServer) ListLoanApplications(context.Context, *ListLoanApplicationsRequest) (*ListLoanApplicationsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListLoanApplications not implemented")
+}
+func (UnimplementedLoanServiceServer) UpdateLoanApplicationStatus(context.Context, *UpdateLoanApplicationStatusRequest) (*UpdateLoanApplicationStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateLoanApplicationStatus not implemented")
+}
+func (UnimplementedLoanServiceServer) AssignLoanApplicationOfficer(context.Context, *AssignLoanApplicationOfficerRequest) (*AssignLoanApplicationOfficerResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AssignLoanApplicationOfficer not implemented")
+}
+func (UnimplementedLoanServiceServer) AddApplicationCoapplicant(context.Context, *AddApplicationCoapplicantRequest) (*AddApplicationCoapplicantResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddApplicationCoapplicant not implemented")
+}
+func (UnimplementedLoanServiceServer) UpsertApplicationCollateral(context.Context, *UpsertApplicationCollateralRequest) (*UpsertApplicationCollateralResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpsertApplicationCollateral not implemented")
+}
+func (UnimplementedLoanServiceServer) UpsertLoanVehicle(context.Context, *UpsertLoanVehicleRequest) (*UpsertLoanVehicleResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpsertLoanVehicle not implemented")
+}
+func (UnimplementedLoanServiceServer) UpsertLoanRealEstate(context.Context, *UpsertLoanRealEstateRequest) (*UpsertLoanRealEstateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpsertLoanRealEstate not implemented")
+}
+func (UnimplementedLoanServiceServer) AddApplicationDocument(context.Context, *AddApplicationDocumentRequest) (*AddApplicationDocumentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddApplicationDocument not implemented")
+}
+func (UnimplementedLoanServiceServer) UpdateApplicationDocumentVerification(context.Context, *UpdateApplicationDocumentVerificationRequest) (*UpdateApplicationDocumentVerificationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateApplicationDocumentVerification not implemented")
+}
+func (UnimplementedLoanServiceServer) AddBureauScore(context.Context, *AddBureauScoreRequest) (*AddBureauScoreResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddBureauScore not implemented")
+}
+func (UnimplementedLoanServiceServer) CreateLoan(context.Context, *CreateLoanRequest) (*CreateLoanResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateLoan not implemented")
+}
+func (UnimplementedLoanServiceServer) GetLoan(context.Context, *GetLoanRequest) (*GetLoanResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetLoan not implemented")
+}
+func (UnimplementedLoanServiceServer) AddEmiScheduleItem(context.Context, *AddEmiScheduleItemRequest) (*AddEmiScheduleItemResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddEmiScheduleItem not implemented")
+}
+func (UnimplementedLoanServiceServer) ListEmiSchedule(context.Context, *ListEmiScheduleRequest) (*ListEmiScheduleResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListEmiSchedule not implemented")
+}
+func (UnimplementedLoanServiceServer) RecordPayment(context.Context, *RecordPaymentRequest) (*RecordPaymentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RecordPayment not implemented")
+}
+func (UnimplementedLoanServiceServer) ListPayments(context.Context, *ListPaymentsRequest) (*ListPaymentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListPayments not implemented")
+}
 func (UnimplementedLoanServiceServer) mustEmbedUnimplementedLoanServiceServer() {}
 func (UnimplementedLoanServiceServer) testEmbeddedByValue()                     {}
 
@@ -64,13 +486,586 @@ func RegisterLoanServiceServer(s grpc.ServiceRegistrar, srv LoanServiceServer) {
 	s.RegisterService(&LoanService_ServiceDesc, srv)
 }
 
+func _LoanService_CreateLoanProduct_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateLoanProductRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).CreateLoanProduct(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_CreateLoanProduct_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).CreateLoanProduct(ctx, req.(*CreateLoanProductRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_UpdateLoanProduct_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateLoanProductRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).UpdateLoanProduct(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_UpdateLoanProduct_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).UpdateLoanProduct(ctx, req.(*UpdateLoanProductRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_DeleteLoanProduct_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteLoanProductRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).DeleteLoanProduct(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_DeleteLoanProduct_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).DeleteLoanProduct(ctx, req.(*DeleteLoanProductRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_GetLoanProduct_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLoanProductRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).GetLoanProduct(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_GetLoanProduct_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).GetLoanProduct(ctx, req.(*GetLoanProductRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_ListLoanProducts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListLoanProductsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).ListLoanProducts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_ListLoanProducts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).ListLoanProducts(ctx, req.(*ListLoanProductsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_UpsertProductEligibilityRule_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpsertProductEligibilityRuleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).UpsertProductEligibilityRule(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_UpsertProductEligibilityRule_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).UpsertProductEligibilityRule(ctx, req.(*UpsertProductEligibilityRuleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_ReplaceProductFees_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReplaceProductFeesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).ReplaceProductFees(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_ReplaceProductFees_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).ReplaceProductFees(ctx, req.(*ReplaceProductFeesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_ReplaceProductRequiredDocuments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReplaceProductRequiredDocumentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).ReplaceProductRequiredDocuments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_ReplaceProductRequiredDocuments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).ReplaceProductRequiredDocuments(ctx, req.(*ReplaceProductRequiredDocumentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_CreateLoanApplication_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateLoanApplicationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).CreateLoanApplication(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_CreateLoanApplication_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).CreateLoanApplication(ctx, req.(*CreateLoanApplicationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_GetLoanApplication_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLoanApplicationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).GetLoanApplication(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_GetLoanApplication_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).GetLoanApplication(ctx, req.(*GetLoanApplicationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_ListLoanApplications_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListLoanApplicationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).ListLoanApplications(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_ListLoanApplications_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).ListLoanApplications(ctx, req.(*ListLoanApplicationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_UpdateLoanApplicationStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateLoanApplicationStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).UpdateLoanApplicationStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_UpdateLoanApplicationStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).UpdateLoanApplicationStatus(ctx, req.(*UpdateLoanApplicationStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_AssignLoanApplicationOfficer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AssignLoanApplicationOfficerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).AssignLoanApplicationOfficer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_AssignLoanApplicationOfficer_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).AssignLoanApplicationOfficer(ctx, req.(*AssignLoanApplicationOfficerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_AddApplicationCoapplicant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddApplicationCoapplicantRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).AddApplicationCoapplicant(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_AddApplicationCoapplicant_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).AddApplicationCoapplicant(ctx, req.(*AddApplicationCoapplicantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_UpsertApplicationCollateral_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpsertApplicationCollateralRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).UpsertApplicationCollateral(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_UpsertApplicationCollateral_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).UpsertApplicationCollateral(ctx, req.(*UpsertApplicationCollateralRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_UpsertLoanVehicle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpsertLoanVehicleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).UpsertLoanVehicle(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_UpsertLoanVehicle_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).UpsertLoanVehicle(ctx, req.(*UpsertLoanVehicleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_UpsertLoanRealEstate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpsertLoanRealEstateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).UpsertLoanRealEstate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_UpsertLoanRealEstate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).UpsertLoanRealEstate(ctx, req.(*UpsertLoanRealEstateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_AddApplicationDocument_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddApplicationDocumentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).AddApplicationDocument(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_AddApplicationDocument_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).AddApplicationDocument(ctx, req.(*AddApplicationDocumentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_UpdateApplicationDocumentVerification_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateApplicationDocumentVerificationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).UpdateApplicationDocumentVerification(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_UpdateApplicationDocumentVerification_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).UpdateApplicationDocumentVerification(ctx, req.(*UpdateApplicationDocumentVerificationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_AddBureauScore_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddBureauScoreRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).AddBureauScore(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_AddBureauScore_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).AddBureauScore(ctx, req.(*AddBureauScoreRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_CreateLoan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateLoanRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).CreateLoan(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_CreateLoan_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).CreateLoan(ctx, req.(*CreateLoanRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_GetLoan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetLoanRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).GetLoan(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_GetLoan_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).GetLoan(ctx, req.(*GetLoanRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_AddEmiScheduleItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddEmiScheduleItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).AddEmiScheduleItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_AddEmiScheduleItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).AddEmiScheduleItem(ctx, req.(*AddEmiScheduleItemRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_ListEmiSchedule_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListEmiScheduleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).ListEmiSchedule(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_ListEmiSchedule_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).ListEmiSchedule(ctx, req.(*ListEmiScheduleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_RecordPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecordPaymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).RecordPayment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_RecordPayment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).RecordPayment(ctx, req.(*RecordPaymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_ListPayments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPaymentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).ListPayments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_ListPayments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).ListPayments(ctx, req.(*ListPaymentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // LoanService_ServiceDesc is the grpc.ServiceDesc for LoanService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var LoanService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "loan.v1.LoanService",
 	HandlerType: (*LoanServiceServer)(nil),
-	Methods:     []grpc.MethodDesc{},
-	Streams:     []grpc.StreamDesc{},
-	Metadata:    "loan/v1/loan.proto",
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CreateLoanProduct",
+			Handler:    _LoanService_CreateLoanProduct_Handler,
+		},
+		{
+			MethodName: "UpdateLoanProduct",
+			Handler:    _LoanService_UpdateLoanProduct_Handler,
+		},
+		{
+			MethodName: "DeleteLoanProduct",
+			Handler:    _LoanService_DeleteLoanProduct_Handler,
+		},
+		{
+			MethodName: "GetLoanProduct",
+			Handler:    _LoanService_GetLoanProduct_Handler,
+		},
+		{
+			MethodName: "ListLoanProducts",
+			Handler:    _LoanService_ListLoanProducts_Handler,
+		},
+		{
+			MethodName: "UpsertProductEligibilityRule",
+			Handler:    _LoanService_UpsertProductEligibilityRule_Handler,
+		},
+		{
+			MethodName: "ReplaceProductFees",
+			Handler:    _LoanService_ReplaceProductFees_Handler,
+		},
+		{
+			MethodName: "ReplaceProductRequiredDocuments",
+			Handler:    _LoanService_ReplaceProductRequiredDocuments_Handler,
+		},
+		{
+			MethodName: "CreateLoanApplication",
+			Handler:    _LoanService_CreateLoanApplication_Handler,
+		},
+		{
+			MethodName: "GetLoanApplication",
+			Handler:    _LoanService_GetLoanApplication_Handler,
+		},
+		{
+			MethodName: "ListLoanApplications",
+			Handler:    _LoanService_ListLoanApplications_Handler,
+		},
+		{
+			MethodName: "UpdateLoanApplicationStatus",
+			Handler:    _LoanService_UpdateLoanApplicationStatus_Handler,
+		},
+		{
+			MethodName: "AssignLoanApplicationOfficer",
+			Handler:    _LoanService_AssignLoanApplicationOfficer_Handler,
+		},
+		{
+			MethodName: "AddApplicationCoapplicant",
+			Handler:    _LoanService_AddApplicationCoapplicant_Handler,
+		},
+		{
+			MethodName: "UpsertApplicationCollateral",
+			Handler:    _LoanService_UpsertApplicationCollateral_Handler,
+		},
+		{
+			MethodName: "UpsertLoanVehicle",
+			Handler:    _LoanService_UpsertLoanVehicle_Handler,
+		},
+		{
+			MethodName: "UpsertLoanRealEstate",
+			Handler:    _LoanService_UpsertLoanRealEstate_Handler,
+		},
+		{
+			MethodName: "AddApplicationDocument",
+			Handler:    _LoanService_AddApplicationDocument_Handler,
+		},
+		{
+			MethodName: "UpdateApplicationDocumentVerification",
+			Handler:    _LoanService_UpdateApplicationDocumentVerification_Handler,
+		},
+		{
+			MethodName: "AddBureauScore",
+			Handler:    _LoanService_AddBureauScore_Handler,
+		},
+		{
+			MethodName: "CreateLoan",
+			Handler:    _LoanService_CreateLoan_Handler,
+		},
+		{
+			MethodName: "GetLoan",
+			Handler:    _LoanService_GetLoan_Handler,
+		},
+		{
+			MethodName: "AddEmiScheduleItem",
+			Handler:    _LoanService_AddEmiScheduleItem_Handler,
+		},
+		{
+			MethodName: "ListEmiSchedule",
+			Handler:    _LoanService_ListEmiSchedule_Handler,
+		},
+		{
+			MethodName: "RecordPayment",
+			Handler:    _LoanService_RecordPayment_Handler,
+		},
+		{
+			MethodName: "ListPayments",
+			Handler:    _LoanService_ListPayments_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "loan/v1/loan.proto",
 }

@@ -11,6 +11,49 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type ApplicationCreatedByChannel string
+
+const (
+	ApplicationCreatedByChannelSELF    ApplicationCreatedByChannel = "SELF"
+	ApplicationCreatedByChannelDST     ApplicationCreatedByChannel = "DST"
+	ApplicationCreatedByChannelOFFICER ApplicationCreatedByChannel = "OFFICER"
+)
+
+func (e *ApplicationCreatedByChannel) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ApplicationCreatedByChannel(s)
+	case string:
+		*e = ApplicationCreatedByChannel(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ApplicationCreatedByChannel: %T", src)
+	}
+	return nil
+}
+
+type NullApplicationCreatedByChannel struct {
+	ApplicationCreatedByChannel ApplicationCreatedByChannel `json:"application_created_by_channel"`
+	Valid                       bool                        `json:"valid"` // Valid is true if ApplicationCreatedByChannel is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullApplicationCreatedByChannel) Scan(value interface{}) error {
+	if value == nil {
+		ns.ApplicationCreatedByChannel, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ApplicationCreatedByChannel.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullApplicationCreatedByChannel) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ApplicationCreatedByChannel), nil
+}
+
 type BorrowerEmploymentType string
 
 const (
@@ -97,6 +140,178 @@ func (ns NullBorrowerGender) Value() (driver.Value, error) {
 	return string(ns.BorrowerGender), nil
 }
 
+type BureauProvider string
+
+const (
+	BureauProviderCIBIL    BureauProvider = "CIBIL"
+	BureauProviderEXPERIAN BureauProvider = "EXPERIAN"
+	BureauProviderEQUIFAX  BureauProvider = "EQUIFAX"
+)
+
+func (e *BureauProvider) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = BureauProvider(s)
+	case string:
+		*e = BureauProvider(s)
+	default:
+		return fmt.Errorf("unsupported scan type for BureauProvider: %T", src)
+	}
+	return nil
+}
+
+type NullBureauProvider struct {
+	BureauProvider BureauProvider `json:"bureau_provider"`
+	Valid          bool           `json:"valid"` // Valid is true if BureauProvider is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullBureauProvider) Scan(value interface{}) error {
+	if value == nil {
+		ns.BureauProvider, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.BureauProvider.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullBureauProvider) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.BureauProvider), nil
+}
+
+type CoapplicantRelationship string
+
+const (
+	CoapplicantRelationshipSPOUSE          CoapplicantRelationship = "SPOUSE"
+	CoapplicantRelationshipPARENT          CoapplicantRelationship = "PARENT"
+	CoapplicantRelationshipSIBLING         CoapplicantRelationship = "SIBLING"
+	CoapplicantRelationshipBUSINESSPARTNER CoapplicantRelationship = "BUSINESS_PARTNER"
+)
+
+func (e *CoapplicantRelationship) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CoapplicantRelationship(s)
+	case string:
+		*e = CoapplicantRelationship(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CoapplicantRelationship: %T", src)
+	}
+	return nil
+}
+
+type NullCoapplicantRelationship struct {
+	CoapplicantRelationship CoapplicantRelationship `json:"coapplicant_relationship"`
+	Valid                   bool                    `json:"valid"` // Valid is true if CoapplicantRelationship is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCoapplicantRelationship) Scan(value interface{}) error {
+	if value == nil {
+		ns.CoapplicantRelationship, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CoapplicantRelationship.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCoapplicantRelationship) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CoapplicantRelationship), nil
+}
+
+type CollateralAssetType string
+
+const (
+	CollateralAssetTypeVEHICLE    CollateralAssetType = "VEHICLE"
+	CollateralAssetTypeREALESTATE CollateralAssetType = "REAL_ESTATE"
+)
+
+func (e *CollateralAssetType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CollateralAssetType(s)
+	case string:
+		*e = CollateralAssetType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CollateralAssetType: %T", src)
+	}
+	return nil
+}
+
+type NullCollateralAssetType struct {
+	CollateralAssetType CollateralAssetType `json:"collateral_asset_type"`
+	Valid               bool                `json:"valid"` // Valid is true if CollateralAssetType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCollateralAssetType) Scan(value interface{}) error {
+	if value == nil {
+		ns.CollateralAssetType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CollateralAssetType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCollateralAssetType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CollateralAssetType), nil
+}
+
+type CollateralVerificationStatus string
+
+const (
+	CollateralVerificationStatusPENDING  CollateralVerificationStatus = "PENDING"
+	CollateralVerificationStatusVERIFIED CollateralVerificationStatus = "VERIFIED"
+	CollateralVerificationStatusREJECTED CollateralVerificationStatus = "REJECTED"
+)
+
+func (e *CollateralVerificationStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CollateralVerificationStatus(s)
+	case string:
+		*e = CollateralVerificationStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CollateralVerificationStatus: %T", src)
+	}
+	return nil
+}
+
+type NullCollateralVerificationStatus struct {
+	CollateralVerificationStatus CollateralVerificationStatus `json:"collateral_verification_status"`
+	Valid                        bool                         `json:"valid"` // Valid is true if CollateralVerificationStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCollateralVerificationStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.CollateralVerificationStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CollateralVerificationStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCollateralVerificationStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CollateralVerificationStatus), nil
+}
+
 type ConsentTypeEnum string
 
 const (
@@ -137,6 +352,525 @@ func (ns NullConsentTypeEnum) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.ConsentTypeEnum), nil
+}
+
+type DocumentRequirementType string
+
+const (
+	DocumentRequirementTypeIDENTITY   DocumentRequirementType = "IDENTITY"
+	DocumentRequirementTypeADDRESS    DocumentRequirementType = "ADDRESS"
+	DocumentRequirementTypeINCOME     DocumentRequirementType = "INCOME"
+	DocumentRequirementTypeCOLLATERAL DocumentRequirementType = "COLLATERAL"
+)
+
+func (e *DocumentRequirementType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = DocumentRequirementType(s)
+	case string:
+		*e = DocumentRequirementType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for DocumentRequirementType: %T", src)
+	}
+	return nil
+}
+
+type NullDocumentRequirementType struct {
+	DocumentRequirementType DocumentRequirementType `json:"document_requirement_type"`
+	Valid                   bool                    `json:"valid"` // Valid is true if DocumentRequirementType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullDocumentRequirementType) Scan(value interface{}) error {
+	if value == nil {
+		ns.DocumentRequirementType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.DocumentRequirementType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullDocumentRequirementType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.DocumentRequirementType), nil
+}
+
+type DocumentVerificationStatus string
+
+const (
+	DocumentVerificationStatusPENDING DocumentVerificationStatus = "PENDING"
+	DocumentVerificationStatusPASS    DocumentVerificationStatus = "PASS"
+	DocumentVerificationStatusFAIL    DocumentVerificationStatus = "FAIL"
+)
+
+func (e *DocumentVerificationStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = DocumentVerificationStatus(s)
+	case string:
+		*e = DocumentVerificationStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for DocumentVerificationStatus: %T", src)
+	}
+	return nil
+}
+
+type NullDocumentVerificationStatus struct {
+	DocumentVerificationStatus DocumentVerificationStatus `json:"document_verification_status"`
+	Valid                      bool                       `json:"valid"` // Valid is true if DocumentVerificationStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullDocumentVerificationStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.DocumentVerificationStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.DocumentVerificationStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullDocumentVerificationStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.DocumentVerificationStatus), nil
+}
+
+type EmiStatus string
+
+const (
+	EmiStatusUPCOMING EmiStatus = "UPCOMING"
+	EmiStatusPAID     EmiStatus = "PAID"
+	EmiStatusOVERDUE  EmiStatus = "OVERDUE"
+)
+
+func (e *EmiStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = EmiStatus(s)
+	case string:
+		*e = EmiStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for EmiStatus: %T", src)
+	}
+	return nil
+}
+
+type NullEmiStatus struct {
+	EmiStatus EmiStatus `json:"emi_status"`
+	Valid     bool      `json:"valid"` // Valid is true if EmiStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullEmiStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.EmiStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.EmiStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullEmiStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.EmiStatus), nil
+}
+
+type FeeCalcMethod string
+
+const (
+	FeeCalcMethodFLAT       FeeCalcMethod = "FLAT"
+	FeeCalcMethodPERCENTAGE FeeCalcMethod = "PERCENTAGE"
+)
+
+func (e *FeeCalcMethod) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = FeeCalcMethod(s)
+	case string:
+		*e = FeeCalcMethod(s)
+	default:
+		return fmt.Errorf("unsupported scan type for FeeCalcMethod: %T", src)
+	}
+	return nil
+}
+
+type NullFeeCalcMethod struct {
+	FeeCalcMethod FeeCalcMethod `json:"fee_calc_method"`
+	Valid         bool          `json:"valid"` // Valid is true if FeeCalcMethod is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullFeeCalcMethod) Scan(value interface{}) error {
+	if value == nil {
+		ns.FeeCalcMethod, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.FeeCalcMethod.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullFeeCalcMethod) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.FeeCalcMethod), nil
+}
+
+type LoanApplicationStatus string
+
+const (
+	LoanApplicationStatusDRAFT       LoanApplicationStatus = "DRAFT"
+	LoanApplicationStatusSUBMITTED   LoanApplicationStatus = "SUBMITTED"
+	LoanApplicationStatusUNDERREVIEW LoanApplicationStatus = "UNDER_REVIEW"
+	LoanApplicationStatusAPPROVED    LoanApplicationStatus = "APPROVED"
+	LoanApplicationStatusREJECTED    LoanApplicationStatus = "REJECTED"
+	LoanApplicationStatusDISBURSED   LoanApplicationStatus = "DISBURSED"
+	LoanApplicationStatusCANCELLED   LoanApplicationStatus = "CANCELLED"
+)
+
+func (e *LoanApplicationStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = LoanApplicationStatus(s)
+	case string:
+		*e = LoanApplicationStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for LoanApplicationStatus: %T", src)
+	}
+	return nil
+}
+
+type NullLoanApplicationStatus struct {
+	LoanApplicationStatus LoanApplicationStatus `json:"loan_application_status"`
+	Valid                 bool                  `json:"valid"` // Valid is true if LoanApplicationStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullLoanApplicationStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.LoanApplicationStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.LoanApplicationStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullLoanApplicationStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.LoanApplicationStatus), nil
+}
+
+type LoanInterestType string
+
+const (
+	LoanInterestTypeFIXED    LoanInterestType = "FIXED"
+	LoanInterestTypeFLOATING LoanInterestType = "FLOATING"
+)
+
+func (e *LoanInterestType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = LoanInterestType(s)
+	case string:
+		*e = LoanInterestType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for LoanInterestType: %T", src)
+	}
+	return nil
+}
+
+type NullLoanInterestType struct {
+	LoanInterestType LoanInterestType `json:"loan_interest_type"`
+	Valid            bool             `json:"valid"` // Valid is true if LoanInterestType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullLoanInterestType) Scan(value interface{}) error {
+	if value == nil {
+		ns.LoanInterestType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.LoanInterestType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullLoanInterestType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.LoanInterestType), nil
+}
+
+type LoanProductCategory string
+
+const (
+	LoanProductCategoryPERSONAL  LoanProductCategory = "PERSONAL"
+	LoanProductCategoryHOME      LoanProductCategory = "HOME"
+	LoanProductCategoryVEHICLE   LoanProductCategory = "VEHICLE"
+	LoanProductCategoryEDUCATION LoanProductCategory = "EDUCATION"
+)
+
+func (e *LoanProductCategory) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = LoanProductCategory(s)
+	case string:
+		*e = LoanProductCategory(s)
+	default:
+		return fmt.Errorf("unsupported scan type for LoanProductCategory: %T", src)
+	}
+	return nil
+}
+
+type NullLoanProductCategory struct {
+	LoanProductCategory LoanProductCategory `json:"loan_product_category"`
+	Valid               bool                `json:"valid"` // Valid is true if LoanProductCategory is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullLoanProductCategory) Scan(value interface{}) error {
+	if value == nil {
+		ns.LoanProductCategory, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.LoanProductCategory.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullLoanProductCategory) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.LoanProductCategory), nil
+}
+
+type LoanStatus string
+
+const (
+	LoanStatusACTIVE LoanStatus = "ACTIVE"
+	LoanStatusCLOSED LoanStatus = "CLOSED"
+	LoanStatusNPA    LoanStatus = "NPA"
+)
+
+func (e *LoanStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = LoanStatus(s)
+	case string:
+		*e = LoanStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for LoanStatus: %T", src)
+	}
+	return nil
+}
+
+type NullLoanStatus struct {
+	LoanStatus LoanStatus `json:"loan_status"`
+	Valid      bool       `json:"valid"` // Valid is true if LoanStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullLoanStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.LoanStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.LoanStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullLoanStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.LoanStatus), nil
+}
+
+type PaymentStatus string
+
+const (
+	PaymentStatusPENDING PaymentStatus = "PENDING"
+	PaymentStatusSUCCESS PaymentStatus = "SUCCESS"
+	PaymentStatusFAILED  PaymentStatus = "FAILED"
+)
+
+func (e *PaymentStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PaymentStatus(s)
+	case string:
+		*e = PaymentStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PaymentStatus: %T", src)
+	}
+	return nil
+}
+
+type NullPaymentStatus struct {
+	PaymentStatus PaymentStatus `json:"payment_status"`
+	Valid         bool          `json:"valid"` // Valid is true if PaymentStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPaymentStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.PaymentStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PaymentStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPaymentStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PaymentStatus), nil
+}
+
+type ProductFeeType string
+
+const (
+	ProductFeeTypePROCESSING  ProductFeeType = "PROCESSING"
+	ProductFeeTypePREPAYMENT  ProductFeeType = "PREPAYMENT"
+	ProductFeeTypeLATEPAYMENT ProductFeeType = "LATE_PAYMENT"
+)
+
+func (e *ProductFeeType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ProductFeeType(s)
+	case string:
+		*e = ProductFeeType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ProductFeeType: %T", src)
+	}
+	return nil
+}
+
+type NullProductFeeType struct {
+	ProductFeeType ProductFeeType `json:"product_fee_type"`
+	Valid          bool           `json:"valid"` // Valid is true if ProductFeeType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullProductFeeType) Scan(value interface{}) error {
+	if value == nil {
+		ns.ProductFeeType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ProductFeeType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullProductFeeType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ProductFeeType), nil
+}
+
+type PropertyStatus string
+
+const (
+	PropertyStatusREADYTOMOVE       PropertyStatus = "READY_TO_MOVE"
+	PropertyStatusUNDERCONSTRUCTION PropertyStatus = "UNDER_CONSTRUCTION"
+)
+
+func (e *PropertyStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PropertyStatus(s)
+	case string:
+		*e = PropertyStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PropertyStatus: %T", src)
+	}
+	return nil
+}
+
+type NullPropertyStatus struct {
+	PropertyStatus PropertyStatus `json:"property_status"`
+	Valid          bool           `json:"valid"` // Valid is true if PropertyStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPropertyStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.PropertyStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PropertyStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPropertyStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PropertyStatus), nil
+}
+
+type PropertyType string
+
+const (
+	PropertyTypeAPARTMENT PropertyType = "APARTMENT"
+	PropertyTypeVILLA     PropertyType = "VILLA"
+	PropertyTypePLOT      PropertyType = "PLOT"
+)
+
+func (e *PropertyType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PropertyType(s)
+	case string:
+		*e = PropertyType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PropertyType: %T", src)
+	}
+	return nil
+}
+
+type NullPropertyType struct {
+	PropertyType PropertyType `json:"property_type"`
+	Valid        bool         `json:"valid"` // Valid is true if PropertyType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPropertyType) Scan(value interface{}) error {
+	if value == nil {
+		ns.PropertyType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PropertyType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPropertyType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PropertyType), nil
 }
 
 type UserRole string
@@ -188,6 +922,39 @@ type AdminProfile struct {
 	ID        pgtype.UUID        `json:"id"`
 	UserID    pgtype.UUID        `json:"user_id"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type ApplicationCoapplicant struct {
+	ID                pgtype.UUID             `json:"id"`
+	ApplicationID     pgtype.UUID             `json:"application_id"`
+	BorrowerProfileID pgtype.UUID             `json:"borrower_profile_id"`
+	Relationship      CoapplicantRelationship `json:"relationship"`
+	ConsentAcceptedAt pgtype.Timestamptz      `json:"consent_accepted_at"`
+	CreatedAt         pgtype.Timestamptz      `json:"created_at"`
+}
+
+type ApplicationCollateral struct {
+	ID                 pgtype.UUID                  `json:"id"`
+	ApplicationID      pgtype.UUID                  `json:"application_id"`
+	AssetType          CollateralAssetType          `json:"asset_type"`
+	EstimatedValue     pgtype.Numeric               `json:"estimated_value"`
+	VerificationStatus CollateralVerificationStatus `json:"verification_status"`
+	CollateralDetails  []byte                       `json:"collateral_details"`
+	CreatedAt          pgtype.Timestamptz           `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz           `json:"updated_at"`
+}
+
+type ApplicationDocument struct {
+	ID                 pgtype.UUID                `json:"id"`
+	ApplicationID      pgtype.UUID                `json:"application_id"`
+	BorrowerProfileID  pgtype.UUID                `json:"borrower_profile_id"`
+	RequiredDocID      pgtype.UUID                `json:"required_doc_id"`
+	MediaFileID        pgtype.UUID                `json:"media_file_id"`
+	QualityFlags       []string                   `json:"quality_flags"`
+	VerificationStatus DocumentVerificationStatus `json:"verification_status"`
+	RejectionReason    pgtype.Text                `json:"rejection_reason"`
+	CreatedAt          pgtype.Timestamptz         `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz         `json:"updated_at"`
 }
 
 type BankBranch struct {
@@ -328,12 +1095,107 @@ type BorrowerProfile struct {
 	CreatedAt                  pgtype.Timestamptz     `json:"created_at"`
 }
 
+type BureauScore struct {
+	ID                pgtype.UUID        `json:"id"`
+	BorrowerProfileID pgtype.UUID        `json:"borrower_profile_id"`
+	ApplicationID     pgtype.UUID        `json:"application_id"`
+	Provider          BureauProvider     `json:"provider"`
+	Score             int32              `json:"score"`
+	FetchedAt         pgtype.Timestamptz `json:"fetched_at"`
+	ExpiresAt         pgtype.Timestamptz `json:"expires_at"`
+}
+
 type DstProfile struct {
 	ID        pgtype.UUID        `json:"id"`
 	UserID    pgtype.UUID        `json:"user_id"`
 	Name      string             `json:"name"`
 	BranchID  pgtype.UUID        `json:"branch_id"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type EmiSchedule struct {
+	ID                pgtype.UUID        `json:"id"`
+	LoanID            pgtype.UUID        `json:"loan_id"`
+	InstallmentNumber int32              `json:"installment_number"`
+	DueDate           pgtype.Date        `json:"due_date"`
+	EmiAmount         pgtype.Numeric     `json:"emi_amount"`
+	Status            EmiStatus          `json:"status"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+}
+
+type Loan struct {
+	ID                 pgtype.UUID        `json:"id"`
+	ApplicationID      pgtype.UUID        `json:"application_id"`
+	PrincipalAmount    pgtype.Numeric     `json:"principal_amount"`
+	InterestRate       pgtype.Numeric     `json:"interest_rate"`
+	EmiAmount          pgtype.Numeric     `json:"emi_amount"`
+	OutstandingBalance pgtype.Numeric     `json:"outstanding_balance"`
+	Status             LoanStatus         `json:"status"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+}
+
+type LoanApplication struct {
+	ID                       pgtype.UUID                 `json:"id"`
+	ReferenceNumber          string                      `json:"reference_number"`
+	PrimaryBorrowerProfileID pgtype.UUID                 `json:"primary_borrower_profile_id"`
+	LoanProductID            pgtype.UUID                 `json:"loan_product_id"`
+	BranchID                 pgtype.UUID                 `json:"branch_id"`
+	RequestedAmount          pgtype.Numeric              `json:"requested_amount"`
+	TenureMonths             int32                       `json:"tenure_months"`
+	Status                   LoanApplicationStatus       `json:"status"`
+	AssignedOfficerUserID    pgtype.UUID                 `json:"assigned_officer_user_id"`
+	EscalationReason         pgtype.Text                 `json:"escalation_reason"`
+	CreatedByUserID          pgtype.UUID                 `json:"created_by_user_id"`
+	CreatedByRole            UserRole                    `json:"created_by_role"`
+	CreatedByChannel         ApplicationCreatedByChannel `json:"created_by_channel"`
+	ProductSnapshotJson      []byte                      `json:"product_snapshot_json"`
+	CreatedAt                pgtype.Timestamptz          `json:"created_at"`
+	UpdatedAt                pgtype.Timestamptz          `json:"updated_at"`
+}
+
+type LoanProduct struct {
+	ID                    pgtype.UUID         `json:"id"`
+	Name                  string              `json:"name"`
+	Category              LoanProductCategory `json:"category"`
+	InterestType          LoanInterestType    `json:"interest_type"`
+	BaseInterestRate      pgtype.Numeric      `json:"base_interest_rate"`
+	MinAmount             pgtype.Numeric      `json:"min_amount"`
+	MaxAmount             pgtype.Numeric      `json:"max_amount"`
+	IsRequiringCollateral bool                `json:"is_requiring_collateral"`
+	IsActive              bool                `json:"is_active"`
+	IsDeleted             bool                `json:"is_deleted"`
+	CreatedAt             pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz  `json:"updated_at"`
+}
+
+type LoanRealEstate struct {
+	ID                 pgtype.UUID        `json:"id"`
+	ApplicationID      pgtype.UUID        `json:"application_id"`
+	PropType           PropertyType       `json:"prop_type"`
+	Status             PropertyStatus     `json:"status"`
+	AddressLine1       string             `json:"address_line_1"`
+	Pincode            string             `json:"pincode"`
+	AreaSqft           pgtype.Numeric     `json:"area_sqft"`
+	DeedDocumentNumber pgtype.Text        `json:"deed_document_number"`
+	AgreementValue     pgtype.Numeric     `json:"agreement_value"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+}
+
+type LoanVehicle struct {
+	ID                          pgtype.UUID        `json:"id"`
+	ApplicationID               pgtype.UUID        `json:"application_id"`
+	Make                        string             `json:"make"`
+	Model                       string             `json:"model"`
+	Variant                     string             `json:"variant"`
+	ManufactureYear             int32              `json:"manufacture_year"`
+	VehicleIdentificationNumber string             `json:"vehicle_identification_number"`
+	EngineNumber                string             `json:"engine_number"`
+	InsuranceID                 pgtype.Text        `json:"insurance_id"`
+	OnRoadPrice                 pgtype.Numeric     `json:"on_road_price"`
+	CreatedAt                   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                   pgtype.Timestamptz `json:"updated_at"`
 }
 
 type ManagerProfile struct {
@@ -372,6 +1234,44 @@ type OfficerProfile struct {
 	EmployeeCode   pgtype.Text        `json:"employee_code"`
 	BranchID       pgtype.UUID        `json:"branch_id"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+type Payment struct {
+	ID                    pgtype.UUID        `json:"id"`
+	LoanID                pgtype.UUID        `json:"loan_id"`
+	EmiScheduleID         pgtype.UUID        `json:"emi_schedule_id"`
+	Amount                pgtype.Numeric     `json:"amount"`
+	ExternalTransactionID string             `json:"external_transaction_id"`
+	Status                PaymentStatus      `json:"status"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+}
+
+type ProductEligibilityRule struct {
+	ID                     pgtype.UUID        `json:"id"`
+	LoanProductID          pgtype.UUID        `json:"loan_product_id"`
+	MinAge                 int32              `json:"min_age"`
+	MinMonthlyIncome       pgtype.Numeric     `json:"min_monthly_income"`
+	MinBureauScore         int32              `json:"min_bureau_score"`
+	AllowedEmploymentTypes []string           `json:"allowed_employment_types"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ProductFee struct {
+	ID            pgtype.UUID        `json:"id"`
+	LoanProductID pgtype.UUID        `json:"loan_product_id"`
+	FeeType       ProductFeeType     `json:"fee_type"`
+	CalcMethod    FeeCalcMethod      `json:"calc_method"`
+	Value         pgtype.Numeric     `json:"value"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
+type ProductRequiredDocument struct {
+	ID              pgtype.UUID             `json:"id"`
+	LoanProductID   pgtype.UUID             `json:"loan_product_id"`
+	RequirementType DocumentRequirementType `json:"requirement_type"`
+	IsMandatory     bool                    `json:"is_mandatory"`
+	CreatedAt       pgtype.Timestamptz      `json:"created_at"`
 }
 
 type RefreshToken struct {

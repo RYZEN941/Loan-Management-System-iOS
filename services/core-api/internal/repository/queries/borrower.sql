@@ -30,6 +30,9 @@ INSERT INTO borrower_profiles (
 -- name: GetBorrowerProfileByUserID :one
 SELECT * FROM borrower_profiles WHERE user_id = $1 LIMIT 1;
 
+-- name: GetBorrowerProfileByID :one
+SELECT * FROM borrower_profiles WHERE id = $1 LIMIT 1;
+
 -- name: ActivateUser :exec
 UPDATE users
 SET is_active = true

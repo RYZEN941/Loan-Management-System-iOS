@@ -12,59 +12,107 @@ import (
 
 type Querier interface {
 	ActivateUser(ctx context.Context, id pgtype.UUID) error
+	AssignLoanApplicationOfficer(ctx context.Context, arg AssignLoanApplicationOfficerParams) error
 	ChangeUserPassword(ctx context.Context, arg ChangeUserPasswordParams) error
 	CreateAdminProfile(ctx context.Context, userID pgtype.UUID) (AdminProfile, error)
 	CreateAdminUser(ctx context.Context, arg CreateAdminUserParams) (User, error)
+	CreateApplicationCoapplicant(ctx context.Context, arg CreateApplicationCoapplicantParams) (ApplicationCoapplicant, error)
+	CreateApplicationDocument(ctx context.Context, arg CreateApplicationDocumentParams) (ApplicationDocument, error)
 	CreateBankBranch(ctx context.Context, arg CreateBankBranchParams) (BankBranch, error)
 	CreateBorrowerAadhaarKycHistory(ctx context.Context, arg CreateBorrowerAadhaarKycHistoryParams) (BorrowerAadhaarKycHistory, error)
 	CreateBorrowerPanKycHistory(ctx context.Context, arg CreateBorrowerPanKycHistoryParams) (BorrowerPanKycHistory, error)
 	CreateBorrowerProfile(ctx context.Context, arg CreateBorrowerProfileParams) (BorrowerProfile, error)
+	CreateBureauScore(ctx context.Context, arg CreateBureauScoreParams) (BureauScore, error)
 	CreateDstProfile(ctx context.Context, arg CreateDstProfileParams) (DstProfile, error)
 	CreateDstUser(ctx context.Context, arg CreateDstUserParams) (User, error)
+	CreateEmiScheduleItem(ctx context.Context, arg CreateEmiScheduleItemParams) (EmiSchedule, error)
 	CreateEmployeeUser(ctx context.Context, arg CreateEmployeeUserParams) (User, error)
+	CreateLoan(ctx context.Context, arg CreateLoanParams) (Loan, error)
+	CreateLoanApplication(ctx context.Context, arg CreateLoanApplicationParams) (LoanApplication, error)
+	CreateLoanProduct(ctx context.Context, arg CreateLoanProductParams) (LoanProduct, error)
 	CreateManagerProfile(ctx context.Context, arg CreateManagerProfileParams) (ManagerProfile, error)
 	CreateMediaFile(ctx context.Context, arg CreateMediaFileParams) (MediaFile, error)
 	CreateOfficerProfile(ctx context.Context, arg CreateOfficerProfileParams) (OfficerProfile, error)
+	CreatePayment(ctx context.Context, arg CreatePaymentParams) (Payment, error)
+	CreateProductFee(ctx context.Context, arg CreateProductFeeParams) (ProductFee, error)
+	CreateProductRequiredDocument(ctx context.Context, arg CreateProductRequiredDocumentParams) (ProductRequiredDocument, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateUserConsent(ctx context.Context, arg CreateUserConsentParams) (UserConsent, error)
 	CreateWebAuthnCredential(ctx context.Context, arg CreateWebAuthnCredentialParams) (WebauthnCredential, error)
+	DeleteProductFeesByProductID(ctx context.Context, loanProductID pgtype.UUID) error
+	DeleteProductRequiredDocumentsByProductID(ctx context.Context, loanProductID pgtype.UUID) error
+	GetActiveMediaFileByIDAndUser(ctx context.Context, arg GetActiveMediaFileByIDAndUserParams) (MediaFile, error)
 	GetAdminProfileByUserID(ctx context.Context, userID pgtype.UUID) (AdminProfile, error)
+	GetApplicationCollateralByApplicationID(ctx context.Context, applicationID pgtype.UUID) (ApplicationCollateral, error)
 	GetBankBranchByID(ctx context.Context, id pgtype.UUID) (BankBranch, error)
+	GetBorrowerProfileByID(ctx context.Context, id pgtype.UUID) (BorrowerProfile, error)
 	GetBorrowerProfileByUserID(ctx context.Context, userID pgtype.UUID) (BorrowerProfile, error)
 	GetDstAccountByUserID(ctx context.Context, userID pgtype.UUID) (GetDstAccountByUserIDRow, error)
 	GetDstProfileByUserID(ctx context.Context, userID pgtype.UUID) (DstProfile, error)
+	GetLatestActiveBureauScoreByBorrowerProfile(ctx context.Context, borrowerProfileID pgtype.UUID) (BureauScore, error)
 	GetLatestGrantedConsentByType(ctx context.Context, arg GetLatestGrantedConsentByTypeParams) (UserConsent, error)
+	GetLoanApplicationByID(ctx context.Context, id pgtype.UUID) (LoanApplication, error)
+	GetLoanApplicationViewByID(ctx context.Context, id pgtype.UUID) (GetLoanApplicationViewByIDRow, error)
+	GetLoanByApplicationID(ctx context.Context, applicationID pgtype.UUID) (Loan, error)
+	GetLoanByID(ctx context.Context, id pgtype.UUID) (Loan, error)
+	GetLoanProductByID(ctx context.Context, id pgtype.UUID) (LoanProduct, error)
+	GetLoanRealEstateByApplicationID(ctx context.Context, applicationID pgtype.UUID) (LoanRealEstate, error)
+	GetLoanVehicleByApplicationID(ctx context.Context, applicationID pgtype.UUID) (LoanVehicle, error)
 	GetManagerProfileByID(ctx context.Context, id pgtype.UUID) (ManagerProfile, error)
 	GetManagerProfileByUserID(ctx context.Context, userID pgtype.UUID) (ManagerProfile, error)
 	GetOfficerProfileByUserID(ctx context.Context, userID pgtype.UUID) (OfficerProfile, error)
+	GetPaymentByExternalTransactionID(ctx context.Context, externalTransactionID string) (Payment, error)
+	GetProductEligibilityRuleByProductID(ctx context.Context, loanProductID pgtype.UUID) (ProductEligibilityRule, error)
 	GetRefreshTokenByHashedToken(ctx context.Context, hashedToken string) (RefreshToken, error)
 	GetRefreshTokenByHashedTokenAny(ctx context.Context, hashedToken string) (RefreshToken, error)
 	GetUserByEmailOrPhone(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 	GetWebAuthnCredentialByID(ctx context.Context, credentialID []byte) (WebauthnCredential, error)
 	GetWebAuthnCredentialsByUserID(ctx context.Context, userID pgtype.UUID) ([]WebauthnCredential, error)
+	ListAllLoanApplications(ctx context.Context, arg ListAllLoanApplicationsParams) ([]ListAllLoanApplicationsRow, error)
+	ListApplicationCoapplicants(ctx context.Context, applicationID pgtype.UUID) ([]ApplicationCoapplicant, error)
+	ListApplicationDocumentsByApplicationID(ctx context.Context, applicationID pgtype.UUID) ([]ApplicationDocument, error)
 	ListBorrowerAadhaarKycHistory(ctx context.Context, arg ListBorrowerAadhaarKycHistoryParams) ([]BorrowerAadhaarKycHistory, error)
 	ListBorrowerPanKycHistory(ctx context.Context, arg ListBorrowerPanKycHistoryParams) ([]BorrowerPanKycHistory, error)
+	ListBureauScoresByApplicationID(ctx context.Context, applicationID pgtype.UUID) ([]BureauScore, error)
 	ListDstAccountsByBranchID(ctx context.Context, arg ListDstAccountsByBranchIDParams) ([]ListDstAccountsByBranchIDRow, error)
+	ListEmiScheduleByLoanID(ctx context.Context, loanID pgtype.UUID) ([]EmiSchedule, error)
 	ListEmployeeAccounts(ctx context.Context, arg ListEmployeeAccountsParams) ([]ListEmployeeAccountsRow, error)
+	ListLoanApplicationsByBranchID(ctx context.Context, arg ListLoanApplicationsByBranchIDParams) ([]ListLoanApplicationsByBranchIDRow, error)
+	ListLoanApplicationsForBorrowerProfile(ctx context.Context, arg ListLoanApplicationsForBorrowerProfileParams) ([]ListLoanApplicationsForBorrowerProfileRow, error)
+	ListLoanProducts(ctx context.Context, arg ListLoanProductsParams) ([]LoanProduct, error)
 	ListMediaFilesByUser(ctx context.Context, arg ListMediaFilesByUserParams) ([]MediaFile, error)
+	ListPaymentsByLoanID(ctx context.Context, loanID pgtype.UUID) ([]Payment, error)
+	ListProductFeesByProductID(ctx context.Context, loanProductID pgtype.UUID) ([]ProductFee, error)
+	ListProductRequiredDocumentsByProductID(ctx context.Context, loanProductID pgtype.UUID) ([]ProductRequiredDocument, error)
 	MarkBorrowerAadhaarVerified(ctx context.Context, arg MarkBorrowerAadhaarVerifiedParams) error
 	MarkBorrowerPanVerified(ctx context.Context, arg MarkBorrowerPanVerifiedParams) error
 	ResetUserPassword(ctx context.Context, arg ResetUserPasswordParams) error
 	RevokeRefreshToken(ctx context.Context, hashedToken string) error
 	RevokeRefreshTokensForUserDevice(ctx context.Context, arg RevokeRefreshTokensForUserDeviceParams) error
 	SetTOTPSecret(ctx context.Context, arg SetTOTPSecretParams) error
+	SoftDeleteLoanProduct(ctx context.Context, id pgtype.UUID) error
+	UpdateApplicationDocumentVerification(ctx context.Context, arg UpdateApplicationDocumentVerificationParams) error
 	UpdateBankBranch(ctx context.Context, arg UpdateBankBranchParams) error
 	UpdateBranchDstCommissionByID(ctx context.Context, arg UpdateBranchDstCommissionByIDParams) error
+	UpdateEmiScheduleStatus(ctx context.Context, arg UpdateEmiScheduleStatusParams) error
 	UpdateEmployeeEmailAndPhone(ctx context.Context, arg UpdateEmployeeEmailAndPhoneParams) error
 	UpdateEmployeePasswordByAdmin(ctx context.Context, arg UpdateEmployeePasswordByAdminParams) error
+	UpdateLoanApplicationEscalation(ctx context.Context, arg UpdateLoanApplicationEscalationParams) error
+	UpdateLoanApplicationStatus(ctx context.Context, arg UpdateLoanApplicationStatusParams) error
+	UpdateLoanProduct(ctx context.Context, arg UpdateLoanProductParams) (LoanProduct, error)
+	UpdateLoanStatusAndOutstanding(ctx context.Context, arg UpdateLoanStatusAndOutstandingParams) error
 	UpdateManagerBranch(ctx context.Context, arg UpdateManagerBranchParams) error
 	UpdateOfficerBranch(ctx context.Context, arg UpdateOfficerBranchParams) error
 	UpdateUserVerification(ctx context.Context, arg UpdateUserVerificationParams) error
 	UpdateWebAuthnCredentialSignCount(ctx context.Context, arg UpdateWebAuthnCredentialSignCountParams) error
+	UpsertApplicationCollateral(ctx context.Context, arg UpsertApplicationCollateralParams) (ApplicationCollateral, error)
 	UpsertBorrowerAadhaarKycCurrent(ctx context.Context, arg UpsertBorrowerAadhaarKycCurrentParams) (BorrowerAadhaarKycCurrent, error)
 	UpsertBorrowerPanKycCurrent(ctx context.Context, arg UpsertBorrowerPanKycCurrentParams) (BorrowerPanKycCurrent, error)
+	UpsertLoanRealEstate(ctx context.Context, arg UpsertLoanRealEstateParams) (LoanRealEstate, error)
+	UpsertLoanVehicle(ctx context.Context, arg UpsertLoanVehicleParams) (LoanVehicle, error)
+	UpsertProductEligibilityRule(ctx context.Context, arg UpsertProductEligibilityRuleParams) (ProductEligibilityRule, error)
 }
 
 var _ Querier = (*Queries)(nil)

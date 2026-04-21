@@ -9,16 +9,18 @@ type Application struct {
 	AuthHandler       *transportgrpc.AuthHandler
 	DstHandler        *transportgrpc.DstHandler
 	KycHandler        *transportgrpc.KycHandler
+	LoanHandler       *transportgrpc.LoanHandler
 	MediaHandler      *transportgrpc.MediaHandler
 	OnboardingHandler *transportgrpc.OnboardingHandler
 }
 
-func New(adminService transportgrpc.AdminService, authService transportgrpc.AuthService, dstService transportgrpc.DstService, kycService transportgrpc.KycService, mediaService transportgrpc.MediaService, onboardingService transportgrpc.OnboardingService) *Application {
+func New(adminService transportgrpc.AdminService, authService transportgrpc.AuthService, dstService transportgrpc.DstService, kycService transportgrpc.KycService, loanService transportgrpc.LoanService, mediaService transportgrpc.MediaService, onboardingService transportgrpc.OnboardingService) *Application {
 	return &Application{
 		AdminHandler:      transportgrpc.NewAdminHandler(adminService),
 		AuthHandler:       transportgrpc.NewAuthHandler(authService),
 		DstHandler:        transportgrpc.NewDstHandler(dstService),
 		KycHandler:        transportgrpc.NewKycHandler(kycService),
+		LoanHandler:       transportgrpc.NewLoanHandler(loanService),
 		MediaHandler:      transportgrpc.NewMediaHandler(mediaService),
 		OnboardingHandler: transportgrpc.NewOnboardingHandler(onboardingService),
 	}

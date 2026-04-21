@@ -17,12 +17,14 @@ import (
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/auth"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/dst"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/kyc"
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/loan"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/media"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/onboarding"
 	adminv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/adminv1"
 	authv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/authv1"
 	dstv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/dstv1"
 	kycv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/kycv1"
+	loanv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/loanv1"
 	mediav1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/mediav1"
 	onboardingv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/onboardingv1"
 	grpcinterceptors "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/interceptors"
@@ -59,13 +61,14 @@ func Run() error {
 	dstService := dst.NewService(queries)
 	sandboxKYCClient := sandbox.NewKYCClient(cfg.SandboxBaseURL, cfg.SandboxAPIKey, cfg.SandboxSecret)
 	kycService := kyc.NewService(pgPool, queries, sandboxKYCClient)
+	loanService := loan.NewService(queries)
 	r2Client, err := r2.NewClient(context.Background(), cfg.R2AccountID, cfg.R2AccessKeyID, cfg.R2SecretAccessKey, cfg.R2BucketName, cfg.R2PublicBaseURL)
 	if err != nil {
 		return fmt.Errorf("failed to initialize r2 client: %w", err)
 	}
 	mediaService := media.NewService(queries, r2Client, time.Duration(cfg.R2UploadURLTTLSecs)*time.Second, cfg.MediaMaxUploadSize)
 	onboardingService := onboarding.NewService(queries)
-	application := app.New(adminService, authService, dstService, kycService, mediaService, onboardingService)
+	application := app.New(adminService, authService, dstService, kycService, loanService, mediaService, onboardingService)
 
 	publicMethods := map[string]struct{}{
 		// BOOTSTRAP ADMIN ONLY:
@@ -108,6 +111,32 @@ func Run() error {
 		"/kyc.v1.KycService/VerifyPanKyc":                             {"borrower"},
 		"/kyc.v1.KycService/GetBorrowerKycStatus":                     {"borrower"},
 		"/kyc.v1.KycService/ListBorrowerKycHistory":                   {"borrower"},
+		"/loan.v1.LoanService/CreateLoanProduct":                      {"admin"},
+		"/loan.v1.LoanService/UpdateLoanProduct":                      {"admin"},
+		"/loan.v1.LoanService/DeleteLoanProduct":                      {"admin"},
+		"/loan.v1.LoanService/GetLoanProduct":                         {"borrower", "officer", "manager", "admin", "dst"},
+		"/loan.v1.LoanService/ListLoanProducts":                       {"borrower", "officer", "manager", "admin", "dst"},
+		"/loan.v1.LoanService/UpsertProductEligibilityRule":           {"admin"},
+		"/loan.v1.LoanService/ReplaceProductFees":                     {"admin"},
+		"/loan.v1.LoanService/ReplaceProductRequiredDocuments":        {"admin"},
+		"/loan.v1.LoanService/CreateLoanApplication":                  {"borrower", "officer", "dst"},
+		"/loan.v1.LoanService/GetLoanApplication":                     {"borrower", "officer", "manager", "admin", "dst"},
+		"/loan.v1.LoanService/ListLoanApplications":                   {"borrower", "officer", "manager", "admin", "dst"},
+		"/loan.v1.LoanService/UpdateLoanApplicationStatus":            {"officer", "manager", "admin"},
+		"/loan.v1.LoanService/AssignLoanApplicationOfficer":           {"manager", "admin"},
+		"/loan.v1.LoanService/AddApplicationCoapplicant":              {"borrower", "officer", "manager", "admin", "dst"},
+		"/loan.v1.LoanService/UpsertApplicationCollateral":            {"borrower", "officer", "manager", "admin", "dst"},
+		"/loan.v1.LoanService/UpsertLoanVehicle":                      {"borrower", "officer", "manager", "admin", "dst"},
+		"/loan.v1.LoanService/UpsertLoanRealEstate":                   {"borrower", "officer", "manager", "admin", "dst"},
+		"/loan.v1.LoanService/AddApplicationDocument":                 {"borrower", "officer", "manager", "admin", "dst"},
+		"/loan.v1.LoanService/UpdateApplicationDocumentVerification":  {"officer", "manager", "admin"},
+		"/loan.v1.LoanService/AddBureauScore":                         {"officer", "manager", "admin"},
+		"/loan.v1.LoanService/CreateLoan":                             {"manager", "admin"},
+		"/loan.v1.LoanService/GetLoan":                                {"borrower", "officer", "manager", "admin", "dst"},
+		"/loan.v1.LoanService/AddEmiScheduleItem":                     {"manager", "admin"},
+		"/loan.v1.LoanService/ListEmiSchedule":                        {"borrower", "officer", "manager", "admin", "dst"},
+		"/loan.v1.LoanService/RecordPayment":                          {"officer", "manager", "admin"},
+		"/loan.v1.LoanService/ListPayments":                           {"borrower", "officer", "manager", "admin", "dst"},
 		"/media.v1.MediaService/InitiateMediaUpload":                  {"borrower"},
 		"/media.v1.MediaService/CompleteMediaUpload":                  {"borrower"},
 		"/media.v1.MediaService/ListMedia":                            {"borrower"},
@@ -137,6 +166,7 @@ func Run() error {
 	authv1.RegisterAuthServiceServer(grpcServer, application.AuthHandler)
 	dstv1.RegisterDstServiceServer(grpcServer, application.DstHandler)
 	kycv1.RegisterKycServiceServer(grpcServer, application.KycHandler)
+	loanv1.RegisterLoanServiceServer(grpcServer, application.LoanHandler)
 	mediav1.RegisterMediaServiceServer(grpcServer, application.MediaHandler)
 	onboardingv1.RegisterOnboardingServiceServer(grpcServer, application.OnboardingHandler)
 	reflection.Register(grpcServer)

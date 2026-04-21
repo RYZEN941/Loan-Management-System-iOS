@@ -70,6 +70,7 @@ In this repository:
 - `000004_add_kyc_and_user_consents` adds borrower KYC history/current tables and user consent tracking
 - `000005_add_media_files` adds media metadata storage for R2-backed uploads
 - `000006_add_employee_identity_fields` adds immutable employee serial/code for manager and officer profiles
+- `000007_add_loan_management` adds loan products, applications, collateral, underwriting, and repayment ledger tables
 
 ## Docker-based Run (no local migrate install)
 

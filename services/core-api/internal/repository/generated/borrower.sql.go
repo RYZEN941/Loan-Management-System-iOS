@@ -106,6 +106,36 @@ func (q *Queries) CreateBorrowerProfile(ctx context.Context, arg CreateBorrowerP
 	return i, err
 }
 
+const getBorrowerProfileByID = `-- name: GetBorrowerProfileByID :one
+SELECT id, user_id, first_name, last_name, date_of_birth, gender, address_line1, city, state, pincode, employment_type, monthly_income, profile_completeness_percent, is_aadhaar_verified, is_pan_verified, aadhaar_verified_at, pan_verified_at, created_at FROM borrower_profiles WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetBorrowerProfileByID(ctx context.Context, id pgtype.UUID) (BorrowerProfile, error) {
+	row := q.db.QueryRow(ctx, getBorrowerProfileByID, id)
+	var i BorrowerProfile
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.FirstName,
+		&i.LastName,
+		&i.DateOfBirth,
+		&i.Gender,
+		&i.AddressLine1,
+		&i.City,
+		&i.State,
+		&i.Pincode,
+		&i.EmploymentType,
+		&i.MonthlyIncome,
+		&i.ProfileCompletenessPercent,
+		&i.IsAadhaarVerified,
+		&i.IsPanVerified,
+		&i.AadhaarVerifiedAt,
+		&i.PanVerifiedAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getBorrowerProfileByUserID = `-- name: GetBorrowerProfileByUserID :one
 SELECT id, user_id, first_name, last_name, date_of_birth, gender, address_line1, city, state, pincode, employment_type, monthly_income, profile_completeness_percent, is_aadhaar_verified, is_pan_verified, aadhaar_verified_at, pan_verified_at, created_at FROM borrower_profiles WHERE user_id = $1 LIMIT 1
 `

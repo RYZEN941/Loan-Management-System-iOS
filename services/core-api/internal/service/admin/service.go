@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"log"
 	"strings"
 	"time"
 
@@ -302,6 +303,7 @@ func (s *service) ListEmployeeAccounts(ctx context.Context, req *adminv1.ListEmp
 		Offset: offset,
 	})
 	if err != nil {
+		log.Printf("list_employee_accounts query_failed role=%s limit=%d offset=%d err=%v", role, limit, offset, err)
 		return nil, status.Error(codes.Internal, "failed to list employee accounts")
 	}
 

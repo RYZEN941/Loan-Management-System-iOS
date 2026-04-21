@@ -62,7 +62,7 @@ INSERT INTO manager_profiles (
 SELECT
     u.id AS user_id,
     COALESCE(mp.name, op.name, 'Administrator') AS name,
-    COALESCE(mp.employee_serial, op.employee_serial) AS employee_serial,
+    COALESCE(mp.employee_serial, op.employee_serial, 0)::BIGINT AS employee_serial,
     COALESCE(mp.employee_code, op.employee_code) AS employee_code,
     u.email,
     u.phone,

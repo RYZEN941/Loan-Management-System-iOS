@@ -29,7 +29,7 @@ Frontend API docs are available in `docs/README.md`.
 ## Architecture At A Glance
 
 - Transport: gRPC using protobuf definitions from `proto/`
-- Services: `AuthService`, `AdminService`, `DstService`, `OnboardingService`, `KycService`, `MediaService`
+- Services: `AuthService`, `AdminService`, `DstService`, `OnboardingService`, `KycService`, `MediaService`, `LoanService`
 - Backend: Go service in `services/core-api`
 - Data layer:
   - Postgres for users, profiles, refresh tokens, webauthn credentials, KYC history, media metadata
@@ -207,6 +207,8 @@ Typical call path:
   - Consent recording, Aadhaar OTP verify flow, PAN verification, borrower KYC status/history
 - `media.v1.MediaService`
   - Presigned upload init/complete and user media listing
+- `loan.v1.LoanService`
+  - Loan product setup, application lifecycle, collateral/documents, bureau snapshots, loans, EMI schedule, and payments
 
 ### Signup behavior
 

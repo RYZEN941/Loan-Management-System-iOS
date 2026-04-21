@@ -112,12 +112,17 @@ func (s *service) InitiateAadhaarKyc(ctx context.Context, req *kycv1.InitiateAad
 		reason = "KYC verification"
 	}
 
-	apiResp, raw, err := s.client.GenerateAadhaarOTP(ctx, sandbox.AadhaarGenerateOTPRequest{
+	payload := sandbox.AadhaarGenerateOTPRequest{
 		Entity:        "in.co.sandbox.kyc.aadhaar.okyc.otp.request",
 		AadhaarNumber: aadhaarNumber,
 		Consent:       "Y",
 		Reason:        reason,
-	})
+	}
+	
+	fmt.Printf("DEBUG: Sandbox GenerateAadhaarOTP Payload: %+v\n", payload)
+
+	apiResp, raw, err := s.client.GenerateAadhaarOTP(ctx, payload)
+
 	if err != nil {
 		fmt.Printf("ERROR: sandbox GenerateAadhaarOTP failed: %v | raw response: %s\n", err, string(raw))
 		return nil, status.Error(codes.Unavailable, "failed to initiate aadhaar verification")

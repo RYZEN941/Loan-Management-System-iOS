@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -31,6 +32,7 @@ type Service interface {
 	GetLoanApplication(ctx context.Context, req *loanv1.GetLoanApplicationRequest) (*loanv1.GetLoanApplicationResponse, error)
 	ListLoanApplications(ctx context.Context, req *loanv1.ListLoanApplicationsRequest) (*loanv1.ListLoanApplicationsResponse, error)
 	UpdateLoanApplicationStatus(ctx context.Context, req *loanv1.UpdateLoanApplicationStatusRequest) (*loanv1.UpdateLoanApplicationStatusResponse, error)
+	UpdateLoanApplicationTerms(ctx context.Context, req *loanv1.UpdateLoanApplicationTermsRequest) (*loanv1.UpdateLoanApplicationTermsResponse, error)
 	AssignLoanApplicationOfficer(ctx context.Context, req *loanv1.AssignLoanApplicationOfficerRequest) (*loanv1.AssignLoanApplicationOfficerResponse, error)
 	AddApplicationCoapplicant(ctx context.Context, req *loanv1.AddApplicationCoapplicantRequest) (*loanv1.AddApplicationCoapplicantResponse, error)
 	UpsertApplicationCollateral(ctx context.Context, req *loanv1.UpsertApplicationCollateralRequest) (*loanv1.UpsertApplicationCollateralResponse, error)
@@ -334,6 +336,7 @@ func (s *service) CreateLoanApplication(ctx context.Context, req *loanv1.CreateL
 		BranchID:                 uuidToPg(branchID),
 		RequestedAmount:          reqAmount,
 		TenureMonths:             req.GetTenureMonths(),
+		OfferedInterestRate:      product.BaseInterestRate,
 		Status:                   statusValue,
 		AssignedOfficerUserID:    pgtype.UUID{},
 		EscalationReason:         pgtype.Text{},
@@ -517,6 +520,58 @@ func (s *service) UpdateLoanApplicationStatus(ctx context.Context, req *loanv1.U
 		}
 	}
 	return &loanv1.UpdateLoanApplicationStatusResponse{Success: true}, nil
+}
+
+func (s *service) UpdateLoanApplicationTerms(ctx context.Context, req *loanv1.UpdateLoanApplicationTermsRequest) (*loanv1.UpdateLoanApplicationTermsResponse, error) {
+	callerUserID, role, err := requireUserAndRole(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if role != "officer" && role != "manager" && role != "admin" {
+		return nil, status.Error(codes.PermissionDenied, "role cannot update loan terms")
+	}
+	applicationID, err := parseUUID(req.GetApplicationId(), "application_id")
+	if err != nil {
+		return nil, err
+	}
+	appRow, err := s.queries.GetLoanApplicationByID(ctx, uuidToPg(applicationID))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, status.Error(codes.NotFound, "loan application not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to fetch application")
+	}
+	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID); err != nil {
+		return nil, err
+	}
+	if role == "officer" {
+		if !appRow.AssignedOfficerUserID.Valid || appRow.AssignedOfficerUserID.Bytes != callerUserID {
+			return nil, status.Error(codes.PermissionDenied, "officer can only update assigned applications")
+		}
+	}
+	if appRow.Status == generated.LoanApplicationStatusMANAGERAPPROVED || appRow.Status == generated.LoanApplicationStatusDISBURSED {
+		return nil, status.Error(codes.FailedPrecondition, "loan terms cannot be updated after manager approval")
+	}
+	if req.GetTenureMonths() <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "tenure_months must be > 0")
+	}
+	rate, err := parseNumeric(req.GetOfferedInterestRate(), "offered_interest_rate")
+	if err != nil {
+		return nil, err
+	}
+	rf, err := numericToFloat64(rate)
+	if err != nil || rf < 0 || rf > 100 {
+		return nil, status.Error(codes.InvalidArgument, "offered_interest_rate must be between 0 and 100")
+	}
+	updated, err := s.queries.UpdateLoanApplicationTerms(ctx, generated.UpdateLoanApplicationTermsParams{
+		ID:                  appRow.ID,
+		TenureMonths:        req.GetTenureMonths(),
+		OfferedInterestRate: rate,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to update loan terms")
+	}
+	return &loanv1.UpdateLoanApplicationTermsResponse{Application: mapLoanApplicationBase(updated, "", "")}, nil
 }
 
 func (s *service) AssignLoanApplicationOfficer(ctx context.Context, req *loanv1.AssignLoanApplicationOfficerRequest) (*loanv1.AssignLoanApplicationOfficerResponse, error) {
@@ -852,18 +907,24 @@ func (s *service) CreateLoan(ctx context.Context, req *loanv1.CreateLoanRequest)
 	if err != nil {
 		return nil, err
 	}
-	rate, err := parseNumeric(req.GetInterestRate(), "interest_rate")
-	if err != nil {
-		return nil, err
+	if !appRow.OfferedInterestRate.Valid {
+		return nil, status.Error(codes.FailedPrecondition, "offered_interest_rate is not set on application")
 	}
-	emi, err := parseNumeric(req.GetEmiAmount(), "emi_amount")
-	if err != nil {
-		return nil, err
+	rate := appRow.OfferedInterestRate
+	principalF, err := numericToFloat64(principal)
+	if err != nil || principalF <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "principal_amount must be > 0")
 	}
-	outstanding, err := parseNumeric(req.GetOutstandingBalance(), "outstanding_balance")
-	if err != nil {
-		return nil, err
+	rateF, err := numericToFloat64(rate)
+	if err != nil || rateF < 0 || rateF > 100 {
+		return nil, status.Error(codes.FailedPrecondition, "invalid offered_interest_rate on application")
 	}
+	emiF := calculateReducingEMI(principalF, rateF, int(appRow.TenureMonths))
+	emi, err := float64ToNumeric(emiF)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to compute emi")
+	}
+	outstanding := principal
 	loanRow, err := s.queries.CreateLoan(ctx, generated.CreateLoanParams{
 		ApplicationID:      uuidToPg(applicationID),
 		PrincipalAmount:    principal,
@@ -880,6 +941,9 @@ func (s *service) CreateLoan(ctx context.Context, req *loanv1.CreateLoanRequest)
 		Status: generated.LoanApplicationStatusDISBURSED,
 	}); err != nil {
 		return nil, status.Error(codes.Internal, "failed to mark application disbursed")
+	}
+	if err := s.generateInitialEmiSchedule(ctx, loanRow.ID, loanRow.CreatedAt.Time.UTC(), int(appRow.TenureMonths), emi); err != nil {
+		return nil, err
 	}
 	return &loanv1.CreateLoanResponse{Loan: mapLoan(loanRow)}, nil
 }
@@ -1421,6 +1485,7 @@ func mapLoanApplicationBase(row generated.LoanApplication, productName, branchNa
 		CreatedAt:                timeToString(row.CreatedAt),
 		UpdatedAt:                timeToString(row.UpdatedAt),
 		ProductSnapshotJson:      string(row.ProductSnapshotJson),
+		OfferedInterestRate:      numericToString(row.OfferedInterestRate),
 	}
 }
 
@@ -1444,6 +1509,7 @@ func mapLoanApplicationView(row generated.GetLoanApplicationViewByIDRow) *loanv1
 		CreatedAt:                timeToString(row.CreatedAt),
 		UpdatedAt:                timeToString(row.UpdatedAt),
 		ProductSnapshotJson:      string(row.ProductSnapshotJson),
+		OfferedInterestRate:      numericToString(row.OfferedInterestRate),
 	}
 }
 
@@ -1467,6 +1533,7 @@ func mapLoanApplicationRowForBorrower(row generated.ListLoanApplicationsForBorro
 		CreatedAt:                timeToString(row.CreatedAt),
 		UpdatedAt:                timeToString(row.UpdatedAt),
 		ProductSnapshotJson:      string(row.ProductSnapshotJson),
+		OfferedInterestRate:      numericToString(row.OfferedInterestRate),
 	}
 }
 
@@ -1490,6 +1557,7 @@ func mapLoanApplicationRowForBranch(row generated.ListLoanApplicationsByBranchID
 		CreatedAt:                timeToString(row.CreatedAt),
 		UpdatedAt:                timeToString(row.UpdatedAt),
 		ProductSnapshotJson:      string(row.ProductSnapshotJson),
+		OfferedInterestRate:      numericToString(row.OfferedInterestRate),
 	}
 }
 
@@ -1513,6 +1581,7 @@ func mapLoanApplicationRowForAdmin(row generated.ListAllLoanApplicationsRow) *lo
 		CreatedAt:                timeToString(row.CreatedAt),
 		UpdatedAt:                timeToString(row.UpdatedAt),
 		ProductSnapshotJson:      string(row.ProductSnapshotJson),
+		OfferedInterestRate:      numericToString(row.OfferedInterestRate),
 	}
 }
 
@@ -1862,6 +1931,59 @@ func numericToString(v pgtype.Numeric) string {
 		return ""
 	}
 	return strconv.FormatFloat(f.Float64, 'f', -1, 64)
+}
+
+func numericToFloat64(v pgtype.Numeric) (float64, error) {
+	f, err := v.Float64Value()
+	if err != nil || !f.Valid {
+		return 0, errors.New("invalid numeric")
+	}
+	return f.Float64, nil
+}
+
+func float64ToNumeric(v float64) (pgtype.Numeric, error) {
+	s := strconv.FormatFloat(v, 'f', 2, 64)
+	var out pgtype.Numeric
+	if err := out.Scan(s); err != nil {
+		return pgtype.Numeric{}, err
+	}
+	return out, nil
+}
+
+func calculateReducingEMI(principal, annualRate float64, tenureMonths int) float64 {
+	if tenureMonths <= 0 {
+		return 0
+	}
+	if annualRate <= 0 {
+		return round2(principal / float64(tenureMonths))
+	}
+	monthlyRate := (annualRate / 12.0) / 100.0
+	pow := math.Pow(1+monthlyRate, float64(tenureMonths))
+	emi := principal * monthlyRate * pow / (pow - 1)
+	return round2(emi)
+}
+
+func round2(v float64) float64 {
+	return math.Round(v*100) / 100
+}
+
+func (s *service) generateInitialEmiSchedule(ctx context.Context, loanID pgtype.UUID, startDate time.Time, tenureMonths int, emiAmount pgtype.Numeric) error {
+	if tenureMonths <= 0 {
+		return status.Error(codes.FailedPrecondition, "tenure_months must be > 0")
+	}
+	for i := 1; i <= tenureMonths; i++ {
+		dueDate := time.Date(startDate.Year(), startDate.Month(), startDate.Day(), 0, 0, 0, 0, time.UTC).AddDate(0, i, 0)
+		if _, err := s.queries.CreateEmiScheduleItem(ctx, generated.CreateEmiScheduleItemParams{
+			LoanID:            loanID,
+			InstallmentNumber: int32(i),
+			DueDate:           pgtype.Date{Time: dueDate, Valid: true},
+			EmiAmount:         emiAmount,
+			Status:            generated.EmiStatusUPCOMING,
+		}); err != nil {
+			return status.Error(codes.Internal, "failed to generate emi schedule")
+		}
+	}
+	return nil
 }
 
 func textToString(v pgtype.Text) string {

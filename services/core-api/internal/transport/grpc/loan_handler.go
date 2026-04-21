@@ -19,6 +19,7 @@ type LoanService interface {
 	GetLoanApplication(ctx context.Context, req *loanv1.GetLoanApplicationRequest) (*loanv1.GetLoanApplicationResponse, error)
 	ListLoanApplications(ctx context.Context, req *loanv1.ListLoanApplicationsRequest) (*loanv1.ListLoanApplicationsResponse, error)
 	UpdateLoanApplicationStatus(ctx context.Context, req *loanv1.UpdateLoanApplicationStatusRequest) (*loanv1.UpdateLoanApplicationStatusResponse, error)
+	UpdateLoanApplicationTerms(ctx context.Context, req *loanv1.UpdateLoanApplicationTermsRequest) (*loanv1.UpdateLoanApplicationTermsResponse, error)
 	AssignLoanApplicationOfficer(ctx context.Context, req *loanv1.AssignLoanApplicationOfficerRequest) (*loanv1.AssignLoanApplicationOfficerResponse, error)
 	AddApplicationCoapplicant(ctx context.Context, req *loanv1.AddApplicationCoapplicantRequest) (*loanv1.AddApplicationCoapplicantResponse, error)
 	UpsertApplicationCollateral(ctx context.Context, req *loanv1.UpsertApplicationCollateralRequest) (*loanv1.UpsertApplicationCollateralResponse, error)
@@ -80,6 +81,9 @@ func (h *LoanHandler) ListLoanApplications(ctx context.Context, req *loanv1.List
 }
 func (h *LoanHandler) UpdateLoanApplicationStatus(ctx context.Context, req *loanv1.UpdateLoanApplicationStatusRequest) (*loanv1.UpdateLoanApplicationStatusResponse, error) {
 	return h.loanService.UpdateLoanApplicationStatus(ctx, req)
+}
+func (h *LoanHandler) UpdateLoanApplicationTerms(ctx context.Context, req *loanv1.UpdateLoanApplicationTermsRequest) (*loanv1.UpdateLoanApplicationTermsResponse, error) {
+	return h.loanService.UpdateLoanApplicationTerms(ctx, req)
 }
 func (h *LoanHandler) AssignLoanApplicationOfficer(ctx context.Context, req *loanv1.AssignLoanApplicationOfficerRequest) (*loanv1.AssignLoanApplicationOfficerResponse, error) {
 	return h.loanService.AssignLoanApplicationOfficer(ctx, req)

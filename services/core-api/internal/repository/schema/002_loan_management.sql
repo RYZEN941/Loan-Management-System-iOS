@@ -81,6 +81,7 @@ CREATE TABLE loan_applications (
     branch_id UUID NOT NULL REFERENCES bank_branches(id) ON DELETE RESTRICT,
     requested_amount NUMERIC(15,2) NOT NULL CHECK (requested_amount > 0),
     tenure_months INT NOT NULL CHECK (tenure_months > 0),
+    offered_interest_rate NUMERIC(5,2) CHECK (offered_interest_rate >= 0 AND offered_interest_rate <= 100),
     status loan_application_status NOT NULL DEFAULT 'DRAFT',
     assigned_officer_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     escalation_reason TEXT,

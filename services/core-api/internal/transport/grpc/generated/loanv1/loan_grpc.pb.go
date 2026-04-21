@@ -31,6 +31,7 @@ const (
 	LoanService_GetLoanApplication_FullMethodName                    = "/loan.v1.LoanService/GetLoanApplication"
 	LoanService_ListLoanApplications_FullMethodName                  = "/loan.v1.LoanService/ListLoanApplications"
 	LoanService_UpdateLoanApplicationStatus_FullMethodName           = "/loan.v1.LoanService/UpdateLoanApplicationStatus"
+	LoanService_UpdateLoanApplicationTerms_FullMethodName            = "/loan.v1.LoanService/UpdateLoanApplicationTerms"
 	LoanService_AssignLoanApplicationOfficer_FullMethodName          = "/loan.v1.LoanService/AssignLoanApplicationOfficer"
 	LoanService_AddApplicationCoapplicant_FullMethodName             = "/loan.v1.LoanService/AddApplicationCoapplicant"
 	LoanService_UpsertApplicationCollateral_FullMethodName           = "/loan.v1.LoanService/UpsertApplicationCollateral"
@@ -64,6 +65,7 @@ type LoanServiceClient interface {
 	GetLoanApplication(ctx context.Context, in *GetLoanApplicationRequest, opts ...grpc.CallOption) (*GetLoanApplicationResponse, error)
 	ListLoanApplications(ctx context.Context, in *ListLoanApplicationsRequest, opts ...grpc.CallOption) (*ListLoanApplicationsResponse, error)
 	UpdateLoanApplicationStatus(ctx context.Context, in *UpdateLoanApplicationStatusRequest, opts ...grpc.CallOption) (*UpdateLoanApplicationStatusResponse, error)
+	UpdateLoanApplicationTerms(ctx context.Context, in *UpdateLoanApplicationTermsRequest, opts ...grpc.CallOption) (*UpdateLoanApplicationTermsResponse, error)
 	AssignLoanApplicationOfficer(ctx context.Context, in *AssignLoanApplicationOfficerRequest, opts ...grpc.CallOption) (*AssignLoanApplicationOfficerResponse, error)
 	AddApplicationCoapplicant(ctx context.Context, in *AddApplicationCoapplicantRequest, opts ...grpc.CallOption) (*AddApplicationCoapplicantResponse, error)
 	UpsertApplicationCollateral(ctx context.Context, in *UpsertApplicationCollateralRequest, opts ...grpc.CallOption) (*UpsertApplicationCollateralResponse, error)
@@ -203,6 +205,16 @@ func (c *loanServiceClient) UpdateLoanApplicationStatus(ctx context.Context, in 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateLoanApplicationStatusResponse)
 	err := c.cc.Invoke(ctx, LoanService_UpdateLoanApplicationStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) UpdateLoanApplicationTerms(ctx context.Context, in *UpdateLoanApplicationTermsRequest, opts ...grpc.CallOption) (*UpdateLoanApplicationTermsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateLoanApplicationTermsResponse)
+	err := c.cc.Invoke(ctx, LoanService_UpdateLoanApplicationTerms_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -375,6 +387,7 @@ type LoanServiceServer interface {
 	GetLoanApplication(context.Context, *GetLoanApplicationRequest) (*GetLoanApplicationResponse, error)
 	ListLoanApplications(context.Context, *ListLoanApplicationsRequest) (*ListLoanApplicationsResponse, error)
 	UpdateLoanApplicationStatus(context.Context, *UpdateLoanApplicationStatusRequest) (*UpdateLoanApplicationStatusResponse, error)
+	UpdateLoanApplicationTerms(context.Context, *UpdateLoanApplicationTermsRequest) (*UpdateLoanApplicationTermsResponse, error)
 	AssignLoanApplicationOfficer(context.Context, *AssignLoanApplicationOfficerRequest) (*AssignLoanApplicationOfficerResponse, error)
 	AddApplicationCoapplicant(context.Context, *AddApplicationCoapplicantRequest) (*AddApplicationCoapplicantResponse, error)
 	UpsertApplicationCollateral(context.Context, *UpsertApplicationCollateralRequest) (*UpsertApplicationCollateralResponse, error)
@@ -435,6 +448,9 @@ func (UnimplementedLoanServiceServer) ListLoanApplications(context.Context, *Lis
 }
 func (UnimplementedLoanServiceServer) UpdateLoanApplicationStatus(context.Context, *UpdateLoanApplicationStatusRequest) (*UpdateLoanApplicationStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateLoanApplicationStatus not implemented")
+}
+func (UnimplementedLoanServiceServer) UpdateLoanApplicationTerms(context.Context, *UpdateLoanApplicationTermsRequest) (*UpdateLoanApplicationTermsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateLoanApplicationTerms not implemented")
 }
 func (UnimplementedLoanServiceServer) AssignLoanApplicationOfficer(context.Context, *AssignLoanApplicationOfficerRequest) (*AssignLoanApplicationOfficerResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AssignLoanApplicationOfficer not implemented")
@@ -714,6 +730,24 @@ func _LoanService_UpdateLoanApplicationStatus_Handler(srv interface{}, ctx conte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LoanServiceServer).UpdateLoanApplicationStatus(ctx, req.(*UpdateLoanApplicationStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_UpdateLoanApplicationTerms_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateLoanApplicationTermsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).UpdateLoanApplicationTerms(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_UpdateLoanApplicationTerms_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).UpdateLoanApplicationTerms(ctx, req.(*UpdateLoanApplicationTermsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1042,6 +1076,10 @@ var LoanService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateLoanApplicationStatus",
 			Handler:    _LoanService_UpdateLoanApplicationStatus_Handler,
+		},
+		{
+			MethodName: "UpdateLoanApplicationTerms",
+			Handler:    _LoanService_UpdateLoanApplicationTerms_Handler,
 		},
 		{
 			MethodName: "AssignLoanApplicationOfficer",

@@ -18,6 +18,7 @@ service LoanService {
   rpc GetLoanApplication(GetLoanApplicationRequest) returns (GetLoanApplicationResponse);
   rpc ListLoanApplications(ListLoanApplicationsRequest) returns (ListLoanApplicationsResponse);
   rpc UpdateLoanApplicationStatus(UpdateLoanApplicationStatusRequest) returns (UpdateLoanApplicationStatusResponse);
+  rpc UpdateLoanApplicationTerms(UpdateLoanApplicationTermsRequest) returns (UpdateLoanApplicationTermsResponse);
   rpc AssignLoanApplicationOfficer(AssignLoanApplicationOfficerRequest) returns (AssignLoanApplicationOfficerResponse);
   rpc AddApplicationCoapplicant(AddApplicationCoapplicantRequest) returns (AddApplicationCoapplicantResponse);
   rpc UpsertApplicationCollateral(UpsertApplicationCollateralRequest) returns (UpsertApplicationCollateralResponse);
@@ -320,6 +321,7 @@ message LoanApplication {
   string created_at = 16;
   string updated_at = 17;
   string product_snapshot_json = 18;
+  string offered_interest_rate = 19;
 }
 
 message CreateLoanApplicationRequest {
@@ -367,6 +369,16 @@ message UpdateLoanApplicationStatusRequest {
 
 message UpdateLoanApplicationStatusResponse {
   bool success = 1;
+}
+
+message UpdateLoanApplicationTermsRequest {
+  string application_id = 1;
+  int32 tenure_months = 2;
+  string offered_interest_rate = 3;
+}
+
+message UpdateLoanApplicationTermsResponse {
+  LoanApplication application = 1;
 }
 
 message AssignLoanApplicationOfficerRequest {
@@ -554,9 +566,8 @@ message Loan {
 message CreateLoanRequest {
   string application_id = 1;
   string principal_amount = 2;
-  string interest_rate = 3;
-  string emi_amount = 4;
-  string outstanding_balance = 5;
+  reserved 3, 4, 5;
+  reserved "interest_rate", "emi_amount", "outstanding_balance";
   LoanStatus status = 6;
 }
 

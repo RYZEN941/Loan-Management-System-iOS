@@ -26,6 +26,7 @@ Read operations:
 - Fetch application with related entities: `GetLoanApplication`
 - List applications: `ListLoanApplications`
 - Update status/escalation: `UpdateLoanApplicationStatus`
+- Update offer terms (tenure + interest rate): `UpdateLoanApplicationTerms`
 - Assign officer: `AssignLoanApplicationOfficer`
 - Add coapplicant: `AddApplicationCoapplicant`
 - Upsert collateral base: `UpsertApplicationCollateral`
@@ -44,6 +45,8 @@ Read operations:
 - List EMI schedule: `ListEmiSchedule`
 - Record payment: `RecordPayment`
 - List payments: `ListPayments`
+- `CreateLoan` computes EMI using reducing-balance formula and auto-creates schedule rows for full tenure.
+- `CreateLoanRequest` now takes `application_id`, `principal_amount`, `status`; interest/emi/outstanding are backend-derived.
 
 ## Explicit Approval States
 
@@ -61,6 +64,7 @@ Enforced flow:
 - Officer handles officer-stage decisions.
 - Manager can approve/reject only after officer approval.
 - `CreateLoan` is allowed only when application is `MANAGER_APPROVED`.
+- Officer/manager can update terms until `MANAGER_APPROVED`; after approval/disbursal terms are locked.
 
 ## Application Source Tracking
 

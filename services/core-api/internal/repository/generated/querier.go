@@ -110,6 +110,7 @@ type Querier interface {
 	UpdateEmployeePasswordByAdmin(ctx context.Context, arg UpdateEmployeePasswordByAdminParams) error
 	UpdateLoanApplicationEscalation(ctx context.Context, arg UpdateLoanApplicationEscalationParams) error
 	UpdateLoanApplicationStatus(ctx context.Context, arg UpdateLoanApplicationStatusParams) error
+	UpdateLoanApplicationTerms(ctx context.Context, arg UpdateLoanApplicationTermsParams) (LoanApplication, error)
 	UpdateLoanProduct(ctx context.Context, arg UpdateLoanProductParams) (LoanProduct, error)
 	UpdateLoanStatusAndOutstanding(ctx context.Context, arg UpdateLoanStatusAndOutstandingParams) error
 	UpdateManagerBranch(ctx context.Context, arg UpdateManagerBranchParams) error

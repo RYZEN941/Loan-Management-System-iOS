@@ -135,6 +135,7 @@ INSERT INTO loan_applications (
     branch_id,
     requested_amount,
     tenure_months,
+    offered_interest_rate,
     status,
     assigned_officer_user_id,
     escalation_reason,
@@ -155,7 +156,8 @@ INSERT INTO loan_applications (
     $10,
     $11,
     $12,
-    $13
+    $13,
+    $14
 ) RETURNING *;
 
 -- name: GetLoanApplicationByID :one
@@ -218,6 +220,14 @@ UPDATE loan_applications
 SET status = $2,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = $1;
+
+-- name: UpdateLoanApplicationTerms :one
+UPDATE loan_applications
+SET tenure_months = $2,
+    offered_interest_rate = $3,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+RETURNING *;
 
 -- name: AssignLoanApplicationOfficer :exec
 UPDATE loan_applications

@@ -277,6 +277,7 @@ INSERT INTO loan_applications (
     branch_id,
     requested_amount,
     tenure_months,
+    offered_interest_rate,
     status,
     assigned_officer_user_id,
     escalation_reason,
@@ -297,8 +298,9 @@ INSERT INTO loan_applications (
     $10,
     $11,
     $12,
-    $13
-) RETURNING id, reference_number, primary_borrower_profile_id, loan_product_id, branch_id, requested_amount, tenure_months, status, assigned_officer_user_id, escalation_reason, created_by_user_id, created_by_role, created_by_channel, product_snapshot_json, created_at, updated_at
+    $13,
+    $14
+) RETURNING id, reference_number, primary_borrower_profile_id, loan_product_id, branch_id, requested_amount, tenure_months, offered_interest_rate, status, assigned_officer_user_id, escalation_reason, created_by_user_id, created_by_role, created_by_channel, product_snapshot_json, created_at, updated_at
 `
 
 type CreateLoanApplicationParams struct {
@@ -308,6 +310,7 @@ type CreateLoanApplicationParams struct {
 	BranchID                 pgtype.UUID                 `json:"branch_id"`
 	RequestedAmount          pgtype.Numeric              `json:"requested_amount"`
 	TenureMonths             int32                       `json:"tenure_months"`
+	OfferedInterestRate      pgtype.Numeric              `json:"offered_interest_rate"`
 	Status                   LoanApplicationStatus       `json:"status"`
 	AssignedOfficerUserID    pgtype.UUID                 `json:"assigned_officer_user_id"`
 	EscalationReason         pgtype.Text                 `json:"escalation_reason"`
@@ -325,6 +328,7 @@ func (q *Queries) CreateLoanApplication(ctx context.Context, arg CreateLoanAppli
 		arg.BranchID,
 		arg.RequestedAmount,
 		arg.TenureMonths,
+		arg.OfferedInterestRate,
 		arg.Status,
 		arg.AssignedOfficerUserID,
 		arg.EscalationReason,
@@ -342,6 +346,7 @@ func (q *Queries) CreateLoanApplication(ctx context.Context, arg CreateLoanAppli
 		&i.BranchID,
 		&i.RequestedAmount,
 		&i.TenureMonths,
+		&i.OfferedInterestRate,
 		&i.Status,
 		&i.AssignedOfficerUserID,
 		&i.EscalationReason,
@@ -660,7 +665,7 @@ func (q *Queries) GetLatestActiveBureauScoreByBorrowerProfile(ctx context.Contex
 }
 
 const getLoanApplicationByID = `-- name: GetLoanApplicationByID :one
-SELECT id, reference_number, primary_borrower_profile_id, loan_product_id, branch_id, requested_amount, tenure_months, status, assigned_officer_user_id, escalation_reason, created_by_user_id, created_by_role, created_by_channel, product_snapshot_json, created_at, updated_at
+SELECT id, reference_number, primary_borrower_profile_id, loan_product_id, branch_id, requested_amount, tenure_months, offered_interest_rate, status, assigned_officer_user_id, escalation_reason, created_by_user_id, created_by_role, created_by_channel, product_snapshot_json, created_at, updated_at
 FROM loan_applications
 WHERE id = $1
 LIMIT 1
@@ -677,6 +682,7 @@ func (q *Queries) GetLoanApplicationByID(ctx context.Context, id pgtype.UUID) (L
 		&i.BranchID,
 		&i.RequestedAmount,
 		&i.TenureMonths,
+		&i.OfferedInterestRate,
 		&i.Status,
 		&i.AssignedOfficerUserID,
 		&i.EscalationReason,
@@ -692,7 +698,7 @@ func (q *Queries) GetLoanApplicationByID(ctx context.Context, id pgtype.UUID) (L
 
 const getLoanApplicationViewByID = `-- name: GetLoanApplicationViewByID :one
 SELECT
-    la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at,
+    la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at,
     lp.name AS product_name,
     lp.category AS product_category,
     bb.name AS branch_name,
@@ -713,6 +719,7 @@ type GetLoanApplicationViewByIDRow struct {
 	BranchID                 pgtype.UUID                 `json:"branch_id"`
 	RequestedAmount          pgtype.Numeric              `json:"requested_amount"`
 	TenureMonths             int32                       `json:"tenure_months"`
+	OfferedInterestRate      pgtype.Numeric              `json:"offered_interest_rate"`
 	Status                   LoanApplicationStatus       `json:"status"`
 	AssignedOfficerUserID    pgtype.UUID                 `json:"assigned_officer_user_id"`
 	EscalationReason         pgtype.Text                 `json:"escalation_reason"`
@@ -740,6 +747,7 @@ func (q *Queries) GetLoanApplicationViewByID(ctx context.Context, id pgtype.UUID
 		&i.BranchID,
 		&i.RequestedAmount,
 		&i.TenureMonths,
+		&i.OfferedInterestRate,
 		&i.Status,
 		&i.AssignedOfficerUserID,
 		&i.EscalationReason,
@@ -1079,7 +1087,7 @@ func (q *Queries) IsApplicationBorrowerParticipant(ctx context.Context, arg IsAp
 
 const listAllLoanApplications = `-- name: ListAllLoanApplications :many
 SELECT
-    la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at,
+    la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at,
     lp.name AS product_name,
     bb.name AS branch_name
 FROM loan_applications la
@@ -1102,6 +1110,7 @@ type ListAllLoanApplicationsRow struct {
 	BranchID                 pgtype.UUID                 `json:"branch_id"`
 	RequestedAmount          pgtype.Numeric              `json:"requested_amount"`
 	TenureMonths             int32                       `json:"tenure_months"`
+	OfferedInterestRate      pgtype.Numeric              `json:"offered_interest_rate"`
 	Status                   LoanApplicationStatus       `json:"status"`
 	AssignedOfficerUserID    pgtype.UUID                 `json:"assigned_officer_user_id"`
 	EscalationReason         pgtype.Text                 `json:"escalation_reason"`
@@ -1132,6 +1141,7 @@ func (q *Queries) ListAllLoanApplications(ctx context.Context, arg ListAllLoanAp
 			&i.BranchID,
 			&i.RequestedAmount,
 			&i.TenureMonths,
+			&i.OfferedInterestRate,
 			&i.Status,
 			&i.AssignedOfficerUserID,
 			&i.EscalationReason,
@@ -1340,7 +1350,7 @@ func (q *Queries) ListEmiScheduleByLoanID(ctx context.Context, loanID pgtype.UUI
 
 const listLoanApplicationsByBranchID = `-- name: ListLoanApplicationsByBranchID :many
 SELECT
-    la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at,
+    la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at,
     lp.name AS product_name,
     bb.name AS branch_name
 FROM loan_applications la
@@ -1365,6 +1375,7 @@ type ListLoanApplicationsByBranchIDRow struct {
 	BranchID                 pgtype.UUID                 `json:"branch_id"`
 	RequestedAmount          pgtype.Numeric              `json:"requested_amount"`
 	TenureMonths             int32                       `json:"tenure_months"`
+	OfferedInterestRate      pgtype.Numeric              `json:"offered_interest_rate"`
 	Status                   LoanApplicationStatus       `json:"status"`
 	AssignedOfficerUserID    pgtype.UUID                 `json:"assigned_officer_user_id"`
 	EscalationReason         pgtype.Text                 `json:"escalation_reason"`
@@ -1395,6 +1406,7 @@ func (q *Queries) ListLoanApplicationsByBranchID(ctx context.Context, arg ListLo
 			&i.BranchID,
 			&i.RequestedAmount,
 			&i.TenureMonths,
+			&i.OfferedInterestRate,
 			&i.Status,
 			&i.AssignedOfficerUserID,
 			&i.EscalationReason,
@@ -1419,7 +1431,7 @@ func (q *Queries) ListLoanApplicationsByBranchID(ctx context.Context, arg ListLo
 
 const listLoanApplicationsForBorrowerProfile = `-- name: ListLoanApplicationsForBorrowerProfile :many
 SELECT
-    la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at,
+    la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at,
     lp.name AS product_name,
     bb.name AS branch_name
 FROM loan_applications la
@@ -1444,6 +1456,7 @@ type ListLoanApplicationsForBorrowerProfileRow struct {
 	BranchID                 pgtype.UUID                 `json:"branch_id"`
 	RequestedAmount          pgtype.Numeric              `json:"requested_amount"`
 	TenureMonths             int32                       `json:"tenure_months"`
+	OfferedInterestRate      pgtype.Numeric              `json:"offered_interest_rate"`
 	Status                   LoanApplicationStatus       `json:"status"`
 	AssignedOfficerUserID    pgtype.UUID                 `json:"assigned_officer_user_id"`
 	EscalationReason         pgtype.Text                 `json:"escalation_reason"`
@@ -1474,6 +1487,7 @@ func (q *Queries) ListLoanApplicationsForBorrowerProfile(ctx context.Context, ar
 			&i.BranchID,
 			&i.RequestedAmount,
 			&i.TenureMonths,
+			&i.OfferedInterestRate,
 			&i.Status,
 			&i.AssignedOfficerUserID,
 			&i.EscalationReason,
@@ -1860,6 +1874,46 @@ type UpdateLoanApplicationStatusParams struct {
 func (q *Queries) UpdateLoanApplicationStatus(ctx context.Context, arg UpdateLoanApplicationStatusParams) error {
 	_, err := q.db.Exec(ctx, updateLoanApplicationStatus, arg.ID, arg.Status)
 	return err
+}
+
+const updateLoanApplicationTerms = `-- name: UpdateLoanApplicationTerms :one
+UPDATE loan_applications
+SET tenure_months = $2,
+    offered_interest_rate = $3,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+RETURNING id, reference_number, primary_borrower_profile_id, loan_product_id, branch_id, requested_amount, tenure_months, offered_interest_rate, status, assigned_officer_user_id, escalation_reason, created_by_user_id, created_by_role, created_by_channel, product_snapshot_json, created_at, updated_at
+`
+
+type UpdateLoanApplicationTermsParams struct {
+	ID                  pgtype.UUID    `json:"id"`
+	TenureMonths        int32          `json:"tenure_months"`
+	OfferedInterestRate pgtype.Numeric `json:"offered_interest_rate"`
+}
+
+func (q *Queries) UpdateLoanApplicationTerms(ctx context.Context, arg UpdateLoanApplicationTermsParams) (LoanApplication, error) {
+	row := q.db.QueryRow(ctx, updateLoanApplicationTerms, arg.ID, arg.TenureMonths, arg.OfferedInterestRate)
+	var i LoanApplication
+	err := row.Scan(
+		&i.ID,
+		&i.ReferenceNumber,
+		&i.PrimaryBorrowerProfileID,
+		&i.LoanProductID,
+		&i.BranchID,
+		&i.RequestedAmount,
+		&i.TenureMonths,
+		&i.OfferedInterestRate,
+		&i.Status,
+		&i.AssignedOfficerUserID,
+		&i.EscalationReason,
+		&i.CreatedByUserID,
+		&i.CreatedByRole,
+		&i.CreatedByChannel,
+		&i.ProductSnapshotJson,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const updateLoanProduct = `-- name: UpdateLoanProduct :one

@@ -1149,6 +1149,7 @@ type LoanApplication struct {
 	BranchID                 pgtype.UUID                 `json:"branch_id"`
 	RequestedAmount          pgtype.Numeric              `json:"requested_amount"`
 	TenureMonths             int32                       `json:"tenure_months"`
+	OfferedInterestRate      pgtype.Numeric              `json:"offered_interest_rate"`
 	Status                   LoanApplicationStatus       `json:"status"`
 	AssignedOfficerUserID    pgtype.UUID                 `json:"assigned_officer_user_id"`
 	EscalationReason         pgtype.Text                 `json:"escalation_reason"`

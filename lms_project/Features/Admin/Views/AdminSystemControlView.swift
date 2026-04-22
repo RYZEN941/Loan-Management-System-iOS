@@ -19,6 +19,11 @@ struct AdminSystemControlView: View {
     @State private var configSaved = false
     @State private var sidebarCollapsed = false
 
+    // Branch management state
+    @State private var branchSearchText = ""
+    @State private var showCreateBranch = false
+    @State private var editingBranch: BranchModel? = nil
+
     // Policy config state
     @State private var foirLimit = 50.0
     @State private var cibilThreshold = 600
@@ -46,6 +51,7 @@ struct AdminSystemControlView: View {
 
     enum SystemSection: String, CaseIterable, Identifiable {
         case userManagement = "User Management"
+        case branchManagement = "Branch Management"
         case policyConfig = "Policy Config"
         case workflowConfig = "Workflow"
         case verificationSettings = "Verification"
@@ -62,6 +68,7 @@ struct AdminSystemControlView: View {
             case .notifications: return "bell.badge"
             case .auditCompliance: return "list.bullet.rectangle.portrait"
             case .integrations: return "network"
+            case .branchManagement: return "building.2.fill"
             }
         }
     }
@@ -97,6 +104,10 @@ struct AdminSystemControlView: View {
             .onAppear { adminVM.loadData() }
             .sheet(isPresented: $showCreateUser) { CreateUserSheet(adminVM: adminVM) }
             .sheet(item: $editingUser) { user in EditUserSheet(adminVM: adminVM, user: user) }
+            .sheet(isPresented: $showCreateBranch) { CreateBranchSheet(adminVM: adminVM) }
+            .sheet(item: $editingBranch) { branch in
+                EditBranchSheet(adminVM: adminVM, branchModel: branch)
+            }
         }
     }
 
@@ -142,6 +153,7 @@ struct AdminSystemControlView: View {
                 Text(selectedSection.rawValue).font(Theme.Typography.titleLarge)
                 switch selectedSection {
                 case .userManagement: userManagementContent
+                case .branchManagement: branchManagementContent
                 case .policyConfig: policyConfigContent
                 case .workflowConfig: workflowConfigContent
                 case .verificationSettings: verificationContent
@@ -493,6 +505,58 @@ struct AdminSystemControlView: View {
             }
         }.padding(.horizontal, Theme.Spacing.md).padding(.vertical, 12)
     }
+    
+    // MARK: - 8. Branch Management
+    private var branchManagementContent: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            HStack {
+                Text("\(adminVM.branches.count) branches total")
+                    .font(Theme.Typography.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button { showCreateBranch = true } label: {
+                    Label("Add Branch", systemImage: "plus.circle.fill")
+                        .font(Theme.Typography.subheadline).fontWeight(.medium)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 16).padding(.vertical, 8)
+                        .background(Theme.Colors.primary)
+                        .clipShape(Capsule())
+                }.buttonStyle(.plain)
+            }
+            
+            // Search
+            HStack {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                TextField("Search branches...", text: $branchSearchText)
+            }
+            .padding(10)
+            .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
+            
+            // List
+            VStack(spacing: 0) {
+                let filteredBranches = adminVM.branches.filter { branchSearchText.isEmpty || $0.name.localizedCaseInsensitiveContains(branchSearchText) }
+                ForEach(filteredBranches) { branch in
+                    HStack(spacing: Theme.Spacing.md) {
+                        ZStack {
+                            Circle().fill(Theme.Colors.primary.opacity(0.12)).frame(width: 36, height: 36)
+                            Image(systemName: "building.2.fill").font(.system(size: 14)).foregroundStyle(Theme.Colors.primary)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(branch.name).font(Theme.Typography.subheadline).fontWeight(.medium)
+                            Text(branch.location.isEmpty ? "Location: Not specified" : "Location: \(branch.location)").font(Theme.Typography.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button { editingBranch = branch } label: {
+                            Image(systemName: "pencil").font(.system(size: 16)).foregroundStyle(Theme.Colors.primary)
+                        }.buttonStyle(.plain)
+                    }
+                    .padding(.horizontal, Theme.Spacing.md).padding(.vertical, 10)
+                    if branch.id != filteredBranches.last?.id { Divider().padding(.leading, 56) }
+                }
+            }
+            .cardStyle(colorScheme: colorScheme)
+        }
+    }
 
     // MARK: - Shared Helpers
     private func editRow<Content: View>(_ label: String, @ViewBuilder value: () -> Content) -> some View {
@@ -600,8 +664,8 @@ struct EditUserSheet: View {
                         }
                     }
                     Picker("Branch", selection: $branch) {
-                        ForEach(adminVM.branches, id: \.self) { b in
-                            Text(b).tag(b)
+                        ForEach(adminVM.branches, id: \.name) { b in
+                            Text(b.name).tag(b.name)
                         }
                         Text("+ Create New Branch").tag("+ Create New Branch")
                     }
@@ -642,6 +706,95 @@ struct EditUserSheet: View {
                             finalBranch = newBranchName
                         }
                         adminVM.updateUser(userId: user.id, name: name, role: selectedRole, branch: finalBranch)
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Branch Management Sheets
+struct CreateBranchSheet: View {
+    @ObservedObject var adminVM: AdminViewModel
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var name = ""
+    @State private var location = ""
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Branch Details") {
+                    TextField("Branch Name", text: $name)
+                    TextField("Location (City/Region)", text: $location)
+                }
+            }
+            .navigationTitle("Create Branch")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        adminVM.createBranch(name, location: location)
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+}
+
+struct EditBranchSheet: View {
+    @ObservedObject var adminVM: AdminViewModel
+    let branchModel: BranchModel
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var name: String
+    @State private var location: String
+    
+    init(adminVM: AdminViewModel, branchModel: BranchModel) {
+        self.adminVM = adminVM
+        self.branchModel = branchModel
+        _name = State(initialValue: branchModel.name)
+        _location = State(initialValue: branchModel.location)
+    }
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Branch Details") {
+                    TextField("Branch Name", text: $name)
+                    TextField("Location (City/Region)", text: $location)
+                }
+                
+                Section {
+                    Button(role: .destructive) {
+                        adminVM.deleteBranch(name: branchModel.name)
+                        dismiss()
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Text("Delete Branch")
+                            Spacer()
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Edit Branch")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        adminVM.updateBranch(oldName: branchModel.name, newName: name, location: location)
                         dismiss()
                     }
                     .fontWeight(.semibold)

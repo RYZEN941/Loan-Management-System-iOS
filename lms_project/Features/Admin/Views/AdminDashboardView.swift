@@ -36,11 +36,11 @@ struct AdminDashboardView: View {
                 ScrollView {
                     VStack(spacing: Theme.Spacing.lg) {
                         greetingBar
-                        topSummaryCards
+                        actionRequiredSection
                         metricsSection
-                        applicationFunnel
                         alertsFlagsPanel
                         recentActivityFeed
+                        slaBreachTrendSection
                         slaTrackingSection
                     }
                     .padding(.horizontal, Theme.Spacing.lg)
@@ -104,40 +104,39 @@ struct AdminDashboardView: View {
         .padding(.top, Theme.Spacing.sm)
     }
     
-    // MARK: - Top Summary Cards
+    // MARK: - Action Required Section
     
-    private var topSummaryCards: some View {
-        HStack(spacing: Theme.Spacing.md) {
-            DashboardKPICard(
-                label: "Total Loan Value",
-                value: portfolioValue,
-                icon: "building.columns.fill",
-                color: Theme.Colors.primary,
-                trend: "+4.2%",
-                trendPositive: true,
-                colorScheme: colorScheme
-            )
+    private var actionRequiredSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            SectionHeader(title: "ACTION REQUIRED", icon: "exclamationmark.triangle.fill")
             
-            DashboardKPICard(
-                label: "Active Loans",
-                value: "\(dashboardVM.applications.filter { $0.status != .rejected }.count)",
-                icon: "doc.text.fill",
-                color: Theme.Colors.success,
-                trend: "+3",
-                trendPositive: true,
-                colorScheme: colorScheme
-            )
-            
-            DashboardKPICard(
-                label: "Closed Loans",
-                value: "\(dashboardVM.applications.filter { $0.status == .rejected }.count + 24)",
-                icon: "checkmark.circle.fill",
-                color: Theme.Colors.neutral,
-                trend: "+2",
-                trendPositive: true,
-                colorScheme: colorScheme
-            )
+            HStack(spacing: Theme.Spacing.sm) {
+                actionRequiredCard(title: "SLA Breaches", count: "12", color: Theme.Colors.critical)
+                actionRequiredCard(title: "Fraud Alerts", count: "3", color: Theme.Colors.critical)
+                actionRequiredCard(title: "Policy Violations", count: "8", color: Theme.Colors.warning)
+                actionRequiredCard(title: "Stuck Apps", count: "24", color: Theme.Colors.warning)
+            }
         }
+    }
+    
+    private func actionRequiredCard(title: String, count: String, color: Color) -> some View {
+        Button { } label: {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Text(count)
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(color)
+                Text(title)
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(2)
+            }
+            .padding(Theme.Spacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: 90)
+            .cardStyle(colorScheme: colorScheme)
+        }
+        .buttonStyle(.plain)
     }
     
     // MARK: - Metrics Section
@@ -145,45 +144,6 @@ struct AdminDashboardView: View {
     private var metricsSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             SectionHeader(title: "Key Metrics", icon: "chart.xyaxis.line")
-            
-            // Disbursement Chart
-            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                // High-Fid Header
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Daily Disbursement")
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundStyle(.primary)
-                        Text("Transaction volume across the week")
-                            .font(Theme.Typography.subheadline)
-                            .foregroundStyle(.secondary.opacity(0.8))
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Text("₹124.5k")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
-                            .foregroundStyle(Theme.Colors.primary)
-                        HStack(spacing: 4) {
-                            Text("↗")
-                            Text("12.4%")
-                        }
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(Color.green)
-                    }
-                }
-                .padding(.bottom, Theme.Spacing.xs)
-                
-                PremiumLineChart(
-                    data: dailyDisbursement,
-                    labels: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
-                    accentColor: Theme.Colors.primary,
-                    showPoints: true
-                )
-                .frame(height: 180)
-            }
-            .padding(.vertical, Theme.Spacing.lg)
-            .padding(.horizontal, Theme.Spacing.md)
-            .cardStyle(colorScheme: colorScheme)
             
             // Collection Efficiency & NPA
             HStack(spacing: Theme.Spacing.md) {
@@ -203,11 +163,6 @@ struct AdminDashboardView: View {
                 )
             }
         }
-    }
-    
-    private func dayLabel(_ index: Int) -> String {
-        let days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-        return days[index % days.count]
     }
     
     private func metricGaugeCard(title: String, value: Double, suffix: String, color: Color, icon: String) -> some View {
@@ -246,110 +201,49 @@ struct AdminDashboardView: View {
         .cardStyle(colorScheme: colorScheme)
     }
     
-    // MARK: - Application Funnel
-    
-    private var applicationFunnel: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "Application Funnel", icon: "arrow.right.arrow.left")
-            
-            let submitted = loansVM.totalCount
-            let underReview = loansVM.underReviewCount
-            let approved = loansVM.approvedCount
-            
-            VStack(spacing: Theme.Spacing.sm) {
-                funnelBar(label: "Submitted", count: submitted, total: max(submitted, 1), color: Theme.Colors.primary)
-                funnelBar(label: "Under Review", count: underReview, total: max(submitted, 1), color: Theme.Colors.warning)
-                funnelBar(label: "Approved", count: approved, total: max(submitted, 1), color: Theme.Colors.success)
-            }
-            .padding(Theme.Spacing.md)
-            .cardStyle(colorScheme: colorScheme)
-        }
-    }
-    
-    private func funnelBar(label: String, count: Int, total: Int, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(label)
-                    .font(Theme.Typography.subheadline)
-                Spacer()
-                Text("\(count)")
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
-                    .foregroundStyle(color)
-            }
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 5)
-                        .fill(color.opacity(0.12))
-                        .frame(height: 10)
-                    RoundedRectangle(cornerRadius: 5)
-                        .fill(color)
-                        .frame(width: geo.size.width * CGFloat(count) / CGFloat(total), height: 10)
-                }
-            }
-            .frame(height: 10)
-        }
-    }
-    
     // MARK: - Alerts & Flags Panel
     
     private var alertsFlagsPanel: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             SectionHeader(title: "Alerts & Flags", icon: "bell.badge")
             
-            VStack(spacing: 0) {
-                alertFlagRow(
+            HStack(spacing: Theme.Spacing.sm) {
+                alertFlagCard(
                     icon: "percent",
                     label: "High FOIR Cases",
-                    detail: "3 applications with FOIR > 50%",
                     count: "3",
                     color: Theme.Colors.warning
                 )
-                Divider().padding(.leading, Theme.Spacing.md)
-                alertFlagRow(
+                alertFlagCard(
                     icon: "chart.bar.fill",
                     label: "Low CIBIL Approvals",
-                    detail: "2 approved with CIBIL < 650",
                     count: "2",
                     color: Theme.Colors.warning
                 )
-                Divider().padding(.leading, Theme.Spacing.md)
-                alertFlagRow(
+                alertFlagCard(
                     icon: "exclamationmark.triangle.fill",
                     label: "Fraud Flags",
-                    detail: "1 suspicious application detected",
                     count: "1",
                     color: Theme.Colors.critical
                 )
             }
-            .cardStyle(colorScheme: colorScheme)
         }
     }
     
-    private func alertFlagRow(icon: String, label: String, detail: String, count: String, color: Color) -> some View {
-        HStack(spacing: Theme.Spacing.md) {
+    private func alertFlagCard(icon: String, label: String, count: String, color: Color) -> some View {
+        HStack(spacing: Theme.Spacing.sm) {
             ZStack {
-                RoundedRectangle(cornerRadius: Theme.Radius.sm)
-                    .fill(color.opacity(0.12))
-                    .frame(width: 36, height: 36)
-                Image(systemName: icon)
-                    .font(.system(size: 15))
-                    .foregroundStyle(color)
+                Circle().fill(color.opacity(0.12)).frame(width: 32, height: 32)
+                Image(systemName: icon).font(.system(size: 14)).foregroundStyle(color)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(Theme.Typography.subheadline)
-                    .fontWeight(.medium)
-                Text(detail)
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(.secondary)
+                Text(count).font(.system(size: 18, weight: .bold, design: .rounded)).foregroundStyle(color)
+                Text(label).font(Theme.Typography.caption).foregroundStyle(.secondary).lineLimit(2)
             }
-            Spacer()
-            Text(count)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundStyle(color)
         }
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, 12)
+        .padding(Theme.Spacing.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardStyle(colorScheme: colorScheme)
     }
     
     // MARK: - Recent Activity Feed
@@ -429,6 +323,27 @@ struct AdminDashboardView: View {
         .padding(.vertical, 12)
     }
     
+    // MARK: - SLA Breach Trend
+    
+    private var slaBreachTrendSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            SectionHeader(title: "SLA Breach Trend (Last 7 Days)", icon: "chart.line.downtrend.xyaxis")
+            
+            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                PremiumLineChart(
+                    data: [5.0, 7.0, 4.0, 8.0, 3.0, 2.0, 4.0],
+                    labels: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
+                    accentColor: Theme.Colors.critical,
+                    showPoints: true
+                )
+                .frame(height: 120)
+            }
+            .padding(.vertical, Theme.Spacing.md)
+            .padding(.horizontal, Theme.Spacing.md)
+            .cardStyle(colorScheme: colorScheme)
+        }
+    }
+    
     // MARK: - SLA Tracking
     
     private var slaTrackingSection: some View {
@@ -480,47 +395,4 @@ struct AdminDashboardView: View {
     
     // Removed Quick Actions
 }
-    
-// MARK: - Dashboard KPI Card
-    
-    private struct DashboardKPICard: View {
-        let label: String
-        let value: String
-        let icon: String
-        let color: Color
-        let trend: String
-        let trendPositive: Bool
-        let colorScheme: ColorScheme
-        
-        var body: some View {
-            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                HStack {
-                    Image(systemName: icon)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(color)
-                        .frame(width: 30, height: 30)
-                        .background(color.opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
-                    Spacer()
-                    Text(trend)
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(trendPositive ? Theme.Colors.success : Theme.Colors.critical)
-                }
-                Spacer()
-                Text(value)
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
-                    .minimumScaleFactor(0.7)
-                    .lineLimit(1)
-                Text(label)
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(Theme.Spacing.md)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(height: 130)
-            .cardStyle(colorScheme: colorScheme)
-        }
-        
-    }
 

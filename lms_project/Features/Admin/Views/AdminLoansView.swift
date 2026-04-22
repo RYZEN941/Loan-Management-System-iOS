@@ -107,6 +107,13 @@ struct AdminLoansView: View {
                 AddLoanSheet()
                     .environmentObject(loansVM)
             }
+            .sheet(item: Binding(
+                get: { loansVM.editingLoan },
+                set: { loansVM.editingLoan = $0 }
+            )) { loan in
+                EditLoanSheet(product: loan)
+                    .environmentObject(loansVM)
+            }
             .alert(loansVM.actionMessage ?? "", isPresented: Binding(
                 get: { loansVM.showActionAlert },
                 set: { loansVM.showActionAlert = $0 }
@@ -167,17 +174,31 @@ struct LoanProductCard: View {
                 
                 Spacer()
                 
-                Button {
-                    loansVM.deleteLoanProduct(product)
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.red.opacity(0.7))
-                        .padding(8)
-                        .background(Color.red.opacity(0.05))
-                        .clipShape(Circle())
+                HStack(spacing: Theme.Spacing.sm) {
+                    Button {
+                        loansVM.editingLoan = product
+                    } label: {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 14))
+                            .foregroundStyle(Theme.Colors.primary.opacity(0.8))
+                            .padding(8)
+                            .background(Theme.Colors.primary.opacity(0.05))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    
+                    Button {
+                        loansVM.deleteLoanProduct(product)
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.red.opacity(0.7))
+                            .padding(8)
+                            .background(Color.red.opacity(0.05))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
             
             Text(product.description)
@@ -232,7 +253,8 @@ struct AddLoanSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     
-    @State private var name = ""
+    @State private var selectedCommonName = "Home Loan"
+    @State private var customName = ""
     @State private var description = ""
     @State private var category = "Asset"
     @State private var interestRate = ""
@@ -240,14 +262,35 @@ struct AddLoanSheet: View {
     @State private var maxTenure = ""
     @State private var selectedIcon = "house.fill"
     
+    let commonNames = ["Home Loan", "Vehicle Loan", "Gold Loan", "Personal Loan", "Business Loan", "Custom..."]
     let icons = ["house.fill", "car.fill", "person.fill", "briefcase.fill", "box.truck.fill", "leaf.fill", "graduationcap.fill", "medicalpalette.fill"]
     let categories = ["Asset", "Personal", "Business", "Education", "Other"]
+    
+    private var resolvedName: String {
+        selectedCommonName == "Custom..." ? customName : selectedCommonName
+    }
+    
+    private var isFormValid: Bool {
+        guard !resolvedName.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
+        guard let rate = Double(interestRate), rate > 0 else { return false }
+        guard let amt = Double(maxAmount), amt > 0 else { return false }
+        guard let tenure = Int(maxTenure), tenure > 0 else { return false }
+        return true
+    }
     
     var body: some View {
         NavigationStack {
             Form {
                 Section("Basic Information") {
-                    TextField("Loan Name", text: $name)
+                    Picker("Loan Type", selection: $selectedCommonName) {
+                        ForEach(commonNames, id: \.self) { n in
+                            Text(n).tag(n)
+                        }
+                    }
+                    
+                    if selectedCommonName == "Custom..." {
+                        TextField("Custom Loan Name", text: $customName)
+                    }
                     TextField("Description", text: $description, axis: .vertical)
                         .lineLimit(3...5)
                     
@@ -316,7 +359,7 @@ struct AddLoanSheet: View {
                     Button("Save") {
                         save()
                     }
-                    .disabled(name.isEmpty || interestRate.isEmpty || maxAmount.isEmpty)
+                    .disabled(!isFormValid)
                     .fontWeight(.bold)
                 }
             }
@@ -325,7 +368,7 @@ struct AddLoanSheet: View {
     
     private func save() {
         let product = LoanProduct(
-            name: name,
+            name: resolvedName,
             description: description,
             icon: selectedIcon,
             interestRate: Double(interestRate) ?? 0.0,
@@ -334,6 +377,163 @@ struct AddLoanSheet: View {
             category: category
         )
         loansVM.addLoanProduct(product)
+    }
+}
+
+// MARK: - Edit Loan Sheet
+
+struct EditLoanSheet: View {
+    let product: LoanProduct
+    @EnvironmentObject var loansVM: AdminLoansViewModel
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    
+    @State private var selectedCommonName: String
+    @State private var customName: String
+    @State private var description: String
+    @State private var category: String
+    @State private var interestRate: String
+    @State private var maxAmount: String
+    @State private var maxTenure: String
+    @State private var selectedIcon: String
+    
+    let commonNames = ["Home Loan", "Vehicle Loan", "Gold Loan", "Personal Loan", "Business Loan", "Custom..."]
+    let icons = ["house.fill", "car.fill", "person.fill", "briefcase.fill", "box.truck.fill", "leaf.fill", "graduationcap.fill", "medicalpalette.fill"]
+    let categories = ["Asset", "Personal", "Business", "Education", "Other"]
+    
+    init(product: LoanProduct) {
+        self.product = product
+        
+        let cNames = ["Home Loan", "Vehicle Loan", "Gold Loan", "Personal Loan", "Business Loan"]
+        if cNames.contains(product.name) {
+            _selectedCommonName = State(initialValue: product.name)
+            _customName = State(initialValue: "")
+        } else {
+            _selectedCommonName = State(initialValue: "Custom...")
+            _customName = State(initialValue: product.name)
+        }
+        
+        _description = State(initialValue: product.description)
+        _category = State(initialValue: product.category)
+        _interestRate = State(initialValue: String(product.interestRate))
+        _maxAmount = State(initialValue: String(format: "%.0f", product.maxAmount))
+        _maxTenure = State(initialValue: String(product.maxTenure))
+        _selectedIcon = State(initialValue: product.icon)
+    }
+    
+    private var resolvedName: String {
+        selectedCommonName == "Custom..." ? customName : selectedCommonName
+    }
+    
+    private var isFormValid: Bool {
+        guard !resolvedName.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
+        guard let rate = Double(interestRate), rate > 0 else { return false }
+        guard let amt = Double(maxAmount.replacingOccurrences(of: ",", with: "")), amt > 0 else { return false }
+        guard let tenure = Int(maxTenure), tenure > 0 else { return false }
+        return true
+    }
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Basic Information") {
+                    Picker("Loan Type", selection: $selectedCommonName) {
+                        ForEach(commonNames, id: \.self) { n in
+                            Text(n).tag(n)
+                        }
+                    }
+                    
+                    if selectedCommonName == "Custom..." {
+                        TextField("Custom Loan Name", text: $customName)
+                    }
+                    TextField("Description", text: $description, axis: .vertical)
+                        .lineLimit(3...5)
+                    
+                    Picker("Category", selection: $category) {
+                        ForEach(categories, id: \.self) { cat in
+                            Text(cat).tag(cat)
+                        }
+                    }
+                }
+                
+                Section("Financial Details") {
+                    HStack {
+                        Text("Interest Rate (%)")
+                        Spacer()
+                        TextField("8.5", text: $interestRate)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 80)
+                    }
+                    
+                    HStack {
+                        Text("Max Amount (₹)")
+                        Spacer()
+                        TextField("1,000,000", text: $maxAmount)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                    }
+                    
+                    HStack {
+                        Text("Max Tenure (Months)")
+                        Spacer()
+                        TextField("120", text: $maxTenure)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 80)
+                    }
+                }
+                
+                Section("Visual Style") {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 15) {
+                            ForEach(icons, id: \.self) { icon in
+                                ZStack {
+                                    Circle()
+                                        .fill(selectedIcon == icon ? Theme.Colors.primary : Theme.Colors.primary.opacity(0.1))
+                                        .frame(width: 44, height: 44)
+                                    Image(systemName: icon)
+                                        .foregroundStyle(selectedIcon == icon ? .white : Theme.Colors.primary)
+                                }
+                                .onTapGesture {
+                                    selectedIcon = icon
+                                }
+                            }
+                        }
+                        .padding(.vertical, 8)
+                    }
+                }
+            }
+            .navigationTitle("Edit Loan")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        save()
+                    }
+                    .disabled(!isFormValid)
+                    .fontWeight(.bold)
+                }
+            }
+        }
+    }
+    
+    private func save() {
+        let amt = Double(maxAmount.replacingOccurrences(of: ",", with: "")) ?? 0.0
+        let updated = LoanProduct(
+            id: product.id,
+            name: resolvedName,
+            description: description,
+            icon: selectedIcon,
+            interestRate: Double(interestRate) ?? 0.0,
+            maxAmount: amt,
+            maxTenure: Int(maxTenure) ?? 0,
+            category: category
+        )
+        loansVM.updateLoanProduct(oldProduct: product, newProduct: updated)
     }
 }
 

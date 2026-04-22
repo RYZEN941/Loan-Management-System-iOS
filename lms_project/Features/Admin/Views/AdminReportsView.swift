@@ -15,7 +15,7 @@ struct AdminReportsView: View {
     @State private var selectedCategory = 0
     @State private var showExportSheet: ReportItem? = nil
     @State private var previewingReport: ReportItem? = nil
-    @State private var showCustomBuilder = false
+    @State private var shareItem: ShareItem? = nil
     @State private var showingBanner = false
     @State private var bannerMessage = ""
     @State private var dateRange = "Last 30 Days"
@@ -47,8 +47,6 @@ struct AdminReportsView: View {
                         filtersSection
                         reportCategoryTabs
                         reportListSection
-                        scheduledReportsSection
-                        customBuilderButton
                     }
                     .padding(.horizontal,Theme.Spacing.lg)
                     .padding(.bottom,Theme.Spacing.lg)
@@ -64,7 +62,9 @@ struct AdminReportsView: View {
             .sheet(item:$previewingReport) { report in
                 ReportPreviewSheet(report:report,onExport:{format in triggerExport(report:report,format:format)})
             }
-            .sheet(isPresented:$showCustomBuilder) { CustomReportBuilderSheet() }
+            .sheet(item: $shareItem) { item in
+                ShareSheet(activityItems: [item.url])
+            }
         }
     }
 
@@ -137,46 +137,7 @@ struct AdminReportsView: View {
         }
     }
 
-    // MARK: - Scheduled Reports
-    private var scheduledReportsSection: some View {
-        VStack(alignment:.leading,spacing:Theme.Spacing.md) {
-            SectionHeader(title:"Scheduled Reports",icon:"calendar.badge.clock")
-            VStack(spacing:0) {
-                scheduledRow(title:"Monthly Portfolio Digest",frequency:"1st of every month",status:"Active",color:Theme.Colors.success)
-                Divider().padding(.leading,Theme.Spacing.md)
-                scheduledRow(title:"Weekly Performance Summary",frequency:"Every Monday, 8:00 AM",status:"Active",color:Theme.Colors.success)
-                Divider().padding(.leading,Theme.Spacing.md)
-                scheduledRow(title:"RBI Compliance Submission",frequency:"Quarterly",status:"Paused",color:Theme.Colors.warning)
-                Divider().padding(.leading,Theme.Spacing.md)
-                scheduledRow(title:"NPA & Recovery Tracker",frequency:"Every Friday",status:"Active",color:Theme.Colors.success)
-            }.cardStyle(colorScheme:colorScheme)
-        }
-    }
 
-    private func scheduledRow(title:String,frequency:String,status:String,color:Color) -> some View {
-        HStack {
-            VStack(alignment:.leading,spacing:2) {
-                Text(title).font(Theme.Typography.subheadline)
-                Text(frequency).font(Theme.Typography.caption).foregroundStyle(.secondary)
-            }
-            Spacer()
-            GenericBadge(text:status,color:color)
-        }.padding(.horizontal,Theme.Spacing.md).padding(.vertical,13)
-    }
-
-    // MARK: - Custom Builder Button
-    private var customBuilderButton: some View {
-        Button { showCustomBuilder = true } label: {
-            HStack {
-                Image(systemName:"wrench.and.screwdriver").font(.system(size:16))
-                Text("Custom Report Builder").fontWeight(.medium)
-            }
-            .foregroundStyle(.white)
-            .frame(maxWidth:.infinity).frame(height:Theme.Layout.buttonHeight)
-            .background(Theme.Colors.primary)
-            .clipShape(RoundedRectangle(cornerRadius:Theme.Radius.md))
-        }.buttonStyle(.plain)
-    }
 
     // MARK: - Export
     private var exportBanner: some View {
@@ -190,8 +151,35 @@ struct AdminReportsView: View {
     private func triggerExport(report:ReportItem,format:ExportFormat) {
         bannerMessage = "Generating \(report.title) as \(format.displayName)…"
         withAnimation{showingBanner=true}
-        DispatchQueue.main.asyncAfter(deadline:.now()+3){withAnimation{showingBanner=false}}
+        
+        DispatchQueue.main.asyncAfter(deadline:.now()+1.5) {
+            withAnimation{showingBanner=false}
+            
+            let fileName = "\(report.title.replacingOccurrences(of: " ", with: "_")).\(format.rawValue)"
+            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+            
+            try? "Mock report data for \(report.title)".write(to: tempURL, atomically: true, encoding: .utf8)
+            
+            self.shareItem = ShareItem(url: tempURL)
+        }
     }
+}
+
+struct ShareItem: Identifiable {
+    let id = UUID()
+    let url: URL
+}
+
+struct ShareSheet: UIViewControllerRepresentable {
+    var activityItems: [Any]
+    var applicationActivities: [UIActivity]? = nil
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(activityItems: activityItems, applicationActivities: applicationActivities)
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - Report Card
@@ -268,44 +256,7 @@ private struct ExportOptionsSheet: View {
     }
 }
 
-// MARK: - Custom Report Builder Sheet
-private struct CustomReportBuilderSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var selectedFields: Set<String> = ["Loan ID","Borrower Name","Amount","Status"]
-    private let availableFields = ["Loan ID","Borrower Name","Amount","Status","Risk Score","CIBIL","FOIR","Branch","Loan Type","EMI","Tenure","Interest Rate","Assigned LO","Created Date"]
-    @State private var dateRange = "Last 30 Days"
-    @State private var format: ExportFormat = .csv
 
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Select Fields") {
-                    ForEach(availableFields,id:\.self) { field in
-                        Toggle(field,isOn:Binding(
-                            get:{selectedFields.contains(field)},
-                            set:{newVal in if newVal{selectedFields.insert(field)}else{selectedFields.remove(field)}}
-                        ))
-                        .tint(Theme.Colors.primary)
-                    }
-                }
-                Section("Options") {
-                    Picker("Format",selection:$format) {
-                        ForEach(ExportFormat.allCases,id:\.self) { Text($0.displayName).tag($0) }
-                    }
-                    Picker("Date Range",selection:$dateRange) {
-                        ForEach(["Last 7 Days","Last 30 Days","Last 90 Days","This FY"],id:\.self) { Text($0).tag($0) }
-                    }
-                }
-                Section { Text("\(selectedFields.count) fields selected").font(.caption).foregroundStyle(.secondary) }
-            }
-            .navigationTitle("Custom Report Builder").navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement:.cancellationAction) { Button("Cancel"){dismiss()} }
-                ToolbarItem(placement:.confirmationAction) { Button("Generate"){dismiss()}.fontWeight(.semibold).disabled(selectedFields.isEmpty) }
-            }
-        }
-    }
-}
 
 // MARK: - Data Models
 struct ReportItem: Identifiable {

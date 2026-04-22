@@ -314,8 +314,8 @@ struct CreateUserSheet: View {
                         }
                     }
                     Picker("Branch", selection: $branch) {
-                        ForEach(adminVM.branches, id: \.self) { b in
-                            Text(b).tag(b)
+                        ForEach(adminVM.branches, id: \.name) { b in
+                            Text(b.name).tag(b.name)
                         }
                         Text("+ Create New Branch").tag("+ Create New Branch")
                     }
@@ -462,8 +462,8 @@ struct InlineEditUserView: View {
                         }
                     }
                     Picker("Branch", selection: $branch) {
-                        ForEach(adminVM.branches, id: \.self) { b in
-                            Text(b).tag(b)
+                        ForEach(adminVM.branches, id: \.name) { b in
+                            Text(b.name).tag(b.name)
                         }
                         Text("+ Create New Branch").tag("+ Create New Branch")
                     }
@@ -487,6 +487,19 @@ struct InlineEditUserView: View {
                         Text("Phone").foregroundStyle(.secondary)
                         Spacer()
                         Text(user.phone).foregroundStyle(.primary)
+                    }
+                }
+                
+                Section {
+                    Button(role: .destructive) {
+                        adminVM.deleteUser(user)
+                        withAnimation { isEditing = false }
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Text("Delete User")
+                            Spacer()
+                        }
                     }
                 }
             }

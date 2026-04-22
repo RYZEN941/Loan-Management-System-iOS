@@ -23,7 +23,11 @@ class AdminViewModel: ObservableObject {
     @Published var autoAssignEnabled: Bool = true
     
     // Branches
-    @Published var branches: [String] = ["Mumbai Central", "Delhi NCR", "Bangalore Tech Park"]
+    @Published var branches: [BranchModel] = [
+        BranchModel(name: "Mumbai Central", location: "Mumbai"),
+        BranchModel(name: "Delhi NCR", location: "Delhi"),
+        BranchModel(name: "Bangalore Tech Park", location: "Bangalore")
+    ]
     
     // Audit Logs
     @Published var auditLogs: [AuditLog] = []
@@ -64,7 +68,13 @@ class AdminViewModel: ObservableObject {
                 }
                 let branchNames = Set(mappedUsers.map(\.branch).filter { !$0.isEmpty })
                 if !branchNames.isEmpty {
-                    branches = Array(branchNames).sorted()
+                    var updatedBranches = branches
+                    for name in branchNames {
+                        if !updatedBranches.contains(where: { $0.name == name }) {
+                            updatedBranches.append(BranchModel(name: name, location: ""))
+                        }
+                    }
+                    branches = updatedBranches.sorted(by: { $0.name < $1.name })
                 }
                 auditLogs = Self.mockAuditLogs()
             } catch {
@@ -145,11 +155,22 @@ class AdminViewModel: ObservableObject {
         }
     }
     
+    func deleteUser(_ user: User) {
+        if let index = users.firstIndex(where: { $0.id == user.id }) {
+            withAnimation {
+                users.remove(at: index)
+                if selectedUser?.id == user.id {
+                    selectedUser = nil
+                }
+            }
+        }
+    }
+    
     func saveConfig(baseRate: Double, maxTenure: Int, slaDays: Int) {
         // Persist to published properties
     }
     
-    func createBranch(_ branchName: String) {
+    func createBranch(_ branchName: String, location: String = "") {
         let trimmed = branchName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             return
@@ -161,17 +182,37 @@ class AdminViewModel: ObservableObject {
 
         Task {
             do {
-                _ = try await adminAPI.createBankBranch(name: trimmed, region: "Unknown", city: "Unknown")
-                if !branches.contains(trimmed) {
-                    withAnimation {
-                        branches.append(trimmed)
-                    }
-                }
+                _ = try await adminAPI.createBankBranch(name: trimmed, region: location, city: location)
                 requestSuccess = "Branch created successfully."
             } catch {
                 requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to create branch"
             }
+            // For UI prototype: Optimistically add the branch regardless of API success
+            if !branches.contains(where: { $0.name == trimmed }) {
+                withAnimation {
+                    branches.append(BranchModel(name: trimmed, location: location))
+                    branches.sort(by: { $0.name < $1.name })
+                }
+            }
             isLoading = false
+        }
+    }
+
+    func updateBranch(oldName: String, newName: String, location: String) {
+        if let index = branches.firstIndex(where: { $0.name == oldName }) {
+            withAnimation {
+                branches[index].name = newName
+                branches[index].location = location
+                branches.sort(by: { $0.name < $1.name })
+            }
+        }
+    }
+    
+    func deleteBranch(name: String) {
+        if let index = branches.firstIndex(where: { $0.name == name }) {
+            withAnimation {
+                branches.remove(at: index)
+            }
         }
     }
 
@@ -270,4 +311,12 @@ struct AuditLog: Identifiable, Hashable {
     let user: String
     let detail: String
     let timestamp: Date
+}
+
+// MARK: - Branch Model
+
+struct BranchModel: Identifiable, Hashable {
+    let id = UUID()
+    var name: String
+    var location: String
 }

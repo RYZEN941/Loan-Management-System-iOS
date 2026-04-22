@@ -17,6 +17,7 @@ class AdminLoansViewModel: ObservableObject {
     @Published var actionMessage: String? = nil
     @Published var showActionAlert = false
     @Published var showAddLoanSheet = false
+    @Published var editingLoan: LoanProduct? = nil
     
     // MARK: - Legacy Compatibility (DO NOT REMOVE - used by Dashboard)
     @Published var applications: [LoanApplication] = [] // Kept for type compatibility
@@ -96,6 +97,19 @@ class AdminLoansViewModel: ObservableObject {
         actionMessage = "Loan '\(product.name)' added successfully!"
         showActionAlert = true
         showAddLoanSheet = false
+    }
+    
+    func updateLoanProduct(oldProduct: LoanProduct, newProduct: LoanProduct) {
+        if let index = loanProducts.firstIndex(where: { $0.id == oldProduct.id }) {
+            withAnimation {
+                var updated = newProduct
+                updated.id = oldProduct.id
+                loanProducts[index] = updated
+            }
+            actionMessage = "Loan '\(newProduct.name)' updated successfully!"
+            showActionAlert = true
+            editingLoan = nil
+        }
     }
     
     func deleteLoanProduct(at indexSet: IndexSet) {

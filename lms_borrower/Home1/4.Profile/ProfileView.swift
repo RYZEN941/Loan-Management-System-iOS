@@ -33,13 +33,13 @@ struct ProfileView: View {
     private var profileSubtitle: String {
         switch session.kycStatus {
         case .approved:
-            return "KYC verified"
+            return "Aadhaar & PAN KYC verified"
         case .pending:
-            return "Verification in progress"
+            return "Backend KYC in progress"
         case .rejected:
-            return "Verification needs attention"
+            return "Backend KYC needs attention"
         case .notStarted:
-            return "Complete your profile to unlock all features"
+            return "Start with the backend-supported Aadhaar & PAN KYC flow"
         }
     }
 
@@ -48,11 +48,11 @@ struct ProfileView: View {
         case .approved:
             return "Verified"
         case .pending:
-            return "In Review"
+            return "In Progress"
         case .rejected:
             return "Retry"
         case .notStarted:
-            return "Start"
+            return "Start KYC"
         }
     }
 

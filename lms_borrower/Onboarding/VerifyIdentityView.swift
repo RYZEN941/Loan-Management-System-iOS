@@ -2,42 +2,37 @@ import SwiftUI
 
 struct VerifyIdentityView: View {
     @Binding var path: NavigationPath
+    @EnvironmentObject private var viewModel: KYCViewModel
     @Environment(\.dismiss) private var dismiss
 
-    @State private var selectedDocument: IdentityDocumentType?
-    @State private var selectedAction: UploadAction?
-
-    private var hasUploadedDocument: Bool {
-        selectedDocument != nil && selectedAction != nil
+    private var canContinue: Bool {
+        viewModel.isBackendImplementedFlowComplete
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 28) {
-                    headerSection
-                    documentSection
-
-                    if let selectedDocument {
-                        selectedDocumentSection(selectedDocument)
-                        uploadOptionsSection
-                    }
-
-                    if hasUploadedDocument {
-                        uploadedPreviewSection
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 32)
+        List {
+            Section {
+                headerSection
+                    .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
             }
 
-            if hasUploadedDocument {
-                bottomBar
+            Section("Implemented in backend") {
+                aadhaarCard
+                panCard
+                statusCard
+            }
+
+            Section("Remaining outside current KYC API") {
+                remainingRow("Address proof collection")
+                remainingRow("Income verification")
+                remainingRow("E-signature")
+                remainingRow("Manual document upload and review")
             }
         }
-        .background(Color(uiColor: .systemGroupedBackground).ignoresSafeArea())
-        .navigationTitle("Verify Identity")
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color(uiColor: .systemGroupedBackground))
+        .navigationTitle("Aadhaar & PAN")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar {
@@ -50,277 +45,191 @@ struct VerifyIdentityView: View {
                 }
             }
         }
+        .safeAreaInset(edge: .bottom) {
+            bottomBar
+        }
     }
 
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Choose an identity document")
-                .font(.system(size: 30, weight: .bold))
-                .foregroundStyle(DS.textPrimary)
-
-            Text("Select a document, then choose how you want to add it.")
-                .font(.system(size: 17))
-                .foregroundStyle(DS.textSecondary)
-        }
-    }
-
-    private var documentSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Document")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(DS.textSecondary)
-
-            VStack(spacing: 0) {
-                documentRow(.aadhaar)
-                divider
-                documentRow(.pan)
-                divider
-                documentRow(.passport)
+        VStack(alignment: .leading, spacing: 14) {
+            Label {
+                Text("Step 2 of 3")
+                    .font(.subheadline.weight(.semibold))
+            } icon: {
+                Image(systemName: "checkmark.shield")
             }
-            .background(Color(uiColor: .secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        }
-    }
+            .foregroundStyle(DS.primary)
 
-    private func documentRow(_ document: IdentityDocumentType) -> some View {
-        let isSelected = selectedDocument == document
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Run the live backend KYC steps")
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(DS.textPrimary)
 
-        return Button {
-            selectedDocument = document
-            selectedAction = nil
-        } label: {
-            HStack(spacing: 14) {
-                Image(systemName: document.icon)
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(DS.primary)
-                    .frame(width: 34, height: 34)
-                    .background(DS.primaryLight)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(document.title)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(DS.textPrimary)
-
-                    Text(document.subtitle)
-                        .font(.system(size: 15))
-                        .foregroundStyle(DS.textSecondary)
-                }
-
-                Spacer()
-
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 22))
-                    .foregroundStyle(isSelected ? DS.primary : Color(uiColor: .tertiaryLabel))
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func selectedDocumentSection(_ document: IdentityDocumentType) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Add \(document.title) using")
-                .font(.system(size: 21, weight: .semibold))
-                .foregroundStyle(DS.textPrimary)
-
-            Text("Choose one option below.")
-                .font(.system(size: 15))
-                .foregroundStyle(DS.textSecondary)
-        }
-    }
-
-    private var uploadOptionsSection: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 12) {
-                uploadOptionButton(.digiLocker)
-                uploadOptionButton(.files)
-                uploadOptionButton(.camera)
-            }
-
-            if let selectedAction {
-                Text(selectedAction.helperText)
-                    .font(.system(size: 13))
+                Text("This flow follows `docs/kyc.md`: Aadhaar consent + OTP, PAN consent + verify, then borrower KYC status.")
+                    .font(.subheadline)
                     .foregroundStyle(DS.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 4)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
 
-    private func uploadOptionButton(_ action: UploadAction) -> some View {
-        let isSelected = selectedAction == action
-
-        return Button {
-            selectedAction = action
-        } label: {
-            VStack(spacing: 10) {
-                ZStack {
-                    Circle()
-                        .fill(isSelected ? DS.primary : DS.primaryLight)
-                        .frame(width: 52, height: 52)
-
-                    Image(systemName: action.icon)
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(isSelected ? .white : DS.primary)
-                }
-
-                VStack(spacing: 2) {
-                    Text(action.title)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(DS.textPrimary)
-                        .multilineTextAlignment(.center)
-
-                    if action == .digiLocker {
-                        Text("Recommended")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(DS.primary)
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 128)
-            .background(Color(uiColor: .secondarySystemGroupedBackground))
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(isSelected ? DS.primary.opacity(0.35) : Color.clear, lineWidth: 1.5)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var uploadedPreviewSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Added document")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(DS.textSecondary)
-
-            HStack(spacing: 14) {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(DS.primaryLight)
-                    .frame(width: 64, height: 80)
-                    .overlay {
-                        Image(systemName: previewIcon)
-                            .font(.system(size: 24, weight: .medium))
-                            .foregroundStyle(DS.primary)
-                    }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(selectedDocument?.title ?? "Document")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(DS.textPrimary)
-
-                    Text(previewTitle)
-                        .font(.system(size: 15))
-                        .foregroundStyle(DS.textSecondary)
-
-                    Label("Ready to continue", systemImage: "checkmark.circle.fill")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(DS.primary)
-                }
+    private var aadhaarCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("Aadhaar verification")
+                    .font(.headline)
 
                 Spacer()
+
+                statusBadge(isComplete: viewModel.isAadhaarVerified)
             }
-            .padding(16)
-            .background(Color(uiColor: .secondarySystemGroupedBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+
+            Toggle("I consent to Aadhaar KYC verification", isOn: $viewModel.aadhaarConsentGranted)
+
+            TextField("12-digit Aadhaar number", text: $viewModel.aadhaarNumber)
+                .keyboardType(.numberPad)
+
+            Button {
+                Task {
+                    _ = await viewModel.sendAadhaarOTP()
+                }
+            } label: {
+                actionLabel("Send OTP", isCompact: true)
+            }
+            .buttonStyle(.plain)
+
+            if viewModel.hasStartedAadhaarStep {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Reference ID: \(viewModel.aadhaarReferenceID)")
+                        .font(.footnote)
+                        .foregroundStyle(DS.textSecondary)
+
+                    TextField("Enter Aadhaar OTP", text: $viewModel.aadhaarOTP)
+                        .keyboardType(.numberPad)
+
+                    Button {
+                        Task {
+                            _ = await viewModel.verifyAadhaarOTP()
+                        }
+                    } label: {
+                        actionLabel("Verify Aadhaar OTP", isCompact: true)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
         }
+        .padding(.vertical, 8)
+    }
+
+    private var panCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("PAN verification")
+                    .font(.headline)
+
+                Spacer()
+
+                statusBadge(isComplete: viewModel.isPanVerified)
+            }
+
+            Toggle("I consent to PAN KYC verification", isOn: $viewModel.panConsentGranted)
+
+            infoRow(title: "Name as per PAN", value: viewModel.fullName.isEmpty ? "Pending profile details" : viewModel.fullName)
+            infoRow(title: "PAN", value: viewModel.normalizedPAN.isEmpty ? "Pending PAN number" : viewModel.normalizedPAN)
+            infoRow(title: "Date of birth", value: viewModel.dateOfBirth.isEmpty ? "Pending date of birth" : viewModel.dateOfBirth)
+
+            Button {
+                Task {
+                    _ = await viewModel.verifyPan()
+                }
+            } label: {
+                actionLabel("Verify PAN", isCompact: true)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.vertical, 8)
+    }
+
+    private var statusCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Backend status endpoints")
+                .font(.headline)
+
+            Text("Once Aadhaar and PAN are complete, the app can use borrower KYC status and history to show verified state in Profile.")
+                .font(.subheadline)
+                .foregroundStyle(DS.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 8)
+    }
+
+    private func remainingRow(_ title: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "clock.arrow.circlepath")
+                .foregroundStyle(DS.warning)
+
+            Text(title)
+                .foregroundStyle(DS.textPrimary)
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func infoRow(title: String, value: String) -> some View {
+        HStack(alignment: .top) {
+            Text(title)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(DS.textSecondary)
+
+            Spacer(minLength: 16)
+
+            Text(value)
+                .font(.subheadline)
+                .foregroundStyle(DS.textPrimary)
+                .multilineTextAlignment(.trailing)
+        }
+    }
+
+    private func statusBadge(isComplete: Bool) -> some View {
+        Text(isComplete ? "Done" : "Pending")
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(isComplete ? Color.white : DS.primary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(isComplete ? DS.primary : DS.primaryLight)
+            .clipShape(Capsule())
+    }
+
+    private func actionLabel(_ title: String, isCompact: Bool) -> some View {
+        Text(viewModel.isLoading ? viewModel.loadingActionText : title)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.white)
+            .frame(maxWidth: isCompact ? nil : .infinity)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(DS.primary)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
     private var bottomBar: some View {
         VStack(spacing: 8) {
-            PrimaryBtn(title: "Continue", disabled: false) {
-                path.append(KYCRoute.review)
+            PrimaryBtn(title: "Continue to summary", isLoading: false, disabled: !canContinue) {
+                path.append(KYCRoute.submissionSummary)
             }
 
-            Text("Your selected document is ready")
-                .font(.system(size: 13))
-                .foregroundStyle(DS.textSecondary)
+            if let errorMessage = viewModel.errorMessage, !errorMessage.isEmpty {
+                Text(errorMessage)
+                    .font(.footnote)
+                    .foregroundStyle(DS.warning)
+                    .multilineTextAlignment(.center)
+            } else if !canContinue {
+                Text("Complete Aadhaar and PAN verification to continue.")
+                    .font(.footnote)
+                    .foregroundStyle(DS.textSecondary)
+            }
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 16)
         .padding(.top, 12)
-        .padding(.bottom, 10)
+        .padding(.bottom, 8)
         .background(.regularMaterial)
-    }
-
-    private var previewTitle: String {
-        switch selectedAction {
-        case .digiLocker: return "Fetched with DigiLocker"
-        case .files: return "Added from Files"
-        case .camera: return "Captured with Camera"
-        case .none: return "Added"
-        }
-    }
-
-    private var previewIcon: String {
-        switch selectedAction {
-        case .digiLocker: return "lock.doc"
-        case .files: return "doc.fill"
-        case .camera: return "camera.fill"
-        case .none: return "doc"
-        }
-    }
-
-    private var divider: some View {
-        Divider().padding(.leading, 64)
-    }
-}
-
-private enum IdentityDocumentType: CaseIterable, Hashable {
-    case aadhaar, pan, passport
-
-    var title: String {
-        switch self {
-        case .aadhaar: return "Aadhaar Card"
-        case .pan: return "PAN Card"
-        case .passport: return "Passport"
-        }
-    }
-
-    var subtitle: String {
-        switch self {
-        case .aadhaar: return "Front and back required"
-        case .pan: return "Permanent Account Number"
-        case .passport: return "First two pages required"
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .aadhaar: return "person.text.rectangle"
-        case .pan: return "creditcard"
-        case .passport: return "book.closed"
-        }
-    }
-}
-
-private enum UploadAction: Hashable {
-    case digiLocker, files, camera
-
-    var title: String {
-        switch self {
-        case .digiLocker: return "DigiLocker"
-        case .files: return "Files"
-        case .camera: return "Camera"
-        }
-    }
-
-    var icon: String {
-        switch self {
-        case .digiLocker: return "lock.shield"
-        case .files: return "doc"
-        case .camera: return "camera"
-        }
-    }
-
-    var helperText: String {
-        switch self {
-        case .digiLocker: return "Continue with DigiLocker"
-        case .files: return "Choose a file to upload"
-        case .camera: return "Take a photo of your document"
-        }
     }
 }

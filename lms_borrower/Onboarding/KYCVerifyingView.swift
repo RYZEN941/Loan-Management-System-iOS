@@ -5,8 +5,6 @@ struct KYCVerifyingView: View {
     @EnvironmentObject private var viewModel: KYCViewModel
     @EnvironmentObject private var session: SessionStore
 
-    @Environment(\.dismiss) private var dismiss
-
     @State private var contentVisible = false
 
     var body: some View {
@@ -22,18 +20,18 @@ struct KYCVerifyingView: View {
                     .accessibilityLabel("Verification in progress")
 
                 VStack(spacing: 10) {
-                    Text("Verifying your documents")
+                    Text("Fetching borrower KYC status")
                         .font(.system(size: 24, weight: .bold, design: .rounded))
                         .foregroundStyle(DS.textPrimary)
                         .multilineTextAlignment(.center)
 
-                    Text("This usually takes a few seconds. Please don’t close the app.")
+                    Text("We’re checking the backend Aadhaar and PAN verification results now.")
                         .font(.system(size: 17))
                         .foregroundStyle(DS.textSecondary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Text("Your documents are securely encrypted")
+                    Text("Status and history will be reflected in your profile")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(DS.primary)
                         .multilineTextAlignment(.center)
@@ -59,7 +57,6 @@ struct KYCVerifyingView: View {
     }
 
     private func pollStatusLoop() async {
-        // Mock polling logic for up to 3 tries
         for _ in 1...3 {
             try? await Task.sleep(nanoseconds: 2_000_000_000) // wait 2s
             let status = await viewModel.pollKYCStatus()

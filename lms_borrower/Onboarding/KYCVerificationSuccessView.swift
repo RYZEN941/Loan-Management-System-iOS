@@ -12,12 +12,12 @@ struct KYCVerificationSuccessView: View {
                 successIcon
 
                 VStack(spacing: 10) {
-                    Text("Verification Complete")
+                    Text("Aadhaar & PAN Verified")
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundStyle(DS.textPrimary)
                         .multilineTextAlignment(.center)
 
-                    Text("Your identity has been successfully verified.")
+                    Text("The backend-supported KYC steps are complete, and your profile can now show verified borrower status.")
                         .font(.system(size: 17))
                         .foregroundStyle(DS.textSecondary)
                         .multilineTextAlignment(.center)

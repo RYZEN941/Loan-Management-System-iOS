@@ -3,82 +3,88 @@ import SwiftUI
 struct KYCSubmissionSummaryView: View {
     @Binding var path: NavigationPath
     @EnvironmentObject private var viewModel: KYCViewModel
+    @EnvironmentObject private var session: SessionStore
     @Environment(\.dismiss) private var dismiss
 
     @State private var isDeclarationAccepted = false
-    @State private var showIncompleteError = false
-
-    // We assume these are true if the user reached here in the real flow.
-    private let isIdentityComplete = true
-    private let isAddressComplete = true
-    private let isIncomeComplete = true
-
-    private var isFormComplete: Bool {
-        isIdentityComplete && isAddressComplete && isIncomeComplete
-    }
 
     private var canSubmit: Bool {
-        isFormComplete && isDeclarationAccepted
+        viewModel.isBackendImplementedFlowComplete && isDeclarationAccepted
     }
+
+    private let remainingItems = [
+        "Address proof collection",
+        "Income details",
+        "E-signature",
+        "Manual document review"
+    ]
 
     var body: some View {
         List {
             Section {
                 progressOverview
-                    .listRowInsets(
-                        EdgeInsets(
-                            top: 16,
-                            leading: 16,
-                            bottom: 16,
-                            trailing: 16
-                        )
-                    )
+                    .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
             }
 
             Section {
-                reviewRow(
-                    title: "Identity Proof",
-                    value: "PAN Data",
-                    detail: "Provided",
-                    icon: "person.text.rectangle",
-                    isComplete: isIdentityComplete
+                summaryRow(
+                    title: "Borrower profile match",
+                    value: viewModel.fullName,
+                    detail: viewModel.dateOfBirth,
+                    isComplete: !viewModel.fullName.isEmpty && !viewModel.dateOfBirth.isEmpty
                 )
-
-                reviewRow(
-                    title: "Address Proof",
-                    value: "Uploaded Document",
-                    detail: "Uploaded",
-                    icon: "house",
-                    isComplete: isAddressComplete
+                summaryRow(
+                    title: "Aadhaar KYC",
+                    value: viewModel.isAadhaarVerified ? "OTP verified" : "Pending",
+                    detail: viewModel.aadhaarReferenceID.isEmpty ? "Reference ID will appear after OTP start" : "Reference ID \(viewModel.aadhaarReferenceID)",
+                    isComplete: viewModel.isAadhaarVerified
                 )
-
-                reviewRow(
-                    title: "Income Proof",
-                    value: "Income Documentation",
-                    detail: "Uploaded",
-                    icon: "indianrupeesign.circle",
-                    isComplete: isIncomeComplete
+                summaryRow(
+                    title: "PAN KYC",
+                    value: viewModel.isPanVerified ? viewModel.normalizedPAN : "Pending",
+                    detail: "Consent + PAN verification",
+                    isComplete: viewModel.isPanVerified
+                )
+                summaryRow(
+                    title: "Borrower KYC status",
+                    value: "Status + history ready",
+                    detail: "Fetched after verification completes",
+                    isComplete: viewModel.isBackendImplementedFlowComplete
                 )
             } header: {
-                Text("Documents")
-            } footer: {
-                if showIncompleteError && !isFormComplete {
-                    Text("Please complete all sections before submitting.")
-                        .foregroundStyle(Color.red)
+                Text("Implemented in backend")
+            }
+
+            Section {
+                ForEach(remainingItems, id: \.self) { item in
+                    HStack(spacing: 10) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .foregroundStyle(DS.warning)
+
+                        Text(item)
+                            .foregroundStyle(DS.textPrimary)
+
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 4)
                 }
+            } header: {
+                Text("Remaining items")
+            } footer: {
+                Text("The second segment is visible for planning, but it is not part of the current backend KYC contract.")
             }
 
             Section {
                 declarationCheckbox
             } footer: {
-                Text("Your documents are encrypted and used only for verification.")
+                Text("This summary reflects the backend-supported Aadhaar and PAN KYC steps from `docs/kyc.md`.")
             }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .background(Color(uiColor: .systemGroupedBackground))
         .navigationBarBackButtonHidden(true)
-        .navigationTitle("Review & Submit")
+        .navigationTitle("KYC Summary")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
@@ -88,7 +94,6 @@ struct KYCSubmissionSummaryView: View {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 17, weight: .semibold))
                 }
-                .accessibilityLabel("Back")
             }
         }
         .safeAreaInset(edge: .bottom) {
@@ -99,24 +104,22 @@ struct KYCSubmissionSummaryView: View {
     private var progressOverview: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Ready to submit")
+                Text("Backend KYC summary")
                     .font(.headline)
                     .foregroundStyle(DS.textPrimary)
 
-                Text("Review your details before we send them for verification.")
+                Text("You’ve completed the currently implemented Aadhaar and PAN journey. The remaining items are listed separately for clarity.")
                     .font(.subheadline)
                     .foregroundStyle(DS.textSecondary)
             }
 
             HStack(spacing: 8) {
-                progressStep(title: "Identity")
+                progressStep(title: "Profile")
                 progressLine
-                progressStep(title: "Address")
+                progressStep(title: "Aadhaar")
                 progressLine
-                progressStep(title: "Income")
+                progressStep(title: "PAN")
             }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("All verification steps are complete")
         }
     }
 
@@ -130,60 +133,37 @@ struct KYCSubmissionSummaryView: View {
                 .font(.caption2)
                 .fontWeight(.medium)
                 .foregroundStyle(DS.textSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
         }
-        .frame(width: 64)
+        .frame(maxWidth: .infinity)
     }
 
     private var progressLine: some View {
         Rectangle()
             .fill(DS.primary.opacity(0.35))
             .frame(height: 1)
-            .frame(maxWidth: .infinity)
             .padding(.bottom, 20)
     }
 
-    private func reviewRow(
-        title: String,
-        value: String,
-        detail: String,
-        icon: String,
-        isComplete: Bool
-    ) -> some View {
+    private func summaryRow(title: String, value: String, detail: String, isComplete: Bool) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 20, weight: .regular))
-                .foregroundStyle(DS.primary)
-                .frame(width: 30)
+            Image(systemName: isComplete ? "checkmark.circle.fill" : "circle")
+                .foregroundStyle(isComplete ? DS.primary : Color(uiColor: .tertiaryLabel))
 
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(title)
-                        .font(.body)
-                        .foregroundStyle(DS.textPrimary)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.body)
+                    .foregroundStyle(DS.textPrimary)
 
-                    if isComplete {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.caption)
-                            .foregroundStyle(DS.primary)
-                            .accessibilityLabel("Complete")
-                    }
-                }
-
-                Text(value)
+                Text(value.isEmpty ? "Pending" : value)
                     .font(.subheadline)
                     .foregroundStyle(DS.primary)
 
                 Text(detail)
                     .font(.footnote)
-                    .foregroundStyle(
-                        isComplete
-                        ? Color(uiColor: .secondaryLabel)
-                        : Color.red
-                    )
+                    .foregroundStyle(DS.textSecondary)
             }
-            Spacer(minLength: 12)
+
+            Spacer(minLength: 0)
         }
         .padding(.vertical, 6)
     }
@@ -199,14 +179,13 @@ struct KYCSubmissionSummaryView: View {
                     .font(.system(size: 24, weight: .semibold))
                     .foregroundStyle(isDeclarationAccepted ? DS.primary : Color(uiColor: .tertiaryLabel))
                     .frame(width: 28, height: 28)
-                    .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Information is accurate")
+                    Text("Backend-supported KYC is ready")
                         .font(.body)
                         .foregroundStyle(DS.textPrimary)
 
-                    Text("I confirm these documents belong to me and can be used for verification.")
+                    Text("I understand that Aadhaar and PAN are the only completed backend KYC steps in this flow right now.")
                         .font(.footnote)
                         .foregroundStyle(DS.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -218,30 +197,19 @@ struct KYCSubmissionSummaryView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Information is accurate")
-        .accessibilityValue(isDeclarationAccepted ? "Checked" : "Unchecked")
-        .accessibilityAddTraits(.isButton)
     }
 
     private var bottomSubmitArea: some View {
         VStack(spacing: 8) {
-            PrimaryBtn(title: "Submit Verification", isLoading: false, disabled: !canSubmit) {
-                guard isFormComplete else {
-                    withAnimation(.easeOut(duration: 0.2)) {
-                        showIncompleteError = true
-                    }
-                    return
-                }
-
-                showIncompleteError = false
+            PrimaryBtn(title: "Fetch borrower KYC status", isLoading: false, disabled: !canSubmit) {
+                session.kycStatus = .pending
                 path.append(KYCRoute.verifying)
             }
 
             if !canSubmit {
                 Text(
                     isDeclarationAccepted
-                    ? "Complete all sections to continue."
+                    ? "Complete Aadhaar and PAN before fetching final status."
                     : "Confirm the declaration to continue."
                 )
                 .font(.footnote)

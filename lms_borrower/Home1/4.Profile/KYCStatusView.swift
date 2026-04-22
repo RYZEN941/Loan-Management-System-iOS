@@ -4,6 +4,23 @@ struct KYCStatusView: View {
     @EnvironmentObject private var session: SessionStore
     @State private var showKYCFlow = false
 
+    private let implementedFeatures = [
+        "Record Aadhaar consent",
+        "Initiate Aadhaar OTP",
+        "Verify Aadhaar OTP",
+        "Record PAN consent",
+        "Verify PAN KYC",
+        "Get borrower KYC status and history"
+    ]
+
+    private let remainingFeatures = [
+        "Address proof",
+        "Income details",
+        "E-signature",
+        "Manual document upload and review",
+        "Other profile completion steps"
+    ]
+
     private var bannerIcon: String {
         switch session.kycStatus {
         case .approved:
@@ -33,26 +50,26 @@ struct KYCStatusView: View {
     private var bannerTitle: String {
         switch session.kycStatus {
         case .approved:
-            return "KYC Verified"
+            return "Aadhaar & PAN Verified"
         case .pending:
-            return "Verification In Progress"
+            return "Backend KYC In Progress"
         case .rejected:
-            return "Verification Needs Attention"
+            return "Backend KYC Needs Attention"
         case .notStarted:
-            return "Complete Your Profile"
+            return "Start Backend KYC"
         }
     }
 
     private var bannerMessage: String {
         switch session.kycStatus {
         case .approved:
-            return "Your identity has been fully verified. You are eligible for instant loan disbursals."
+            return "Your borrower profile reflects the completed Aadhaar and PAN verification steps available in the backend today."
         case .pending:
-            return "We are reviewing your details. You can reopen the flow to continue from the latest verification step."
+            return "We’re waiting on the backend-supported Aadhaar and PAN checks to finish."
         case .rejected:
-            return "A part of your verification could not be completed. Reopen the flow to review your details and try again."
+            return "Aadhaar or PAN verification could not be completed. Reopen the flow and review the details."
         case .notStarted:
-            return "Finish identity verification to unlock the full post-login experience and loan journey."
+            return "Start with the KYC steps that are already implemented in the backend, then review the remaining onboarding items separately."
         }
     }
 
@@ -61,11 +78,11 @@ struct KYCStatusView: View {
         case .approved:
             return nil
         case .pending:
-            return "Continue Verification"
+            return "Continue Aadhaar & PAN KYC"
         case .rejected:
-            return "Retry Verification"
+            return "Retry Aadhaar & PAN KYC"
         case .notStarted:
-            return "Start Verification"
+            return "Start Aadhaar & PAN KYC"
         }
     }
 
@@ -78,11 +95,27 @@ struct KYCStatusView: View {
 
                 if session.kycStatus == .approved {
                     documentsSection
-                } else {
-                    nextStepSection
-                        .padding(.horizontal, 20)
                 }
+
+                segmentSection(
+                    title: "Implemented in backend",
+                    subtitle: "This first segment is based directly on `docs/kyc.md`.",
+                    items: implementedFeatures,
+                    icon: "checkmark.circle.fill",
+                    iconColor: DS.primary
+                )
+                .padding(.horizontal, 20)
+
+                segmentSection(
+                    title: "Remaining items",
+                    subtitle: "These still sit outside the current backend KYC API scope.",
+                    items: remainingFeatures,
+                    icon: "clock.arrow.circlepath",
+                    iconColor: DS.warning
+                )
+                .padding(.horizontal, 20)
             }
+            .padding(.bottom, 24)
         }
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("KYC Status")
@@ -138,11 +171,9 @@ struct KYCStatusView: View {
                 .padding(.horizontal, 20)
 
             VStack(spacing: 0) {
-                KYCDocRow(title: "PAN Card", docID: "ABCDE1234F", date: "Verified on 12 Jan 2025")
+                KYCDocRow(title: "PAN Card", docID: "Matched with borrower profile", date: "Verified via PAN KYC")
                 Divider().padding(.leading, 20)
-                KYCDocRow(title: "Aadhaar Card", docID: "XXXX XXXX 1234", date: "Verified on 12 Jan 2025")
-                Divider().padding(.leading, 20)
-                KYCDocRow(title: "Bank Account", docID: "HDFC Bank •••• 4567", date: "Verified on 14 Jan 2025")
+                KYCDocRow(title: "Aadhaar Card", docID: "OTP-based verification completed", date: "Verified via Aadhaar KYC")
             }
             .background(Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 16))
@@ -151,14 +182,34 @@ struct KYCStatusView: View {
         }
     }
 
-    private var nextStepSection: some View {
+    private func segmentSection(
+        title: String,
+        subtitle: String,
+        items: [String],
+        icon: String,
+        iconColor: Color
+    ) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("What happens next")
+            Text(title)
                 .font(.headline)
 
-            Text(nextStepDescription)
+            Text(subtitle)
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundStyle(DS.textSecondary)
+
+            ForEach(items, id: \.self) { item in
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: icon)
+                        .foregroundStyle(iconColor)
+                        .padding(.top, 2)
+
+                    Text(item)
+                        .font(.subheadline)
+                        .foregroundStyle(DS.textPrimary)
+
+                    Spacer(minLength: 0)
+                }
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(20)
@@ -166,32 +217,19 @@ struct KYCStatusView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
     }
-
-    private var nextStepDescription: String {
-        switch session.kycStatus {
-        case .approved:
-            return ""
-        case .pending:
-            return "Keep your documents handy. The verification screens will resume from the latest available state."
-        case .rejected:
-            return "Review the submitted details, retake any missing proofs, and submit again for approval."
-        case .notStarted:
-            return "You will be guided through profile details, address proof, income details, e-signature, and identity verification."
-        }
-    }
 }
 
 struct KYCDocRow: View {
     let title: String
     let docID: String
     let date: String
-    
+
     var body: some View {
         HStack(spacing: 16) {
             Image(systemName: "doc.text.viewfinder")
                 .font(.title2)
                 .foregroundColor(.mainBlue)
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(title).font(.headline)
                 Text(docID).font(.subheadline).foregroundColor(.secondary)

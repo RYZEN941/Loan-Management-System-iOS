@@ -9,7 +9,7 @@ struct BorrowerPersonalDetailsView: View {
 
     private var isFormValid: Bool {
         !viewModel.fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        !viewModel.panNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        viewModel.normalizedPAN.count == 10
     }
 
     var body: some View {
@@ -27,6 +27,7 @@ struct BorrowerPersonalDetailsView: View {
 
                 TextField("PAN Number", text: $viewModel.panNumber)
                     .textInputAutocapitalization(.characters)
+                    .autocorrectionDisabled()
                     .submitLabel(.next)
 
                 DatePicker(
@@ -64,7 +65,7 @@ struct BorrowerPersonalDetailsView: View {
     private var headerContent: some View {
         VStack(alignment: .leading, spacing: 14) {
             Label {
-                Text("Step 1 of 4")
+                Text("Step 1 of 3")
                     .font(.subheadline.weight(.semibold))
             } icon: {
                 Image(systemName: "person.crop.circle")
@@ -72,11 +73,11 @@ struct BorrowerPersonalDetailsView: View {
             .foregroundStyle(DS.primary)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("Tell us about yourself")
+                Text("Match your borrower profile")
                     .font(.title2.weight(.bold))
                     .foregroundStyle(DS.textPrimary)
 
-                Text("We’ll use this information to securely verify your identity.")
+                Text("These details are used to match the Aadhaar and PAN verification responses from the backend KYC APIs.")
                     .font(.subheadline)
                     .foregroundStyle(DS.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -93,15 +94,22 @@ struct BorrowerPersonalDetailsView: View {
                 
                 Task {
                     if await viewModel.submitPersonalDetails() {
-                        path.append(KYCRoute.addressProof)
+                        path.append(KYCRoute.verifyIdentity)
                     }
                 }
             }
 
             if !isFormValid {
-                Text("Complete all details to continue.")
+                Text("Enter your full name, PAN, and date of birth to continue.")
+                .font(.footnote)
+                .foregroundStyle(DS.textSecondary)
+            }
+
+            if let errorMessage = viewModel.errorMessage, !errorMessage.isEmpty {
+                Text(errorMessage)
                     .font(.footnote)
-                    .foregroundStyle(DS.textSecondary)
+                    .foregroundStyle(DS.warning)
+                    .multilineTextAlignment(.center)
             }
         }
         .padding(.horizontal, 16)

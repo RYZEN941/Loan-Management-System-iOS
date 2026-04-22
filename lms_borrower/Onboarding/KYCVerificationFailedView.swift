@@ -27,12 +27,12 @@ struct KYCVerificationFailedView: View {
                 }
 
                 VStack(spacing: 12) {
-                    Text("Verification Failed")
+                    Text("KYC Verification Failed")
                         .font(.system(size: 26, weight: .semibold, design: .rounded))
                         .foregroundStyle(DS.warning)
                         .multilineTextAlignment(.center)
 
-                    Text("Document was unclear or incomplete")
+                    Text("Aadhaar or PAN verification could not be completed with the current details.")
                         .font(.system(size: 16))
                         .foregroundStyle(DS.textSecondary)
                         .multilineTextAlignment(.center)

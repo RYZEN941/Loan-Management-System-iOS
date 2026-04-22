@@ -2,6 +2,8 @@
 //  LODashboardView.swift
 //  lms_project
 //
+//  Loan Officer Dashboard: Premium FinTech UI with gradient header and split view workspace.
+//
 
 import SwiftUI
 
@@ -9,25 +11,33 @@ struct LODashboardView: View {
     @EnvironmentObject var dashboardVM: DashboardViewModel
     @EnvironmentObject var authVM: AuthViewModel
     @Environment(\.colorScheme) private var colorScheme
+    @Binding var selectedTab: Int
     @Binding var showProfile: Bool
     
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.Colors.adaptiveBackground(colorScheme)
-                    .ignoresSafeArea()
+                Theme.Colors.adaptiveBackground(colorScheme).ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    // Greeting
-                    greetingBar
+                    // Simple Elegant Header
+                    VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                        greetingBar
+                            .padding(.horizontal, Theme.Spacing.lg)
+                            .padding(.bottom, Theme.Spacing.md)
+                    }
+                    .background(Theme.Colors.adaptiveBackground(colorScheme))
+                    .foregroundStyle(.primary)
                     
-                    // KPI Strip
-                    kpiStrip
+                    ScrollView {
+                        VStack(spacing: Theme.Spacing.xl) {
+                            kpiStrip
+                            trendSection
+                            activeWorkspaceSection
+                        }
                         .padding(.horizontal, Theme.Spacing.lg)
-                        .padding(.bottom, Theme.Spacing.lg)
-                    
-                    // Active Workspace
-                    activeWorkspace
+                        .padding(.bottom, Theme.Spacing.xl)
+                    }
                 }
             }
             .navigationTitle("Dashboard")
@@ -43,19 +53,16 @@ struct LODashboardView: View {
         }
     }
     
-    // MARK: - Greeting Bar
-    
+    // MARK: - Greeting
     private var greetingBar: some View {
         HStack {
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                 Text(greetingText)
                     .font(Theme.Typography.titleLarge)
-                    .foregroundStyle(.primary)
-                
                 HStack(spacing: Theme.Spacing.sm) {
-                    Image(systemName: "building.2")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.secondary)
+                    Image(systemName: "location.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Theme.Colors.primary)
                     Text(authVM.currentUser?.branch ?? "Branch")
                         .font(Theme.Typography.subheadline)
                         .foregroundStyle(.secondary)
@@ -63,8 +70,7 @@ struct LODashboardView: View {
             }
             Spacer()
         }
-        .padding(.horizontal, Theme.Spacing.lg)
-        .padding(.vertical, Theme.Spacing.md)
+        .padding(.top, Theme.Spacing.md)
     }
     
     private var greetingText: String {
@@ -76,79 +82,154 @@ struct LODashboardView: View {
     }
     
     // MARK: - KPI Strip
-    
     private var kpiStrip: some View {
-        KPIStripView(cards: [
-            KPIData(title: "Assigned Applications", value: "\(dashboardVM.assignedCount)",
-                    icon: "doc.text.fill", color: Theme.Colors.primary),
-            KPIData(title: "Pending Review", value: "\(dashboardVM.pendingReviewCount)",
-                    icon: "clock.fill", color: Theme.Colors.warning),
-            KPIData(title: "High Risk Cases", value: "\(dashboardVM.highRiskCount)",
-                    icon: "exclamationmark.triangle.fill", color: Theme.Colors.critical)
-        ])
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            SectionHeader(title: "Portfolio Overview", icon: "briefcase.fill")
+                .description("Summary of your current assignment status and risk exposure.")
+                .info { /* Info Action */ }
+            
+            KPIStripView(cards: [
+                KPIData(title: "Active Cases", value: "\(dashboardVM.assignedCount)",
+                        icon: "doc.on.doc.fill", color: Theme.Colors.primary),
+                KPIData(title: "Pending Review", value: "\(dashboardVM.pendingReviewCount)",
+                        icon: "timer", color: Theme.Colors.warning),
+                KPIData(title: "High Risk", value: "\(dashboardVM.highRiskCount)",
+                        icon: "shield.righthalf.filled", color: Theme.Colors.critical)
+            ])
+        }
     }
     
-    // MARK: - Active Workspace (Split Layout)
+    // MARK: - Trend Section
+    private var trendSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            SectionHeader(title: "Performance Trend", icon: "chart.line.uptrend.xyaxis")
+                .description("Weekly approval metrics and disbursement velocity.")
+                .info { /* Info Action */ }
+            
+            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("34 Loans Approved")
+                            .font(Theme.Typography.headline)
+                        Text("This Month")
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.up.right")
+                        Text("12%")
+                    }
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Theme.Colors.success)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Theme.Colors.success.opacity(0.1))
+                    .clipShape(Capsule())
+                }
+                
+                PremiumLineChart(
+                    data: [12, 18, 15, 22, 19, 28, 34],
+                    labels: ["W1", "W2", "W3", "W4", "W5", "W6", "W7"],
+                    accentColor: Theme.Colors.primary,
+                    showPoints: true,
+                    unit: "loans"
+                )
+                .frame(height: 180)
+            }
+            .padding(Theme.Spacing.lg)
+            .background(Theme.Colors.adaptiveSurface(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                    .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+            )
+        }
+    }
     
-    private var activeWorkspace: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            SectionHeader(title: "Active Workspace", icon: "rectangle.split.2x1")
-                .padding(.horizontal, Theme.Spacing.lg)
+    // MARK: - Active Workspace
+    private var activeWorkspaceSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            HStack(alignment: .bottom) {
+                VStack(alignment: .leading, spacing: 4) {
+                    SectionHeader(title: "Active Workspace", icon: "square.grid.2x2.fill")
+                        .info { /* Info Action */ }
+                    Text("Select and preview applications directly from your assigned list.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.tertiary)
+                }
+                Spacer()
+                if dashboardVM.selectedApplication != nil {
+                    Button {
+                        openSelectedApplication()
+                    } label: {
+                        Label("Detailed View", systemImage: "arrow.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(Theme.Colors.primary.opacity(0.1))
+                            .foregroundStyle(Theme.Colors.primary)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
             
             GeometryReader { geometry in
-                HStack(spacing: 1) {
-                    // LEFT: Application List (35%)
+                HStack(spacing: 0) {
+                    // LEFT: Application List (38%)
                     applicationList
-                        .frame(width: geometry.size.width * 0.35)
+                        .frame(width: geometry.size.width * 0.38)
                     
                     Divider()
+                        .padding(.vertical, Theme.Spacing.lg)
                     
-                    // RIGHT: Preview Panel (65%)
+                    // RIGHT: Preview Panel (62%)
                     previewPanel
-                        .frame(width: geometry.size.width * 0.65 - 1)
+                        .frame(width: geometry.size.width * 0.62)
                 }
                 .background(Theme.Colors.adaptiveSurface(colorScheme))
                 .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
                 .overlay(
                     RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                        .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 0.5)
+                        .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
                 )
-                .padding(.horizontal, Theme.Spacing.lg)
             }
+            .frame(height: 550)
         }
     }
     
     // MARK: - Application List
-    
     private var applicationList: some View {
         VStack(spacing: 0) {
-            // List Header
             HStack {
                 Text("Applications")
                     .font(Theme.Typography.headline)
                 Spacer()
                 Text("\(dashboardVM.activeApplications.count)")
                     .font(Theme.Typography.caption2)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+                    .foregroundStyle(Theme.Colors.primary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Theme.Colors.primary.opacity(0.1))
                     .clipShape(Capsule())
             }
             .padding(.horizontal, Theme.Spacing.md)
-            .padding(.vertical, 12)
-            
-            Divider()
+            .padding(.vertical, 16)
             
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(dashboardVM.activeApplications) { app in
                         ApplicationRow(
                             application: app,
-                            isSelected: dashboardVM.selectedApplication?.id == app.id
+                            isSelected: dashboardVM.selectedApplication?.id == app.id,
+                            useMinimalStyle: true
                         )
                         .onTapGesture {
-                            dashboardVM.selectApplication(app)
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                dashboardVM.selectApplication(app)
+                            }
                         }
                         
                         Divider().padding(.leading, 72)
@@ -159,88 +240,60 @@ struct LODashboardView: View {
     }
     
     // MARK: - Preview Panel
-    
     private var previewPanel: some View {
         Group {
             if let app = dashboardVM.selectedApplication {
                 ScrollView {
                     VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                        // Header
                         HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                                 Text(app.borrower.name)
                                     .font(Theme.Typography.title)
+                                Text(app.id)
+                                    .font(Theme.Typography.caption)
+                                    .foregroundStyle(.secondary)
                                 Text(app.loan.amount.currencyFormatted)
                                     .font(Theme.Typography.titleLarge)
                                     .foregroundStyle(Theme.Colors.primary)
                             }
-                            
                             Spacer()
-                            
                             StatusBadge(status: app.status)
                         }
                         
                         Divider()
                         
-                        // Financial Summary
-                        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
                             Text("Financial Summary")
                                 .font(Theme.Typography.headline)
+                                .foregroundStyle(.secondary)
                             
-                            HStack(spacing: Theme.Spacing.lg) {
-                                financialItem(label: "Monthly Income", value: app.financials.monthlyIncome.currencyFormatted)
-                                financialItem(label: "CIBIL Score", value: "\(app.financials.cibilScore)", color: cibilColor(app.financials.cibilScore))
-                                financialItem(label: "DTI Ratio", value: app.financials.dtiRatio.percentFormatted, color: dtiColor(app.financials.dtiRatio))
+                            HStack(spacing: Theme.Spacing.md) {
+                                MiniMetric(label: "CIBIL", value: "\(app.financials.cibilScore)", color: Theme.Colors.primary)
+                                MiniMetric(label: "DTI", value: app.financials.dtiRatio.percentFormatted, color: Theme.Colors.secondary)
+                                MiniMetric(label: "Risk", value: app.riskLevel.displayName, color: app.riskLevel.color)
                             }
                         }
                         
-                        Divider()
-                        
-                        // Document Status
                         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                            Text("Documents")
-                                .font(Theme.Typography.headline)
-                            
-                            ForEach(app.documents) { doc in
-                                HStack {
-                                    Image(systemName: doc.type.icon)
-                                        .font(.system(size: 14))
-                                        .foregroundStyle(.secondary)
-                                        .frame(width: 20)
-                                    Text(doc.label)
-                                        .font(Theme.Typography.subheadline)
-                                    Spacer()
-                                    DocStatusBadge(status: doc.status)
-                                }
-                            }
-                        }
-                        
-                        Divider()
-                        
-                        // Latest Note
-                        if let latestNote = app.notes.last {
-                            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                                Text("Latest Comment")
-                                    .font(Theme.Typography.headline)
-                                
-                                Text(latestNote.text)
-                                    .font(Theme.Typography.subheadline)
-                                    .foregroundStyle(.secondary)
-                                
-                                Text("\(latestNote.author) • \(latestNote.timestamp.relativeFormatted)")
-                                    .font(Theme.Typography.caption)
-                                    .foregroundStyle(.tertiary)
-                            }
+                            Text("Recent Note")
+                                .font(Theme.Typography.caption)
+                                .foregroundStyle(.secondary)
+                            Text(app.notes.last?.text ?? "No notes available")
+                                .font(Theme.Typography.subheadline)
+                                .padding(Theme.Spacing.md)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Theme.Colors.adaptiveSurface(colorScheme).opacity(0.5))
+                                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
                         }
                     }
                     .padding(Theme.Spacing.lg)
                 }
             } else {
-                VStack(spacing: Theme.Spacing.md) {
-                    Image(systemName: "doc.text.magnifyingglass")
-                        .font(.system(size: 40))
+                VStack(spacing: 12) {
+                    Image(systemName: "hand.tap.fill")
+                        .font(.system(size: 32))
                         .foregroundStyle(.tertiary)
-                    Text("Select an application to preview")
+                    Text("Select an application to preview details")
                         .font(Theme.Typography.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -249,29 +302,26 @@ struct LODashboardView: View {
         }
     }
     
-    // MARK: - Helpers
+    private func openSelectedApplication() {
+        withAnimation {
+            selectedTab = 1
+        }
+    }
+}
+
+struct MiniMetric: View {
+    let label: String
+    let value: String
+    let color: Color
     
-    private func financialItem(label: String, value: String, color: Color = .primary) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(Theme.Typography.caption)
-                .foregroundStyle(.secondary)
-            Text(value)
-                .font(Theme.Typography.headline)
-                .foregroundStyle(color)
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label).font(.system(size: 10, weight: .bold)).foregroundStyle(.tertiary).textCase(.uppercase)
+            Text(value).font(.system(size: 14, weight: .bold)).foregroundStyle(color)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-    
-    private func cibilColor(_ score: Int) -> Color {
-        if score >= 750 { return Theme.Colors.success }
-        if score >= 650 { return Theme.Colors.warning }
-        return Theme.Colors.critical
-    }
-    
-    private func dtiColor(_ ratio: Double) -> Color {
-        if ratio <= 0.30 { return Theme.Colors.success }
-        if ratio <= 0.40 { return Theme.Colors.warning }
-        return Theme.Colors.critical
+        .padding(10)
+        .background(color.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 }

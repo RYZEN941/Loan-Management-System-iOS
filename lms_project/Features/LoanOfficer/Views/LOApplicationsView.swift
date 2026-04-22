@@ -94,61 +94,77 @@ struct LOApplicationsView: View {
     private var applicationListPanel: some View {
         VStack(spacing: 0) {
             // Search bar
-            HStack(spacing: 8) {
+            HStack(spacing: 12) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                    .font(.system(size: 14))
-                TextField("Search...", text: $applicationsVM.searchText)
+                    .foregroundStyle(Theme.Colors.primary)
+                    .font(.system(size: 14, weight: .bold))
+                TextField("Search applications...", text: $applicationsVM.searchText)
                     .font(Theme.Typography.subheadline)
             }
-            .padding(10)
-            .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
-            .padding(.horizontal, 12)
-            .padding(.top, 10)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Theme.Colors.adaptiveSurface(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.md)
+                    .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+            )
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+
+            // List Header
+            HStack(alignment: .bottom) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Applications")
+                        .font(.system(size: 17, weight: .bold))
+                    Text("Browse and manage your assigned loan cases.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                }
+                Spacer()
+                Text("\(applicationsVM.filteredApplications.count)")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Theme.Colors.primary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Theme.Colors.primary.opacity(0.1))
+                    .clipShape(Capsule())
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 16)
 
             // Filter chips — only key statuses
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     AppFilterChip(label: "All", isSelected: applicationsVM.filterStatus == nil) {
-                        applicationsVM.filterStatus = nil
+                        withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = nil }
                     }
                     AppFilterChip(label: "Pending", isSelected: applicationsVM.filterStatus == .pending) {
-                        applicationsVM.filterStatus = .pending
+                        withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .pending }
                     }
-                    AppFilterChip(label: "Under Review", isSelected: applicationsVM.filterStatus == .underReview) {
-                        applicationsVM.filterStatus = .underReview
+                    AppFilterChip(label: "In Review", isSelected: applicationsVM.filterStatus == .underReview) {
+                        withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .underReview }
                     }
                     AppFilterChip(label: "Approved", isSelected: applicationsVM.filterStatus == .approved) {
-                        applicationsVM.filterStatus = .approved
+                        withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .approved }
                     }
                     AppFilterChip(label: "Rejected", isSelected: applicationsVM.filterStatus == .rejected) {
-                        applicationsVM.filterStatus = .rejected
+                        withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .rejected }
                     }
                 }
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 16)
             }
             .padding(.vertical, 8)
-
-            // Count
-            HStack {
-                Text("\(applicationsVM.filteredApplications.count) applications")
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(.secondary)
-                Spacer()
-            }
-            .padding(.horizontal, 14)
-            .padding(.bottom, 4)
 
             Divider()
 
             // List
             if applicationsVM.filteredApplications.isEmpty {
-                VStack(spacing: 10) {
+                VStack(spacing: 12) {
                     Image(systemName: "doc.text.magnifyingglass")
-                        .font(.system(size: 28))
-                        .foregroundStyle(.tertiary)
-                    Text("No applications")
+                        .font(.system(size: 32, weight: .thin))
+                        .foregroundStyle(Theme.Colors.primary.opacity(0.3))
+                    Text("No applications found")
                         .font(Theme.Typography.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -159,10 +175,16 @@ struct LOApplicationsView: View {
                         ForEach(applicationsVM.filteredApplications) { app in
                             ApplicationRow(
                                 application: app,
-                                isSelected: applicationsVM.selectedApplication?.id == app.id
+                                isSelected: applicationsVM.selectedApplication?.id == app.id,
+                                useMinimalStyle: true
                             )
-                            .onTapGesture { applicationsVM.selectApplication(app) }
-                            Divider().padding(.leading, 56)
+                            .onTapGesture {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                    applicationsVM.selectApplication(app)
+                                }
+                            }
+                            
+                            Divider().padding(.leading, 72)
                         }
                     }
                 }
@@ -238,16 +260,16 @@ struct LOApplicationsView: View {
     // ────────────────────────────────────────────────────────────────
 
     private func detailHeader(_ app: LoanApplication) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top) {
-                // Avatar
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 16) {
+                // Avatar with Gradient
                 ZStack {
                     Circle()
-                        .fill(Theme.Colors.primary.opacity(0.1))
-                        .frame(width: 48, height: 48)
+                        .fill(Theme.Colors.primary)
+                        .frame(width: 60, height: 60)
                     Text(app.borrower.name.prefix(1))
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(Theme.Colors.primary)
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -257,29 +279,44 @@ struct LOApplicationsView: View {
                         Spacer()
                         StatusBadge(status: app.status)
                     }
-                    Text(app.loan.amount.currencyFormatted + " · " + app.loan.type.displayName)
-                        .font(Theme.Typography.subheadline)
-                        .foregroundStyle(Theme.Colors.primary)
+                    
+                    HStack(spacing: 6) {
+                        Text(app.loan.amount.currencyFormatted)
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundStyle(Theme.Colors.primary)
+                        Text("•")
+                            .foregroundStyle(.tertiary)
+                        Text(app.loan.type.displayName)
+                            .font(Theme.Typography.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    
                     Text("ID: \(app.id)")
-                        .font(Theme.Typography.caption)
+                        .font(.system(size: 12, weight: .medium, design: .monospaced))
                         .foregroundStyle(.tertiary)
+                        .padding(.top, 2)
                 }
             }
 
             // Borrower meta row
             HStack(spacing: 20) {
-                metaItem(icon: "building.2", text: app.borrower.employer)
-                metaItem(icon: "person.fill", text: app.borrower.employmentType)
-                metaItem(icon: "phone", text: app.borrower.phone)
+                metaItem(icon: "building.2.fill", text: app.borrower.employer)
+                metaItem(icon: "person.text.rectangle.fill", text: app.borrower.employmentType)
+                metaItem(icon: "phone.fill", text: app.borrower.phone)
                 Spacer()
             }
-            .font(.system(size: 13))
+            .font(.system(size: 13, weight: .medium))
             .foregroundStyle(.secondary)
+            .padding(.top, 4)
         }
-        .padding(16)
+        .padding(20)
         .background(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
                 .fill(Theme.Colors.adaptiveSurface(colorScheme))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
         )
     }
 
@@ -295,8 +332,9 @@ struct LOApplicationsView: View {
     // ────────────────────────────────────────────────────────────────
 
     private func financialSection(_ app: LoanApplication) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionLabel("Financial Details", icon: "indianrupeesign.circle")
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Financial Details", icon: "indianrupeesign.circle")
+                .description("Verified income, expenses, and credit risk assessment data.")
 
             LazyVGrid(columns: [
                 GridItem(.flexible()),
@@ -314,6 +352,10 @@ struct LOApplicationsView: View {
         .padding(16)
         .background(RoundedRectangle(cornerRadius: Theme.Radius.lg)
             .fill(Theme.Colors.adaptiveSurface(colorScheme)))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+        )
     }
 
     private func finCard(_ label: String, _ value: String, _ icon: String, _ tint: Color) -> some View {
@@ -332,8 +374,12 @@ struct LOApplicationsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
-        .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+        .background(Theme.Colors.adaptiveSurface(colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.sm)
+                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 0.5)
+        )
     }
 
     private func cibilColor(_ s: Int)    -> Color { s >= 750 ? Theme.Colors.success : s >= 650 ? Theme.Colors.neutral : Theme.Colors.critical }
@@ -344,8 +390,10 @@ struct LOApplicationsView: View {
     // ────────────────────────────────────────────────────────────────
 
     private func documentsSection(_ app: LoanApplication) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionLabel("Documents", icon: "doc.fill")
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Required Documents", icon: "doc.fill")
+                .description("Upload and verify necessary documentation for loan eligibility.")
+                .info { /* Info Action */ }
 
             ForEach(app.documents) { doc in
                 DocumentUploadRow(
@@ -370,6 +418,10 @@ struct LOApplicationsView: View {
         .padding(16)
         .background(RoundedRectangle(cornerRadius: Theme.Radius.lg)
             .fill(Theme.Colors.adaptiveSurface(colorScheme)))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+        )
         .alert("Add Document", isPresented: $showAddDocumentAlert) {
             TextField("Document Name", text: $newDocumentName)
             Button("Cancel", role: .cancel) { }
@@ -388,8 +440,10 @@ struct LOApplicationsView: View {
     // ────────────────────────────────────────────────────────────────
 
     private func verificationSection(_ app: LoanApplication) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionLabel("OCR Verification", icon: "cpu")
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "AI Verification", icon: "cpu.fill")
+                .description("Automated data cross-referencing and authenticity checks.")
+                .info { /* Info Action */ }
 
             let mismatches = app.verification.filter { !$0.isMatch }.count
             if mismatches > 0 {
@@ -425,6 +479,10 @@ struct LOApplicationsView: View {
             .padding(16)
             .background(RoundedRectangle(cornerRadius: Theme.Radius.lg)
                 .fill(Theme.Colors.adaptiveSurface(colorScheme)))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                    .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+            )
     }
 
     // ────────────────────────────────────────────────────────────────
@@ -447,8 +505,12 @@ struct LOApplicationsView: View {
                     .font(Theme.Typography.subheadline)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 9)
-                    .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
+            .background(Theme.Colors.adaptiveSurface(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+            )
 
                 Button {
                     applicationsVM.sendApplicationMessage(
@@ -503,7 +565,7 @@ struct LOApplicationsView: View {
                         }
                         Text(msg.text)
                             .font(Theme.Typography.subheadline)
-                            .foregroundStyle(msg.isFromCurrentUser ? .white : .primary)
+                            .foregroundStyle(msg.isFromCurrentUser ? Color.white : Color.primary)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
                             .background(msg.isFromCurrentUser ? Theme.Colors.primary : Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
@@ -694,8 +756,12 @@ struct DocumentUploadRow: View {
                 }
             }
         }
-        .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
+            .background(Theme.Colors.adaptiveSurface(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.sm)
+                    .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 0.5)
+            )
         // File picker
         .photosPicker(isPresented: $showPicker, selection: $selectedPhotos, maxSelectionCount: 1, matching: .any(of: [.images, .videos]))
         .onChange(of: selectedPhotos) { _, items in
@@ -824,8 +890,12 @@ struct InternalRemarksView: View {
                     .lineLimit(1...3)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            .background(Theme.Colors.adaptiveSurface(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+            )
                     .focused($focused)
 
                 Button {
@@ -865,7 +935,7 @@ struct AppFilterChip: View {
         Button(action: onTap) {
             Text(label)
                 .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
-                .foregroundStyle(isSelected ? .white : .secondary)
+                .foregroundStyle(isSelected ? Color.white : Color.secondary)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 5)
                 .background(isSelected ? Theme.Colors.primary : Color.clear)
@@ -889,6 +959,7 @@ typealias FilterChip = AppFilterChip
 struct CreateApplicationSheet: View {
     @ObservedObject var applicationsVM: ApplicationsViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var borrowerName    = ""
     @State private var borrowerPhone   = ""
@@ -916,78 +987,148 @@ struct CreateApplicationSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Borrower") {
-                    TextField("Full Name",     text: $borrowerName)
-                    TextField("Phone",         text: $borrowerPhone).keyboardType(.phonePad)
-                    TextField("Email",         text: $borrowerEmail).keyboardType(.emailAddress).autocapitalization(.none)
-                    TextField("Address",       text: $borrowerAddress, axis: .vertical).lineLimit(2...3)
-                }
-                Section("Loan Details") {
-                    Picker("Loan Type", selection: $selectedLoanType) {
-                        ForEach(LoanType.allCases) { t in Text(t.displayName).tag(t) }
-                    }
-                    TextField("Amount (₹)",    text: $loanAmountText).keyboardType(.numberPad)
-                    TextField("Tenure (months)", text: $tenureText).keyboardType(.numberPad)
-                }
-                Section("Financials") {
-                    TextField("Monthly Income (₹)", text: $monthlyIncomeText).keyboardType(.numberPad)
-                    TextField("Existing EMI (₹)",   text: $existingEMIText).keyboardType(.numberPad)
-                }
-                Section("Documents") {
-                    ForEach($newDocuments) { $doc in
-                        HStack {
-                            Image(systemName: doc.type.icon).foregroundStyle(Theme.Colors.primary).frame(width: 24)
-                            TextField("Document Name", text: $doc.label)
-                            Spacer()
-                            Button { doc.isUploaded.toggle() } label: {
-                                Image(systemName: doc.isUploaded ? "checkmark.circle.fill" : "icloud.and.arrow.up")
-                                    .foregroundStyle(doc.isUploaded ? Theme.Colors.success : .secondary)
-                                    .font(.system(size: 18))
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .onDelete { indexSet in
-                        newDocuments.remove(atOffsets: indexSet)
-                    }
-                    
-                    Menu {
-                        ForEach(DocumentType.allCases) { type in
-                            Button(type.displayName) {
-                                newDocuments.append(NewDocument(type: type, label: type.displayName, isUploaded: false))
+            ZStack {
+                Theme.Colors.adaptiveBackground(colorScheme).ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: 24) {
+                        // Section 1: Borrower Information
+                        formSection(title: "Borrower Information", icon: "person.fill") {
+                            VStack(spacing: 16) {
+                                customTextField("Full Name", text: $borrowerName, icon: "person")
+                                HStack(spacing: 16) {
+                                    customTextField("Phone", text: $borrowerPhone, icon: "phone").keyboardType(.phonePad)
+                                    customTextField("Email", text: $borrowerEmail, icon: "envelope").keyboardType(.emailAddress).autocapitalization(.none)
+                                }
+                                customTextField("Residential Address", text: $borrowerAddress, icon: "mappin.and.ellipse", isMultiline: true)
                             }
                         }
-                    } label: {
-                        Label("Add Document", systemImage: "plus.circle")
-                            .foregroundStyle(Theme.Colors.primary)
-                    }
-                    
-                    Button {
-                        applicationsVM.simulateXMLUpload()
-                        xmlParsed = true
-                        if let r = applicationsVM.xmlParseResult {
-                            monthlyIncomeText = String(Int(r.monthlyIncome))
+                        
+                        // Section 2: Loan Details
+                        formSection(title: "Loan Parameters", icon: "indianrupeesign.circle.fill") {
+                            VStack(spacing: 16) {
+                                HStack(spacing: 16) {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text("Loan Type").font(Theme.Typography.caption2).foregroundStyle(.secondary)
+                                        Picker("Loan Type", selection: $selectedLoanType) {
+                                            ForEach(LoanType.allCases) { t in Text(t.displayName).tag(t) }
+                                        }
+                                        .pickerStyle(.menu)
+                                        .padding(.horizontal, 12)
+                                        .frame(maxWidth: .infinity, minHeight: 44)
+                                        .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    }
+                                    
+                                    customTextField("Tenure (months)", text: $tenureText, icon: "calendar").keyboardType(.numberPad)
+                                }
+                                
+                                customTextField("Requested Loan Amount (₹)", text: $loanAmountText, icon: "banknote").keyboardType(.numberPad)
+                            }
                         }
-                    } label: {
-                        Label(
-                            xmlParsed ? "XML Parsed" : "Upload XML",
-                            systemImage: xmlParsed ? "checkmark.circle.fill" : "arrow.up.doc"
-                        )
-                        .foregroundStyle(xmlParsed ? Theme.Colors.success : Theme.Colors.primary)
+                        
+                        // Section 3: Financials & XML
+                        formSection(title: "Financial Profile", icon: "chart.bar.doc.horizontal.fill") {
+                            VStack(spacing: 16) {
+                                HStack(spacing: 16) {
+                                    customTextField("Monthly Income (₹)", text: $monthlyIncomeText, icon: "arrow.up.right.circle").keyboardType(.numberPad)
+                                    customTextField("Existing EMI (₹)", text: $existingEMIText, icon: "arrow.down.left.circle").keyboardType(.numberPad)
+                                }
+                                
+                                Button {
+                                    withAnimation {
+                                        applicationsVM.simulateXMLUpload()
+                                        xmlParsed = true
+                                        if let r = applicationsVM.xmlParseResult {
+                                            monthlyIncomeText = String(Int(r.monthlyIncome))
+                                        }
+                                    }
+                                } label: {
+                                    HStack {
+                                        Image(systemName: xmlParsed ? "checkmark.seal.fill" : "doc.viewfinder.fill")
+                                        Text(xmlParsed ? "Bank Statement Parsed Successfully" : "Auto-fill via Bank Statement (XML)")
+                                            .fontWeight(.semibold)
+                                    }
+                                    .font(Theme.Typography.subheadline)
+                                    .foregroundStyle(xmlParsed ? .white : Theme.Colors.primary)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(xmlParsed ? Theme.Colors.success : Theme.Colors.primary.opacity(0.1))
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
+                            }
+                        }
+                        
+                        // Section 4: Documents
+                        formSection(title: "Required Documents", icon: "doc.on.doc.fill") {
+                            VStack(spacing: 12) {
+                                ForEach($newDocuments) { $doc in
+                                    HStack {
+                                        Image(systemName: doc.type.icon)
+                                            .foregroundStyle(Theme.Colors.primary)
+                                            .frame(width: 24)
+                                        Text(doc.label)
+                                            .font(Theme.Typography.subheadline)
+                                        Spacer()
+                                        Button {
+                                            withAnimation(.spring(response: 0.3)) { doc.isUploaded.toggle() }
+                                        } label: {
+                                            HStack(spacing: 4) {
+                                                Image(systemName: doc.isUploaded ? "checkmark.circle.fill" : "arrow.up.circle")
+                                                Text(doc.isUploaded ? "Attached" : "Attach")
+                                            }
+                                            .font(.system(size: 12, weight: .bold))
+                                            .foregroundStyle(doc.isUploaded ? Theme.Colors.success : Theme.Colors.primary)
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 6)
+                                            .background(doc.isUploaded ? Theme.Colors.success.opacity(0.1) : Theme.Colors.primary.opacity(0.1))
+                                            .clipShape(Capsule())
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                    .padding(12)
+                                    .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                }
+                                
+                                Menu {
+                                    ForEach(DocumentType.allCases) { type in
+                                        Button(type.displayName) {
+                                            withAnimation {
+                                                newDocuments.append(NewDocument(type: type, label: type.displayName, isUploaded: false))
+                                            }
+                                        }
+                                    }
+                                } label: {
+                                    Label("Add Other Document", systemImage: "plus.circle.fill")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(Theme.Colors.primary)
+                                        .padding(.top, 8)
+                                }
+                            }
+                        }
                     }
+                    .padding(24)
                 }
             }
-            .navigationTitle("New Application")
+            .navigationTitle("New Loan Application")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction)  { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction)  {
+                    Button("Cancel") { dismiss() }
+                        .foregroundStyle(.secondary)
+                }
                 ToolbarItem(placement: .confirmationAction) {
-                    Menu {
-                        Button("Save Draft")         { submit(draft: true) }
-                        Button("Submit Application") { submit(draft: false) }
+                    Button {
+                        submit(draft: false)
                     } label: {
-                        Text("Save").fontWeight(.semibold)
+                        Text("Create Application")
+                            .fontWeight(.bold)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(borrowerName.isEmpty ? Theme.Colors.neutral.opacity(0.2) : Theme.Colors.primary)
+                            .foregroundStyle(borrowerName.isEmpty ? Color.secondary : Color.white)
+                            .clipShape(Capsule())
                     }
                     .disabled(borrowerName.isEmpty || loanAmountText.isEmpty)
                 }
@@ -995,6 +1136,52 @@ struct CreateApplicationSheet: View {
         }
     }
 
+    // MARK: - Components
+
+    private func formSection<Content: View>(title: String, icon: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                    .foregroundStyle(Theme.Colors.primary)
+                Text(title)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.secondary)
+            }
+            
+            content()
+                .padding(16)
+                .background(Theme.Colors.adaptiveSurface(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+        }
+    }
+
+    private func customTextField(_ label: String, text: Binding<String>, icon: String, isMultiline: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(Theme.Typography.caption2)
+                .foregroundStyle(.secondary)
+            
+            HStack(spacing: 10) {
+                Image(systemName: icon)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Theme.Colors.primary.opacity(0.7))
+                    .frame(width: 16)
+                
+                if isMultiline {
+                    TextField(label, text: text, axis: .vertical)
+                        .lineLimit(2...4)
+                } else {
+                    TextField(label, text: text)
+                }
+            }
+            .font(Theme.Typography.subheadline)
+            .padding(12)
+            .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
 
     private func submit(draft: Bool) {
         let amount = Double(loanAmountText) ?? 0

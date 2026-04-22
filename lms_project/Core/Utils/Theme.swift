@@ -12,29 +12,49 @@ enum Theme {
     // MARK: - Colors
     
     enum Colors {
-        // Primary palette (brand colours)
-        static let primary      = Color(hex: "002FDC")   // Primary Blue
-        static let secondary    = Color(hex: "264BE3")   // Secondary Blue
-        static let primaryLight = Color(hex: "E8F2FA")   // Background Light
-        static let accent       = Color(hex: "ED1E48")   // Accent Red
+        // Specific Palette
+        static let mainBlue      = Color(hex: "#002FDC")
+        static let secondaryBlue = Color(hex: "#264BE3")
+        static let lightBlue     = Color(hex: "#E8F2FA")
+        static let alertRed      = Color(hex: "#ED1E48")
+        
+        static let headerBlueTop    = Color(hex: "#4E68F5")
+        static let headerBlueMid    = Color(hex: "#4C72F6")
+        static let headerBlueBottom = Color(hex: "#6F92FF")
+        static let homeBackground   = Color(hex: "#EEF3FB")
+
+        // Primary palette (mapped)
+        static let primary      = mainBlue
+        static let secondary    = secondaryBlue
+        static let primaryLight = lightBlue
+        static let accent       = secondaryBlue
 
         // Semantic
-        static let critical = Color(hex: "ED1E48")   // Accent Red
-        static let warning  = Color(hex: "264BE3")   // Secondary Blue (instead of yellow)
-        static let success  = Color(hex: "264BE3")   // Secondary Blue (instead of green)
-        static let neutral  = Color(hex: "E8F2FA")   // Background Light (instead of grey)
+        static let critical = alertRed
+        static let warning  = Color(hex: "#FF9500")
+        static let success  = Color(hex: "#34C759")
+        static let neutral  = Color(hex: "#8E8E93")
 
         // Surfaces (light mode)
-        static let background        = Color(hex: "E8F2FA")
+        static let background        = homeBackground
         static let surface           = Color.white
-        static let surfaceSecondary  = Color(hex: "E8F2FA").opacity(0.5)
-        static let border            = Color(hex: "002FDC").opacity(0.15)
+        static let surfaceSecondary  = Color.white
+        static let border            = Color.black.opacity(0.06)
 
         // Surfaces (dark mode)
-        static let backgroundDark       = Color(hex: "0D1423")
-        static let surfaceDark          = Color(hex: "1A2035")
-        static let surfaceSecondaryDark = Color(hex: "232E48")
-        static let borderDark           = Color(hex: "002FDC").opacity(0.3)
+        static let backgroundDark       = Color(hex: "#0A0C10")
+        static let surfaceDark          = Color(hex: "#161B22")
+        static let surfaceSecondaryDark = Color(hex: "#161B22")
+        static let borderDark           = Color.white.opacity(0.1)
+
+        // Header Gradient
+        static var headerGradient: LinearGradient {
+            LinearGradient(
+                colors: [headerBlueTop, headerBlueMid, headerBlueBottom],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
 
         // Adaptive helpers
         static func adaptiveBackground(_ colorScheme: ColorScheme) -> Color {
@@ -68,19 +88,19 @@ enum Theme {
     // MARK: - Corner Radius
     
     enum Radius {
-        static let sm: CGFloat = 6
-        static let md: CGFloat = 10
-        static let lg: CGFloat = 12
-        static let xl: CGFloat = 16
+        static let sm: CGFloat = 8  // Increased slightly for modern look
+        static let md: CGFloat = 12
+        static let lg: CGFloat = 16
+        static let xl: CGFloat = 24
         static let pill: CGFloat = 100
     }
     
     // MARK: - Typography
     
     enum Typography {
-        static let titleLarge = Font.system(size: 28, weight: .bold)
-        static let title = Font.system(size: 22, weight: .semibold)
-        static let headline = Font.system(size: 17, weight: .semibold)
+        static let titleLarge = Font.system(size: 28, weight: .bold, design: .rounded)
+        static let title = Font.system(size: 22, weight: .semibold, design: .rounded)
+        static let headline = Font.system(size: 17, weight: .semibold, design: .rounded)
         static let body = Font.system(size: 17, weight: .regular)
         static let subheadline = Font.system(size: 15, weight: .regular)
         static let caption = Font.system(size: 13, weight: .regular)
@@ -91,8 +111,13 @@ enum Theme {
     // MARK: - Shadows
     
     enum Shadows {
-        static let subtle = Color.black.opacity(0.06)
-        static let card = Color.black.opacity(0.08)
+        static let subtle = Color.black.opacity(0.04)
+        static let card = Color.black.opacity(0.06)
+        static let elevation = Color.black.opacity(0.1)
+        
+        static func applyCardShadow<V: View>(_ view: V, colorScheme: ColorScheme) -> some View {
+            view.shadow(color: colorScheme == .dark ? Color.clear : card, radius: 10, x: 0, y: 4)
+        }
     }
     
     // MARK: - Layout

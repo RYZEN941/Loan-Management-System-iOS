@@ -59,17 +59,23 @@ class MessagesViewModel: ObservableObject {
     // MARK: - Send Message
     
     func sendMessage() {
-        guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              let conversation = selectedConversation else { return }
+        sendMessage(text: messageText)
+    }
+    
+    func sendMessage(text: String = "", attachmentName: String? = nil) {
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let conversation = selectedConversation,
+              !trimmedText.isEmpty || attachmentName != nil else { return }
         
         let newMessage = Message(
             id: "MSG-\(UUID().uuidString.prefix(6))",
             conversationId: conversation.id,
             senderId: "LO-001",
             senderName: "Amit Singh",
-            text: messageText,
+            text: trimmedText,
             timestamp: Date(),
-            isFromCurrentUser: true
+            isFromCurrentUser: true,
+            attachmentName: attachmentName
         )
         
         withAnimation {
@@ -78,7 +84,11 @@ class MessagesViewModel: ObservableObject {
         
         // Update last message in conversation
         if let index = conversations.firstIndex(where: { $0.id == conversation.id }) {
-            conversations[index].lastMessage = messageText
+            if let attachmentName {
+                conversations[index].lastMessage = trimmedText.isEmpty ? attachmentName : "\(trimmedText) · \(attachmentName)"
+            } else {
+                conversations[index].lastMessage = trimmedText
+            }
             conversations[index].lastMessageTime = Date()
         }
         

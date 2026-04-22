@@ -42,7 +42,7 @@ struct VerificationRow: View {
                         Text(item.extractedValue)
                             .font(Theme.Typography.subheadline)
                             .fontWeight(.medium)
-                            .foregroundStyle(item.isMatch ? .primary : Theme.Colors.warning)
+                            .foregroundStyle(item.isMatch ? Color.primary : Theme.Colors.warning)
                     }
                 }
             }

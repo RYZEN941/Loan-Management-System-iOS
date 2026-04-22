@@ -441,13 +441,13 @@ private struct MFAMethodCard: View {
                         .frame(width: 44, height: 44)
                     Image(systemName: method.icon)
                         .font(.system(size: 18))
-                        .foregroundStyle(isSelected ? Theme.Colors.primary : .secondary)
+                        .foregroundStyle(isSelected ? Theme.Colors.primary : Color.secondary)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(method.displayName)
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(isSelected ? Theme.Colors.primary : .primary)
+                        .foregroundStyle(isSelected ? Theme.Colors.primary : Color.primary)
                     Text(method.description)
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)

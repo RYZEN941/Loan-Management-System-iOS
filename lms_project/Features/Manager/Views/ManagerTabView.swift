@@ -13,13 +13,13 @@ struct ManagerTabView: View {
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            ManagerDashboardView(showProfile: $showProfile)
+            ManagerDashboardView(selectedTab: $selectedTab, showProfile: $showProfile)
                 .tabItem {
                     Label("Dashboard", systemImage: "chart.bar.fill")
                 }
                 .tag(0)
             
-            ManagerApprovalsView(showProfile: $showProfile)
+            ManagerApprovalsView(selectedTab: $selectedTab, showProfile: $showProfile)
                 .tabItem {
                     Label("Approvals", systemImage: "checkmark.circle.fill")
                 }
@@ -39,7 +39,7 @@ struct ManagerTabView: View {
         }
         .tint(Theme.Colors.primary)
         .sheet(isPresented: $showProfile) {
-            LOProfileView(isModal: true)
+            ManagerProfileView()
         }
     }
 }

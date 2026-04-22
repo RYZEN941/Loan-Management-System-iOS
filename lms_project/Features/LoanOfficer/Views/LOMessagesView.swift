@@ -4,6 +4,9 @@
 //
 
 import SwiftUI
+import PhotosUI
+import UniformTypeIdentifiers
+import UIKit
 
 struct LOMessagesView: View {
     @EnvironmentObject var messagesVM: MessagesViewModel
@@ -11,6 +14,11 @@ struct LOMessagesView: View {
     @Binding var showProfile: Bool
     
     @State private var showQuickReplies = false
+    @State private var showAttachmentOptions = false
+    @State private var showPhotoPicker = false
+    @State private var showFileImporter = false
+    @State private var showCamera = false
+    @State private var selectedPhoto: PhotosPickerItem?
     
     var body: some View {
         NavigationStack {
@@ -90,7 +98,20 @@ struct LOMessagesView: View {
     
     private var conversationList: some View {
         VStack(spacing: 0) {
-            // Search
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Conversations")
+                        .font(Theme.Typography.headline)
+                    Text("\(messagesVM.conversations.count) active chats")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.top, Theme.Spacing.md)
+            .padding(.bottom, Theme.Spacing.sm)
+            
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
@@ -103,7 +124,7 @@ struct LOMessagesView: View {
             .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
             .padding(.horizontal, Theme.Spacing.md)
-            .padding(.vertical, Theme.Spacing.sm)
+            .padding(.bottom, Theme.Spacing.sm)
             
             Divider()
             
@@ -148,6 +169,9 @@ struct LOMessagesView: View {
                         Text(conversation.participantRole)
                             .font(Theme.Typography.caption)
                             .foregroundStyle(.secondary)
+                        Text(conversation.participantEmail)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
                     }
                     
                     Spacer()
@@ -172,10 +196,21 @@ struct LOMessagesView: View {
                 
                 // Messages
                 ScrollView {
-                    LazyVStack(spacing: Theme.Spacing.sm) {
+                    VStack(spacing: Theme.Spacing.md) {
+                        Text("Conversation")
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Theme.Colors.adaptiveSurface(colorScheme))
+                            .clipShape(Capsule())
+                            .padding(.top, 4)
+                        
+                        LazyVStack(spacing: Theme.Spacing.sm) {
                         ForEach(messagesVM.messages) { message in
                             MessageBubble(message: message)
                         }
+                    }
                     }
                     .padding(Theme.Spacing.md)
                 }
@@ -196,7 +231,7 @@ struct LOMessagesView: View {
                                         .font(Theme.Typography.caption)
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 6)
-                                        .background(Theme.Colors.primaryLight.opacity(colorScheme == .dark ? 0.2 : 1))
+                                        .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
                                         .foregroundStyle(Theme.Colors.primary)
                                         .clipShape(Capsule())
                                 }
@@ -208,39 +243,47 @@ struct LOMessagesView: View {
                     }
                 }
                 
-                // Input Bar
+                // Input Bar (Floating Style)
                 HStack(spacing: Theme.Spacing.sm) {
                     Button {
                         showQuickReplies.toggle()
                     } label: {
-                        Image(systemName: "text.bubble")
-                            .font(.system(size: 20))
-                            .foregroundStyle(showQuickReplies ? Theme.Colors.primary : .secondary)
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundStyle(showQuickReplies ? Theme.Colors.primary : Theme.Colors.primary.opacity(0.6))
                     }
                     .buttonStyle(.plain)
                     
-                    Button {} label: {
-                        Image(systemName: "paperclip")
-                            .font(.system(size: 20))
-                            .foregroundStyle(.secondary)
+                    HStack(spacing: 12) {
+                        TextField("Type a message...", text: $messagesVM.messageText)
+                            .font(Theme.Typography.body)
+                            .padding(.vertical, 10)
+                        
+                        Button {
+                            showAttachmentOptions = true
+                        } label: {
+                            Image(systemName: "paperclip")
+                                .font(.system(size: 18))
+                                .foregroundStyle(Theme.Colors.primary)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
-                    
-                    TextField("Type a message...", text: $messagesVM.messageText)
-                        .font(Theme.Typography.body)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
-                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .padding(.horizontal, 16)
+                    .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+                    .clipShape(RoundedRectangle(cornerRadius: 24))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 24)
+                            .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 0.5)
+                    )
                     
                     Button {
                         messagesVM.sendMessage()
                     } label: {
                         Image(systemName: "arrow.up.circle.fill")
-                            .font(.system(size: 28))
+                            .font(.system(size: 32))
                             .foregroundStyle(
                                 messagesVM.messageText.trimmingCharacters(in: .whitespaces).isEmpty
-                                ? Theme.Colors.neutral.opacity(0.4)
+                                ? Theme.Colors.neutral.opacity(0.3)
                                 : Theme.Colors.primary
                             )
                     }
@@ -248,8 +291,11 @@ struct LOMessagesView: View {
                     .disabled(messagesVM.messageText.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
                 .padding(.horizontal, Theme.Spacing.md)
-                .padding(.vertical, Theme.Spacing.sm)
-                .background(Theme.Colors.adaptiveSurface(colorScheme))
+                .padding(.vertical, 12)
+                .background(
+                    Theme.Colors.adaptiveSurface(colorScheme)
+                        .ignoresSafeArea()
+                )
             } else {
                 VStack(spacing: Theme.Spacing.md) {
                     Image(systemName: "message")
@@ -260,6 +306,47 @@ struct LOMessagesView: View {
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .confirmationDialog("Attach File", isPresented: $showAttachmentOptions, titleVisibility: .visible) {
+            Button("Choose Photo") {
+                showPhotoPicker = true
+            }
+            Button("Choose Document") {
+                showFileImporter = true
+            }
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Button("Take Photo") {
+                    showCamera = true
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        }
+        .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhoto, matching: .images)
+        .onChange(of: selectedPhoto) { _, newItem in
+            guard let item = newItem else { return }
+            Task {
+                if let _ = try? await item.loadTransferable(type: Data.self) {
+                    let name = "Photo_\(Int(Date().timeIntervalSince1970)).jpg"
+                    await MainActor.run {
+                        messagesVM.sendMessage(attachmentName: name)
+                        selectedPhoto = nil
+                    }
+                }
+            }
+        }
+        .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.pdf, .image, .plainText, .data], allowsMultipleSelection: false) { result in
+            if case let .success(urls) = result, let fileURL = urls.first {
+                messagesVM.sendMessage(attachmentName: fileURL.lastPathComponent)
+            }
+        }
+        .sheet(isPresented: $showCamera) {
+            LOImagePicker(sourceType: .camera) { image in
+                showCamera = false
+                if image != nil {
+                    let name = "Camera_\(Int(Date().timeIntervalSince1970)).jpg"
+                    messagesVM.sendMessage(attachmentName: name)
+                }
             }
         }
     }
@@ -274,34 +361,40 @@ private struct ConversationRow: View {
     @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 16) {
             ZStack(alignment: .bottomTrailing) {
                 Circle()
                     .fill(Theme.Colors.primary.opacity(0.12))
-                    .frame(width: 44, height: 44)
+                    .frame(width: 50, height: 50)
                 
                 Text(String(conversation.participantName.prefix(1)))
-                    .font(Theme.Typography.headline)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundStyle(Theme.Colors.primary)
                 
                 if conversation.isOnline {
                     Circle()
                         .fill(Theme.Colors.success)
-                        .frame(width: 10, height: 10)
+                        .frame(width: 12, height: 12)
                         .overlay(Circle().stroke(Theme.Colors.adaptiveSurface(colorScheme), lineWidth: 2))
                 }
             }
             
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text(conversation.participantName)
-                        .font(Theme.Typography.headline)
-                        .lineLimit(1)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(conversation.participantName)
+                            .font(Theme.Typography.headline)
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                        Text(conversation.participantRole)
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(.secondary)
+                    }
                     
                     Spacer()
                     
                     Text(conversation.lastMessageTime.relativeFormatted)
-                        .font(Theme.Typography.caption)
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.tertiary)
                 }
                 
@@ -315,18 +408,70 @@ private struct ConversationRow: View {
                     
                     if conversation.unreadCount > 0 {
                         Text("\(conversation.unreadCount)")
-                            .font(Theme.Typography.caption2)
+                            .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(.white)
-                            .frame(width: 20, height: 20)
+                            .frame(width: 18, height: 18)
                             .background(Theme.Colors.primary)
                             .clipShape(Circle())
                     }
                 }
             }
         }
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, 10)
-        .background(isSelected ? Theme.Colors.primaryLight.opacity(colorScheme == .dark ? 0.2 : 1) : Color.clear)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            isSelected 
+            ? Theme.Colors.primary.opacity(colorScheme == .dark ? 0.15 : 0.05) 
+            : Color.clear
+        )
+        .overlay(
+            HStack {
+                if isSelected {
+                    Rectangle()
+                        .fill(Theme.Colors.primary)
+                        .frame(width: 4)
+                        .transition(.move(edge: .leading))
+                }
+                Spacer()
+            }
+        )
         .contentShape(Rectangle())
+    }
+}
+
+private struct LOImagePicker: UIViewControllerRepresentable {
+    let sourceType: UIImagePickerController.SourceType
+    let onImagePicked: (UIImage?) -> Void
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onImagePicked: onImagePicked)
+    }
+    
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = sourceType
+        picker.delegate = context.coordinator
+        return picker
+    }
+    
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+    
+    final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        let onImagePicked: (UIImage?) -> Void
+        
+        init(onImagePicked: @escaping (UIImage?) -> Void) {
+            self.onImagePicked = onImagePicked
+        }
+        
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            onImagePicked(nil)
+            picker.dismiss(animated: true)
+        }
+        
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            let image = info[.originalImage] as? UIImage
+            onImagePicked(image)
+            picker.dismiss(animated: true)
+        }
     }
 }

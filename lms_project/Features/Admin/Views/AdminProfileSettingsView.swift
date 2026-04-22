@@ -102,7 +102,7 @@ struct AdminProfileSettingsView: View {
                             HStack(spacing: Theme.Spacing.md) {
                                 Image(systemName: section.icon)
                                     .font(.system(size: 18))
-                                    .foregroundStyle(isSelected ? Theme.Colors.primary : .secondary)
+                                    .foregroundStyle(isSelected ? Theme.Colors.primary : Color.secondary)
                                     .frame(width: 24)
                                 Text(section.rawValue)
                                     .font(Theme.Typography.subheadline)

@@ -98,9 +98,9 @@ extension View {
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                    .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 0.5)
+                    .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1.0)
             )
-            .shadow(color: Theme.Shadows.card, radius: 3, x: 0, y: 1)
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.2 : 0.04), radius: 6, x: 0, y: 2)
     }
     
     /// Conditional modifier

@@ -47,7 +47,7 @@ class DashboardViewModel: ObservableObject {
     // MARK: - Active applications (non-terminal)
     
     var activeApplications: [LoanApplication] {
-        applications.filter { $0.status != .approved && $0.status != .rejected }
+        applications.filter { $0.status == .pending || $0.status == .underReview }
     }
     
     // MARK: - Load Data

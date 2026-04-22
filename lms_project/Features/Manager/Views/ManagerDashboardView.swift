@@ -2,33 +2,45 @@
 //  ManagerDashboardView.swift
 //  lms_project
 //
+//  Manager Dashboard: Premium FinTech UI with gradient header and team portfolio oversight.
+//
 
 import SwiftUI
 
 struct ManagerDashboardView: View {
     @EnvironmentObject var dashboardVM: DashboardViewModel
-    @EnvironmentObject var applicationsVM: ApplicationsViewModel
     @EnvironmentObject var authVM: AuthViewModel
     @Environment(\.colorScheme) private var colorScheme
+    @Binding var selectedTab: Int
     @Binding var showProfile: Bool
-
+    
     var body: some View {
         NavigationStack {
             ZStack {
                 Theme.Colors.adaptiveBackground(colorScheme).ignoresSafeArea()
-                ScrollView {
-                    VStack(spacing: Theme.Spacing.lg) {
+                
+                VStack(spacing: 0) {
+                    // Simple Elegant Header
+                    VStack(alignment: .leading, spacing: Theme.Spacing.md) {
                         greetingBar
-                        kpiStrip
-                        recentApplicationsSection
-                        pendingApprovalsSection
-                        recentActivitySection
+                            .padding(.horizontal, Theme.Spacing.lg)
+                            .padding(.bottom, Theme.Spacing.md)
                     }
-                    .padding(.horizontal, Theme.Spacing.lg)
-                    .padding(.bottom, Theme.Spacing.lg)
+                    .background(Theme.Colors.adaptiveBackground(colorScheme))
+                    .foregroundStyle(.primary)
+                    
+                    ScrollView {
+                        VStack(spacing: Theme.Spacing.xl) {
+                            managerKPIStrip
+                            portfolioTrendSection
+                            pendingApprovalsWorkspace
+                        }
+                        .padding(.horizontal, Theme.Spacing.lg)
+                        .padding(.bottom, Theme.Spacing.xl)
+                    }
                 }
             }
-            .navigationTitle("Dashboard")
+            .navigationTitle("Manager Dashboard")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -37,184 +49,107 @@ struct ManagerDashboardView: View {
             }
             .onAppear {
                 dashboardVM.loadData()
-                applicationsVM.loadData()
             }
         }
     }
-
+    
     // MARK: - Greeting
     private var greetingBar: some View {
         HStack {
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text(greetingText).font(Theme.Typography.titleLarge)
+                Text(greetingText)
+                    .font(Theme.Typography.titleLarge)
                 HStack(spacing: Theme.Spacing.sm) {
-                    Image(systemName: "building.2").font(.system(size: 13)).foregroundStyle(.secondary)
-                    Text(authVM.currentUser?.branch ?? "Branch").font(Theme.Typography.subheadline).foregroundStyle(.secondary)
+                    Image(systemName: "building.2.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Theme.Colors.primary)
+                    Text("Branch Operations Oversight")
+                        .font(Theme.Typography.subheadline)
+                        .foregroundStyle(.secondary)
                 }
             }
             Spacer()
         }
-        .padding(.top, Theme.Spacing.sm)
+        .padding(.top, Theme.Spacing.md)
     }
-
+    
     private var greetingText: String {
-        let hour = Calendar.current.component(.hour, from: Date())
         let name = authVM.currentUser?.name.split(separator: " ").first.map(String.init) ?? "Manager"
-        if hour < 12 { return "Good Morning, \(name)" }
-        if hour < 17 { return "Good Afternoon, \(name)" }
-        return "Good Evening, \(name)"
+        return "Welcome Back, \(name)"
     }
-
-    // MARK: - KPI Strip
-    private var kpiStrip: some View {
-        LazyVGrid(
-            columns: [GridItem(.flexible(), spacing: Theme.Spacing.md), GridItem(.flexible(), spacing: Theme.Spacing.md)],
-            spacing: Theme.Spacing.md
-        ) {
-            KPICard(title: "Pending Approvals", value: "\(underReviewCount)",
-                    icon: "checkmark.circle.fill", color: Theme.Colors.warning)
-            KPICard(title: "Approved This Month", value: "\(dashboardVM.approvedThisMonth)",
-                    icon: "checkmark.seal.fill", color: Theme.Colors.success)
-            KPICard(title: "Portfolio Value", value: dashboardVM.totalPortfolioValue.compactFormatted,
-                    icon: "chart.line.uptrend.xyaxis", color: Theme.Colors.primary)
-            KPICard(title: "NPA Rate", value: "2.4%",
-                    icon: "exclamationmark.triangle.fill", color: Theme.Colors.critical,
-                    subtitle: "↓ 0.3% from last month")
+    
+    // MARK: - Manager KPIs
+    private var managerKPIStrip: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            SectionHeader(title: "Branch Portfolio", icon: "chart.bar.fill")
+                .description("High-level overview of branch-wide loan activity and risk metrics.")
+                .info { /* Info Action */ }
+            
+            KPIStripView(cards: [
+                KPIData(title: "Pending Approvals", value: "12",
+                        icon: "clock.fill", color: Theme.Colors.warning),
+                KPIData(title: "Total Disbursed", value: "₹4.2Cr",
+                        icon: "checkmark.circle.fill", color: Theme.Colors.primary),
+                KPIData(title: "Portfolio Risk", value: "Low",
+                        icon: "shield.fill", color: Theme.Colors.success)
+            ])
         }
     }
-
-    private var underReviewCount: Int {
-        applicationsVM.applications.filter { $0.status == .underReview }.count
-    }
-
-    // MARK: - Recent Applications (clickable → Approvals tab)
-    private var recentApplicationsSection: some View {
+    
+    // MARK: - Portfolio Trend
+    private var portfolioTrendSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "Recent Applications", icon: "doc.text.fill")
-
-            let recent = Array(applicationsVM.applications.prefix(5))
-
-            if recent.isEmpty {
-                emptyCard("No applications yet")
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(recent) { app in
-                        Button {
-                            applicationsVM.selectApplication(app)
-                        } label: {
-                            HStack(spacing: 12) {
-                                ZStack {
-                                    Circle().fill(statusColor(app.status).opacity(0.12)).frame(width: 38, height: 38)
-                                    Text(app.borrower.name.prefix(1))
-                                        .font(.system(size: 15, weight: .semibold))
-                                        .foregroundStyle(statusColor(app.status))
-                                }
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(app.borrower.name).font(Theme.Typography.headline).foregroundStyle(.primary)
-                                    Text(app.loan.amount.currencyFormatted + " · " + app.loan.type.displayName)
-                                        .font(Theme.Typography.caption).foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                VStack(alignment: .trailing, spacing: 4) {
-                                    StatusBadge(status: app.status)
-                                    Text(app.createdAt.shortFormatted)
-                                        .font(Theme.Typography.caption2).foregroundStyle(.tertiary)
-                                }
+            SectionHeader(title: "Portfolio Growth", icon: "chart.line.uptrend.xyaxis")
+                .description("Monthly disbursement volume and approval velocity.")
+                .info { /* Info Action */ }
+            
+            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                PremiumLineChart(
+                    data: [20, 25, 22, 30, 28, 35, 42],
+                    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"],
+                    accentColor: Theme.Colors.secondary,
+                    showPoints: true,
+                    unit: "loans"
+                )
+                .frame(height: 200)
+            }
+            .padding(Theme.Spacing.lg)
+            .background(Theme.Colors.adaptiveSurface(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                    .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+            )
+        }
+    }
+    
+    // MARK: - Pending Approvals
+    private var pendingApprovalsWorkspace: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            SectionHeader(title: "Critical Approvals", icon: "exclamationmark.shield.fill")
+                .description("High-priority applications requiring immediate manager oversight.")
+                .info { /* Info Action */ }
+            
+            VStack(spacing: 0) {
+                ForEach(dashboardVM.activeApplications.prefix(3)) { app in
+                    ApplicationRow(application: app, isSelected: false, useMinimalStyle: true)
+                        .onTapGesture {
+                            withAnimation {
+                                dashboardVM.selectApplication(app)
+                                selectedTab = 1
                             }
-                            .padding(.horizontal, Theme.Spacing.md)
-                            .padding(.vertical, 10)
-                            .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
-
-                        if app.id != recent.last?.id {
-                            Divider().padding(.leading, 62)
-                        }
+                    if app.id != dashboardVM.activeApplications.prefix(3).last?.id {
+                        Divider().padding(.leading, 72)
                     }
                 }
-                .cardStyle(colorScheme: colorScheme)
             }
+            .background(Theme.Colors.adaptiveSurface(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                    .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+            )
         }
-    }
-
-    private func statusColor(_ status: ApplicationStatus) -> Color {
-        switch status {
-        case .pending: return Theme.Colors.neutral
-        case .underReview: return Theme.Colors.warning
-        case .approved: return Theme.Colors.success
-        case .rejected: return Theme.Colors.critical
-        }
-    }
-
-    // MARK: - Pending Approvals (Under Review)
-    private var pendingApprovalsSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "Pending Approvals", icon: "clock.fill")
-
-            let underReview = applicationsVM.applications.filter { $0.status == .underReview }
-
-            if underReview.isEmpty {
-                emptyCard("No pending approvals")
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(underReview) { app in
-                        Button {
-                            applicationsVM.selectApplication(app)
-                        } label: {
-                            ApplicationRow(application: app, isSelected: false)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-
-                        if app.id != underReview.last?.id {
-                            Divider().padding(.leading, 72)
-                        }
-                    }
-                }
-                .cardStyle(colorScheme: colorScheme)
-            }
-        }
-    }
-
-    // MARK: - Recent Decisions
-    private var recentActivitySection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "Recent Decisions", icon: "clock.arrow.circlepath")
-
-            let decided = applicationsVM.applications.filter {
-                $0.status == .approved || $0.status == .rejected
-            }
-
-            if decided.isEmpty {
-                emptyCard("No recent decisions")
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(decided) { app in
-                        Button {
-                            applicationsVM.selectApplication(app)
-                        } label: {
-                            ApplicationRow(application: app, isSelected: false)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-
-                        if app.id != decided.last?.id {
-                            Divider().padding(.leading, 72)
-                        }
-                    }
-                }
-                .cardStyle(colorScheme: colorScheme)
-            }
-        }
-    }
-
-    private func emptyCard(_ text: String) -> some View {
-        HStack {
-            Spacer()
-            Text(text).font(Theme.Typography.subheadline).foregroundStyle(.secondary)
-                .padding(.vertical, Theme.Spacing.lg)
-            Spacer()
-        }
-        .cardStyle(colorScheme: colorScheme)
     }
 }

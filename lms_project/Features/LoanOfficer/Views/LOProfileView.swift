@@ -78,7 +78,12 @@ struct LOProfileView: View {
         }
         .padding(Theme.Spacing.lg)
         .frame(maxWidth: .infinity)
-        .cardStyle(colorScheme: colorScheme)
+        .background(Theme.Colors.adaptiveSurface(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 0.5)
+        )
     }
     
     // MARK: - Account Details
@@ -98,7 +103,12 @@ struct LOProfileView: View {
                 Divider().padding(.leading, 48)
                 profileRow(icon: "calendar", label: "Joined", value: authVM.currentUser?.joinedAt.shortFormatted ?? "")
             }
-            .cardStyle(colorScheme: colorScheme)
+            .background(Theme.Colors.adaptiveSurface(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                    .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 0.5)
+            )
         }
     }
     
@@ -117,7 +127,12 @@ struct LOProfileView: View {
                 Divider().padding(.leading, 48)
                 settingsToggle(icon: "moon", label: "Dark Mode", isOn: $darkModeEnabled)
             }
-            .cardStyle(colorScheme: colorScheme)
+            .background(Theme.Colors.adaptiveSurface(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                    .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 0.5)
+            )
         }
     }
     

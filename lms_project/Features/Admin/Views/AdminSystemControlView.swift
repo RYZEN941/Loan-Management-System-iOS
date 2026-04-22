@@ -123,7 +123,7 @@ struct AdminSystemControlView: View {
                         HStack(spacing: Theme.Spacing.sm) {
                             Image(systemName: section.icon)
                                 .font(.system(size: 15))
-                                .foregroundStyle(isSelected ? Theme.Colors.primary : .secondary)
+                                .foregroundStyle(isSelected ? Theme.Colors.primary : Color.secondary)
                                 .frame(width: 22)
                             Text(section.rawValue)
                                 .font(Theme.Typography.caption)

@@ -13,20 +13,40 @@ struct ManagerPortfolioView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.Colors.adaptiveBackground(colorScheme)
-                    .ignoresSafeArea()
+                Theme.Colors.adaptiveBackground(colorScheme).ignoresSafeArea()
                 
-                ScrollView {
-                    VStack(spacing: Theme.Spacing.lg) {
-                        portfolioSummary
-                        loanDistribution
-                        riskOverview
+                VStack(spacing: 0) {
+                    // Simple Elegant Header
+                    VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Portfolio Analysis")
+                                    .font(Theme.Typography.titleLarge)
+                                Text("Real-time branch metrics and distribution")
+                                    .font(Theme.Typography.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                        }
+                        .padding(.horizontal, Theme.Spacing.lg)
+                        .padding(.bottom, Theme.Spacing.md)
+                        .padding(.top, Theme.Spacing.md)
                     }
-                    .padding(.horizontal, Theme.Spacing.lg)
-                    .padding(.vertical, Theme.Spacing.md)
+                    .background(Theme.Colors.adaptiveBackground(colorScheme))
+                    .foregroundStyle(.primary)
+
+                    ScrollView {
+                        VStack(spacing: Theme.Spacing.xl) {
+                            portfolioSummary
+                            loanDistribution
+                            riskOverview
+                        }
+                        .padding(.horizontal, Theme.Spacing.lg)
+                        .padding(.bottom, Theme.Spacing.xl)
+                    }
                 }
             }
-            .navigationTitle("Portfolio & Reports")
+            .navigationTitle("Portfolio")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -42,6 +62,7 @@ struct ManagerPortfolioView: View {
     private var portfolioSummary: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             SectionHeader(title: "Portfolio Summary", icon: "chart.pie.fill")
+                .description("Key metrics of total loan volume and average disbursement value.")
             
             HStack(spacing: Theme.Spacing.md) {
                 KPICard(title: "Total Applications", value: "\(dashboardVM.applications.count)",
@@ -63,67 +84,50 @@ struct ManagerPortfolioView: View {
         guard !dashboardVM.applications.isEmpty else { return 0 }
         return totalLoanValue / Double(dashboardVM.applications.count)
     }
-    
+
     private var loanDistribution: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "Loan Type Distribution", icon: "chart.bar.xaxis")
+            SectionHeader(title: "Disbursement Trend", icon: "chart.line.uptrend.xyaxis")
+                .description("Analysis of loan approvals and disbursement performance over time.")
             
-            let distribution = Dictionary(grouping: dashboardVM.applications, by: { $0.loan.type })
-            
-            VStack(spacing: Theme.Spacing.sm) {
-                ForEach(LoanType.allCases) { type in
-                    let apps = distribution[type] ?? []
-                    if !apps.isEmpty {
-                        distributionRow(
-                            label: type.displayName,
-                            count: apps.count,
-                            total: dashboardVM.applications.count,
-                            value: apps.reduce(0) { $0 + $1.loan.amount }
-                        )
+            VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Disbursements")
+                            .font(Theme.Typography.headline)
+                        Text("Past 6 months")
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(.secondary)
                     }
+                    Spacer()
+                    Text("+14.2%")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Theme.Colors.success)
                 }
+                
+                PremiumLineChart(
+                    data: [3200000, 3800000, 3500000, 4200000, 4800000, 5100000],
+                    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+                    accentColor: Theme.Colors.primary,
+                    showPoints: true,
+                    unit: "cr"
+                )
+                .frame(height: 200)
             }
-            .padding(Theme.Spacing.md)
-            .cardStyle(colorScheme: colorScheme)
+            .padding(Theme.Spacing.lg)
+            .background(Theme.Colors.adaptiveSurface(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                    .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+            )
         }
-    }
-    
-    private func distributionRow(label: String, count: Int, total: Int, value: Double) -> some View {
-        VStack(spacing: Theme.Spacing.xs) {
-            HStack {
-                Text(label)
-                    .font(Theme.Typography.subheadline)
-                    .fontWeight(.medium)
-                Spacer()
-                Text("\(count) apps")
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(.secondary)
-                Text("•")
-                    .foregroundStyle(.quaternary)
-                Text(value.compactFormatted)
-                    .font(Theme.Typography.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundStyle(Theme.Colors.primary)
-            }
-            
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
-                        .frame(height: 6)
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(Theme.Colors.primary)
-                        .frame(width: geo.size.width * CGFloat(count) / CGFloat(max(total, 1)), height: 6)
-                }
-            }
-            .frame(height: 6)
-        }
-        .padding(.vertical, 4)
     }
     
     private var riskOverview: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "Risk Overview", icon: "exclamationmark.shield")
+            SectionHeader(title: "Risk Analysis", icon: "shield.fill")
+                .description("Categorical breakdown of applications based on calculated risk profiles.")
             
             HStack(spacing: Theme.Spacing.md) {
                 ForEach(RiskLevel.allCases) { risk in
@@ -135,26 +139,31 @@ struct ManagerPortfolioView: View {
     }
     
     private func riskCard(level: RiskLevel, count: Int) -> some View {
-        VStack(spacing: Theme.Spacing.sm) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             HStack {
-                Circle().fill(level.color).frame(width: 8, height: 8)
+                Image(systemName: "circle.fill")
+                    .font(.system(size: 8))
+                    .foregroundStyle(level.color)
                 Text(level.displayName)
-                    .font(Theme.Typography.subheadline)
+                    .font(Theme.Typography.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
             }
             Text("\(count)")
-                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .font(.system(size: 28, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
             Text("applications")
-                .font(Theme.Typography.caption)
+                .font(.system(size: 10))
                 .foregroundStyle(.tertiary)
-                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(Theme.Spacing.md)
-        .cardStyle(colorScheme: colorScheme)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.Colors.adaptiveSurface(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+        )
     }
-    
 }
 

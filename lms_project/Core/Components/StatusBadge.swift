@@ -10,12 +10,16 @@ struct StatusBadge: View {
     
     var body: some View {
         Text(status.displayName)
-            .font(Theme.Typography.caption2)
+            .font(.system(size: 10, weight: .bold))
             .foregroundStyle(status.color)
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
-            .background(status.backgroundColor)
+            .background(status.color.opacity(0.1))
             .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .strokeBorder(status.color.opacity(0.15), lineWidth: 0.5)
+            )
     }
 }
 
@@ -27,11 +31,11 @@ struct GenericBadge: View {
     
     var body: some View {
         Text(text)
-            .font(Theme.Typography.caption2)
+            .font(.system(size: 10, weight: .bold))
             .foregroundStyle(color)
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
-            .background(color.opacity(0.12))
+            .background(color.opacity(0.1))
             .clipShape(Capsule())
     }
 }
@@ -44,14 +48,18 @@ struct DocStatusBadge: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: status.icon)
-                .font(.system(size: 10))
+                .font(.system(size: 9, weight: .black))
             Text(status.displayName)
-                .font(Theme.Typography.caption2)
+                .font(.system(size: 10, weight: .bold, design: .rounded))
         }
         .foregroundStyle(status.color)
         .padding(.horizontal, 10)
-        .padding(.vertical, 4)
-        .background(status.color.opacity(0.12))
+        .padding(.vertical, 5)
+        .background(status.color.opacity(0.08))
         .clipShape(Capsule())
+        .overlay(
+            Capsule()
+                .strokeBorder(status.color.opacity(0.1), lineWidth: 0.5)
+        )
     }
 }

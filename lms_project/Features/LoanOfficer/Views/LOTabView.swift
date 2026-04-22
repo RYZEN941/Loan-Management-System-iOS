@@ -13,7 +13,7 @@ struct LOTabView: View {
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            LODashboardView(showProfile: $showProfile)
+            LODashboardView(selectedTab: $selectedTab, showProfile: $showProfile)
                 .tabItem {
                     Label("Dashboard", systemImage: "chart.bar.fill")
                 }

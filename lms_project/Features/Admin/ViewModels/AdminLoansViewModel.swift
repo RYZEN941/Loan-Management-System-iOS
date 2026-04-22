@@ -11,114 +11,102 @@ import Combine
 class AdminLoansViewModel: ObservableObject {
 
     // MARK: Published State
-    @Published var applications: [LoanApplication] = []
-    @Published var selectedApplication: LoanApplication? = nil
-    @Published var filterStatus: ApplicationStatus? = nil   // nil = All
-    @Published var searchText = ""
+    @Published var loanProducts: [LoanProduct] = []
     @Published var isLoading = false
+    @Published var searchText = ""
     @Published var actionMessage: String? = nil
     @Published var showActionAlert = false
-    @Published var showReassignSheet = false
-    @Published var showEscalateSheet = false
-    @Published var escalateNote = ""
-    @Published var reassignTargetId = ""
+    @Published var showAddLoanSheet = false
+    
+    // MARK: - Legacy Compatibility (DO NOT REMOVE - used by Dashboard)
+    @Published var applications: [LoanApplication] = [] // Kept for type compatibility
+    var totalCount: Int { loanProducts.count }
+    var pendingCount: Int { 0 }
+    var underReviewCount: Int { 0 }
+    var approvedCount: Int { loanProducts.count }
+    var rejectedCount: Int { 0 }
 
-    private let dataService = MockDataService.shared
-
-    // MARK: - Derived
-
-    var filteredApplications: [LoanApplication] {
-        var result = applications
-        if let status = filterStatus {
-            result = result.filter { $0.status == status }
+    // MARK: - Filtered
+    
+    var filteredProducts: [LoanProduct] {
+        if searchText.isEmpty {
+            return loanProducts
         }
-        if !searchText.isEmpty {
-            result = result.filter {
-                $0.borrower.name.localizedCaseInsensitiveContains(searchText) ||
-                $0.id.localizedCaseInsensitiveContains(searchText) ||
-                $0.borrower.employer.localizedCaseInsensitiveContains(searchText)
-            }
+        return loanProducts.filter { 
+            $0.name.localizedCaseInsensitiveContains(searchText) || 
+            $0.category.localizedCaseInsensitiveContains(searchText) ||
+            $0.description.localizedCaseInsensitiveContains(searchText)
         }
-        return result
     }
 
-    var totalCount: Int { applications.count }
-    var pendingCount: Int { applications.filter { $0.status == .pending }.count }
-    var underReviewCount: Int { applications.filter { $0.status == .underReview }.count }
-    var approvedCount: Int { applications.filter { $0.status == .approved }.count }
-    var rejectedCount: Int { applications.filter { $0.status == .rejected }.count }
-
     // MARK: - Load
-
+    
     func loadData() {
         isLoading = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-            guard let self else { return }
-            self.applications = self.dataService.fetchApplications()
-            if self.selectedApplication == nil {
-                self.selectedApplication = self.applications.first
-            }
+        // Mock data
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            guard let self = self else { return }
+            self.loanProducts = [
+                LoanProduct(name: "Home Loan", 
+                            description: "Flexible financing for your dream home with competitive rates.", 
+                            icon: "house.fill", 
+                            interestRate: 8.5, 
+                            maxAmount: 15000000, 
+                            maxTenure: 240, 
+                            category: "Asset"),
+                LoanProduct(name: "Car Loan", 
+                            description: "Drive your dream car with easy EMI options and quick approval.", 
+                            icon: "car.fill", 
+                            interestRate: 9.2, 
+                            maxAmount: 5000000, 
+                            maxTenure: 84, 
+                            category: "Asset"),
+                LoanProduct(name: "Personal Loan", 
+                            description: "Instant funds for your personal needs, weddings, or travel.", 
+                            icon: "person.fill", 
+                            interestRate: 11.5, 
+                            maxAmount: 2000000, 
+                            maxTenure: 60, 
+                            category: "Personal"),
+                LoanProduct(name: "Business Loan", 
+                            description: "Empower your business growth with our tailored financial solutions.", 
+                            icon: "briefcase.fill", 
+                            interestRate: 10.0, 
+                            maxAmount: 10000000, 
+                            maxTenure: 120, 
+                            category: "Business"),
+                LoanProduct(name: "Vehicle Loan", 
+                            description: "Affordable loans for two-wheelers and commercial vehicles.", 
+                            icon: "box.truck.fill", 
+                            interestRate: 9.8, 
+                            maxAmount: 1500000, 
+                            maxTenure: 48, 
+                            category: "Asset")
+            ]
             self.isLoading = false
         }
     }
 
     // MARK: - Actions
-
-    func approve(_ app: LoanApplication) {
-        updateStatus(app, to: .approved, message: "Application \(app.id) approved ✓")
+    
+    func addLoanProduct(_ product: LoanProduct) {
+        withAnimation {
+            loanProducts.insert(product, at: 0)
+        }
+        actionMessage = "Loan '\(product.name)' added successfully!"
+        showActionAlert = true
+        showAddLoanSheet = false
     }
-
-    func reject(_ app: LoanApplication) {
-        updateStatus(app, to: .rejected, message: "Application \(app.id) rejected")
+    
+    func deleteLoanProduct(at indexSet: IndexSet) {
+        loanProducts.remove(atOffsets: indexSet)
     }
-
-    func beginEscalate(_ app: LoanApplication) {
-        selectedApplication = app
-        escalateNote = ""
-        showEscalateSheet = true
-    }
-
-    func confirmEscalate() {
-        guard let app = selectedApplication else { return }
-        updateStatus(app, to: .underReview, message: "Application \(app.id) escalated to senior manager")
-        showEscalateSheet = false
-    }
-
-    func beginReassign(_ app: LoanApplication) {
-        selectedApplication = app
-        reassignTargetId = ""
-        showReassignSheet = true
-    }
-
-    func confirmReassign(to officerId: String) {
-        guard let app = selectedApplication else { return }
-        if let idx = applications.firstIndex(where: { $0.id == app.id }) {
+    
+    func deleteLoanProduct(_ product: LoanProduct) {
+        if let index = loanProducts.firstIndex(where: { $0.id == product.id }) {
             withAnimation {
-                applications[idx].assignedTo = officerId
-                selectedApplication = applications[idx]
+                loanProducts.remove(at: index)
             }
         }
-        actionMessage = "Application reassigned to \(officerId)"
-        showActionAlert = true
-        showReassignSheet = false
     }
-
-    private func updateStatus(_ app: LoanApplication, to status: ApplicationStatus, message: String) {
-        if let idx = applications.firstIndex(where: { $0.id == app.id }) {
-            withAnimation {
-                applications[idx].status = status
-                selectedApplication = applications[idx]
-            }
-        }
-        actionMessage = message
-        showActionAlert = true
-    }
-
-    // MARK: - Officers (for reassign picker)
-
-    let loanOfficers: [(id: String, name: String)] = [
-        ("LO-001", "Amit Singh"),
-        ("LO-002", "Neha Kapoor"),
-        ("LO-003", "Ravi Shankar")
-    ]
 }

@@ -32,6 +32,10 @@ class AdminViewModel: ObservableObject {
     // Audit Logs
     @Published var auditLogs: [AuditLog] = []
     
+    // Performance Trends
+    @Published var slaBreachTrendData: [Double] = [8, 5, 12, 7, 4, 9, 3]
+    @Published var slaBreachTrendLabels: [String] = [] 
+    
     private let adminAPI = AdminAPI()
     
     var filteredUsers: [User] {
@@ -77,10 +81,12 @@ class AdminViewModel: ObservableObject {
                     branches = updatedBranches.sorted(by: { $0.name < $1.name })
                 }
                 auditLogs = Self.mockAuditLogs()
+                slaBreachTrendLabels = Self.generateDayLabels()
             } catch {
                 users = []
                 requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to load users"
                 auditLogs = Self.mockAuditLogs()
+                slaBreachTrendLabels = Self.generateDayLabels()
             }
             isLoading = false
         }
@@ -299,6 +305,16 @@ class AdminViewModel: ObservableObject {
             return .loanOfficer
         default:
             return nil
+        }
+    }
+
+    private static func generateDayLabels() -> [String] {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE" // e.g., MON, TUE
+        let calendar = Calendar.current
+        return (0..<7).reversed().map { dayOffset in
+            let date = calendar.date(byAdding: .day, value: -dayOffset, to: Date()) ?? Date()
+            return formatter.string(from: date).uppercased()
         }
     }
 }

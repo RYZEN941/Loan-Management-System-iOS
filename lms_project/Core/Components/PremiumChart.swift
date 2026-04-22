@@ -12,6 +12,7 @@ struct PremiumLineChart: View {
     let labels: [String]
     let accentColor: Color
     let showPoints: Bool
+    var unit: String = ""
     
     @State private var hoveredIndex: Int? = nil
     @State private var dragLocation: CGPoint = .zero
@@ -39,7 +40,7 @@ struct PremiumLineChart: View {
                     )
                 
                 // Background Gradient Area
-                let baselineY = geo.size.height - 35 // Consistent baseline for labels
+                let baselineY = geo.size.height - 25 // Tighter baseline for compact layout
                 PremiumLineShape(points: points, closed: true, height: baselineY)
                     .fill(
                         LinearGradient(
@@ -75,9 +76,9 @@ struct PremiumLineChart: View {
                         let stepX = (geo.size.width - 40) / CGFloat(labels.count - 1)
                         let x = 20 + CGFloat(i) * stepX
                         Text(labels[i])
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.system(size: 9, weight: .bold)) // Finer font for compact view
                             .foregroundStyle(.secondary.opacity(0.8))
-                            .position(x: x, y: geo.size.height - 10)
+                            .position(x: x, y: geo.size.height - 8)
                     }
                 }
                 .frame(maxHeight: .infinity, alignment: .bottom)
@@ -90,8 +91,8 @@ struct PremiumLineChart: View {
                     Rectangle()
                         .fill(accentColor.opacity(0.3))
                         .frame(width: 1)
-                        .position(x: point.x, y: (geo.size.height - 35) / 2 + 15) // Centered between paddings
-                        .frame(height: geo.size.height - 65) // Respect top and bottom padding
+                        .position(x: point.x, y: (geo.size.height - 25) / 2 + 10) 
+                        .frame(height: geo.size.height - 45) // Refined for tighter paddings
                     
                     // Glowing point indicator
                     Circle()
@@ -106,7 +107,8 @@ struct PremiumLineChart: View {
                     
                     // Tooltip Box
                     VStack(spacing: 4) {
-                        Text("\(labels[index]): \(String(format: "%.1f", data[index]))k")
+                        let valueString = unit.isEmpty ? String(format: "%.0f", data[index]) : (unit == "k" ? String(format: "%.1f", data[index]) + unit : String(format: "%.0f", data[index]) + " " + unit)
+                        Text("\(labels[index]): \(valueString)")
                             .font(.system(size: 12, weight: .bold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 10)
@@ -148,8 +150,8 @@ struct PremiumLineChart: View {
         let drawRange = range == 0 ? 1.0 : range
         
         let horizontalPadding: CGFloat = 20
-        let topPadding: CGFloat = 40    // Room for tooltip
-        let bottomPadding: CGFloat = 40 // Room for labels
+        let topPadding: CGFloat = 25    // Reduced for compact view
+        let bottomPadding: CGFloat = 25 // Reduced for compact view
         
         let drawHeight = size.height - topPadding - bottomPadding
         let stepX = (size.width - horizontalPadding * 2) / CGFloat(data.count - 1)
@@ -185,18 +187,5 @@ struct PremiumLineShape: Shape {
         }
         
         return path
-    }
-}
-
-struct PremiumLineChart_Previews: PreviewProvider {
-    static var previews: some View {
-        PremiumLineChart(
-            data: [12.4, 15.1, 9.8, 18.2, 14.6, 22.0, 16.8],
-            labels: ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"],
-            accentColor: .blue,
-            showPoints: true
-        )
-        .frame(height: 200)
-        .padding()
     }
 }

@@ -788,8 +788,12 @@ struct EditUserSheet: View {
     @State private var email: String
     @State private var phone: String
     @State private var selectedRole: UserRole
-    @State private var branch: String
+    @State private var branchID: String
     @State private var newBranchName = ""
+    
+    private var editableRoles: [UserRole] {
+        [.loanOfficer, .manager]
+    }
     
     init(adminVM: AdminViewModel, user: User) {
         self.adminVM = adminVM
@@ -798,7 +802,7 @@ struct EditUserSheet: View {
         _email = State(initialValue: user.email)
         _phone = State(initialValue: user.phone)
         _selectedRole = State(initialValue: user.role)
-        _branch = State(initialValue: user.branch)
+        _branchID = State(initialValue: adminVM.branches.first(where: { $0.name == user.branch })?.id ?? "")
     }
     
     var body: some View {
@@ -807,17 +811,18 @@ struct EditUserSheet: View {
                 Section("Edit Information") {
                     TextField("Full Name", text: $name)
                     Picker("Role", selection: $selectedRole) {
-                        ForEach(UserRole.allCases) { role in
+                        ForEach(editableRoles) { role in
                             Text(role.displayName).tag(role)
                         }
                     }
-                    Picker("Branch", selection: $branch) {
-                        ForEach(adminVM.branches, id: \.name) { b in
-                            Text(b.name).tag(b.name)
+                    .disabled(true)
+                    Picker("Branch", selection: $branchID) {
+                        ForEach(adminVM.branches) { b in
+                            Text(b.name).tag(b.id)
                         }
                         Text("+ Create New Branch").tag("+ Create New Branch")
                     }
-                    if branch == "+ Create New Branch" {
+                    if branchID == "+ Create New Branch" {
                         TextField("New Branch Name", text: $newBranchName)
                     }
                 }
@@ -843,12 +848,21 @@ struct EditUserSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        var finalBranch = branch
-                        if branch == "+ Create New Branch" {
+                        var finalBranchID = branchID
+                        if branchID == "+ Create New Branch" {
                             adminVM.createBranch(newBranchName)
-                            finalBranch = newBranchName
+                            finalBranchID = ""
                         }
-                        adminVM.updateUser(userId: user.id, name: name, email: email, phone: phone, role: selectedRole, branch: finalBranch)
+                        let finalBranchName = adminVM.branches.first(where: { $0.id == finalBranchID })?.name ?? user.branch
+                        adminVM.updateUser(
+                            userId: user.id,
+                            name: name,
+                            email: email,
+                            phone: phone,
+                            role: selectedRole,
+                            branchID: finalBranchID.isEmpty ? nil : finalBranchID,
+                            branchName: finalBranchName
+                        )
                         dismiss()
                     }
                     .fontWeight(.semibold)
@@ -918,8 +932,6 @@ struct EditBranchSheet: View {
                 
                 Section {
                     Button(role: .destructive) {
-                        adminVM.deleteBranch(name: branchModel.name)
-                        dismiss()
                     } label: {
                         HStack {
                             Spacer()
@@ -927,6 +939,10 @@ struct EditBranchSheet: View {
                             Spacer()
                         }
                     }
+                    .disabled(true)
+                    Text("Delete is disabled: backend delete branch is not supported yet.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
             .navigationTitle("Edit Branch")
@@ -937,7 +953,7 @@ struct EditBranchSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        adminVM.updateBranch(oldName: branchModel.name, newName: name, location: location)
+                        adminVM.updateBranch(branchID: branchModel.id, newName: name, location: location)
                         dismiss()
                     }
                     .fontWeight(.semibold)

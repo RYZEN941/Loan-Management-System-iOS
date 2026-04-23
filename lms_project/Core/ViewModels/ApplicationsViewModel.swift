@@ -109,12 +109,91 @@ class ApplicationsViewModel: ObservableObject {
     }
     
     func approveApplication(_ app: LoanApplication) {
-        updateStatus(app, to: .approved, message: "Application approved ✓")
+        let version = SanctionLetterVersion(
+            version: 1,
+            generatedAt: Date(),
+            status: .sent,
+            fileUrl: "https://lms.static.com/sanction/\(app.id)_v1.pdf"
+        )
+        
+        let sanctionLetter = SanctionLetter(versions: [version], currentVersion: 1)
+        
+        if let index = applications.firstIndex(where: { $0.id == app.id }) {
+            withAnimation {
+                applications[index].status = .approved
+                applications[index].sanctionLetter = sanctionLetter
+                selectedApplication = applications[index]
+            }
+            
+            // Activity Logs
+            addInternalRemark(applicationId: app.id, text: "Sanction Letter Generated (v1)", author: "System")
+            addInternalRemark(applicationId: app.id, text: "Sent to Borrower", author: "System")
+            
+            // Notification for Loan Officer (Simulated as remark/message)
+            sendApplicationMessage(
+                applicationId: app.id,
+                senderName: "System",
+                senderRole: "Notification",
+                text: "Sanction Letter Generated for \(app.id)",
+                isManagerRemark: false
+            )
+        }
+        
+        actionMessage = "Application Approved & Sanction Letter Sent"
+        showActionAlert = true
+    }
+    
+    func regenerateSanctionLetter(_ app: LoanApplication) {
+        guard var letter = app.sanctionLetter else { return }
+        
+        let newVersionNumber = letter.currentVersion + 1
+        let newVersion = SanctionLetterVersion(
+            version: newVersionNumber,
+            generatedAt: Date(),
+            status: .sent,
+            fileUrl: "https://lms.static.com/sanction/\(app.id)_v\(newVersionNumber).pdf"
+        )
+        
+        letter.versions.append(newVersion)
+        letter.currentVersion = newVersionNumber
+        
+        if let index = applications.firstIndex(where: { $0.id == app.id }) {
+            withAnimation {
+                applications[index].sanctionLetter = letter
+                selectedApplication = applications[index]
+            }
+            
+            addInternalRemark(applicationId: app.id, text: "Sanction Letter Regenerated (v\(newVersionNumber))", author: "System")
+            addInternalRemark(applicationId: app.id, text: "Sent to Borrower", author: "System")
+        }
+        
+        actionMessage = "New sanction letter version generated and sent"
+        showActionAlert = true
+    }
+    
+    func revokeSanctionLetter(_ app: LoanApplication) {
+        guard var letter = app.sanctionLetter else { return }
+        
+        if let vIdx = letter.versions.firstIndex(where: { $0.version == letter.currentVersion }) {
+            letter.versions[vIdx].status = .revoked
+        }
+        
+        if let index = applications.firstIndex(where: { $0.id == app.id }) {
+            withAnimation {
+                applications[index].sanctionLetter = letter
+                selectedApplication = applications[index]
+            }
+            
+            addInternalRemark(applicationId: app.id, text: "Sanction Letter Revoked", author: "System")
+        }
+        
+        actionMessage = "Sanction Letter Revoked"
+        showActionAlert = true
     }
     
     func beginSendBack(_ app: LoanApplication) {
         pendingSendBackApp = app
-        sendBackReason = "Incomplete documentation"
+        sendBackReason = "Select a reason"
         sendBackCustomRemark = ""
         showSendBackSheet = true
     }

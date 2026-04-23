@@ -291,16 +291,20 @@ struct CreateUserSheet: View {
     @State private var password     = ""
     @State private var phone        = ""
     @State private var selectedRole: UserRole = .loanOfficer
-    @State private var branch       = "Mumbai Central"
+    @State private var branchID     = ""
     @State private var newBranchName = ""
     @State private var employeeId   = ""
     @State private var showPassword = false
     @State private var emailError: String? = nil
 
     private var isFormValid: Bool {
-        let branchValid = branch == "+ Create New Branch" ? !newBranchName.trimmingCharacters(in: .whitespaces).isEmpty : !branch.isEmpty
+        let branchValid = branchID == "+ Create New Branch" ? !newBranchName.trimmingCharacters(in: .whitespaces).isEmpty : !branchID.isEmpty
         return !name.isEmpty && !email.isEmpty && !password.isEmpty &&
         branchValid && !employeeId.isEmpty
+    }
+    
+    private var creatableRoles: [UserRole] {
+        [.loanOfficer, .manager]
     }
 
     var body: some View {
@@ -309,17 +313,17 @@ struct CreateUserSheet: View {
                 Section("User Information") {
                     TextField("Full Name", text: $name)
                     Picker("Role", selection: $selectedRole) {
-                        ForEach(UserRole.allCases) { role in
+                        ForEach(creatableRoles) { role in
                             Text(role.displayName).tag(role)
                         }
                     }
-                    Picker("Branch", selection: $branch) {
-                        ForEach(adminVM.branches, id: \.name) { b in
-                            Text(b.name).tag(b.name)
+                    Picker("Branch", selection: $branchID) {
+                        ForEach(adminVM.branches) { b in
+                            Text(b.name).tag(b.id)
                         }
                         Text("+ Create New Branch").tag("+ Create New Branch")
                     }
-                    if branch == "+ Create New Branch" {
+                    if branchID == "+ Create New Branch" {
                         TextField("New Branch Name", text: $newBranchName)
                     }
                     TextField("Employee ID", text: $employeeId)
@@ -378,11 +382,12 @@ struct CreateUserSheet: View {
                             emailError = "An account with this email already exists."
                             return
                         }
-                        var finalBranch = branch
-                        if branch == "+ Create New Branch" {
+                        var finalBranchID = branchID
+                        if branchID == "+ Create New Branch" {
                             adminVM.createBranch(newBranchName)
-                            finalBranch = newBranchName
+                            finalBranchID = ""
                         }
+                        let finalBranchName = adminVM.branches.first(where: { $0.id == finalBranchID })?.name ?? newBranchName
                         
                         adminVM.createUser(
                             name: name,
@@ -390,13 +395,19 @@ struct CreateUserSheet: View {
                             password: password,
                             phone: phone,
                             role: selectedRole,
-                            branch: finalBranch,
+                            branchID: finalBranchID.isEmpty ? nil : finalBranchID,
+                            branchName: finalBranchName,
                             employeeId: employeeId
                         )
                         dismiss()
                     }
                     .disabled(!isFormValid)
                 }
+            }
+        }
+        .onAppear {
+            if branchID.isEmpty, let firstBranch = adminVM.branches.first {
+                branchID = firstBranch.id
             }
         }
     }
@@ -414,8 +425,12 @@ struct InlineEditUserView: View {
     @State private var email: String
     @State private var phone: String
     @State private var selectedRole: UserRole
-    @State private var branch: String
+    @State private var branchID: String
     @State private var newBranchName = ""
+    
+    private var editableRoles: [UserRole] {
+        [.loanOfficer, .manager]
+    }
     
     init(adminVM: AdminViewModel, user: User, isEditing: Binding<Bool>) {
         self.adminVM = adminVM
@@ -425,7 +440,7 @@ struct InlineEditUserView: View {
         _email = State(initialValue: user.email)
         _phone = State(initialValue: user.phone)
         _selectedRole = State(initialValue: user.role)
-        _branch = State(initialValue: user.branch)
+        _branchID = State(initialValue: adminVM.branches.first(where: { $0.name == user.branch })?.id ?? "")
     }
     
     var body: some View {
@@ -443,12 +458,21 @@ struct InlineEditUserView: View {
                 Spacer()
                 
                 Button("Save") {
-                    var finalBranch = branch
-                    if branch == "+ Create New Branch" {
+                    var finalBranchID = branchID
+                    if branchID == "+ Create New Branch" {
                         adminVM.createBranch(newBranchName)
-                        finalBranch = newBranchName
+                        finalBranchID = ""
                     }
-                    adminVM.updateUser(userId: user.id, name: name, email: email, phone: phone, role: selectedRole, branch: finalBranch)
+                    let finalBranchName = adminVM.branches.first(where: { $0.id == finalBranchID })?.name ?? user.branch
+                    adminVM.updateUser(
+                        userId: user.id,
+                        name: name,
+                        email: email,
+                        phone: phone,
+                        role: selectedRole,
+                        branchID: finalBranchID.isEmpty ? nil : finalBranchID,
+                        branchName: finalBranchName
+                    )
                     withAnimation { isEditing = false }
                 }
                 .font(Theme.Typography.subheadline.weight(.semibold))
@@ -467,17 +491,18 @@ struct InlineEditUserView: View {
                         .keyboardType(.phonePad)
                     
                     Picker("Role", selection: $selectedRole) {
-                        ForEach(UserRole.allCases) { role in
+                        ForEach(editableRoles) { role in
                             Text(role.displayName).tag(role)
                         }
                     }
-                    Picker("Branch", selection: $branch) {
-                        ForEach(adminVM.branches, id: \.name) { b in
-                            Text(b.name).tag(b.name)
+                    .disabled(true)
+                    Picker("Branch", selection: $branchID) {
+                        ForEach(adminVM.branches) { b in
+                            Text(b.name).tag(b.id)
                         }
                         Text("+ Create New Branch").tag("+ Create New Branch")
                     }
-                    if branch == "+ Create New Branch" {
+                    if branchID == "+ Create New Branch" {
                         TextField("New Branch Name", text: $newBranchName)
                     }
                 }

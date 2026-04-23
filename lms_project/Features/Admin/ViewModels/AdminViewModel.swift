@@ -54,11 +54,7 @@ class AdminViewModel: ObservableObject {
     @Published var autoAssignEnabled: Bool = true
     
     // Branches
-    @Published var branches: [BranchModel] = [
-        BranchModel(name: "Mumbai Central", location: "Mumbai"),
-        BranchModel(name: "Delhi NCR", location: "Delhi"),
-        BranchModel(name: "Bangalore Tech Park", location: "Bangalore")
-    ]
+    @Published var branches: [BranchModel] = []
     
     // Audit Logs
     @Published var auditLogs: [AuditLog] = []
@@ -97,6 +93,7 @@ class AdminViewModel: ObservableObject {
     @Published var slaBreachTrendLabels: [String] = [] 
     
     private let adminAPI = AdminAPI()
+    private let branchAPI = BranchAPI()
     
     var filteredUsers: [User] {
         if searchText.isEmpty { return users }
@@ -122,28 +119,25 @@ class AdminViewModel: ObservableObject {
         isLoading = true
         Task {
             do {
-                let employees = try await adminAPI.listEmployeeAccounts(limit: 200, offset: 0)
+                async let employeesTask = adminAPI.listEmployeeAccounts(limit: 200, offset: 0)
+                async let branchesTask = branchAPI.listBranches(limit: 200, offset: 0)
+
+                let employees = try await employeesTask
+                let backendBranches = try await branchesTask
                 let mappedUsers = employees.compactMap(Self.mapEmployeeAccount)
+                let mappedBranches = backendBranches.map(Self.mapBranch).sorted(by: { $0.name < $1.name })
                 withAnimation {
                     users = mappedUsers
+                    branches = mappedBranches
                     if let selectedID = selectedUser?.id {
                         selectedUser = mappedUsers.first(where: { $0.id == selectedID })
                     }
-                }
-                let branchNames = Set(mappedUsers.map(\.branch).filter { !$0.isEmpty })
-                if !branchNames.isEmpty {
-                    var updatedBranches = branches
-                    for name in branchNames {
-                        if !updatedBranches.contains(where: { $0.name == name }) {
-                            updatedBranches.append(BranchModel(name: name, location: ""))
-                        }
-                    }
-                    branches = updatedBranches.sorted(by: { $0.name < $1.name })
                 }
                 auditLogs = Self.mockAuditLogs()
                 slaBreachTrendLabels = Self.generateDayLabels()
             } catch {
                 users = []
+                branches = []
                 requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to load users"
                 auditLogs = Self.mockAuditLogs()
                 slaBreachTrendLabels = Self.generateDayLabels()
@@ -178,12 +172,21 @@ class AdminViewModel: ObservableObject {
         notifications.removeAll(where: { $0.id == id })
     }
 
-    func createUser(name: String, email: String, password: String, phone: String, role: UserRole, branch: String, employeeId: String) {
+    func createUser(
+        name: String,
+        email: String,
+        password: String,
+        phone: String,
+        role: UserRole,
+        branchID: String?,
+        branchName: String,
+        employeeId: String
+    ) {
         requestError = nil
         requestSuccess = nil
 
-        guard role == .loanOfficer || role == .manager || role == .dst else {
-            requestError = "Only Manager, Officer and DST accounts can be created from this screen."
+        guard role == .loanOfficer || role == .manager else {
+            requestError = "Only Manager and Loan Officer accounts can be created from this screen."
             return
         }
 
@@ -196,25 +199,20 @@ class AdminViewModel: ObservableObject {
         Task {
             do {
                 var userId = employeeId
-                if role == .dst {
-                    _ = try await adminAPI.createDstAccount(
-                        name: name,
-                        email: finalEmail,
-                        phoneNumber: finalPhone,
-                        password: password
-                    )
-                } else {
-                    let response = try await adminAPI.createEmployeeAccount(
-                        name: name,
-                        email: finalEmail,
-                        phoneNumber: finalPhone,
-                        password: password,
-                        role: role,
-                        branchID: nil
-                    )
-                    if !response.userID.isEmpty {
-                        userId = response.userID
-                    }
+                let response = try await adminAPI.createEmployeeAccount(
+                    name: name,
+                    email: finalEmail,
+                    phoneNumber: finalPhone,
+                    password: password,
+                    role: role,
+                    branchID: branchID
+                )
+                if !response.userID.isEmpty {
+                    userId = response.userID
+                }
+
+                if let branchID, !branchID.isEmpty, !userId.isEmpty {
+                    _ = try await adminAPI.assignEmployeeBranch(userID: userId, branchID: branchID)
                 }
 
                 let newUser = User(
@@ -222,7 +220,7 @@ class AdminViewModel: ObservableObject {
                     name: name,
                     email: finalEmail,
                     role: role,
-                    branch: branch,
+                    branch: branchName,
                     phone: finalPhone,
                     isActive: true,
                     joinedAt: Date()
@@ -240,16 +238,58 @@ class AdminViewModel: ObservableObject {
         }
     }
     
-    func updateUser(userId: String, name: String, email: String, phone: String, role: UserRole, branch: String) {
-        if let index = users.firstIndex(where: { $0.id == userId }) {
-            withAnimation {
-                users[index].name = name
-                users[index].email = email
-                users[index].phone = phone
-                users[index].role = role
-                users[index].branch = branch
-                selectedUser = users[index]
+    func updateUser(
+        userId: String,
+        name: String,
+        email: String,
+        phone: String,
+        role: UserRole,
+        branchID: String?,
+        branchName: String
+    ) {
+        requestError = nil
+        requestSuccess = nil
+        isLoading = true
+
+        Task {
+            do {
+                if let existingUser = users.first(where: { $0.id == userId }), existingUser.role != role {
+                    requestError = "Role change is not supported by backend yet. Create a new user with the desired role."
+                    isLoading = false
+                    return
+                }
+
+                _ = try await adminAPI.updateEmployeeAccount(
+                    userID: userId,
+                    email: email,
+                    phoneNumber: phone,
+                    newPassword: nil
+                )
+
+                if let branchID, !branchID.isEmpty {
+                    _ = try await adminAPI.assignEmployeeBranch(userID: userId, branchID: branchID)
+                } else {
+                    _ = try await adminAPI.assignEmployeeBranch(userID: userId, branchID: "", clearBranch: true)
+                }
+
+                if let index = users.firstIndex(where: { $0.id == userId }) {
+                    withAnimation {
+                        users[index].name = name
+                        users[index].email = email
+                        users[index].phone = phone
+                        users[index].role = role
+                        users[index].branch = branchName
+                        selectedUser = users[index]
+                    }
+                }
+
+                requestSuccess = "User updated successfully."
+                loadData()
+            } catch {
+                requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to update user"
             }
+
+            isLoading = false
         }
     }
     
@@ -270,6 +310,7 @@ class AdminViewModel: ObservableObject {
     
     func createBranch(_ branchName: String, location: String = "") {
         let trimmed = branchName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedLocation = location.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             return
         }
@@ -280,29 +321,44 @@ class AdminViewModel: ObservableObject {
 
         Task {
             do {
-                _ = try await adminAPI.createBankBranch(name: trimmed, region: location, city: location)
+                _ = try await adminAPI.createBankBranch(name: trimmed, region: trimmedLocation, city: trimmedLocation)
+                let backendBranches = try await branchAPI.listBranches(limit: 200, offset: 0)
+                branches = backendBranches.map(Self.mapBranch).sorted(by: { $0.name < $1.name })
                 requestSuccess = "Branch created successfully."
             } catch {
                 requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to create branch"
-            }
-            // For UI prototype: Optimistically add the branch regardless of API success
-            if !branches.contains(where: { $0.name == trimmed }) {
-                withAnimation {
-                    branches.append(BranchModel(name: trimmed, location: location))
-                    branches.sort(by: { $0.name < $1.name })
-                }
             }
             isLoading = false
         }
     }
 
-    func updateBranch(oldName: String, newName: String, location: String) {
-        if let index = branches.firstIndex(where: { $0.name == oldName }) {
-            withAnimation {
-                branches[index].name = newName
-                branches[index].location = location
-                branches.sort(by: { $0.name < $1.name })
+    func updateBranch(branchID: String, newName: String, location: String) {
+        let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedLocation = location.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else {
+            requestError = "Branch name is required."
+            return
+        }
+
+        requestError = nil
+        requestSuccess = nil
+        isLoading = true
+
+        Task {
+            do {
+                _ = try await adminAPI.updateBankBranch(
+                    branchID: branchID,
+                    name: trimmedName,
+                    region: trimmedLocation,
+                    city: trimmedLocation
+                )
+                let backendBranches = try await branchAPI.listBranches(limit: 200, offset: 0)
+                branches = backendBranches.map(Self.mapBranch).sorted(by: { $0.name < $1.name })
+                requestSuccess = "Branch updated successfully."
+            } catch {
+                requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to update branch"
             }
+            isLoading = false
         }
     }
     
@@ -427,6 +483,18 @@ class AdminViewModel: ObservableObject {
             return formatter.string(from: date).uppercased()
         }
     }
+
+    private static func mapBranch(_ branch: Branch_V1_BankBranch) -> BranchModel {
+        let location = [branch.city, branch.region]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+        return BranchModel(
+            id: branch.id,
+            name: branch.name,
+            location: location
+        )
+    }
 }
 
 // MARK: - Audit Log
@@ -442,7 +510,7 @@ struct AuditLog: Identifiable, Hashable {
 // MARK: - Branch Model
 
 struct BranchModel: Identifiable, Hashable {
-    let id = UUID()
+    let id: String
     var name: String
     var location: String
 }

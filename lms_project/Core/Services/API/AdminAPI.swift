@@ -71,6 +71,37 @@ struct AdminAPI {
         }
     }
 
+    func updateBankBranch(
+        branchID: String,
+        name: String?,
+        region: String?,
+        city: String?
+    ) async throws -> Admin_V1_UpdateBankBranchResponse {
+        let request: Admin_V1_UpdateBankBranchRequest = {
+            var req = Admin_V1_UpdateBankBranchRequest()
+            req.branchID = branchID
+            if let name, !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                req.name = name
+            }
+            if let region, !region.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                req.region = region
+            }
+            if let city, !city.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                req.city = city
+            }
+            return req
+        }()
+
+        do {
+            return try await CoreAPIClient.withClient { client in
+                let admin = Admin_V1_AdminService.Client(wrapping: client)
+                return try await admin.updateBankBranch(request, metadata: await CoreAPIClient.authorizedMetadata())
+            }
+        } catch {
+            throw APIError.from(error)
+        }
+    }
+
     func updateEmployeeAccount(
         userID: String,
         email: String?,

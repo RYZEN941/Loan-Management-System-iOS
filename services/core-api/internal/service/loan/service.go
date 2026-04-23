@@ -540,7 +540,8 @@ func (s *service) UpdateLoanApplicationStatus(ctx context.Context, req *loanv1.U
 			}
 		}
 
-		if product.Category == generated.LoanProductCategoryVEHICLE {
+		switch product.Category {
+case generated.LoanProductCategoryVEHICLE:
 			_, err := s.queries.GetLoanVehicleByApplicationID(ctx, appRow.ID)
 			if err != nil {
 				if errors.Is(err, pgx.ErrNoRows) {
@@ -548,7 +549,7 @@ func (s *service) UpdateLoanApplicationStatus(ctx context.Context, req *loanv1.U
 				}
 				return nil, status.Error(codes.Internal, "failed to fetch vehicle details")
 			}
-		} else if product.Category == generated.LoanProductCategoryHOME {
+		case generated.LoanProductCategoryHOME:
 			_, err := s.queries.GetLoanRealEstateByApplicationID(ctx, appRow.ID)
 			if err != nil {
 				if errors.Is(err, pgx.ErrNoRows) {

@@ -240,3 +240,11 @@ WHERE id = $1
 SELECT * FROM bank_branches
 ORDER BY name ASC
 LIMIT $1 OFFSET $2;
+
+-- name: ListOfficerUserIDsByBranchID :many
+SELECT op.user_id
+FROM officer_profiles op
+JOIN users u ON u.id = op.user_id
+WHERE op.branch_id = $1
+  AND u.is_active = true
+  AND u.is_deleted = false;

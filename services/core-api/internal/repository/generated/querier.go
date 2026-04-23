@@ -106,6 +106,7 @@ type Querier interface {
 	ListManagerChatTargets(ctx context.Context, arg ListManagerChatTargetsParams) ([]ListManagerChatTargetsRow, error)
 	ListMediaFilesByUser(ctx context.Context, arg ListMediaFilesByUserParams) ([]MediaFile, error)
 	ListOfficerChatTargets(ctx context.Context, arg ListOfficerChatTargetsParams) ([]ListOfficerChatTargetsRow, error)
+	ListOfficerUserIDsByBranchID(ctx context.Context, branchID pgtype.UUID) ([]pgtype.UUID, error)
 	ListPaymentsByLoanID(ctx context.Context, loanID pgtype.UUID) ([]Payment, error)
 	ListProductFeesByProductID(ctx context.Context, loanProductID pgtype.UUID) ([]ProductFee, error)
 	ListProductRequiredDocumentsByProductID(ctx context.Context, loanProductID pgtype.UUID) ([]ProductRequiredDocument, error)

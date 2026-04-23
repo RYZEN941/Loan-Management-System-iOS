@@ -668,6 +668,35 @@ func (q *Queries) ListEmployeeAccounts(ctx context.Context, arg ListEmployeeAcco
 	return items, nil
 }
 
+const listOfficerUserIDsByBranchID = `-- name: ListOfficerUserIDsByBranchID :many
+SELECT op.user_id
+FROM officer_profiles op
+JOIN users u ON u.id = op.user_id
+WHERE op.branch_id = $1
+  AND u.is_active = true
+  AND u.is_deleted = false
+`
+
+func (q *Queries) ListOfficerUserIDsByBranchID(ctx context.Context, branchID pgtype.UUID) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, listOfficerUserIDsByBranchID, branchID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []pgtype.UUID
+	for rows.Next() {
+		var user_id pgtype.UUID
+		if err := rows.Scan(&user_id); err != nil {
+			return nil, err
+		}
+		items = append(items, user_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateBankBranch = `-- name: UpdateBankBranch :exec
 UPDATE bank_branches
 SET name = $2,

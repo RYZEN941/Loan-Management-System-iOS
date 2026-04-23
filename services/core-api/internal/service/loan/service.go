@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
+	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -353,6 +354,18 @@ func (s *service) CreateLoanApplication(ctx context.Context, req *loanv1.CreateL
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to create loan application")
 	}
+
+	// Auto-assign a random active officer from the branch.
+	officerUserIDs, err := s.queries.ListOfficerUserIDsByBranchID(ctx, uuidToPg(branchID))
+	if err == nil && len(officerUserIDs) > 0 {
+		picked := officerUserIDs[rand.Intn(len(officerUserIDs))]
+		_ = s.queries.AssignLoanApplicationOfficer(ctx, generated.AssignLoanApplicationOfficerParams{
+			ID:                    row.ID,
+			AssignedOfficerUserID: picked,
+		})
+		row.AssignedOfficerUserID = picked
+	}
+
 	return &loanv1.CreateLoanApplicationResponse{Application: mapLoanApplicationBase(row, "", "")}, nil
 }
 

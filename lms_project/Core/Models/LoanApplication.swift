@@ -24,6 +24,9 @@ struct LoanApplication: Identifiable, Codable, Hashable {
     var slaDeadline: Date
     /// Populated when manager rejects — saved with the application
     var rejectionRemarks: String?
+    
+    /// Sanction letter tracking
+    var sanctionLetter: SanctionLetter?
 
     var slaStatus: SLAStatus {
         let days = slaDeadline.daysRemaining
@@ -31,6 +34,25 @@ struct LoanApplication: Identifiable, Codable, Hashable {
         if days <= 2 { return .urgent }
         return .onTrack
     }
+}
+
+// MARK: - Sanction Letter
+
+struct SanctionLetter: Codable, Hashable {
+    var versions: [SanctionLetterVersion]
+    var currentVersion: Int
+    
+    var activeVersion: SanctionLetterVersion? {
+        versions.first { $0.version == currentVersion }
+    }
+}
+
+struct SanctionLetterVersion: Identifiable, Codable, Hashable {
+    var id: String { "\(version)" }
+    let version: Int
+    let generatedAt: Date
+    var status: SanctionLetterStatus
+    let fileUrl: String
 }
 
 

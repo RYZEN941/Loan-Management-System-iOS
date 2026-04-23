@@ -23,6 +23,7 @@ struct lms_projectApp: App {
                 .environmentObject(applicationsVM)
                 .environmentObject(messagesVM)
                 .environmentObject(adminVM)
+                .preferredColorScheme(authVM.isDarkMode ? .dark : .light)
         }
     }
 }

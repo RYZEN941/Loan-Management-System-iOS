@@ -71,6 +71,7 @@ enum AuthStep {
 
 @MainActor
 class AuthViewModel: ObservableObject {
+    @AppStorage("isDarkMode") var isDarkMode: Bool = false
 
     // Published session state
     @Published var currentRole: UserRole? = nil

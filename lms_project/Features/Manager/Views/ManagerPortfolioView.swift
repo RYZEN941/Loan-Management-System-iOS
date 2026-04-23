@@ -13,7 +13,7 @@ struct ManagerPortfolioView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.Colors.adaptiveBackground(colorScheme).ignoresSafeArea()
+                ManagerTheme.Colors.background(colorScheme).ignoresSafeArea()
                 
                 VStack(spacing: 0) {
                     // Simple Elegant Header
@@ -32,7 +32,7 @@ struct ManagerPortfolioView: View {
                         .padding(.bottom, Theme.Spacing.md)
                         .padding(.top, Theme.Spacing.md)
                     }
-                    .background(Theme.Colors.adaptiveBackground(colorScheme))
+                    .background(ManagerTheme.Colors.background(colorScheme))
                     .foregroundStyle(.primary)
                     
                     ScrollView {
@@ -66,12 +66,12 @@ struct ManagerPortfolioView: View {
             
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 280))], spacing: Theme.Spacing.md) {
                 KPICard(title: "Total Applications", value: "\(dashboardVM.applications.count)",
-                        icon: "doc.text.fill", color: Theme.Colors.primary)
+                        icon: "doc.text.fill", color: ManagerTheme.Colors.primary(colorScheme))
                 KPICard(title: "Total Value", value: totalLoanValue.compactFormatted,
-                        icon: "indianrupeesign.circle.fill", color: Theme.Colors.success,
+                        icon: "indianrupeesign.circle.fill", color: Theme.Colors.adaptiveSuccess(colorScheme),
                         subtitle: "Across all applications")
                 KPICard(title: "Avg. Loan Size", value: avgLoanSize.compactFormatted,
-                        icon: "chart.bar.fill", color: Theme.Colors.warning)
+                        icon: "chart.bar.fill", color: Theme.Colors.adaptiveWarning(colorScheme))
             }
         }
     }
@@ -102,24 +102,24 @@ struct ManagerPortfolioView: View {
                     Spacer()
                     Text("+14.2%")
                         .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(Theme.Colors.success)
+                        .foregroundStyle(Theme.Colors.adaptiveSuccess(colorScheme))
                 }
                 
                 PremiumLineChart(
                     data: [3200000, 3800000, 3500000, 4200000, 4800000, 5100000],
                     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-                    accentColor: Theme.Colors.primary,
+                    accentColor: ManagerTheme.Colors.primary(colorScheme),
                     showPoints: true,
                     unit: "cr"
                 )
                 .frame(height: 200)
             }
             .padding(Theme.Spacing.lg)
-            .background(Theme.Colors.adaptiveSurface(colorScheme))
+            .background(ManagerTheme.Colors.surface(colorScheme))
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                    .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+                    .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
             )
         }
     }
@@ -143,7 +143,7 @@ struct ManagerPortfolioView: View {
             HStack {
                 Image(systemName: "circle.fill")
                     .font(.system(size: 8))
-                    .foregroundStyle(level.color)
+                    .foregroundStyle(level.adaptiveColor(colorScheme))
                 Text(level.displayName)
                     .font(Theme.Typography.caption)
                     .foregroundStyle(.secondary)
@@ -158,11 +158,11 @@ struct ManagerPortfolioView: View {
         }
         .padding(Theme.Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.Colors.adaptiveSurface(colorScheme))
+        .background(ManagerTheme.Colors.surface(colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
         )
     }
 }

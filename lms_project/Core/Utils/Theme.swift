@@ -41,19 +41,32 @@ enum Theme {
         static let surfaceSecondary  = Color.white
         static let border            = Color.black.opacity(0.06)
 
-        // Surfaces (dark mode)
-        static let backgroundDark       = Color(hex: "#0A0C10")
-        static let surfaceDark          = Color(hex: "#161B22")
-        static let surfaceSecondaryDark = Color(hex: "#161B22")
-        static let borderDark           = Color.white.opacity(0.1)
+        // Surfaces (dark mode) - Updated
+        static let backgroundDark       = Color(hex: "#0F172A")
+        static let surfaceDark          = Color(hex: "#111827")
+        static let surfaceSecondaryDark = Color(hex: "#1F2937")
+        static let borderDark           = Color(hex: "#374151")
+        
+        // Brand Blues (Dark)
+        static let primaryDark          = Color(hex: "#5B7CFF")
+        static let secondaryDark        = Color(hex: "#7C95FF")
+        static let lightBlueDark        = Color(hex: "#1E3A8A")
 
-        // Header Gradient
-        static var headerGradient: LinearGradient {
-            LinearGradient(
-                colors: [headerBlueTop, headerBlueMid, headerBlueBottom],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+        // Header Gradient (Adaptive)
+        static func headerGradient(_ colorScheme: ColorScheme) -> LinearGradient {
+            if colorScheme == .dark {
+                return LinearGradient(
+                    colors: [Color(hex: "#1E2A78"), Color(hex: "#2536A3"), Color(hex: "#3B5BDB")],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            } else {
+                return LinearGradient(
+                    colors: [headerBlueTop, headerBlueMid, headerBlueBottom],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
         }
 
         // Adaptive helpers
@@ -71,6 +84,26 @@ enum Theme {
 
         static func adaptiveBorder(_ colorScheme: ColorScheme) -> Color {
             colorScheme == .dark ? borderDark : border
+        }
+        
+        static func adaptivePrimary(_ colorScheme: ColorScheme) -> Color {
+            colorScheme == .dark ? primaryDark : primary
+        }
+        
+        static func adaptiveSecondary(_ colorScheme: ColorScheme) -> Color {
+            colorScheme == .dark ? secondaryDark : secondary
+        }
+        
+        static func adaptiveSuccess(_ colorScheme: ColorScheme) -> Color {
+            colorScheme == .dark ? Color(hex: "#22C55E") : success
+        }
+        
+        static func adaptiveCritical(_ colorScheme: ColorScheme) -> Color {
+            colorScheme == .dark ? Color(hex: "#FF4D6D") : critical
+        }
+        
+        static func adaptiveWarning(_ colorScheme: ColorScheme) -> Color {
+            colorScheme == .dark ? Color(hex: "#FACC15") : warning
         }
     }
     

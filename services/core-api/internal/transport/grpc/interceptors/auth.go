@@ -102,7 +102,7 @@ func JWTUnaryInterceptor(cfg JWTConfig) grpc.UnaryServerInterceptor {
 
 		// Enforce password change requirement
 		if claims.IsRequiringPasswordChange {
-			if info.FullMethod != "/auth.v1.AuthService/ChangePassword" && info.FullMethod != "/auth.v1.AuthService/Logout" {
+			if info.FullMethod != "/auth.v1.AuthService/ChangePassword" && info.FullMethod != "/auth.v1.AuthService/Logout" && info.FullMethod != "/auth.v1.AuthService/GetMyProfile" {
 				return nil, status.Error(codes.FailedPrecondition, "password change required")
 			}
 		}

@@ -10,7 +10,7 @@ struct LoanComparisonView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Compare Loans")
                         .font(.largeTitle).bold()
-                    Text("See how the \(loan.title) stacks up against standard market rates.")
+                    Text("See how the \(loan.name) stacks up against standard market rates.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -26,9 +26,9 @@ struct LoanComparisonView: View {
                             .font(.headline)
                             .foregroundColor(.mainBlue)
                         
-                        ComparisonDataPoint(label: "Interest Rate", value: loan.interestRate)
-                        ComparisonDataPoint(label: "Max Tenure", value: "\(loan.maxTenure) Mos")
-                        ComparisonDataPoint(label: "Processing Fee", value: "1.5%")
+                        ComparisonDataPoint(label: "Interest Rate", value: "\(loan.baseInterestRate)%")
+                        ComparisonDataPoint(label: "Max Amount", value: formatCurrency(loan.maxAmount))
+                        ComparisonDataPoint(label: "Processing Fee", value: comparisonFeeText)
                         ComparisonDataPoint(label: "Approval Time", value: "24 Hours")
                     }
                     .padding(16)
@@ -60,6 +60,29 @@ struct LoanComparisonView: View {
         }
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var comparisonFeeText: String {
+        guard let fee = loan.fees.first(where: { $0.type == .processing }) else {
+            return "Configured by bank"
+        }
+        switch fee.calcMethod {
+        case .flat:
+            return formatCurrency(fee.value)
+        case .percentage:
+            return "\(fee.value)%"
+        default:
+            return fee.value
+        }
+    }
+
+    private func formatCurrency(_ raw: String) -> String {
+        guard let value = Double(raw) else { return raw }
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = Locale(identifier: "en_IN")
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: value)) ?? raw
     }
 }
 

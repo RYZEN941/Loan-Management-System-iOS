@@ -13,18 +13,18 @@ enum AppRoute: Hashable {
     
     // Application Flow
     case startApplication(LoanProduct)
-    case documentUpload
-    case reviewApplication
-    case submitConfirmation
+    case documentUpload(BorrowerLoanApplication)
+    case reviewApplication(BorrowerLoanApplication)
+    case submitConfirmation(BorrowerLoanApplication)
     case draftApplications
     
     // Tracking
-    case detailedTracking
+    case detailedTracking(BorrowerLoanApplication)
     case rejectionReason
     
     // Feature 7: EMI & Loan Management
     case emiCalculator
-    case activeLoanDetails
+    case activeLoanDetails(BorrowerLoanApplication)
     case amortisationSchedule
     case outstandingBalance
     
@@ -63,4 +63,3 @@ enum AppRoute: Hashable {
     case statementDownload
     case notifications
 }
-

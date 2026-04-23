@@ -3,6 +3,7 @@
 // Root coordinator for authenticated and unauthenticated app flows.
 
 import SwiftUI
+import Combine
 
 // ═══════════════════════════════════════════════════════════════
 // MARK: - Root View

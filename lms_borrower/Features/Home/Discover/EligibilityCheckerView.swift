@@ -16,7 +16,7 @@ struct EligibilityCheckerView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Eligibility Check")
                             .font(.largeTitle).bold()
-                        Text("Let's see if you qualify for the \(loan.title).")
+                        Text("Let's see if you qualify for the \(loan.name).")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }

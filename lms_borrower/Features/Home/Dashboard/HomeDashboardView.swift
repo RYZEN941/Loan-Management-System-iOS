@@ -32,29 +32,54 @@ struct HomeDashboardView: View {
                         HeaderView(userName: displayName, collapseProgress: collapseProgress)
                             .padding(.top, topInset + 18)
 
-                        // ── 2. LOAN SUMMARY CARDS (Paging Scroll) ──────
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            LazyHStack(spacing: 16) {
-                                ForEach(viewModel.activeLoans) { loan in
-                                    Button {
-                                        router.push(.activeLoanDetails)
-                                    } label: {
-                                        LoanSummaryCardView(loan: loan)
-                                            .frame(width: UIScreen.main.bounds.width * 0.85)
-                                    }
-                                    .buttonStyle(PlainButtonStyle())
-                                }
+                        if viewModel.isLoading && viewModel.activeLoans.isEmpty {
+                            ProgressView()
+                                .padding(.top, 36)
+                        } else {
+                            if let errorMessage = viewModel.errorMessage {
+                                DashboardInfoCard(
+                                    title: "Loan summary unavailable",
+                                    message: errorMessage
+                                )
+                                .padding(.horizontal, 20)
+                                .padding(.top, 18)
                             }
-                            .scrollTargetLayout()
-                        }
-                        .scrollTargetBehavior(.viewAligned)
-                        .safeAreaPadding(.horizontal, 20)
-                        .padding(.top, 18)
 
-                        // ── 3. NEXT EMI BANNER ─────────────────────────
-                        NextEMIBannerView(emi: viewModel.nextEMI)
-                            .padding(.horizontal, 20)
-                            .padding(.top, 18)
+                            if viewModel.activeLoans.isEmpty {
+                                DashboardInfoCard(
+                                    title: "No active loans yet",
+                                    message: "Once a loan is disbursed, your live balance, EMI schedule, and repayment details will appear here."
+                                )
+                                .padding(.horizontal, 20)
+                                .padding(.top, 18)
+                            } else {
+                                // ── 2. LOAN SUMMARY CARDS (Paging Scroll) ──────
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    LazyHStack(spacing: 16) {
+                                        ForEach(viewModel.activeLoans) { loan in
+                                            Button {
+                                                router.push(.activeLoanDetails(loan.application))
+                                            } label: {
+                                                LoanSummaryCardView(loan: loan)
+                                                    .frame(width: UIScreen.main.bounds.width * 0.85)
+                                            }
+                                            .buttonStyle(PlainButtonStyle())
+                                        }
+                                    }
+                                    .scrollTargetLayout()
+                                }
+                                .scrollTargetBehavior(.viewAligned)
+                                .safeAreaPadding(.horizontal, 20)
+                                .padding(.top, 18)
+                            }
+
+                            // ── 3. NEXT EMI BANNER ─────────────────────────
+                            if let nextEMI = viewModel.nextEMI {
+                                NextEMIBannerView(emi: nextEMI)
+                                    .padding(.horizontal, 20)
+                                    .padding(.top, 18)
+                            }
+                        }
 
                         // ── 4. QUICK ACTIONS ───────────────────────────
                         QuickActionsGridView(actions: viewModel.quickActions)
@@ -62,12 +87,18 @@ struct HomeDashboardView: View {
                             .padding(.top, 24)
 
                         // ── 5. CREDIBILITY SCORE (With Inner Buttons) ──
-                        Button {
-                            router.push(.credibilityOverview)
-                        } label: {
-                            CredibilityScoreCardView(score: viewModel.credibilityScore)
+                        Group {
+                            if let credibilityScore = viewModel.credibilityScore {
+                                Button {
+                                    router.push(.credibilityOverview)
+                                } label: {
+                                    CredibilityScoreCardView(score: credibilityScore)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            } else {
+                                CredibilityScoreUnavailableView()
+                            }
                         }
-                        .buttonStyle(PlainButtonStyle())
                         .padding(.horizontal, 20)
                         .padding(.top, 20)
                         .padding(.bottom, 40)
@@ -80,6 +111,9 @@ struct HomeDashboardView: View {
             }
         }
         .navigationBarHidden(true)
+        .task {
+            viewModel.fetchDashboardData()
+        }
     }
 }
 
@@ -302,6 +336,27 @@ struct LoanSummaryCardView: View {
     }
 }
 
+struct DashboardInfoCard: View {
+    let title: String
+    let message: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.headline)
+                .foregroundColor(.primary)
+            Text(message)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .background(.white.opacity(0.96))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 4)
+    }
+}
+
 // MARK: - 3. Next EMI Banner
 struct NextEMIBannerView: View {
     let emi: NextEMIInfo
@@ -464,28 +519,57 @@ struct CredibilityScoreCardView: View {
     }
 }
 
+struct CredibilityScoreUnavailableView: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Credibility Score")
+                .font(.headline)
+                .foregroundColor(.primary)
+            Text("Your live score will appear here after bureau checks are recorded for an application.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            Text("No score available yet")
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.mainBlue)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(22)
+        .background(.white.opacity(0.96))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .shadow(color: .black.opacity(0.07), radius: 12, x: 0, y: 5)
+    }
+}
+
 // MARK: - Models & ViewModel
 struct LoanSummary: Identifiable {
     let id: String
+    let application: BorrowerLoanApplication
     let title: String
     let totalAmount: Double
     let outstandingBalance: Double
-    var repaidFraction: Double { 1 - (outstandingBalance / totalAmount) }
+    var repaidFraction: Double {
+        guard totalAmount > 0 else { return 0 }
+        return min(max(1 - (outstandingBalance / totalAmount), 0), 1)
+    }
     let remainingEMIs: Int
 }
-struct NextEMIInfo { let amount: Double; let dueDate: String; let daysLeft: String; let isUrgent: Bool }
+struct NextEMIInfo {
+    let amount: Double
+    let dueDate: String
+    let daysLeft: String
+    let isUrgent: Bool
+}
 struct QuickAction: Identifiable { let id = UUID(); let icon: String; let label: String }
 
-class HomeDashboardViewModel: ObservableObject {
-    // Localization added to arrays
-    let activeLoans: [LoanSummary] = [
-        LoanSummary(id: "1", title: String(localized: "Personal Loan"), totalAmount: 500000, outstandingBalance: 312000, remainingEMIs: 18),
-        LoanSummary(id: "2", title: String(localized: "Auto Loan"), totalAmount: 850000, outstandingBalance: 720000, remainingEMIs: 48)
-    ]
-    
-    let nextEMI = NextEMIInfo(amount: 14200, dueDate: String(localized: "20 Apr 2026"), daysLeft: String(localized: "6 days left"), isUrgent: true)
-    let credibilityScore = 724
-    
+@MainActor
+@available(iOS 18.0, *)
+final class HomeDashboardViewModel: ObservableObject {
+    @Published var activeLoans: [LoanSummary] = []
+    @Published var nextEMI: NextEMIInfo? = nil
+    @Published var credibilityScore: Int? = nil
+    @Published var isLoading: Bool = false
+    @Published var errorMessage: String? = nil
+
     let quickActions: [QuickAction] = [
         QuickAction(icon: "arrow.triangle.2.circlepath", label: String(localized: "AutoPay")),
         QuickAction(icon: "indianrupeesign.circle.fill", label: String(localized: "Pay EMI")),
@@ -496,4 +580,131 @@ class HomeDashboardViewModel: ObservableObject {
         QuickAction(icon: "doc.plaintext.fill", label: String(localized: "Statement")),
         QuickAction(icon: "chart.bar.fill", label: String(localized: "Analytics"))
     ]
+
+    private let service: LoanServiceProtocol
+
+    init(service: LoanServiceProtocol = ServiceContainer.loanService) {
+        self.service = service
+    }
+
+    func fetchDashboardData() {
+        Task {
+            await fetchDashboardDataInternal()
+        }
+    }
+
+    private func fetchDashboardDataInternal() async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        do {
+            async let applicationsTask = service.listLoanApplications(limit: 100, offset: 0)
+            async let loansTask = service.listLoans(limit: 100, offset: 0)
+
+            let (applications, loans) = try await (applicationsTask, loansTask)
+            let applicationsById = Dictionary(uniqueKeysWithValues: applications.map { ($0.id, $0) })
+            let schedules = try await loadSchedules(for: loans)
+
+            activeLoans = loans.compactMap { loan in
+                guard let application = applicationsById[loan.applicationId] else { return nil }
+                let totalAmount = Double(loan.principalAmount) ?? Double(application.requestedAmount) ?? 0
+                let outstanding = Double(loan.outstandingBalance) ?? 0
+                let remainingEMIs = (schedules[loan.id] ?? []).filter { $0.status != .paid }.count
+                return LoanSummary(
+                    id: loan.id,
+                    application: application,
+                    title: application.loanProductName,
+                    totalAmount: totalAmount,
+                    outstandingBalance: outstanding,
+                    remainingEMIs: remainingEMIs
+                )
+            }
+            .sorted { lhs, rhs in
+                parseDate(lhs.application.updatedAt) > parseDate(rhs.application.updatedAt)
+            }
+
+            nextEMI = buildNextEMI(
+                loans: loans,
+                applicationsById: applicationsById,
+                schedules: schedules
+            )
+        } catch {
+            errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to load your live loan dashboard."
+            activeLoans = []
+            nextEMI = nil
+        }
+    }
+
+    private func loadSchedules(for loans: [ActiveLoan]) async throws -> [String: [EmiScheduleItem]] {
+        try await withThrowingTaskGroup(of: (String, [EmiScheduleItem]).self) { group in
+            for loan in loans {
+                group.addTask { [service] in
+                    let items = try await service.listEmiSchedule(loanId: loan.id)
+                    return (loan.id, items)
+                }
+            }
+
+            var schedules: [String: [EmiScheduleItem]] = [:]
+            for try await (loanId, items) in group {
+                schedules[loanId] = items
+            }
+            return schedules
+        }
+    }
+
+    private func buildNextEMI(
+        loans: [ActiveLoan],
+        applicationsById: [String: BorrowerLoanApplication],
+        schedules: [String: [EmiScheduleItem]]
+    ) -> NextEMIInfo? {
+        let nextSchedule = loans.compactMap { loan -> (ActiveLoan, EmiScheduleItem)? in
+            guard applicationsById[loan.applicationId] != nil else { return nil }
+            let upcoming = (schedules[loan.id] ?? [])
+                .filter { $0.status == .upcoming || $0.status == .overdue }
+                .sorted { parseDate($0.dueDate) < parseDate($1.dueDate) }
+                .first
+            guard let upcoming else { return nil }
+            return (loan, upcoming)
+        }
+        .sorted { parseDate($0.1.dueDate) < parseDate($1.1.dueDate) }
+        .first
+
+        guard let (_, schedule) = nextSchedule else { return nil }
+
+        let amount = Double(schedule.emiAmount) ?? 0
+        let dueDate = parseDate(schedule.dueDate)
+        return NextEMIInfo(
+            amount: amount,
+            dueDate: formatDate(dueDate),
+            daysLeft: dueDateLabel(for: dueDate),
+            isUrgent: schedule.status == .overdue || Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()), to: Calendar.current.startOfDay(for: dueDate)).day ?? 0 <= 3
+        )
+    }
+
+    private func dueDateLabel(for dueDate: Date) -> String {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let due = calendar.startOfDay(for: dueDate)
+        let days = calendar.dateComponents([.day], from: today, to: due).day ?? 0
+
+        if days < 0 { return "Overdue by \(abs(days)) day\(abs(days) == 1 ? "" : "s")" }
+        if days == 0 { return "Due today" }
+        if days == 1 { return "1 day left" }
+        return "\(days) days left"
+    }
+
+    private func parseDate(_ raw: String) -> Date {
+        if let date = ISO8601DateFormatter().date(from: raw) {
+            return date
+        }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.date(from: raw) ?? .distantPast
+    }
+
+    private func formatDate(_ date: Date) -> String {
+        date.formatted(date: .abbreviated, time: .omitted)
+    }
 }

@@ -1,141 +1,204 @@
 import SwiftUI
-import Combine
 
-// MARK: - View Model
-class ReviewApplicationViewModel: ObservableObject {
-    @Published var loanAmount: Double = 150000
-    @Published var tenureMonths: Int = 24
-    @Published var estimatedEMI: Double = 6961
-    @Published var interestRate: Double = 10.5
-    
-    @Published var documents: [String] = ["PAN Card", "Aadhaar Card", "Bank Statement", "Salary Slip"]
-    
-    @Published var isConsentGiven = false
-}
-
-// MARK: - Main View
+@available(iOS 18.0, *)
 struct ReviewApplicationView: View {
-    @StateObject var viewModel = ReviewApplicationViewModel()
-    @EnvironmentObject var router: AppRouter
-    
+    let application: BorrowerLoanApplication
+
+    @EnvironmentObject private var router: AppRouter
+
+    @State private var currentApplication: BorrowerLoanApplication
+    @State private var product: LoanProduct?
+    @State private var isConsentGiven = false
+    @State private var isLoading = true
+    @State private var errorMessage: String?
+
+    private let loanService: LoanServiceProtocol
+
+    init(
+        application: BorrowerLoanApplication,
+        loanService: LoanServiceProtocol = ServiceContainer.loanService
+    ) {
+        self.application = application
+        self.loanService = loanService
+        _currentApplication = State(initialValue: application)
+    }
+
     var body: some View {
         ZStack(alignment: .bottom) {
             ScrollView {
                 VStack(spacing: 24) {
-                    
-                    // Header
-                    VStack(spacing: 8) {
-                        Text("Review Details")
-                            .font(.largeTitle).bold()
-                        Text("Please verify your information before final submission.")
+                    headerSection
+
+                    if isLoading {
+                        ProgressView()
+                            .padding(.top, 20)
+                    } else if let errorMessage {
+                        Text(errorMessage)
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(.red)
                             .multilineTextAlignment(.center)
+                            .padding(20)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .padding(.horizontal, 20)
+                    } else {
+                        loanSummarySection
+                        documentsSection
+                        consentSection
                     }
-                    .padding(.top, 20)
-                    .padding(.horizontal, 20)
-                    
-                    // Loan Summary Card
-                    ReviewSectionCard(title: "Loan Details", actionTitle: "Edit") {
-                        VStack(spacing: 16) {
-                            ReviewDataRow(label: "Loan Amount", value: "₹\(viewModel.loanAmount.formatted(.number.grouping(.automatic)))")
-                            ReviewDataRow(label: "Tenure", value: "\(viewModel.tenureMonths) Months")
-                            
-                            ReviewDataRow(label: "Interest Rate", value: String(format: "%.1f%% p.a.", viewModel.interestRate))
-                            
-                            Divider()
-                            ReviewDataRow(label: "Estimated EMI", value: "₹\(viewModel.estimatedEMI.formatted(.number.grouping(.automatic)))", isHighlight: true)
-                        }
-                    }
-                    
-                    // Documents Summary Card
-                    ReviewSectionCard(title: "Documents", actionTitle: "Edit") {
-                        VStack(alignment: .leading, spacing: 12) {
-                            ForEach(viewModel.documents, id: \.self) { doc in
-                                HStack(spacing: 12) {
-                                    Image(systemName: "checkmark.seal.fill")
-                                        .foregroundColor(Color(hex: "#00C48C"))
-                                    Text(doc)
-                                        .font(.subheadline)
-                                    Spacer()
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Custom Centered Consent UI
-                    HStack(alignment: .center, spacing: 12) {
-                        Button {
-                            viewModel.isConsentGiven.toggle()
-                        } label: {
-                            Image(systemName: viewModel.isConsentGiven ? "checkmark.square.fill" : "square")
-                                .font(.title2)
-                                .foregroundColor(viewModel.isConsentGiven ? .mainBlue : .secondary)
-                        }
-                        
-                        Text("I hereby declare that the information provided is true and correct. I authorize the platform to pull my credit report for assessment purposes.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(20)
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                    .padding(.horizontal, 20)
-                    
+
                     Spacer().frame(height: 100)
                 }
             }
-            
-            // Sticky Submit Button
-            VStack {
-                Divider()
-                Button {
-                    router.push(.submitConfirmation)
-                } label: {
-                    Text("Confirm & Submit")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(viewModel.isConsentGiven ? DS.primary : Color.secondary.opacity(0.3))
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
-                .disabled(!viewModel.isConsentGiven)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 10)
-                .background(Color(UIColor.systemGroupedBackground))
-            }
+
+            footerSection
         }
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await reloadData()
+        }
+    }
+
+    private var headerSection: some View {
+        VStack(spacing: 8) {
+            Text("Review Details")
+                .font(.largeTitle).bold()
+            Text("Please confirm the live application details before continuing.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.top, 20)
+        .padding(.horizontal, 20)
+    }
+
+    private var loanSummarySection: some View {
+        ReviewSectionCard(title: "Loan Details") {
+            VStack(spacing: 16) {
+                ReviewDataRow(label: "Application ID", value: currentApplication.referenceNumber)
+                ReviewDataRow(label: "Product", value: currentApplication.loanProductName)
+                ReviewDataRow(label: "Loan Amount", value: formatCurrency(currentApplication.requestedAmount))
+                ReviewDataRow(label: "Tenure", value: "\(currentApplication.tenureMonths) Months")
+                ReviewDataRow(label: "Interest Rate", value: "\(currentApplication.offeredInterestRate)% p.a.")
+                ReviewDataRow(label: "Branch", value: currentApplication.branchName.isEmpty ? currentApplication.branchId : currentApplication.branchName)
+                Divider()
+                ReviewDataRow(label: "Current Status", value: currentApplication.status.displayName, isHighlight: true)
+            }
+        }
+    }
+
+    private var documentsSection: some View {
+        ReviewSectionCard(title: "Documents") {
+            if currentApplication.documents.isEmpty {
+                Text("No application documents have been attached yet.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(currentApplication.documents) { document in
+                        HStack(spacing: 12) {
+                            Image(systemName: "checkmark.seal.fill")
+                                .foregroundColor(document.verificationStatus.color)
+                            Text(documentName(for: document))
+                                .font(.subheadline)
+                            Spacer()
+                            Text(document.verificationStatus.displayName)
+                                .font(.caption).bold()
+                                .foregroundColor(document.verificationStatus.color)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var consentSection: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Button {
+                isConsentGiven.toggle()
+            } label: {
+                Image(systemName: isConsentGiven ? "checkmark.square.fill" : "square")
+                    .font(.title2)
+                    .foregroundColor(isConsentGiven ? .mainBlue : .secondary)
+            }
+
+            Text("I confirm that these application details are correct and I authorize the bank to continue processing this loan request.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .padding(20)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .padding(.horizontal, 20)
+    }
+
+    private var footerSection: some View {
+        VStack {
+            Divider()
+            Button {
+                router.push(.submitConfirmation(currentApplication))
+            } label: {
+                Text("Continue")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(isConsentGiven ? DS.primary : Color.secondary.opacity(0.3))
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+            .disabled(!isConsentGiven)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
+            .background(Color(UIColor.systemGroupedBackground))
+        }
+    }
+
+    private func reloadData() async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            async let detailedApplication = loanService.getLoanApplication(applicationId: currentApplication.id)
+            async let fetchedProduct = loanService.getLoanProduct(productId: currentApplication.loanProductId)
+            currentApplication = try await detailedApplication
+            product = try await fetchedProduct
+        } catch {
+            errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to load application summary"
+        }
+        isLoading = false
+    }
+
+    private func documentName(for document: BorrowerApplicationDocument) -> String {
+        product?.requiredDocuments
+            .first(where: { $0.id == document.requiredDocId })?
+            .requirementType
+            .displayName ?? document.requiredDocId
+    }
+
+    private func formatCurrency(_ raw: String) -> String {
+        guard let amount = Double(raw) else { return raw }
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = Locale(identifier: "en_IN")
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: amount)) ?? raw
     }
 }
 
-// MARK: - Subcomponents
-struct ReviewSectionCard<Content: View>: View {
+private struct ReviewSectionCard<Content: View>: View {
     let title: String
-    let actionTitle: String
     let content: Content
-    
-    init(title: String, actionTitle: String, @ViewBuilder content: () -> Content) {
+
+    init(title: String, @ViewBuilder content: () -> Content) {
         self.title = title
-        self.actionTitle = actionTitle
         self.content = content()
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text(title)
-                    .font(.headline)
-                Spacer()
-                Button(actionTitle) {
-                    // Edit action
-                }
-                .font(.subheadline).bold()
-                .foregroundColor(.mainBlue)
-            }
-            
+            Text(title)
+                .font(.headline)
             content
         }
         .padding(20)
@@ -146,11 +209,11 @@ struct ReviewSectionCard<Content: View>: View {
     }
 }
 
-struct ReviewDataRow: View {
+private struct ReviewDataRow: View {
     let label: String
     let value: String
     var isHighlight: Bool = false
-    
+
     var body: some View {
         HStack {
             Text(label)
@@ -161,13 +224,7 @@ struct ReviewDataRow: View {
                 .font(isHighlight ? .title3 : .subheadline)
                 .fontWeight(isHighlight ? .bold : .semibold)
                 .foregroundColor(isHighlight ? .mainBlue : .primary)
+                .multilineTextAlignment(.trailing)
         }
-    }
-}
-
-#Preview {
-    NavigationStack {
-        ReviewApplicationView()
-            .environmentObject(AppRouter())
     }
 }

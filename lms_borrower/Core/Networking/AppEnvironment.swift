@@ -36,7 +36,6 @@ public struct AppEnvironment: Sendable {
 
     /// The gRPC server port.
     /// - Production: 443 (TLS over HTTP/2)
-    /// - Local dev:  50051 (plaintext)
     public let port: Int
 
     /// TLS mode applied to the channel. Must be `.tls` in production.
@@ -63,27 +62,11 @@ public struct AppEnvironment: Sendable {
         name: "Production"
     )
 
-    /// Local development server running on localhost:50051 without TLS.
-    /// Only used when `DEBUG` is defined and the developer explicitly sets `.localDev`.
-    public static let localDev = AppEnvironment(
-        host: "localhost",
-        port: 50051,
-        tlsMode: .plaintext,
-        name: "Local Dev"
-    )
-
     // MARK: Current
 
     /// The active environment for this build.
     ///
-    /// Switch to `.localDev` during development by changing this value.
-    /// This should always be `.production` in release builds.
-    public static let current: AppEnvironment = {
-        #if DEBUG
-        // Change to `.localDev` when running against a local backend.
-        return .production
-        #else
-        return .production
-        #endif
-    }()
+    /// Loan lifecycle integration is pinned to the live backend so every build
+    /// exercises the same API surface.
+    public static let current: AppEnvironment = .production
 }

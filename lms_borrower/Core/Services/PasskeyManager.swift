@@ -219,7 +219,7 @@ private struct PublicKeyCredentialRequestOptions: Decodable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         challenge = try container.decode(String.self, forKey: .challenge)
-        rpID = try container.decodeIfPresent(String.self, forKey: .rpID) ?? "localhost"
+        rpID = try container.decodeIfPresent(String.self, forKey: .rpID) ?? "lmsapi.chirag.codes"
         allowCredentials = try container.decodeIfPresent([AllowedCredential].self, forKey: .allowCredentials) ?? []
     }
 }

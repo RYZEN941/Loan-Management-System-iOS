@@ -1,174 +1,236 @@
 import SwiftUI
 import Combine
 
-// MARK: - Models
-enum TrackingStatus {
+private enum TrackingStepState {
     case completed
     case current
     case pending
 }
 
-struct TimelineStepItem: Identifiable {
+private struct TimelineStepItem: Identifiable {
     let id = UUID()
     let title: String
-    let date: String?
-    let description: String
-    let status: TrackingStatus
+    let detail: String
+    let state: TrackingStepState
 }
 
-// MARK: - View Model
-class ApplicationTrackingViewModel: ObservableObject {
-    @Published var loanID = "APP-9824-XT"
-    @Published var amount = 150000.0
-    
-    @Published var steps: [TimelineStepItem] = [
-        TimelineStepItem(title: "Application Submitted", date: "14 Apr, 10:30 AM", description: "Your application and documents have been received.", status: .completed),
-        TimelineStepItem(title: "Document Verification", date: "14 Apr, 02:15 PM", description: "Our team has successfully verified your identity and income.", status: .completed),
-        TimelineStepItem(title: "Credit Assessment", date: "In Progress", description: "We are currently evaluating your credit profile.", status: .current),
-        TimelineStepItem(title: "Loan Approval", date: nil, description: "Final approval pending from the underwriting team.", status: .pending),
-        TimelineStepItem(title: "Amount Disbursed", date: nil, description: "Funds will be transferred to your registered bank account.", status: .pending)
-    ]
-}
-
-// MARK: - Main View
+@available(iOS 18.0, *)
 struct ApplicationTrackingView: View {
-    @StateObject var viewModel = ApplicationTrackingViewModel()
-    
+    let application: BorrowerLoanApplication
+
+    @StateObject private var viewModel = TrackViewModel()
+    @State private var currentApplication: BorrowerLoanApplication
+
+    init(application: BorrowerLoanApplication) {
+        self.application = application
+        _currentApplication = State(initialValue: application)
+    }
+
+    private var timelineSteps: [TimelineStepItem] {
+        [
+            TimelineStepItem(
+                title: "Application Submitted",
+                detail: "The bank received your application and basic details.",
+                state: submissionState
+            ),
+            TimelineStepItem(
+                title: "Officer Review",
+                detail: "Loan officer validates documents, terms, and risk indicators.",
+                state: officerState
+            ),
+            TimelineStepItem(
+                title: "Manager Decision",
+                detail: "Manager approval is required before any disbursement can happen.",
+                state: managerState
+            ),
+            TimelineStepItem(
+                title: "Disbursement",
+                detail: "Loan ledger is created and funds are ready to be released.",
+                state: disbursementState
+            )
+        ]
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                
-                // Summary Card
-                HStack {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Application ID")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text(viewModel.loanID)
-                            .font(.headline)
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 6) {
-                        Text("Applied Amount")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text("₹\(viewModel.amount.formatted(.number.grouping(.automatic)))")
-                            .font(.headline)
-                            .foregroundColor(.mainBlue)
-                    }
+                summaryCard
+
+                if let error = viewModel.errorMessage {
+                    Text(error)
+                        .font(.footnote)
+                        .foregroundColor(.red)
+                        .padding(.horizontal, 20)
                 }
-                .padding(20)
-                .background(DS.primary.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(DS.primary.opacity(0.2), lineWidth: 1)
-                )
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-                
-                // Timeline
+
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(viewModel.steps.enumerated()), id: \.element.id) { index, step in
+                    ForEach(Array(timelineSteps.enumerated()), id: \.element.id) { index, step in
                         TimelineRow(
                             step: step,
-                            isLast: index == viewModel.steps.count - 1
+                            isLast: index == timelineSteps.count - 1
                         )
                     }
                 }
                 .padding(.horizontal, 20)
-                
             }
             .padding(.bottom, 40)
         }
         .background(Color(UIColor.systemBackground).ignoresSafeArea())
         .navigationTitle("Track Status")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            viewModel.fetchApplicationDetail(applicationId: currentApplication.id)
+        }
+        .onReceive(viewModel.$selectedApplication.compactMap { $0 }) { detailed in
+            if detailed.id == currentApplication.id {
+                currentApplication = detailed
+            }
+        }
+    }
+
+    private var summaryCard: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Application ID")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text(currentApplication.referenceNumber)
+                    .font(.headline)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 6) {
+                Text("Applied Amount")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text(formatCurrency(currentApplication.requestedAmount))
+                    .font(.headline)
+                    .foregroundColor(.mainBlue)
+            }
+        }
+        .padding(20)
+        .background(DS.primary.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(DS.primary.opacity(0.2), lineWidth: 1)
+        )
+        .padding(.horizontal, 20)
+        .padding(.top, 20)
+    }
+
+    private var submissionState: TrackingStepState {
+        currentApplication.status == .draft ? .current : .completed
+    }
+
+    private var officerState: TrackingStepState {
+        switch currentApplication.status {
+        case .draft:
+            return .pending
+        case .submitted, .underReview, .officerReview:
+            return .current
+        case .officerApproved, .officerRejected, .managerReview, .managerApproved, .managerRejected, .approved, .rejected, .disbursed:
+            return .completed
+        default:
+            return .pending
+        }
+    }
+
+    private var managerState: TrackingStepState {
+        switch currentApplication.status {
+        case .officerApproved, .managerReview:
+            return .current
+        case .managerApproved, .managerRejected, .approved, .rejected, .disbursed:
+            return .completed
+        default:
+            return .pending
+        }
+    }
+
+    private var disbursementState: TrackingStepState {
+        switch currentApplication.status {
+        case .managerApproved:
+            return .current
+        case .disbursed:
+            return .completed
+        default:
+            return .pending
+        }
+    }
+
+    private func formatCurrency(_ raw: String) -> String {
+        guard let value = Double(raw) else { return raw }
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = Locale(identifier: "en_IN")
+        formatter.maximumFractionDigits = 0
+        return formatter.string(from: NSNumber(value: value)) ?? raw
     }
 }
 
-// MARK: - Subcomponents
-struct TimelineRow: View {
+private struct TimelineRow: View {
     let step: TimelineStepItem
     let isLast: Bool
-    
+
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
-            
-            // Left Column: Line & Dot
             VStack(spacing: 0) {
-                // Circle Indicator
                 ZStack {
                     Circle()
-                        .fill(circleColor.opacity(step.status == .current ? 0.2 : 1.0))
+                        .fill(circleColor.opacity(step.state == .current ? 0.2 : 1.0))
                         .frame(width: 24, height: 24)
-                    
-                    if step.status == .current {
+
+                    if step.state == .current {
                         Circle()
                             .fill(circleColor)
                             .frame(width: 12, height: 12)
-                    } else if step.status == .completed {
+                    } else if step.state == .completed {
                         Image(systemName: "checkmark")
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.white)
                     }
                 }
-                
-                // Vertical Line (Hide if last item)
+
                 if !isLast {
                     Rectangle()
                         .fill(lineColor)
                         .frame(width: 2)
-                        .frame(minHeight: 60) // Adjusts spacing between steps
+                        .frame(minHeight: 60)
                 }
             }
-            
-            // Right Column: Content
+
             VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text(step.title)
-                        .font(.headline)
-                        .foregroundColor(step.status == .pending ? .secondary : .primary)
-                    Spacer()
-                    if let date = step.date {
-                        Text(date)
-                            .font(.caption2).bold()
-                            .foregroundColor(step.status == .current ? .secondaryBlue : .secondary)
-                    }
-                }
-                
-                Text(step.description)
+                Text(step.title)
+                    .font(.headline)
+                    .foregroundColor(step.state == .pending ? .secondary : .primary)
+
+                Text(step.detail)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
-                    .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
-                
-                // Extra padding at the bottom of the text block to match the line height
+
                 Spacer().frame(height: 20)
             }
-            .padding(.top, 2) // Aligns text slightly down with the circle
+            .padding(.top, 2)
         }
     }
-    
-    // Computed colors based on status
-    private var circleColor: Color {
-        switch step.status {
-        case .completed: return Color(hex: "#00C48C") // Success Green
-        case .current: return .mainBlue
-        case .pending: return Color.gray.opacity(0.3)
-        }
-    }
-    
-    private var lineColor: Color {
-        switch step.status {
-        case .completed: return Color(hex: "#00C48C")
-        case .current, .pending: return Color.gray.opacity(0.2)
-        }
-    }
-}
 
-#Preview {
-    NavigationStack {
-        ApplicationTrackingView()
+    private var circleColor: Color {
+        switch step.state {
+        case .completed:
+            return Color(hex: "#00C48C")
+        case .current:
+            return .mainBlue
+        case .pending:
+            return Color.gray.opacity(0.3)
+        }
+    }
+
+    private var lineColor: Color {
+        switch step.state {
+        case .completed:
+            return Color(hex: "#00C48C")
+        case .current, .pending:
+            return Color.gray.opacity(0.2)
+        }
     }
 }

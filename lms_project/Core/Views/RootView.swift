@@ -18,6 +18,8 @@ struct RootView: View {
                     ManagerTabView()
                 case .admin:
                     AdminTabView()
+                case .dst:
+                    EmptyView()
                 }
             } else {
                 LoginView()

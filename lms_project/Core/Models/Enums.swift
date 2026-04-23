@@ -11,6 +11,7 @@ enum UserRole: String, CaseIterable, Identifiable, Codable {
     case loanOfficer = "loan_officer"
     case manager = "manager"
     case admin = "admin"
+    case dst = "dst"
     
     var id: String { rawValue }
     
@@ -19,6 +20,7 @@ enum UserRole: String, CaseIterable, Identifiable, Codable {
         case .loanOfficer: return "Loan Officer"
         case .manager: return "Manager"
         case .admin: return "Admin"
+        case .dst: return "DST"
         }
     }
     
@@ -27,6 +29,7 @@ enum UserRole: String, CaseIterable, Identifiable, Codable {
         case .loanOfficer: return "person.text.rectangle"
         case .manager: return "person.badge.shield.checkmark"
         case .admin: return "gearshape.2"
+        case .dst: return "person.badge.plus"
         }
     }
 }

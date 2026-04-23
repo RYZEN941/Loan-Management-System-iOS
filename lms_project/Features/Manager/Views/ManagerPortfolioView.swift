@@ -34,7 +34,7 @@ struct ManagerPortfolioView: View {
                     }
                     .background(Theme.Colors.adaptiveBackground(colorScheme))
                     .foregroundStyle(.primary)
-
+                    
                     ScrollView {
                         VStack(spacing: Theme.Spacing.xl) {
                             portfolioSummary
@@ -64,7 +64,7 @@ struct ManagerPortfolioView: View {
             SectionHeader(title: "Portfolio Summary", icon: "chart.pie.fill")
                 .description("Key metrics of total loan volume and average disbursement value.")
             
-            HStack(spacing: Theme.Spacing.md) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 280))], spacing: Theme.Spacing.md) {
                 KPICard(title: "Total Applications", value: "\(dashboardVM.applications.count)",
                         icon: "doc.text.fill", color: Theme.Colors.primary)
                 KPICard(title: "Total Value", value: totalLoanValue.compactFormatted,
@@ -84,7 +84,7 @@ struct ManagerPortfolioView: View {
         guard !dashboardVM.applications.isEmpty else { return 0 }
         return totalLoanValue / Double(dashboardVM.applications.count)
     }
-
+    
     private var loanDistribution: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             SectionHeader(title: "Disbursement Trend", icon: "chart.line.uptrend.xyaxis")
@@ -129,7 +129,7 @@ struct ManagerPortfolioView: View {
             SectionHeader(title: "Risk Analysis", icon: "shield.fill")
                 .description("Categorical breakdown of applications based on calculated risk profiles.")
             
-            HStack(spacing: Theme.Spacing.md) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 180))], spacing: Theme.Spacing.md) {
                 ForEach(RiskLevel.allCases) { risk in
                     let count = dashboardVM.applications.filter { $0.riskLevel == risk }.count
                     riskCard(level: risk, count: count)
@@ -166,4 +166,3 @@ struct ManagerPortfolioView: View {
         )
     }
 }
-

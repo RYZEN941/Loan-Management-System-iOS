@@ -411,6 +411,8 @@ struct InlineEditUserView: View {
     @Environment(\.colorScheme) private var colorScheme
     
     @State private var name: String
+    @State private var email: String
+    @State private var phone: String
     @State private var selectedRole: UserRole
     @State private var branch: String
     @State private var newBranchName = ""
@@ -420,6 +422,8 @@ struct InlineEditUserView: View {
         self.user = user
         self._isEditing = isEditing
         _name = State(initialValue: user.name)
+        _email = State(initialValue: user.email)
+        _phone = State(initialValue: user.phone)
         _selectedRole = State(initialValue: user.role)
         _branch = State(initialValue: user.branch)
     }
@@ -444,7 +448,7 @@ struct InlineEditUserView: View {
                         adminVM.createBranch(newBranchName)
                         finalBranch = newBranchName
                     }
-                    adminVM.updateUser(userId: user.id, name: name, role: selectedRole, branch: finalBranch)
+                    adminVM.updateUser(userId: user.id, name: name, email: email, phone: phone, role: selectedRole, branch: finalBranch)
                     withAnimation { isEditing = false }
                 }
                 .font(Theme.Typography.subheadline.weight(.semibold))
@@ -456,6 +460,12 @@ struct InlineEditUserView: View {
             Form {
                 Section("Edit Information") {
                     TextField("Full Name", text: $name)
+                    TextField("Email Address", text: $email)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                    TextField("Phone Number", text: $phone)
+                        .keyboardType(.phonePad)
+                    
                     Picker("Role", selection: $selectedRole) {
                         ForEach(UserRole.allCases) { role in
                             Text(role.displayName).tag(role)
@@ -474,19 +484,9 @@ struct InlineEditUserView: View {
                 
                 Section("Account (Read-only)") {
                     HStack {
-                        Text("Email").foregroundStyle(.secondary)
-                        Spacer()
-                        Text(user.email).foregroundStyle(.primary)
-                    }
-                    HStack {
                         Text("Employee ID").foregroundStyle(.secondary)
                         Spacer()
                         Text(user.id).foregroundStyle(.primary)
-                    }
-                    HStack {
-                        Text("Phone").foregroundStyle(.secondary)
-                        Spacer()
-                        Text(user.phone).foregroundStyle(.primary)
                     }
                 }
                 

@@ -8,6 +8,8 @@ import SwiftUI
 struct ManagerTabView: View {
 
     
+    @EnvironmentObject var adminVM: AdminViewModel
+    @EnvironmentObject var authVM: AuthViewModel
     @State private var selectedTab = 0
     @State private var showProfile = false
     
@@ -31,11 +33,17 @@ struct ManagerTabView: View {
                 }
                 .tag(2)
             
+            ManagerDstView(showProfile: $showProfile)
+                .tabItem {
+                    Label("Dst", systemImage: "person.2.badge.gearshape.fill")
+                }
+                .tag(3)
+            
             ManagerMessagesView(showProfile: $showProfile)
                 .tabItem {
                     Label("Messages", systemImage: "message.fill")
                 }
-                .tag(3)
+                .tag(4)
         }
         .tint(Theme.Colors.primary)
         .sheet(isPresented: $showProfile) {

@@ -785,6 +785,8 @@ struct EditUserSheet: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var name: String
+    @State private var email: String
+    @State private var phone: String
     @State private var selectedRole: UserRole
     @State private var branch: String
     @State private var newBranchName = ""
@@ -793,6 +795,8 @@ struct EditUserSheet: View {
         self.adminVM = adminVM
         self.user = user
         _name = State(initialValue: user.name)
+        _email = State(initialValue: user.email)
+        _phone = State(initialValue: user.phone)
         _selectedRole = State(initialValue: user.role)
         _branch = State(initialValue: user.branch)
     }
@@ -818,21 +822,16 @@ struct EditUserSheet: View {
                     }
                 }
                 
-                Section("Account (Read-only)") {
-                    HStack {
-                        Text("Email").foregroundStyle(.secondary)
-                        Spacer()
-                        Text(user.email).foregroundStyle(.primary)
-                    }
+                Section("Account Details") {
+                    TextField("Email Address", text: $email)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                    TextField("Phone Number", text: $phone)
+                        .keyboardType(.phonePad)
                     HStack {
                         Text("Employee ID").foregroundStyle(.secondary)
                         Spacer()
                         Text(user.id).foregroundStyle(.primary)
-                    }
-                    HStack {
-                        Text("Phone").foregroundStyle(.secondary)
-                        Spacer()
-                        Text(user.phone).foregroundStyle(.primary)
                     }
                 }
             }
@@ -849,7 +848,7 @@ struct EditUserSheet: View {
                             adminVM.createBranch(newBranchName)
                             finalBranch = newBranchName
                         }
-                        adminVM.updateUser(userId: user.id, name: name, role: selectedRole, branch: finalBranch)
+                        adminVM.updateUser(userId: user.id, name: name, email: email, phone: phone, role: selectedRole, branch: finalBranch)
                         dismiss()
                     }
                     .fontWeight(.semibold)

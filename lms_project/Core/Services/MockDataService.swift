@@ -62,6 +62,17 @@ class MockDataService: LMSDataService {
                 isActive: true,
                 joinedAt: Calendar.current.date(byAdding: .year, value: -8, to: Date())!
             )
+        case .dst:
+            return User(
+                id: "ADM-006",
+                name: "Dst Patel",
+                email: "admin@gmail.com",
+                role: .dst,
+                branch: "Head Office",
+                phone: "+91-9876543212",
+                isActive: true,
+                joinedAt: Calendar.current.date(byAdding: .year, value: -8, to: Date())!
+            )
         }
     }
     

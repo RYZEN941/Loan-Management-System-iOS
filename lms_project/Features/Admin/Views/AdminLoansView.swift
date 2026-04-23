@@ -82,16 +82,10 @@ struct AdminLoansView: View {
                         Button {
                             loansVM.showAddLoanSheet = true
                         } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: "plus.circle.fill")
-                                Text("Add Loan")
-                            }
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Theme.Colors.primary)
-                            .clipShape(Capsule())
+                            Image(systemName: "plus")
+                                .font(.system(size: 22, weight: .light))
+                                .foregroundStyle(Theme.Colors.primary)
+                                .frame(width: 44, height: 44)
                         }
                         .buttonStyle(.plain)
                         

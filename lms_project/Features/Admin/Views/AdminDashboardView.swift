@@ -149,7 +149,28 @@ struct AdminDashboardView: View {
                             trend: String? = nil, 
                             trendPositive: Bool? = nil, 
                             subtext: String? = nil) -> some View {
-        Button(action: {}) {
+        Button(action: {
+            // Mapping titles to actions
+            switch title {
+            case "SLA Breaches":
+                adminVM.selectedRiskSection = .actionRequired
+                adminVM.selectedRiskFilter = .slaBreach
+                selectedTab = 2 // Risk Tab index
+            case "Fraud Alerts":
+                adminVM.selectedRiskSection = .actionRequired
+                adminVM.selectedRiskFilter = .fraudAlert
+                selectedTab = 2
+            case "Policy Overrides", "Policy Violations":
+                adminVM.selectedRiskSection = .actionRequired
+                adminVM.selectedRiskFilter = .policyViolation
+                selectedTab = 2
+            case "Stuck Applications":
+                adminVM.selectedRiskSection = .actionRequired
+                adminVM.selectedRiskFilter = .stuckApplication
+                selectedTab = 2
+            default: break
+            }
+        }) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top) {
                     ZStack {
@@ -534,9 +555,6 @@ struct AdminDashboardView: View {
                     .font(Theme.Typography.caption)
                 }
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.tertiary)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)

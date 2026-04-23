@@ -2,7 +2,8 @@
 //  AdminRiskView.swift
 //  lms_project
 //
-//  TAB 3 — Risk & Collections (Merged)
+//  TAB 3 — Risk Control Panel
+//  Operational two-panel layout with collapsible sidebar and actionable task management.
 //
 
 import SwiftUI
@@ -11,117 +12,235 @@ struct AdminRiskView: View {
     @EnvironmentObject var adminVM: AdminViewModel
     @EnvironmentObject var riskVM: AdminRiskViewModel
     @EnvironmentObject var collectionsVM: AdminCollectionsViewModel
+    @EnvironmentObject var messagesVM: MessagesViewModel
     @Environment(\.colorScheme) private var colorScheme
     @Binding var showProfile: Bool
+    @Binding var selectedTab: Int
 
-    @State private var selectedSection = 0
-    @State private var riskFilter: RiskFilter = .all
-    @State private var dpdBucket: DPDBucket = .thirty
-    @State private var showSettlementSheet: CollectionCase? = nil
-    @State private var showAgentAssign: CollectionCase? = nil
+    @State private var sidebarCollapsed = false
+    @State private var showAssignSheet: ActionItem? = nil
+    @State private var showMessageSheet: ActionItem? = nil
+    
+    // Resolution confirmation
+    @State private var showConfirmation = false
+    @State private var confirmationMessage = ""
+    @State private var confirmationAction: (() -> Void)?
+    
+    // Toast state
+    @State private var showToast = false
+    @State private var toastMessage = ""
+    
+    // Modals
+    @State private var activeInvestigation: ActionItem?
+    @State private var activeOverride: ActionItem?
 
-    enum RiskFilter: String, CaseIterable { case all="All", high="High", medium="Medium", low="Low" }
-    enum DPDBucket: String, CaseIterable {
-        case thirty="30 DPD", sixty="60 DPD", ninety="90+ DPD"
-        var color: Color {
-            switch self { case .thirty: return Theme.Colors.warning; case .sixty: return Color(hex:"E8720C"); case .ninety: return Theme.Colors.critical }
-        }
+    // MARK: - Mock Data Models
+    
+    struct ActionItem: Identifiable {
+        let id: String
+        let loanId: String
+        let issue: String
+        let severity: String // High, Medium, Low
+        let time: String
+        var officer: String
+        var details: String? = nil
+        var signals: [String]? = nil
     }
-
-    // Mock data
-    private let foirData: [(label:String,value:Double)] = [("Home Loan",0.38),("Personal Loan",0.52),("Business Loan",0.44),("Vehicle Loan",0.31),("Education Loan",0.28)]
-    private let cibilData: [(label:String,count:Int,color:Color)] = [("750+",42,Theme.Colors.success),("650–749",28,Theme.Colors.warning),("<650",8,Theme.Colors.critical)]
-    private let ltvData: [(label:String,value:Double)] = [("Home Loan",0.72),("Vehicle Loan",0.65),("Business Loan",0.55),("Education Loan",0.40)]
-
-    private let flaggedApps: [FlaggedApplication] = [
-        FlaggedApplication(id:"APP-031",borrower:"Ramesh Gupta",loanType:"Personal",amount:"₹5.5L",riskScore:88,risk:.high,flag:"CIBIL 542, DTI 61%"),
-        FlaggedApplication(id:"APP-047",borrower:"Kavitha Nair",loanType:"Business",amount:"₹18L",riskScore:76,risk:.high,flag:"Multiple active loans"),
-        FlaggedApplication(id:"APP-055",borrower:"Ajay Sharma",loanType:"Home",amount:"₹42L",riskScore:61,risk:.medium,flag:"LTV 84% exceeds cap"),
-        FlaggedApplication(id:"APP-062",borrower:"Priya Menon",loanType:"Vehicle",amount:"₹8.2L",riskScore:54,risk:.medium,flag:"Income verification gap"),
-        FlaggedApplication(id:"APP-071",borrower:"Suresh Pillai",loanType:"Education",amount:"₹3.8L",riskScore:38,risk:.low,flag:"Document mismatch"),
+    
+    // Mutable mock data for reassignment simulation
+    @State private var slaBreaches = [
+        ActionItem(id: "1", loanId: "APP-2024-001", issue: "SLA Breach", severity: "High", time: "24m ago", officer: "Ravi Kumar"),
+        ActionItem(id: "2", loanId: "APP-2024-005", issue: "SLA Breach", severity: "Medium", time: "1h ago", officer: "Priya Sharma"),
+        ActionItem(id: "3", loanId: "APP-2024-012", issue: "SLA Breach", severity: "High", time: "2h ago", officer: "Deepak Mehta")
     ]
-
-    private let cases30: [CollectionCase] = [
-        CollectionCase(id:"COL-001",borrower:"Vivek Tiwari",loanType:"Personal Loan",outstanding:"₹2.4L",emi:"₹8,500",agent:"Ravi Kumar",status:.contacted),
-        CollectionCase(id:"COL-002",borrower:"Sunita Rao",loanType:"Vehicle Loan",outstanding:"₹3.8L",emi:"₹12,200",agent:"Priya Sharma",status:.pendingPTP),
-        CollectionCase(id:"COL-003",borrower:"Arjun Kulkarni",loanType:"Home Loan",outstanding:"₹18.6L",emi:"₹24,500",agent:"Unassigned",status:.unassigned),
+    
+    @State private var fraudAlerts = [
+        ActionItem(id: "4", loanId: "APP-2024-009", issue: "Fraud Flag", severity: "High", time: "3h ago", officer: "System", details: "Multiple applications from same IP", signals: ["IP Conflict", "Phone Match", "Device ID Link"]),
+        ActionItem(id: "5", loanId: "APP-2024-021", issue: "Doc Mismatch", severity: "Medium", time: "5h ago", officer: "System", details: "PAN OCR mismatch with manual input", signals: ["OCR Verification Failed", "Name Mismatch", "DOB Inconsistency"])
     ]
-    private let cases60: [CollectionCase] = [
-        CollectionCase(id:"COL-004",borrower:"Deepa Nambiar",loanType:"Business Loan",outstanding:"₹7.2L",emi:"₹18,000",agent:"Suresh Nair",status:.escalated),
-        CollectionCase(id:"COL-005",borrower:"Manoj Patel",loanType:"Personal Loan",outstanding:"₹1.9L",emi:"₹6,800",agent:"Ravi Kumar",status:.partialPayment),
+    
+    @State private var policyViolations = [
+        ActionItem(id: "6", loanId: "APP-2024-015", issue: "LTV Exceeded", severity: "Medium", time: "1d ago", officer: "Sunita Patel", details: "LTV is 84% (Max allowed: 80%)"),
+        ActionItem(id: "7", loanId: "APP-2024-033", issue: "FOIR High", severity: "Low", time: "2d ago", officer: "Deepak Mehta", details: "FOIR is 58% (Limit: 50%)")
     ]
-    private let cases90: [CollectionCase] = [
-        CollectionCase(id:"COL-006",borrower:"Girish Mehta",loanType:"Home Loan",outstanding:"₹34.5L",emi:"₹42,000",agent:"Legal Team",status:.legal),
-        CollectionCase(id:"COL-007",borrower:"Rekha Joshi",loanType:"Business Loan",outstanding:"₹11.2L",emi:"₹22,500",agent:"Vikram Seth",status:.settled),
+    
+    @State private var stuckApps = [
+        ActionItem(id: "8", loanId: "APP-2024-044", issue: "Stuck in Verification", severity: "Low", time: "3d ago", officer: "Ravi Kumar"),
+        ActionItem(id: "9", loanId: "APP-2024-055", issue: "Manual Review Req.", severity: "Medium", time: "4d ago", officer: "Priya Sharma")
     ]
-    private let npaLoans: [CollectionCase] = [
-        CollectionCase(id:"NPA-001",borrower:"Farhan Siddiqui",loanType:"Vehicle Loan",outstanding:"₹5.6L",emi:"₹14,000",agent:"Unassigned",status:.unassigned),
-    ]
-
-    private var filteredFlagged: [FlaggedApplication] {
-        switch riskFilter {
-        case .all: return flaggedApps
-        case .high: return flaggedApps.filter{$0.risk == .high}
-        case .medium: return flaggedApps.filter{$0.risk == .medium}
-        case .low: return flaggedApps.filter{$0.risk == .low}
-        }
-    }
-    private var activeCases: [CollectionCase] {
-        switch dpdBucket { case .thirty: return cases30; case .sixty: return cases60; case .ninety: return cases90 }
-    }
 
     var body: some View {
         NavigationStack {
             ZStack {
                 Theme.Colors.adaptiveBackground(colorScheme).ignoresSafeArea()
-                VStack(spacing: 0) {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: Theme.Spacing.sm) {
-                            ForEach([("Risk Dashboard", 0), ("Fraud Detection", 1), ("Collections", 2), ("NPA", 3)], id: \.1) { item in
-                                Button {
-                                    withAnimation { selectedSection = item.1 }
-                                } label: {
-                                    Text(item.0)
-                                        .font(Theme.Typography.caption)
-                                        .fontWeight(selectedSection == item.1 ? .semibold : .regular)
-                                        .foregroundStyle(selectedSection == item.1 ? .white : Theme.Colors.primary)
-                                        .padding(.horizontal, 14).padding(.vertical, 8)
-                                        .background(selectedSection == item.1 ? Theme.Colors.primary : Theme.Colors.primary.opacity(0.08))
-                                        .clipShape(Capsule())
-                                }
-                                .buttonStyle(.plain)
-                            }
+                
+                GeometryReader { geo in
+                    HStack(spacing: 0) {
+                        // LEFT SIDEBAR (Collapsible)
+                        if !sidebarCollapsed {
+                            riskSidebar
+                                .frame(width: 280)
+                                .transition(.move(edge: .leading).combined(with: .opacity))
+                            
+                            Divider()
                         }
-                        .padding(.horizontal, Theme.Spacing.lg)
+                        
+                        // RIGHT PANEL
+                        rightPanelContent
+                            .frame(maxWidth: .infinity)
                     }
-                    .padding(.vertical, Theme.Spacing.md)
-
-                    ScrollView {
-                        VStack(spacing: Theme.Spacing.lg) {
-                            switch selectedSection {
-                            case 0: riskDashboardSection
-                            case 1: fraudDetectionSection
-                            case 2: collectionsSection
-                            case 3: npaSection
-                            default: EmptyView()
-                            }
+                    .onAppear {
+                        // Set initial state based on orientation/width
+                        if geo.size.width < 800 { // Simple portrait check
+                            sidebarCollapsed = true
                         }
-                        .padding(.horizontal, Theme.Spacing.lg)
-                        .padding(.bottom, Theme.Spacing.lg)
                     }
                 }
             }
             .navigationTitle("Risk & Collections")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            sidebarCollapsed.toggle()
+                        }
+                    } label: {
+                        Image(systemName: "sidebar.left")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Theme.Colors.primary)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) { ProfileNavButton(showProfile: $showProfile) }
             }
-            .sheet(item: $showAgentAssign) { ccase in AgentAssignmentSheet(collectionCase: ccase) }
-            .animation(.easeInOut(duration: 0.2), value: selectedSection)
+            // Assignment Modal
+            .sheet(item: $showAssignSheet) { item in
+                ReassignOfficerSheet(actionItem: item) { newOfficer in
+                    updateOfficer(for: item, to: newOfficer)
+                }
+            }
+            // Messaging Modal
+            .sheet(item: $showMessageSheet) { item in
+                MessageOfficerSheet(actionItem: item)
+            }
+            .sheet(item: $activeInvestigation) { item in
+                InvestigationModal(item: item, 
+                                   adminVM: adminVM,
+                                   onMarkFalsePositive: {
+                                       confirmationMessage = "Mark this as false positive?"
+                                       confirmationAction = { resolveFraud(item: item, message: "Marked as False Positive") }
+                                       showConfirmation = true
+                                   },
+                                   onConfirmFraud: {
+                                       confirmationMessage = "Confirm this as fraud?"
+                                       confirmationAction = { resolveFraud(item: item, message: "Fraud Confirmed and Resolved") }
+                                       showConfirmation = true
+                                   })
+            }
+            .sheet(item: $activeOverride) { item in
+                OverrideModal(item: item, onApprove: {
+                    withAnimation { policyViolations.removeAll { $0.id == item.id } }
+                })
+            }
+            .confirmationDialog(confirmationMessage, isPresented: $showConfirmation, titleVisibility: .visible) {
+                Button("Confirm", role: .destructive) { confirmationAction?() }
+                Button("Cancel", role: .cancel) {}
+            }
+            .overlay(alignment: .bottom) {
+                if showToast {
+                    ToastView(message: toastMessage)
+                        .transition(AnyTransition.move(edge: .bottom).combined(with: .opacity))
+                        .padding(.bottom, 40)
+                }
+            }
         }
     }
-
-    // MARK: - Risk Dashboard
+    
+    // MARK: - Sidebar
+    
+    private var riskSidebar: some View {
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: Theme.Spacing.xs) {
+                    ForEach(RiskSection.allCases) { section in
+                        sidebarItem(for: section)
+                    }
+                }
+                .padding(.vertical, Theme.Spacing.md)
+                .padding(.horizontal, Theme.Spacing.sm)
+            }
+            
+            Spacer()
+        }
+        .background(Theme.Colors.adaptiveSurface(colorScheme))
+    }
+    
+    private func sidebarItem(for section: RiskSection) -> some View {
+        Button {
+            withAnimation(.spring(response: 0.3)) {
+                adminVM.selectedRiskSection = section
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: section.icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .frame(width: 24)
+                
+                Text(section.rawValue)
+                    .font(Theme.Typography.subheadline.weight(.medium))
+                
+                Spacer()
+                
+                if section == .actionRequired {
+                    let totalActions = slaBreaches.count + fraudAlerts.count + policyViolations.count + stuckApps.count
+                    if totalActions > 0 {
+                        Text("\(totalActions)")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(Theme.Colors.critical)
+                            .clipShape(Capsule())
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background {
+                if adminVM.selectedRiskSection == section {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Theme.Colors.primary.opacity(0.1))
+                }
+            }
+            .foregroundStyle(adminVM.selectedRiskSection == section ? Theme.Colors.primary : .secondary)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+    
+    // MARK: - Right Panel
+    
+    private var rightPanelContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                switch adminVM.selectedRiskSection {
+                case .overview:
+                    riskDashboardSection
+                case .actionRequired:
+                    actionRequiredSection
+                case .collections:
+                    collectionsSection
+                case .npa:
+                    npaSection
+                }
+            }
+            .padding(Theme.Spacing.lg)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+    
+    // MARK: - 1. OVERVIEW
+    
     private var riskDashboardSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
             // FOIR
@@ -159,216 +278,483 @@ struct AdminRiskView: View {
                     }
                 }.cardStyle(colorScheme: colorScheme)
             }
-            // Risk Profile Summary
+            
+            // Risk Profile
             VStack(alignment: .leading, spacing: Theme.Spacing.md) {
                 SectionHeader(title: "Applicant Risk Profile", icon: "shield.lefthalf.filled")
                 HStack(spacing: Theme.Spacing.md) {
-                    riskCountPill(label:"High",count:flaggedApps.filter{$0.risk == .high}.count,color:Theme.Colors.critical)
-                    riskCountPill(label:"Medium",count:flaggedApps.filter{$0.risk == .medium}.count,color:Theme.Colors.warning)
-                    riskCountPill(label:"Low",count:flaggedApps.filter{$0.risk == .low}.count,color:Theme.Colors.success)
+                    riskCountPill(label:"High",count:3,color:Theme.Colors.critical)
+                    riskCountPill(label:"Medium",count:8,color:Theme.Colors.warning)
+                    riskCountPill(label:"Low",count:12,color:Theme.Colors.success)
                 }
             }
         }
     }
-
-    // MARK: - Fraud Detection
-    private var fraudDetectionSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            HStack {
-                SectionHeader(title: "Flagged Applications", icon: "shield.slash")
-                Spacer()
-                Text("\(filteredFlagged.count) flagged").font(Theme.Typography.caption).foregroundStyle(.secondary)
-            }
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Theme.Spacing.sm) {
-                    ForEach(RiskFilter.allCases, id: \.self) { filter in
-                        Button {
-                            withAnimation { riskFilter = filter }
-                        } label: {
-                            Text(filter.rawValue)
-                                .font(Theme.Typography.caption)
-                                .fontWeight(riskFilter == filter ? .semibold : .regular)
-                                .foregroundStyle(riskFilter == filter ? .white : Theme.Colors.primary)
-                                .padding(.horizontal, 14).padding(.vertical, 8)
-                                .background(riskFilter == filter ? Theme.Colors.primary : Theme.Colors.primary.opacity(0.08))
-                                .clipShape(Capsule())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-
-            if filteredFlagged.isEmpty {
-                emptyState(icon:"checkmark.shield.fill",text:"No flags in this category")
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(filteredFlagged) { app in
-                        FlaggedAppRow(app:app, colorScheme:colorScheme)
-                        if app.id != filteredFlagged.last?.id { Divider().padding(.leading, Theme.Spacing.md) }
-                    }
-                }.cardStyle(colorScheme: colorScheme)
-            }
-
-            // Duplicate Applications
-            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                SectionHeader(title: "Duplicate Applications", icon: "doc.on.doc")
-                VStack(spacing: 0) {
-                    dupRow(name:"Ramesh Gupta",apps:"2 applications",detail:"Same PAN, different addresses")
-                    Divider().padding(.leading, Theme.Spacing.md)
-                    dupRow(name:"Unknown",apps:"3 applications",detail:"Same phone number across apps")
-                }.cardStyle(colorScheme:colorScheme)
-            }
-        }
-    }
-
-    private func dupRow(name:String,apps:String,detail:String) -> some View {
-        HStack(spacing: Theme.Spacing.md) {
-            Image(systemName:"exclamationmark.triangle.fill").font(.system(size:14)).foregroundStyle(Theme.Colors.critical)
-            VStack(alignment:.leading,spacing:2) {
-                Text(name).font(Theme.Typography.subheadline).fontWeight(.medium)
-                Text("\(apps) · \(detail)").font(Theme.Typography.caption).foregroundStyle(.secondary)
-            }
-            Spacer()
-            GenericBadge(text:"Suspicious",color:Theme.Colors.critical)
-        }.padding(.horizontal,Theme.Spacing.md).padding(.vertical,12)
-    }
-
-    // MARK: - Collections
-    private var collectionsSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Theme.Spacing.sm) {
-                    ForEach(DPDBucket.allCases, id: \.self) { bucket in
-                        Button {
-                            withAnimation { dpdBucket = bucket }
-                        } label: {
-                            Text(bucket.rawValue)
-                                .font(Theme.Typography.caption)
-                                .fontWeight(dpdBucket == bucket ? .semibold : .regular)
-                                .foregroundStyle(dpdBucket == bucket ? .white : bucket.color)
-                                .padding(.horizontal, 14).padding(.vertical, 8)
-                                .background(dpdBucket == bucket ? bucket.color : bucket.color.opacity(0.08))
-                                .clipShape(Capsule())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
-
-            // Summary
-            HStack(spacing:Theme.Spacing.lg) {
-                VStack(alignment:.leading,spacing:Theme.Spacing.xs) {
-                    Text(dpdBucket.rawValue).font(.system(size:28,weight:.bold,design:.rounded)).foregroundStyle(dpdBucket.color)
-                    Text("Overdue Loans").font(Theme.Typography.caption).foregroundStyle(.secondary)
-                }
-                Spacer()
-                VStack(alignment:.trailing,spacing:Theme.Spacing.xs) {
-                    Text("\(activeCases.count)").font(.system(size:36,weight:.bold,design:.rounded)).foregroundStyle(dpdBucket.color)
-                    Text("cases").font(Theme.Typography.caption).foregroundStyle(.secondary)
-                }
-            }
-            .padding(Theme.Spacing.lg)
-            .background(dpdBucket.color.opacity(0.08))
-            .overlay(RoundedRectangle(cornerRadius:Theme.Radius.lg).stroke(dpdBucket.color.opacity(0.25),lineWidth:1))
-            .clipShape(RoundedRectangle(cornerRadius:Theme.Radius.lg))
-
-            // Case list
-            VStack(alignment:.leading,spacing:Theme.Spacing.md) {
-                SectionHeader(title:"Borrower Cases",icon:"person.crop.rectangle.stack")
-                if activeCases.isEmpty {
-                    emptyState(icon:"checkmark.circle.fill",text:"No cases in this bucket")
-                } else {
-                    VStack(spacing:0) {
-                        ForEach(activeCases) { ccase in
-                            CollectionCaseRow(ccase:ccase,bucketColor:dpdBucket.color,colorScheme:colorScheme,onAssign:{ showAgentAssign = ccase })
-                            if ccase.id != activeCases.last?.id { Divider().padding(.leading,Theme.Spacing.md) }
-                        }
-                    }.cardStyle(colorScheme:colorScheme)
-                }
-            }
-
-            // Recovery summary
-            VStack(alignment:.leading,spacing:Theme.Spacing.md) {
-                SectionHeader(title:"Recovery Summary",icon:"arrow.uturn.down.circle")
-                VStack(spacing:0) {
-                    recoveryRow(label:"Contacted",count:4,color:Theme.Colors.primary)
-                    Divider().padding(.leading,Theme.Spacing.md)
-                    recoveryRow(label:"PTP Received",count:3,color:Theme.Colors.success)
-                    Divider().padding(.leading,Theme.Spacing.md)
-                    recoveryRow(label:"Partial Payment",count:2,color:Theme.Colors.warning)
-                    Divider().padding(.leading,Theme.Spacing.md)
-                    recoveryRow(label:"Settled",count:1,color:Theme.Colors.success)
-                    Divider().padding(.leading,Theme.Spacing.md)
-                    recoveryRow(label:"Legal Action",count:1,color:Theme.Colors.critical)
-                }.cardStyle(colorScheme:colorScheme)
-            }
-        }
-    }
-
-    // MARK: - NPA
-    private var npaSection: some View {
-        VStack(alignment:.leading,spacing:Theme.Spacing.md) {
-            SectionHeader(title:"NPA Management",icon:"exclamationmark.triangle")
-            Text("Loans classified as Non-Performing Assets (90+ DPD)").font(Theme.Typography.caption).foregroundStyle(.secondary)
-
-            if npaLoans.isEmpty {
-                emptyState(icon:"checkmark.shield.fill",text:"No NPA loans currently")
-            } else {
-                VStack(spacing:0) {
-                    ForEach(npaLoans) { loan in
-                        HStack(spacing:Theme.Spacing.md) {
-                            Image(systemName:"exclamationmark.triangle.fill").font(.system(size:16)).foregroundStyle(Theme.Colors.critical)
-                            VStack(alignment:.leading,spacing:2) {
-                                HStack { Text(loan.borrower).font(Theme.Typography.headline); Spacer(); GenericBadge(text:"NPA",color:Theme.Colors.critical) }
-                                Text("\(loan.id) · \(loan.loanType) · \(loan.outstanding) outstanding").font(Theme.Typography.caption).foregroundStyle(.secondary)
-                            }
-                        }.padding(.horizontal,Theme.Spacing.md).padding(.vertical,12)
-                    }
-                }.cardStyle(colorScheme:colorScheme)
-            }
-
-            // NPA Stats
-            HStack(spacing:Theme.Spacing.md) {
-                npaStatCard(label:"Total NPA",value:"\(npaLoans.count)",color:Theme.Colors.critical)
-                npaStatCard(label:"NPA Ratio",value:"2.4%",color:Theme.Colors.warning)
-                npaStatCard(label:"Recovery Rate",value:"34%",color:Theme.Colors.success)
-            }
-        }
-    }
-
-    // MARK: - Helpers
-    private func emptyState(icon:String,text:String) -> some View {
-        VStack(spacing:Theme.Spacing.md) {
-            Image(systemName:icon).font(.system(size:36)).foregroundStyle(Theme.Colors.success)
-            Text(text).font(Theme.Typography.subheadline).foregroundStyle(.secondary)
-        }.frame(maxWidth:.infinity).padding(Theme.Spacing.xxl).cardStyle(colorScheme:colorScheme)
-    }
-
+    
     private func riskCountPill(label:String,count:Int,color:Color) -> some View {
         VStack(spacing:Theme.Spacing.xs) {
             Text("\(count)").font(.system(size:28,weight:.bold,design:.rounded)).foregroundStyle(color)
             Text(label+" Risk").font(Theme.Typography.caption).foregroundStyle(.secondary)
         }.frame(maxWidth:.infinity).padding(Theme.Spacing.md).cardStyle(colorScheme:colorScheme)
     }
-
-    private func recoveryRow(label:String,count:Int,color:Color) -> some View {
-        HStack {
-            Circle().fill(color).frame(width:8,height:8)
-            Text(label).font(Theme.Typography.subheadline)
-            Spacer()
-            Text("\(count)").font(.system(size:20,weight:.bold,design:.rounded)).foregroundStyle(color)
-        }.padding(.horizontal,Theme.Spacing.md).padding(.vertical,13)
+    
+    // MARK: - 2. ACTION REQUIRED
+    
+    private var actionRequiredSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+            Text("Showing: \(adminVM.selectedRiskFilter.rawValue) (\(currentFilterCount))")
+                .font(Theme.Typography.headline)
+                .foregroundStyle(.secondary)
+            
+            // Filter Chips
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Theme.Spacing.sm) {
+                    ForEach(ActionRequiredFilter.allCases) { filter in
+                        Button {
+                            withAnimation { adminVM.selectedRiskFilter = filter }
+                        } label: {
+                            Text(filter.rawValue)
+                                .font(Theme.Typography.caption)
+                                .fontWeight(adminVM.selectedRiskFilter == filter ? .semibold : .regular)
+                                .foregroundStyle(adminVM.selectedRiskFilter == filter ? .white : Theme.Colors.primary)
+                                .padding(.horizontal, 14).padding(.vertical, 8)
+                                .background(adminVM.selectedRiskFilter == filter ? Theme.Colors.primary : Theme.Colors.primary.opacity(0.08))
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            
+            // Table
+            VStack(spacing: 0) {
+                // Table Header
+                HStack {
+                    tableHeaderLabel("ID", width: 80)
+                    tableHeaderLabel("ISSUE", width: 100)
+                    tableHeaderLabel("SEV", width: 60)
+                    tableHeaderLabel("TIME", width: 60)
+                    tableHeaderLabel(adminVM.selectedRiskFilter == .fraudAlert ? "DETECTED BY" : "OFFICER", width: 120)
+                    Spacer()
+                    tableHeaderLabel("ACTIONS", width: 180)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+                
+                let items = filteredActionItems
+                if items.isEmpty {
+                    VStack(spacing: 16) {
+                        Spacer()
+                        Image(systemName: "checkmark.circle")
+                            .font(.system(size: 40))
+                            .foregroundStyle(Theme.Colors.success.opacity(0.6))
+                        Text("No issues found. System operating smoothly.")
+                            .font(Theme.Typography.subheadline)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 300)
+                } else {
+                    ForEach(items) { item in
+                        HStack {
+                            Text(item.loanId).font(Theme.Typography.mono).font(.system(size: 11)).frame(width: 80, alignment: .leading)
+                            Text(item.issue).font(Theme.Typography.subheadline).font(.system(size: 11)).frame(width: 100, alignment: .leading).lineLimit(1)
+                            severityBadge(text: item.severity).frame(width: 60, alignment: .leading)
+                            Text(item.time).font(Theme.Typography.caption).font(.system(size: 10)).foregroundStyle(.secondary).frame(width: 60, alignment: .leading)
+                            Text(adminVM.selectedRiskFilter == .fraudAlert ? "System" : item.officer).font(Theme.Typography.subheadline).font(.system(size: 11)).frame(width: 120, alignment: .leading).lineLimit(1)
+                            
+                            Spacer()
+                            
+                            HStack(spacing: 6) {
+                                renderActions(for: item)
+                            }
+                            .frame(width: 180, alignment: .leading)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 14)
+                        
+                        if item.id != items.last?.id { Divider().padding(.horizontal, 12) }
+                    }
+                }
+            }
+            .background(Theme.Colors.adaptiveSurface(colorScheme))
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.02), radius: 10, x: 0, y: 5)
+        }
+    }
+    
+    @ViewBuilder
+    private func renderActions(for item: ActionItem) -> some View {
+        switch adminVM.selectedRiskFilter {
+        case .slaBreach:
+            actionButton(title: "Message", icon: "message") { showMessageSheet = item }
+            actionButton(title: "Assign", icon: "person.2.badge.gearshape") { showAssignSheet = item }
+            
+        case .fraudAlert:
+            actionButton(title: "Investigate", icon: "magnifyingglass.circle") {
+                activeInvestigation = item
+            }
+            
+        case .policyViolation:
+            actionButton(title: "Override", icon: "exclamationmark.shield") {
+                activeOverride = item
+            }
+            actionButton(title: "Review Policy", icon: "gearshape") {
+                selectedTab = 4 // Navigate to System
+                adminVM.selectedSystemSection = "Policy Config"
+            }
+            
+        case .stuckApplication:
+            actionButton(title: "Remind", icon: "bell") { showMessageSheet = item }
+            actionButton(title: "Reassign", icon: "person.2") { showAssignSheet = item }
+        }
+    }
+    
+    private func actionButton(title: String, icon: String, color: Color = Theme.Colors.primary, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 3) {
+                Image(systemName: icon)
+                Text(title)
+            }
+            .font(.system(size: 10, weight: .bold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(color.opacity(0.1))
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .fixedSize(horizontal: true, vertical: false)
     }
 
-    private func npaStatCard(label:String,value:String,color:Color) -> some View {
-        VStack(spacing:6) {
-            Text(value).font(.system(size:24,weight:.bold,design:.rounded)).foregroundStyle(color)
-            Text(label).font(Theme.Typography.caption).foregroundStyle(.secondary)
-        }.frame(maxWidth:.infinity).padding(Theme.Spacing.md).cardStyle(colorScheme:colorScheme)
+    // MARK: - Modals
+
+    private func resolveFraud(item: ActionItem, message: String) {
+        withAnimation {
+            fraudAlerts.removeAll { $0.id == item.id }
+            activeInvestigation = nil
+            toastMessage = message
+            showToast = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { showToast = false }
+        }
+    }
+    
+    private func investigatePanelContent(for item: ActionItem) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            InfoSection(title: "Fraud Reason", content: item.details ?? "Suspicious activity detected.")
+            
+            if let signals = item.signals {
+                VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                    Text("Triggered Signals").font(Theme.Typography.subheadline).fontWeight(.semibold)
+                    ForEach(signals, id: \.self) { signal in
+                        Label(signal, systemImage: "bolt.fill")
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(Theme.Colors.critical)
+                            .padding(.horizontal, 10).padding(.vertical, 6)
+                            .background(Theme.Colors.critical.opacity(0.1))
+                            .clipShape(Capsule())
+                    }
+                }
+            }
+            
+            InfoSection(title: "Relevant Data Summary", content: "Borrower attempted 3 applications in 24 hours with slightly different income values. Bank statement OCR linked to another active application APP-2024-002.")
+        }
+    }
+    
+    private func overridePanelContent(for item: ActionItem) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            InfoSection(title: "Violation Detail", content: item.details ?? "Policy criteria not met.")
+            
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                Text("Admin Remark").font(Theme.Typography.subheadline).fontWeight(.semibold)
+                TextEditor(text: .constant("Approving exception based on strong secondary income sources verified via physical visit."))
+                    .padding(10)
+                    .background(Color.primary.opacity(0.05))
+                    .cornerRadius(8)
+                    .frame(height: 100)
+            }
+        }
+    }
+    
+    private struct InfoSection: View {
+        let title: String
+        let content: String
+        var body: some View {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(Theme.Typography.subheadline).fontWeight(.semibold)
+                Text(content).font(Theme.Typography.body).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var currentFilterCount: Int {
+        filteredActionItems.count
+    }
+    
+    private var filteredActionItems: [ActionItem] {
+        switch adminVM.selectedRiskFilter {
+        case .slaBreach: return slaBreaches
+        case .fraudAlert: return fraudAlerts
+        case .policyViolation: return policyViolations
+        case .stuckApplication: return stuckApps
+        }
+    }
+    
+    private func updateOfficer(for item: ActionItem, to newOfficer: String) {
+        if let index = slaBreaches.firstIndex(where: { $0.id == item.id }) { slaBreaches[index].officer = newOfficer }
+        if let index = fraudAlerts.firstIndex(where: { $0.id == item.id }) { fraudAlerts[index].officer = newOfficer }
+        if let index = policyViolations.firstIndex(where: { $0.id == item.id }) { policyViolations[index].officer = newOfficer }
+        if let index = stuckApps.firstIndex(where: { $0.id == item.id }) { stuckApps[index].officer = newOfficer }
+    }
+    
+    private func severityBadge(text: String) -> some View {
+        let color: Color = {
+            switch text {
+            case "High": return Color.red
+            case "Medium": return Color.yellow
+            default: return Color.gray
+            }
+        }()
+        return Text(text.uppercased())
+            .font(.system(size: 10, weight: .bold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(color.opacity(0.1))
+            .clipShape(Capsule())
+    }
+    
+    private func tableHeaderLabel(_ title: String, width: CGFloat) -> some View {
+        Text(title)
+            .font(Theme.Typography.caption2)
+            .foregroundStyle(.secondary)
+            .frame(width: width, alignment: .leading)
+    }
+
+    // MARK: - 3. FRAUD DETECTION
+    
+    private var fraudDetectionSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            SectionHeader(title: "Fraud Watchlist", icon: "shield.slash")
+            
+            VStack(spacing: 0) {
+                ForEach(flaggedApps) { app in
+                    HStack(spacing: Theme.Spacing.md) {
+                        Circle().fill(Theme.Colors.critical).frame(width: 8, height: 8)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(app.borrower).font(Theme.Typography.subheadline).fontWeight(.semibold)
+                            Text("\(app.id) · \(app.loanType) · \(app.amount)").font(Theme.Typography.caption).foregroundStyle(.secondary)
+                            Text("Reason: \(app.flag)").font(Theme.Typography.caption).foregroundStyle(Theme.Colors.critical)
+                        }
+                        Spacer()
+                        Button("Review") { }
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(Theme.Colors.primary)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    
+                    if app.id != flaggedApps.last?.id { Divider().padding(.leading, 32) }
+                }
+            }
+            .cardStyle(colorScheme: colorScheme)
+        }
+    }
+
+    // MARK: - 4. COLLECTIONS
+    
+    private var collectionsSection: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            SectionHeader(title: "Overdue Accounts", icon: "tray.full")
+            
+            VStack(spacing: 0) {
+                let allCases = cases30 + cases60 + cases90
+                ForEach(allCases) { ccase in
+                    HStack(spacing: Theme.Spacing.md) {
+                        Circle().fill(ccase.status.color).frame(width: 10, height: 10)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(ccase.borrower).font(Theme.Typography.subheadline).fontWeight(.semibold)
+                            Text("\(ccase.id) · \(ccase.loanType) · \(ccase.outstanding) overdue").font(Theme.Typography.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        GenericBadge(text: ccase.status.displayName, color: ccase.status.color)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    
+                    if ccase.id != allCases.last?.id { Divider().padding(.leading, 32) }
+                }
+            }
+            .cardStyle(colorScheme: colorScheme)
+        }
+    }
+
+    // MARK: - 5. NPA
+    
+    private var npaSection: some View {
+        VStack(alignment:.leading,spacing:Theme.Spacing.md) {
+            SectionHeader(title:"Non-Performing Assets",icon:"exclamationmark.octagon")
+            
+            VStack(spacing:0) {
+                ForEach(npaLoans) { loan in
+                    HStack(spacing:Theme.Spacing.md) {
+                        Image(systemName:"exclamationmark.triangle.fill").font(.system(size:16)).foregroundStyle(Theme.Colors.critical)
+                        VStack(alignment:.leading,spacing:2) {
+                            Text(loan.borrower).font(Theme.Typography.headline)
+                            Text("\(loan.id) · \(loan.loanType) · \(loan.outstanding) outstanding").font(Theme.Typography.caption).foregroundStyle(.secondary)
+                            Text("Aging: 90+ days past due").font(Theme.Typography.caption).foregroundStyle(Theme.Colors.critical)
+                        }
+                        Spacer()
+                        Button("Manage") { }
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(Theme.Colors.primary)
+                    }.padding(.horizontal,Theme.Spacing.md).padding(.vertical,12)
+                    
+                    if loan.id != npaLoans.last?.id { Divider().padding(.horizontal, 12) }
+                }
+            }.cardStyle(colorScheme:colorScheme)
+        }
+    }
+
+    // MARK: - Helpers & Data
+    
+    private let foirData: [(label:String,value:Double)] = [("Home Loan",0.38),("Personal Loan",0.52),("Business Loan",0.44),("Vehicle Loan",0.31),("Education Loan",0.28)]
+    private let cibilData: [(label:String,count:Int,color:Color)] = [("750+",42,Theme.Colors.success),("650–749",28,Theme.Colors.warning),("<650",8,Theme.Colors.critical)]
+    private let ltvData: [(label:String,value:Double)] = [("Home Loan",0.72),("Vehicle Loan",0.65),("Business Loan",0.55),("Education Loan",0.40)]
+
+    private let flaggedApps: [FlaggedApplication] = [
+        FlaggedApplication(id:"APP-031",borrower:"Ramesh Gupta",loanType:"Personal",amount:"₹5.5L",riskScore:88,risk:.high,flag:"CIBIL 542, DTI 61%"),
+        FlaggedApplication(id:"APP-047",borrower:"Kavitha Nair",loanType:"Business",amount:"₹18L",riskScore:76,risk:.high,flag:"Multiple active loans"),
+        FlaggedApplication(id:"APP-055",borrower:"Ajay Sharma",loanType:"Home",amount:"₹42L",riskScore:61,risk:.medium,flag:"LTV 84% exceeds cap"),
+        FlaggedApplication(id:"APP-062",borrower:"Priya Menon",loanType:"Vehicle",amount:"₹8.2L",riskScore:54,risk:.medium,flag:"Income verification gap"),
+        FlaggedApplication(id:"APP-071",borrower:"Suresh Pillai",loanType:"Education",amount:"₹3.8L",riskScore:38,risk:.low,flag:"Document mismatch"),
+    ]
+
+    private let cases30: [CollectionCase] = [
+        CollectionCase(id:"COL-001",borrower:"Vivek Tiwari",loanType:"Personal Loan",outstanding:"₹2.4L",emi:"₹8,500",agent:"Ravi Kumar",status:.contacted),
+    ]
+    private let cases60: [CollectionCase] = [
+        CollectionCase(id:"COL-004",borrower:"Deepa Nambiar",loanType:"Business Loan",outstanding:"₹7.2L",emi:"₹18,000",agent:"Suresh Nair",status:.escalated),
+    ]
+    private let cases90: [CollectionCase] = [
+        CollectionCase(id:"COL-006",borrower:"Girish Mehta",loanType:"Home Loan",outstanding:"₹34.5L",emi:"₹42,000",agent:"Legal Team",status:.legal),
+    ]
+    private let npaLoans: [CollectionCase] = [
+        CollectionCase(id:"NPA-001",borrower:"Farhan Siddiqui",loanType:"Vehicle Loan",outstanding:"₹5.6L",emi:"₹14,000",agent:"Unassigned",status:.unassigned),
+    ]
+}
+
+// MARK: - Reassign Officer Sheet
+
+private struct ReassignOfficerSheet: View {
+    let actionItem: AdminRiskView.ActionItem
+    let onSave: (String) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedOfficer: String = ""
+    
+    private let officers = ["Ravi Kumar", "Priya Sharma", "Deepak Mehta", "Sunita Patel", "Neha Kapoor"]
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Application Details") {
+                    LabeledContent("Loan ID", value: actionItem.loanId)
+                    LabeledContent("Current Officer", value: actionItem.officer)
+                }
+                
+                Section("Select New Officer") {
+                    Picker("Officer", selection: $selectedOfficer) {
+                        ForEach(officers, id: \.self) { officer in
+                            Text(officer).tag(officer)
+                        }
+                    }
+                    .pickerStyle(.inline)
+                }
+            }
+            .navigationTitle("Reassign Task")
+            .navigationBarTitleDisplayMode(.inline)
+            .onAppear { selectedOfficer = actionItem.officer }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        onSave(selectedOfficer)
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 }
 
-// MARK: - Risk Bar Row
+// MARK: - Message Officer Sheet
+
+private struct MessageOfficerSheet: View {
+    let actionItem: AdminRiskView.ActionItem
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var messagesVM: MessagesViewModel
+    @State private var messageText = "This application has exceeded SLA. Please take action."
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("To: \(actionItem.officer)")
+                        .font(Theme.Typography.headline)
+                    Text("Regarding: \(actionItem.loanId) - \(actionItem.issue)")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .onAppear {
+                    if actionItem.issue.contains("SLA") {
+                        messageText = "This application has exceeded SLA. Please take action."
+                    } else if actionItem.issue.contains("Stuck") {
+                        messageText = "This application is stuck in process. Please take action."
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal)
+                
+                TextEditor(text: $messageText)
+                    .padding(12)
+                    .background(Color.primary.opacity(0.05))
+                    .cornerRadius(12)
+                    .padding(.horizontal)
+                    .frame(height: 150)
+                
+                Button {
+                    // Logic to send message through VM
+                    dismiss()
+                } label: {
+                    Text("Send Message")
+                        .font(Theme.Typography.headline)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(Theme.Colors.primary)
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal)
+                .padding(.bottom)
+                
+                Spacer()
+            }
+            .padding(.top)
+            .navigationTitle("Message Officer")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Close") { dismiss() } }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+}
+
+// MARK: - Subviews
+
 private struct RiskBarRow: View {
     let label:String; let value:Double; let valueText:String; let warningThreshold:Double; let dangerThreshold:Double; let colorScheme:ColorScheme
     private var barColor: Color {
@@ -390,82 +776,165 @@ private struct RiskBarRow: View {
     }
 }
 
-// MARK: - Flagged App Row
-private struct FlaggedAppRow: View {
-    let app: FlaggedApplication; let colorScheme: ColorScheme
-    private var riskColor: Color { switch app.risk { case .high: return Theme.Colors.critical; case .medium: return Theme.Colors.warning; case .low: return Theme.Colors.success } }
-    var body: some View {
-        HStack(spacing:Theme.Spacing.md) {
-            ZStack {
-                Circle().stroke(riskColor.opacity(0.2),lineWidth:3).frame(width:44,height:44)
-                Circle().trim(from:0,to:Double(app.riskScore)/100).stroke(riskColor,style:StrokeStyle(lineWidth:3,lineCap:.round)).rotationEffect(.degrees(-90)).frame(width:44,height:44)
-                Text("\(app.riskScore)").font(.system(size:12,weight:.bold)).foregroundStyle(riskColor)
-            }
-            VStack(alignment:.leading,spacing:3) {
-                HStack { Text(app.borrower).font(Theme.Typography.headline); Spacer(); GenericBadge(text:app.risk.displayName,color:riskColor) }
-                Text("\(app.id) · \(app.loanType) · \(app.amount)").font(Theme.Typography.caption).foregroundStyle(.secondary)
-                HStack(spacing:4) {
-                    Image(systemName:"flag.fill").font(.system(size:10)).foregroundStyle(riskColor)
-                    Text(app.flag).font(Theme.Typography.caption).foregroundStyle(riskColor)
-                }
-            }
-        }.padding(.horizontal,Theme.Spacing.md).padding(.vertical,12)
-    }
+private struct FlaggedApplication: Identifiable {
+    let id:String; let borrower:String; let loanType:String; let amount:String; let riskScore:Int; let risk:RiskLevel; let flag:String
 }
 
-// MARK: - Collection Case Row
-private struct CollectionCaseRow: View {
-    let ccase:CollectionCase; let bucketColor:Color; let colorScheme:ColorScheme; let onAssign:()->Void
-    var body: some View {
-        HStack(spacing:Theme.Spacing.md) {
-            Circle().fill(ccase.status.color).frame(width:10,height:10)
-            VStack(alignment:.leading,spacing:3) {
-                HStack { Text(ccase.borrower).font(Theme.Typography.headline); Spacer(); GenericBadge(text:ccase.status.displayName,color:ccase.status.color) }
-                Text("\(ccase.id) · \(ccase.loanType)").font(Theme.Typography.caption).foregroundStyle(.secondary)
-                HStack {
-                    Label(ccase.outstanding+" outstanding",systemImage:"indianrupeesign.circle").font(Theme.Typography.caption).foregroundStyle(.secondary)
-                    Spacer()
-                    if ccase.agent == "Unassigned" {
-                        Button("Assign Agent"){onAssign()}.font(.system(size:12,weight:.semibold)).foregroundStyle(bucketColor).buttonStyle(.plain)
-                    } else {
-                        Label(ccase.agent,systemImage:"person.fill").font(Theme.Typography.caption).foregroundStyle(.secondary)
-                    }
-                }
-            }
-        }.padding(.horizontal,Theme.Spacing.md).padding(.vertical,12)
-    }
-}
+// MARK: - Modals
 
-// MARK: - Agent Assignment Sheet
-private struct AgentAssignmentSheet: View {
-    let collectionCase: CollectionCase
+struct InvestigationModal: View {
+    let item: AdminRiskView.ActionItem
+    @ObservedObject var adminVM: AdminViewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var selectedAgent = 0
-    private let agents = ["Ravi Kumar","Priya Sharma","Suresh Nair","Vikram Seth","Ananya Bose"]
+    @Environment(\.colorScheme) private var colorScheme
+    
+    var onMarkFalsePositive: () -> Void
+    var onConfirmFraud: () -> Void
+    
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Case Details") {
-                    LabeledContent("Case ID",value:collectionCase.id)
-                    LabeledContent("Borrower",value:collectionCase.borrower)
-                    LabeledContent("Outstanding",value:collectionCase.outstanding)
-                }
-                Section("Assign Recovery Agent") {
-                    Picker("Agent",selection:$selectedAgent) {
-                        ForEach(agents.indices,id:\.self) { Text(agents[$0]).tag($0) }
+            ScrollView {
+                VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("LOAN ID: \(item.loanId)").font(Theme.Typography.mono).foregroundStyle(.secondary)
+                        Text(item.issue).font(Theme.Typography.titleLarge).fontWeight(.bold)
+                    }
+                    .padding(.bottom)
+                    
+                    VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                        detailRow(title: "Fraud Reason", value: "Multiple applications from same IP", icon: "network")
+                        detailRow(title: "Triggered Signals", value: "IP Conflict, Phone Match, Device ID Link", icon: "bolt.shield")
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Relevant Data Summary")
+                                .font(Theme.Typography.subheadline).fontWeight(.bold)
+                            Text("Borrower attempted 3 applications in 24 hours with slightly different income values. Bank statement OCR linked to another active application APP-2024-002.")
+                                .font(Theme.Typography.caption)
+                                .foregroundStyle(.secondary)
+                                .lineSpacing(4)
+                        }
+                        .padding()
+                        .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+                        .cornerRadius(12)
                     }
                 }
+                .padding()
             }
-            .navigationTitle("Assign Agent").navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Fraud Investigation")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement:.cancellationAction) { Button("Cancel"){dismiss()} }
-                ToolbarItem(placement:.confirmationAction) { Button("Assign"){dismiss()}.fontWeight(.semibold) }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { dismiss() } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                HStack(spacing: 12) {
+                    Button(action: onMarkFalsePositive) {
+                        Text("Mark as False Positive")
+                            .font(Theme.Typography.caption.weight(.bold))
+                            .foregroundStyle(Theme.Colors.primary)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 44)
+                            .background(Theme.Colors.primary.opacity(0.1))
+                            .cornerRadius(10)
+                    }
+                    
+                    Button(action: onConfirmFraud) {
+                        Text("Confirm Fraud")
+                            .font(Theme.Typography.caption.weight(.bold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 44)
+                            .background(Theme.Colors.critical)
+                            .cornerRadius(10)
+                    }
+                }
+                .padding()
+                .background(.ultraThinMaterial)
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+    
+    private func detailRow(title: String, value: String, icon: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon).foregroundStyle(Theme.Colors.primary).frame(width: 20)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(Theme.Typography.caption).foregroundStyle(.secondary)
+                Text(value).font(Theme.Typography.subheadline).fontWeight(.medium)
             }
         }
     }
 }
 
-// MARK: - Local Data Models
-private struct FlaggedApplication: Identifiable {
-    let id:String; let borrower:String; let loanType:String; let amount:String; let riskScore:Int; let risk:RiskLevel; let flag:String
+struct OverrideModal: View {
+    let item: AdminRiskView.ActionItem
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    var onApprove: () -> Void
+    
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("LOAN ID: \(item.loanId)").font(Theme.Typography.mono).foregroundStyle(.secondary)
+                        Text(item.issue).font(Theme.Typography.titleLarge).fontWeight(.bold)
+                    }
+                    .padding(.bottom)
+                    
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Violation Details").font(Theme.Typography.headline)
+                        Text(item.details ?? "No additional details provided.")
+                            .font(Theme.Typography.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+                    .cornerRadius(12)
+                }
+                .padding()
+            }
+            .navigationTitle("Policy Override")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { dismiss() } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                Button {
+                    onApprove()
+                    dismiss()
+                } label: {
+                    Text("Approve Exception")
+                        .font(Theme.Typography.headline)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(Theme.Colors.primary)
+                        .cornerRadius(12)
+                }
+                .padding()
+                .background(.ultraThinMaterial)
+            }
+        }
+        .presentationDetents([.medium])
+    }
+}
+
+struct ToastView: View {
+    let message: String
+    var body: some View {
+        Text(message)
+            .font(Theme.Typography.caption.weight(.semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(Color.black.opacity(0.8))
+            .clipShape(Capsule())
+            .shadow(radius: 4)
+    }
 }

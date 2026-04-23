@@ -31,7 +31,7 @@ struct AdminNewTabView: View {
                 .tabItem { Label("Loans", systemImage: "doc.text.fill") }
                 .tag(1)
 
-            AdminRiskView(showProfile: $showProfile)
+            AdminRiskView(showProfile: $showProfile, selectedTab: $selectedTab)
                 .environmentObject(riskVM)
                 .tabItem { Label("Risk", systemImage: "shield.righthalf.filled") }
                 .tag(2)

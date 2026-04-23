@@ -13,7 +13,6 @@ struct AdminSystemControlView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Binding var showProfile: Bool
 
-    @State private var selectedSection: SystemSection = .userManagement
     @State private var showCreateUser = false
     @State private var editingUser: User? = nil
     @State private var configSaved = false
@@ -43,6 +42,17 @@ struct AdminSystemControlView: View {
     @State private var faceMatchThreshold = 85.0
     @State private var videoKYC = false
 
+    // New Editable Policy/Verification State
+    @State private var showRuleModal = false
+    @State private var selectedRuleIndex: Int? = nil
+    @State private var ruleTextInput = ""
+    
+    // Document Checklist Modal State
+    @State private var showDocumentModal = false
+    @State private var selectedDocument: DocumentChecklistItem? = nil
+    @State private var documentNameInput = ""
+    @State private var documentRequiredInput = true
+
     // Notification state
     @State private var npaEmailAlert = true
     @State private var smsDocRequest = true
@@ -53,7 +63,6 @@ struct AdminSystemControlView: View {
         case userManagement = "User Management"
         case branchManagement = "Branch Management"
         case policyConfig = "Policy Config"
-        case workflowConfig = "Workflow"
         case verificationSettings = "Verification"
         case notifications = "Notifications"
         case auditCompliance = "Audit & Compliance"
@@ -61,14 +70,13 @@ struct AdminSystemControlView: View {
         var id: String { rawValue }
         var icon: String {
             switch self {
-            case .userManagement: return "person.3.fill"
+            case .userManagement: return "person.3"
             case .policyConfig: return "shield.righthalf.filled"
-            case .workflowConfig: return "arrow.triangle.branch"
             case .verificationSettings: return "checkmark.seal"
-            case .notifications: return "bell.badge"
+            case .notifications: return "bell"
             case .auditCompliance: return "list.bullet.rectangle.portrait"
             case .integrations: return "network"
-            case .branchManagement: return "building.2.fill"
+            case .branchManagement: return "building.2"
             }
         }
     }
@@ -86,6 +94,11 @@ struct AdminSystemControlView: View {
                         }
                         contentPanel.frame(maxWidth: .infinity)
                     }
+                }
+            }
+            .onAppear {
+                if adminVM.selectedSystemSection.isEmpty {
+                    adminVM.selectedSystemSection = SystemSection.userManagement.rawValue
                 }
             }
             .navigationTitle("System Control").navigationBarTitleDisplayMode(.inline)
@@ -116,9 +129,9 @@ struct AdminSystemControlView: View {
         ScrollView {
             VStack(spacing: 0) {
                 ForEach(SystemSection.allCases) { section in
-                    let isSelected = selectedSection == section
+                    let isSelected = adminVM.selectedSystemSection == section.rawValue
                     Button {
-                        withAnimation(.easeInOut(duration: 0.2)) { selectedSection = section }
+                        withAnimation(.easeInOut(duration: 0.2)) { adminVM.selectedSystemSection = section.rawValue }
                     } label: {
                         HStack(spacing: Theme.Spacing.sm) {
                             Image(systemName: section.icon)
@@ -150,16 +163,17 @@ struct AdminSystemControlView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                 requestBanner
-                Text(selectedSection.rawValue).font(Theme.Typography.titleLarge)
-                switch selectedSection {
-                case .userManagement: userManagementContent
-                case .branchManagement: branchManagementContent
-                case .policyConfig: policyConfigContent
-                case .workflowConfig: workflowConfigContent
-                case .verificationSettings: verificationContent
-                case .notifications: notificationsContent
-                case .auditCompliance: auditContent
-                case .integrations: integrationsContent
+                Text(adminVM.selectedSystemSection).font(Theme.Typography.titleLarge)
+                if let section = SystemSection(rawValue: adminVM.selectedSystemSection) {
+                    switch section {
+                    case .userManagement: userManagementContent
+                    case .branchManagement: branchManagementContent
+                    case .policyConfig: policyConfigContent
+                    case .verificationSettings: verificationContent
+                    case .notifications: notificationsContent
+                    case .auditCompliance: auditContent
+                    case .integrations: integrationsContent
+                    }
                 }
             }
             .padding(Theme.Spacing.lg)
@@ -277,14 +291,52 @@ struct AdminSystemControlView: View {
             // Eligibility rules
             SectionHeader(title: "Loan Eligibility Rules", icon: "checklist")
             VStack(spacing: 0) {
-                ruleInfoRow("Min income ₹25,000/month for Personal Loan")
-                Divider().padding(.leading, Theme.Spacing.md)
-                ruleInfoRow("Co-applicant required for loans > ₹15L")
-                Divider().padding(.leading, Theme.Spacing.md)
-                ruleInfoRow("Max 3 active loans per borrower")
-                Divider().padding(.leading, Theme.Spacing.md)
-                ruleInfoRow("Employment tenure ≥ 1 year")
-            }.cardStyle(colorScheme: colorScheme)
+                ForEach(adminVM.eligibilityRules.indices, id: \.self) { index in
+                    HStack {
+                        Text(adminVM.eligibilityRules[index]).font(Theme.Typography.subheadline)
+                        Spacer()
+                        
+                        Button {
+                            selectedRuleIndex = index
+                            ruleTextInput = adminVM.eligibilityRules[index]
+                            showRuleModal = true
+                        } label: {
+                            Image(systemName: "pencil.line").foregroundStyle(Theme.Colors.primary)
+                        }
+                        
+                        Button {
+                            withAnimation {
+                                adminVM.deleteEligibilityRule(at: index)
+                            }
+                        } label: {
+                            Image(systemName: "trash").foregroundStyle(Theme.Colors.critical)
+                        }
+                    }
+                    .padding(.horizontal, Theme.Spacing.md).padding(.vertical, 12)
+                    if index != adminVM.eligibilityRules.count - 1 { Divider().padding(.leading, Theme.Spacing.md) }
+                }
+                
+                // Add Rule Button
+                Button {
+                    selectedRuleIndex = nil
+                    ruleTextInput = ""
+                    showRuleModal = true
+                } label: {
+                    HStack {
+                        Image(systemName: "plus.circle")
+                        Text("Add New Rule")
+                    }
+                    .font(Theme.Typography.caption).fontWeight(.bold)
+                    .foregroundStyle(Theme.Colors.primary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                }
+                .background(Theme.Colors.primary.opacity(0.05))
+            }
+            .cardStyle(colorScheme: colorScheme)
+            .sheet(isPresented: $showRuleModal) {
+                ruleFormModal
+            }
         }
     }
 
@@ -340,22 +392,56 @@ struct AdminSystemControlView: View {
 
             SectionHeader(title: "Document Checklist", icon: "doc.badge.gearshape")
             VStack(spacing: 0) {
-                ForEach(DocumentType.allCases) { docType in
+                ForEach(adminVM.documentChecklist) { item in
                     HStack {
-                        Image(systemName: docType.icon).font(.system(size: 16)).foregroundStyle(Theme.Colors.primary).frame(width: 24)
-                        Text(docType.displayName).font(Theme.Typography.subheadline)
+                        Text(item.name).font(Theme.Typography.subheadline)
                         Spacer()
-                        GenericBadge(text: "Required", color: Theme.Colors.primary)
+                        GenericBadge(text: item.isRequired ? "Required" : "Optional", 
+                                     color: item.isRequired ? Theme.Colors.primary : .secondary)
+                        
+                        Button {
+                            selectedDocument = item
+                            documentNameInput = item.name
+                            documentRequiredInput = item.isRequired
+                            showDocumentModal = true
+                        } label: {
+                            Image(systemName: "pencil.line").foregroundStyle(Theme.Colors.primary)
+                        }
+                        
+                        Button {
+                            withAnimation {
+                                adminVM.documentChecklist.removeAll(where: { $0.id == item.id })
+                            }
+                        } label: {
+                            Image(systemName: "trash").foregroundStyle(Theme.Colors.critical)
+                        }
                     }
                     .padding(.horizontal, Theme.Spacing.md).padding(.vertical, 12)
-                    if docType != DocumentType.allCases.last { Divider().padding(.leading, 48) }
+                    if item.id != adminVM.documentChecklist.last?.id { Divider().padding(.leading, Theme.Spacing.md) }
                 }
-            }.cardStyle(colorScheme: colorScheme)
-
-            SectionHeader(title: "Face Match Threshold", icon: "face.smiling")
-            VStack(spacing: 0) {
-                editRow("Match Confidence") { stepper(value: $faceMatchThreshold, range: 70...99, step: 1, suffix: "%") }
-            }.cardStyle(colorScheme: colorScheme)
+                
+                // Add Document Button
+                Button {
+                    selectedDocument = nil
+                    documentNameInput = ""
+                    documentRequiredInput = true
+                    showDocumentModal = true
+                } label: {
+                    HStack {
+                        Image(systemName: "plus.circle")
+                        Text("Add New Document")
+                    }
+                    .font(Theme.Typography.caption).fontWeight(.bold)
+                    .foregroundStyle(Theme.Colors.primary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                }
+                .background(Theme.Colors.primary.opacity(0.05))
+            }
+            .cardStyle(colorScheme: colorScheme)
+            .sheet(isPresented: $showDocumentModal) {
+                documentFormModal
+            }
 
             saveButton("Save Verification Settings") {}
         }
@@ -406,7 +492,7 @@ struct AdminSystemControlView: View {
     private var auditContent: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             HStack {
-                SectionHeader(title: "Audit Logs", icon: "list.bullet.rectangle")
+                SectionHeader(title: "System Audit Logs", icon: "list.bullet.rectangle.portrait")
                 Spacer()
                 Button {} label: {
                     Label("Export CSV", systemImage: "square.and.arrow.up").font(Theme.Typography.caption).foregroundStyle(Theme.Colors.primary)
@@ -429,15 +515,6 @@ struct AdminSystemControlView: View {
                     .padding(.horizontal, Theme.Spacing.md).padding(.vertical, 12)
                     if log.id != adminVM.auditLogs.last?.id { Divider().padding(.leading, 48) }
                 }
-            }.cardStyle(colorScheme: colorScheme)
-
-            SectionHeader(title: "Data Access Logs", icon: "lock.doc")
-            VStack(spacing: 0) {
-                accessLogRow(user: "Sunita Patel", action: "Viewed loan APP-2024-006", time: "2 min ago")
-                Divider().padding(.leading, Theme.Spacing.md)
-                accessLogRow(user: "Deepak Mehta", action: "Exported Portfolio Report", time: "15 min ago")
-                Divider().padding(.leading, Theme.Spacing.md)
-                accessLogRow(user: "Neha Kapoor", action: "Accessed borrower PII data", time: "1 hr ago")
             }.cardStyle(colorScheme: colorScheme)
         }
     }
@@ -514,7 +591,7 @@ struct AdminSystemControlView: View {
                     .font(Theme.Typography.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button { showCreateBranch = true } label: {
-                    Label("Add Branch", systemImage: "plus.circle.fill")
+                    Label("Add Branch", systemImage: "plus.circle")
                         .font(Theme.Typography.subheadline).fontWeight(.medium)
                         .foregroundStyle(.white)
                         .padding(.horizontal, 16).padding(.vertical, 8)
@@ -539,7 +616,7 @@ struct AdminSystemControlView: View {
                     HStack(spacing: Theme.Spacing.md) {
                         ZStack {
                             Circle().fill(Theme.Colors.primary.opacity(0.12)).frame(width: 36, height: 36)
-                            Image(systemName: "building.2.fill").font(.system(size: 14)).foregroundStyle(Theme.Colors.primary)
+                            Image(systemName: "building.2").font(.system(size: 14)).foregroundStyle(Theme.Colors.primary)
                         }
                         VStack(alignment: .leading, spacing: 2) {
                             Text(branch.name).font(Theme.Typography.subheadline).fontWeight(.medium)
@@ -559,8 +636,40 @@ struct AdminSystemControlView: View {
     }
 
     // MARK: - Shared Helpers
-    private func editRow<Content: View>(_ label: String, @ViewBuilder value: () -> Content) -> some View {
-        HStack { Text(label).font(Theme.Typography.subheadline); Spacer(); value() }
+    private var ruleFormModal: some View {
+        NavigationStack {
+            Form {
+                Section("Rule Description") {
+                    TextEditor(text: $ruleTextInput)
+                        .frame(minHeight: 100)
+                        .font(Theme.Typography.subheadline)
+                }
+            }
+            .navigationTitle(selectedRuleIndex == nil ? "Add Eligibility Rule" : "Edit Eligibility Rule")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showRuleModal = false }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        if let index = selectedRuleIndex {
+                            adminVM.eligibilityRules[index] = ruleTextInput
+                        } else {
+                            adminVM.eligibilityRules.append(ruleTextInput)
+                        }
+                        showRuleModal = false
+                    }
+                    .fontWeight(.bold)
+                    .disabled(ruleTextInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+        .presentationDetents([.height(300)])
+    }
+
+    private func editRow<V: View>(_ label: String, content: () -> V) -> some View {
+        HStack { Text(label).font(Theme.Typography.subheadline); Spacer(); content() }
             .padding(.horizontal, Theme.Spacing.md).padding(.vertical, 12)
     }
 
@@ -589,7 +698,7 @@ struct AdminSystemControlView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { configSaved = false }
         } label: {
             HStack {
-                Image(systemName: configSaved ? "checkmark.circle.fill" : "square.and.arrow.down")
+                Image(systemName: configSaved ? "checkmark.circle" : "square.and.arrow.down")
                 Text(configSaved ? "Saved!" : label).fontWeight(.medium)
             }
             .foregroundStyle(.white).frame(maxWidth: .infinity).frame(height: Theme.Layout.buttonHeight)
@@ -598,9 +707,44 @@ struct AdminSystemControlView: View {
         }.buttonStyle(.plain)
     }
 
+    private var documentFormModal: some View {
+        NavigationStack {
+            Form {
+                Section("Document Details") {
+                    TextField("Document Name", text: $documentNameInput)
+                    Toggle("Required Field", isOn: $documentRequiredInput)
+                        .tint(Theme.Colors.primary)
+                }
+            }
+            .navigationTitle(selectedDocument == nil ? "Add Document" : "Edit Document")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showDocumentModal = false }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        if let doc = selectedDocument {
+                            if let idx = adminVM.documentChecklist.firstIndex(where: { $0.id == doc.id }) {
+                                adminVM.documentChecklist[idx].name = documentNameInput
+                                adminVM.documentChecklist[idx].isRequired = documentRequiredInput
+                            }
+                        } else {
+                            adminVM.documentChecklist.append(DocumentChecklistItem(name: documentNameInput, isRequired: documentRequiredInput))
+                        }
+                        showDocumentModal = false
+                    }
+                    .fontWeight(.bold)
+                    .disabled(documentNameInput.isEmpty)
+                }
+            }
+        }
+        .presentationDetents([.height(250)])
+    }
+
     private func ruleInfoRow(_ text: String) -> some View {
         HStack {
-            Image(systemName: "checkmark.circle.fill").font(.system(size: 14)).foregroundStyle(Theme.Colors.success)
+            Image(systemName: "checkmark.circle").font(.system(size: 14)).foregroundStyle(Theme.Colors.success)
             Text(text).font(Theme.Typography.subheadline)
             Spacer()
         }.padding(.horizontal, Theme.Spacing.md).padding(.vertical, 12)

@@ -482,13 +482,15 @@ private struct EditDstSheet: View {
     
     private func updateAgent() {
         isSaving = true
+        let branchID = adminVM.branches.first(where: { $0.name == agent.branch })?.id
         adminVM.updateUser(
             userId: agent.id,
             name: name,
             email: email,
             phone: phone,
             role: .dst,
-            branch: agent.branch
+            branchID: branchID,
+            branchName: agent.branch
         )
         dismiss()
         isSaving = false

@@ -100,6 +100,7 @@ type Querier interface {
 	ResetUserPassword(ctx context.Context, arg ResetUserPasswordParams) error
 	RevokeRefreshToken(ctx context.Context, hashedToken string) error
 	RevokeRefreshTokensForUserDevice(ctx context.Context, arg RevokeRefreshTokensForUserDeviceParams) error
+	SearchBorrowerSignupStatus(ctx context.Context, arg SearchBorrowerSignupStatusParams) ([]SearchBorrowerSignupStatusRow, error)
 	SetTOTPSecret(ctx context.Context, arg SetTOTPSecretParams) error
 	SoftDeleteLoanProduct(ctx context.Context, id pgtype.UUID) error
 	UpdateApplicationDocumentVerification(ctx context.Context, arg UpdateApplicationDocumentVerificationParams) error

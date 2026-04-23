@@ -8,6 +8,7 @@ import (
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/repository/generated"
 	onboardingv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/onboardingv1"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/interceptors"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -26,15 +27,21 @@ func NewService(queries generated.Querier) Service {
 	return &service{queries: queries}
 }
 
-// CompleteBorrowerOnboarding creates borrower profile details for the authenticated borrower.
-// User identity is derived from JWT context, not from request payload.
+// CompleteBorrowerOnboarding creates borrower profile details for self or assisted onboarding.
+// Borrower self-flow uses caller identity; staff roles can target borrower_user_id.
 func (s *service) CompleteBorrowerOnboarding(ctx context.Context, req *onboardingv1.CompleteBorrowerOnboardingRequest) (*onboardingv1.CompleteBorrowerOnboardingResponse, error) {
-	userID, ok := interceptors.UserIDFromContext(ctx)
+	callerUserID, ok := interceptors.UserIDFromContext(ctx)
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "missing user context")
 	}
+	role, _ := ctx.Value(interceptors.ContextRoleKey).(string)
 
-	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+	targetUserID, err := resolveTargetBorrowerUser(ctx, s.queries, callerUserID, role, req.GetBorrowerUserId())
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: targetUserID, Valid: true})
 	if err != nil {
 		return nil, status.Error(codes.NotFound, "user not found")
 	}
@@ -78,7 +85,7 @@ func (s *service) CompleteBorrowerOnboarding(ctx context.Context, req *onboardin
 	}
 
 	_, err = s.queries.CreateBorrowerProfile(ctx, generated.CreateBorrowerProfileParams{
-		UserID:                     pgtype.UUID{Bytes: userID, Valid: true},
+		UserID:                     pgtype.UUID{Bytes: targetUserID, Valid: true},
 		FirstName:                  firstName,
 		LastName:                   lastName,
 		DateOfBirth:                pgtype.Date{Time: dob, Valid: true},
@@ -99,11 +106,40 @@ func (s *service) CompleteBorrowerOnboarding(ctx context.Context, req *onboardin
 		return nil, status.Error(codes.Internal, "failed to create borrower profile")
 	}
 
-	if err := s.queries.ActivateUser(ctx, pgtype.UUID{Bytes: userID, Valid: true}); err != nil {
+	if err := s.queries.ActivateUser(ctx, pgtype.UUID{Bytes: targetUserID, Valid: true}); err != nil {
 		return nil, status.Error(codes.Internal, "failed to activate user")
 	}
 
 	return &onboardingv1.CompleteBorrowerOnboardingResponse{Success: true}, nil
+}
+
+func resolveTargetBorrowerUser(ctx context.Context, queries generated.Querier, callerUserID uuid.UUID, role, borrowerUserID string) (uuid.UUID, error) {
+	trimmed := strings.TrimSpace(borrowerUserID)
+	switch role {
+	case "borrower":
+		if trimmed != "" && trimmed != callerUserID.String() {
+			return uuid.UUID{}, status.Error(codes.PermissionDenied, "borrower can only onboard own profile")
+		}
+		return callerUserID, nil
+	case "officer", "dst", "manager", "admin":
+		if trimmed == "" {
+			return uuid.UUID{}, status.Error(codes.InvalidArgument, "borrower_user_id is required for assisted onboarding")
+		}
+		targetUserID, err := uuid.Parse(trimmed)
+		if err != nil {
+			return uuid.UUID{}, status.Error(codes.InvalidArgument, "borrower_user_id must be a valid uuid")
+		}
+		user, err := queries.GetUserByID(ctx, pgtype.UUID{Bytes: targetUserID, Valid: true})
+		if err != nil {
+			return uuid.UUID{}, status.Error(codes.NotFound, "borrower user not found")
+		}
+		if user.Role != generated.UserRoleBorrower {
+			return uuid.UUID{}, status.Error(codes.InvalidArgument, "target user is not a borrower")
+		}
+		return targetUserID, nil
+	default:
+		return uuid.UUID{}, status.Error(codes.PermissionDenied, "role cannot complete onboarding")
+	}
 }
 
 func mapProtoBorrowerGender(gender onboardingv1.BorrowerGender) (generated.BorrowerGender, error) {

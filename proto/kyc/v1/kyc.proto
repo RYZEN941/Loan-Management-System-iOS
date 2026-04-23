@@ -34,6 +34,7 @@ message RecordUserConsentRequest {
   string ip_address = 6;
   string user_agent = 7;
   string metadata_json = 8;
+  string borrower_user_id = 9;
 }
 
 message RecordUserConsentResponse {
@@ -44,6 +45,7 @@ message RecordUserConsentResponse {
 message InitiateAadhaarKycRequest {
   string aadhaar_number = 1;
   string reason = 2;
+  string borrower_user_id = 3;
 }
 
 message InitiateAadhaarKycResponse {
@@ -56,6 +58,7 @@ message InitiateAadhaarKycResponse {
 message VerifyAadhaarKycOtpRequest {
   string reference_id = 1;
   string otp = 2;
+  string borrower_user_id = 3;
 }
 
 message VerifyAadhaarKycOtpResponse {
@@ -73,6 +76,7 @@ message VerifyPanKycRequest {
   string name_as_per_pan = 2;
   string date_of_birth = 3;
   string reason = 4;
+  string borrower_user_id = 5;
 }
 
 message VerifyPanKycResponse {
@@ -85,7 +89,9 @@ message VerifyPanKycResponse {
   string aadhaar_seeding_status = 7;
 }
 
-message GetBorrowerKycStatusRequest {}
+message GetBorrowerKycStatusRequest {
+  string borrower_user_id = 1;
+}
 
 message GetBorrowerKycStatusResponse {
   bool is_aadhaar_verified = 1;
@@ -98,6 +104,7 @@ message ListBorrowerKycHistoryRequest {
   KycDocType doc_type = 1;
   int32 limit = 2;
   int32 offset = 3;
+  string borrower_user_id = 4;
 }
 
 message KycHistoryItem {

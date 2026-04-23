@@ -245,6 +245,77 @@ func (q *Queries) RevokeRefreshTokensForUserDevice(ctx context.Context, arg Revo
 	return err
 }
 
+const searchBorrowerSignupStatus = `-- name: SearchBorrowerSignupStatus :many
+SELECT
+    u.id AS user_id,
+    u.email,
+    u.phone,
+    u.is_email_verified,
+    u.is_phone_verified,
+    u.is_active,
+    bp.id AS borrower_profile_id,
+    COALESCE(bp.is_aadhaar_verified, false) AS is_aadhaar_verified,
+    COALESCE(bp.is_pan_verified, false) AS is_pan_verified
+FROM users u
+LEFT JOIN borrower_profiles bp ON bp.user_id = u.id
+WHERE u.is_deleted = false
+  AND u.role = 'borrower'
+  AND (
+    u.email ILIKE ('%' || $1 || '%')
+    OR u.phone ILIKE ('%' || $1 || '%')
+  )
+ORDER BY u.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type SearchBorrowerSignupStatusParams struct {
+	Column1 pgtype.Text `json:"column_1"`
+	Limit   int32       `json:"limit"`
+	Offset  int32       `json:"offset"`
+}
+
+type SearchBorrowerSignupStatusRow struct {
+	UserID            pgtype.UUID `json:"user_id"`
+	Email             string      `json:"email"`
+	Phone             string      `json:"phone"`
+	IsEmailVerified   pgtype.Bool `json:"is_email_verified"`
+	IsPhoneVerified   pgtype.Bool `json:"is_phone_verified"`
+	IsActive          pgtype.Bool `json:"is_active"`
+	BorrowerProfileID pgtype.UUID `json:"borrower_profile_id"`
+	IsAadhaarVerified bool        `json:"is_aadhaar_verified"`
+	IsPanVerified     bool        `json:"is_pan_verified"`
+}
+
+func (q *Queries) SearchBorrowerSignupStatus(ctx context.Context, arg SearchBorrowerSignupStatusParams) ([]SearchBorrowerSignupStatusRow, error) {
+	rows, err := q.db.Query(ctx, searchBorrowerSignupStatus, arg.Column1, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SearchBorrowerSignupStatusRow
+	for rows.Next() {
+		var i SearchBorrowerSignupStatusRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.Email,
+			&i.Phone,
+			&i.IsEmailVerified,
+			&i.IsPhoneVerified,
+			&i.IsActive,
+			&i.BorrowerProfileID,
+			&i.IsAadhaarVerified,
+			&i.IsPanVerified,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const setTOTPSecret = `-- name: SetTOTPSecret :exec
 UPDATE users 
 SET totp_secret = $2, has_totp = $3

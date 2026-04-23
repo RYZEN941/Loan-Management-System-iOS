@@ -299,6 +299,11 @@ func (s *service) CreateLoanApplication(ctx context.Context, req *loanv1.CreateL
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "primary_borrower_profile_id not found")
 	}
+	if role == "officer" || role == "dst" {
+		if !borrowerProfile.IsAadhaarVerified || !borrowerProfile.IsPanVerified {
+			return nil, status.Error(codes.FailedPrecondition, "borrower kyc must be complete before staff can create loan application")
+		}
+	}
 
 	borrowerAge := ageFromDate(borrowerProfile.DateOfBirth.Time)
 	if borrowerAge < int(eligibilityRule.MinAge) {

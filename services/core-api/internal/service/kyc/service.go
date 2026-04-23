@@ -44,7 +44,7 @@ func NewService(pool *pgxpool.Pool, queries *generated.Queries, client *sandbox.
 }
 
 func (s *service) RecordUserConsent(ctx context.Context, req *kycv1.RecordUserConsentRequest) (*kycv1.RecordUserConsentResponse, error) {
-	userID, profile, err := s.requireBorrowerContext(ctx)
+	userID, profile, err := s.resolveBorrowerContext(ctx, req.GetBorrowerUserId())
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func (s *service) RecordUserConsent(ctx context.Context, req *kycv1.RecordUserCo
 }
 
 func (s *service) InitiateAadhaarKyc(ctx context.Context, req *kycv1.InitiateAadhaarKycRequest) (*kycv1.InitiateAadhaarKycResponse, error) {
-	userID, profile, err := s.requireBorrowerContext(ctx)
+	userID, profile, err := s.resolveBorrowerContext(ctx, req.GetBorrowerUserId())
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func (s *service) InitiateAadhaarKyc(ctx context.Context, req *kycv1.InitiateAad
 }
 
 func (s *service) VerifyAadhaarKycOtp(ctx context.Context, req *kycv1.VerifyAadhaarKycOtpRequest) (*kycv1.VerifyAadhaarKycOtpResponse, error) {
-	userID, profile, err := s.requireBorrowerContext(ctx)
+	userID, profile, err := s.resolveBorrowerContext(ctx, req.GetBorrowerUserId())
 	if err != nil {
 		return nil, err
 	}
@@ -258,7 +258,7 @@ func (s *service) VerifyAadhaarKycOtp(ctx context.Context, req *kycv1.VerifyAadh
 }
 
 func (s *service) VerifyPanKyc(ctx context.Context, req *kycv1.VerifyPanKycRequest) (*kycv1.VerifyPanKycResponse, error) {
-	userID, profile, err := s.requireBorrowerContext(ctx)
+	userID, profile, err := s.resolveBorrowerContext(ctx, req.GetBorrowerUserId())
 	if err != nil {
 		return nil, err
 	}
@@ -357,8 +357,7 @@ func (s *service) VerifyPanKyc(ctx context.Context, req *kycv1.VerifyPanKycReque
 }
 
 func (s *service) GetBorrowerKycStatus(ctx context.Context, req *kycv1.GetBorrowerKycStatusRequest) (*kycv1.GetBorrowerKycStatusResponse, error) {
-	_ = req
-	_, profile, err := s.requireBorrowerContext(ctx)
+	_, profile, err := s.resolveBorrowerContext(ctx, req.GetBorrowerUserId())
 	if err != nil {
 		return nil, err
 	}
@@ -372,7 +371,7 @@ func (s *service) GetBorrowerKycStatus(ctx context.Context, req *kycv1.GetBorrow
 }
 
 func (s *service) ListBorrowerKycHistory(ctx context.Context, req *kycv1.ListBorrowerKycHistoryRequest) (*kycv1.ListBorrowerKycHistoryResponse, error) {
-	_, profile, err := s.requireBorrowerContext(ctx)
+	_, profile, err := s.resolveBorrowerContext(ctx, req.GetBorrowerUserId())
 	if err != nil {
 		return nil, err
 	}
@@ -467,23 +466,47 @@ func mapConsentType(consentType kycv1.ConsentType) (generated.ConsentTypeEnum, e
 	}
 }
 
-func (s *service) requireBorrowerContext(ctx context.Context) (uuid.UUID, generated.BorrowerProfile, error) {
-	userID, ok := interceptors.UserIDFromContext(ctx)
+func (s *service) resolveBorrowerContext(ctx context.Context, borrowerUserID string) (uuid.UUID, generated.BorrowerProfile, error) {
+	callerUserID, ok := interceptors.UserIDFromContext(ctx)
 	if !ok {
 		return uuid.UUID{}, generated.BorrowerProfile{}, status.Error(codes.Unauthenticated, "missing user context")
 	}
-
 	role, _ := ctx.Value(interceptors.ContextRoleKey).(string)
-	if role != "borrower" {
-		return uuid.UUID{}, generated.BorrowerProfile{}, status.Error(codes.PermissionDenied, "only borrower can use kyc endpoints")
+	trimmedTarget := strings.TrimSpace(borrowerUserID)
+
+	var targetUserID uuid.UUID
+	switch role {
+	case "borrower":
+		if trimmedTarget != "" && trimmedTarget != callerUserID.String() {
+			return uuid.UUID{}, generated.BorrowerProfile{}, status.Error(codes.PermissionDenied, "borrower can only access own kyc")
+		}
+		targetUserID = callerUserID
+	case "officer", "dst", "manager", "admin":
+		if trimmedTarget == "" {
+			return uuid.UUID{}, generated.BorrowerProfile{}, status.Error(codes.InvalidArgument, "borrower_user_id is required for assisted kyc")
+		}
+		parsed, err := uuid.Parse(trimmedTarget)
+		if err != nil {
+			return uuid.UUID{}, generated.BorrowerProfile{}, status.Error(codes.InvalidArgument, "borrower_user_id must be a valid uuid")
+		}
+		targetUserID = parsed
+		userRow, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: targetUserID, Valid: true})
+		if err != nil {
+			return uuid.UUID{}, generated.BorrowerProfile{}, status.Error(codes.NotFound, "borrower user not found")
+		}
+		if userRow.Role != generated.UserRoleBorrower {
+			return uuid.UUID{}, generated.BorrowerProfile{}, status.Error(codes.InvalidArgument, "target user is not a borrower")
+		}
+	default:
+		return uuid.UUID{}, generated.BorrowerProfile{}, status.Error(codes.PermissionDenied, "role cannot perform kyc")
 	}
 
-	profile, err := s.queries.GetBorrowerProfileByUserID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+	profile, err := s.queries.GetBorrowerProfileByUserID(ctx, pgtype.UUID{Bytes: targetUserID, Valid: true})
 	if err != nil {
 		return uuid.UUID{}, generated.BorrowerProfile{}, status.Error(codes.NotFound, "borrower profile not found")
 	}
 
-	return userID, profile, nil
+	return targetUserID, profile, nil
 }
 
 func (s *service) upsertAadhaarCurrentAndMarkVerified(ctx context.Context, userID uuid.UUID, borrowerProfileID pgtype.UUID, history generated.BorrowerAadhaarKycHistory) error {

@@ -64,3 +64,25 @@ INSERT INTO users (
 
 -- name: GetUserByID :one
 SELECT * FROM users WHERE id = $1 AND is_deleted = false LIMIT 1;
+
+-- name: SearchBorrowerSignupStatus :many
+SELECT
+    u.id AS user_id,
+    u.email,
+    u.phone,
+    u.is_email_verified,
+    u.is_phone_verified,
+    u.is_active,
+    bp.id AS borrower_profile_id,
+    COALESCE(bp.is_aadhaar_verified, false) AS is_aadhaar_verified,
+    COALESCE(bp.is_pan_verified, false) AS is_pan_verified
+FROM users u
+LEFT JOIN borrower_profiles bp ON bp.user_id = u.id
+WHERE u.is_deleted = false
+  AND u.role = 'borrower'
+  AND (
+    u.email ILIKE ('%' || $1 || '%')
+    OR u.phone ILIKE ('%' || $1 || '%')
+  )
+ORDER BY u.created_at DESC
+LIMIT $2 OFFSET $3;

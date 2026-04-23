@@ -46,6 +46,7 @@ type Service interface {
 	VerifyForgotPasswordOTPs(ctx context.Context, req *authv1.VerifyForgotPasswordOTPsRequest) (*authv1.VerifyForgotPasswordOTPsResponse, error)
 	ResetForgotPassword(ctx context.Context, req *authv1.ResetForgotPasswordRequest) (*authv1.ResetForgotPasswordResponse, error)
 	GetMyProfile(ctx context.Context, req *authv1.GetMyProfileRequest) (*authv1.GetMyProfileResponse, error)
+	SearchBorrowerSignupStatus(ctx context.Context, req *authv1.SearchBorrowerSignupStatusRequest) (*authv1.SearchBorrowerSignupStatusResponse, error)
 	RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequest) (*authv1.AuthTokens, error)
 	Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv1.LogoutResponse, error)
 	BeginWebAuthnRegistration(ctx context.Context, req *authv1.WebAuthnRegRequest) (*authv1.WebAuthnRegResponse, error)
@@ -888,6 +889,67 @@ func (s *service) GetMyProfile(ctx context.Context, req *authv1.GetMyProfileRequ
 	return response, nil
 }
 
+func (s *service) SearchBorrowerSignupStatus(ctx context.Context, req *authv1.SearchBorrowerSignupStatusRequest) (*authv1.SearchBorrowerSignupStatusResponse, error) {
+	_, ok := interceptors.UserIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing user context")
+	}
+	role, _ := ctx.Value(interceptors.ContextRoleKey).(string)
+	if role != "officer" && role != "dst" && role != "manager" && role != "admin" {
+		return nil, status.Error(codes.PermissionDenied, "role cannot search borrowers")
+	}
+	query := strings.TrimSpace(req.GetQuery())
+	if query == "" {
+		return nil, status.Error(codes.InvalidArgument, "query is required")
+	}
+	limit := req.GetLimit()
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	offset := req.GetOffset()
+	if offset < 0 {
+		offset = 0
+	}
+	rows, err := s.queries.SearchBorrowerSignupStatus(ctx, generated.SearchBorrowerSignupStatusParams{
+		Column1: pgtype.Text{String: query, Valid: true},
+		Limit:   limit,
+		Offset:  offset,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to search borrower status")
+	}
+	items := make([]*authv1.BorrowerSignupStatusItem, 0, len(rows))
+	for _, row := range rows {
+		onboardingDone := row.BorrowerProfileID.Valid
+		kycDone := row.IsAadhaarVerified && row.IsPanVerified
+		stage := "ACCOUNT_CREATED"
+		switch {
+		case onboardingDone && kycDone:
+			stage = "KYC_DONE"
+		case onboardingDone:
+			stage = "ONBOARDING_DONE"
+		case row.IsEmailVerified.Bool && row.IsPhoneVerified.Bool:
+			stage = "OTP_VERIFIED"
+		}
+		items = append(items, &authv1.BorrowerSignupStatusItem{
+			UserId:              row.UserID.String(),
+			Email:               row.Email,
+			Phone:               row.Phone,
+			IsEmailVerified:     row.IsEmailVerified.Bool,
+			IsPhoneVerified:     row.IsPhoneVerified.Bool,
+			IsActive:            row.IsActive.Bool,
+			OnboardingCompleted: onboardingDone,
+			KycCompleted:        kycDone,
+			BorrowerProfileId:   nullableUUIDToString(row.BorrowerProfileID),
+			SignupStage:         stage,
+		})
+	}
+	return &authv1.SearchBorrowerSignupStatusResponse{Items: items}, nil
+}
+
 func (s *service) loadBranchProfile(ctx context.Context, branchID pgtype.UUID) *authv1.BranchProfile {
 	if !branchID.Valid {
 		return nil
@@ -1494,6 +1556,13 @@ func nullableTextToString(t pgtype.Text) string {
 		return ""
 	}
 	return t.String
+}
+
+func nullableUUIDToString(v pgtype.UUID) string {
+	if !v.Valid {
+		return ""
+	}
+	return uuid.UUID(v.Bytes).String()
 }
 
 // validatePasswordStrength enforces minimum complexity for new user passwords.

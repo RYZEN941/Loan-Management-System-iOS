@@ -28,6 +28,7 @@ service AuthService {
   rpc FinishWebAuthnLogin(WebAuthnFinishLoginRequest) returns (AuthTokens);
 
   rpc GetMyProfile(GetMyProfileRequest) returns (GetMyProfileResponse);
+  rpc SearchBorrowerSignupStatus(SearchBorrowerSignupStatusRequest) returns (SearchBorrowerSignupStatusResponse);
   rpc RefreshToken(RefreshTokenRequest) returns (AuthTokens);
   rpc Logout(LogoutRequest) returns (LogoutResponse);
 }
@@ -271,6 +272,29 @@ message GetMyProfileResponse {
     BorrowerProfile borrower_profile = 23;
     DstProfile dst_profile = 24;
   }
+}
+
+message SearchBorrowerSignupStatusRequest {
+  string query = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message BorrowerSignupStatusItem {
+  string user_id = 1;
+  string email = 2;
+  string phone = 3;
+  bool is_email_verified = 4;
+  bool is_phone_verified = 5;
+  bool is_active = 6;
+  bool onboarding_completed = 7;
+  bool kyc_completed = 8;
+  string borrower_profile_id = 9;
+  string signup_stage = 10;
+}
+
+message SearchBorrowerSignupStatusResponse {
+  repeated BorrowerSignupStatusItem items = 1;
 }
 
 message RefreshTokenRequest {

@@ -11,6 +11,25 @@ import (
 	"time"
 )
 
+type flexibleString string
+
+func (f *flexibleString) UnmarshalJSON(data []byte) error {
+	if len(data) > 0 && (data[0] == '"' && data[len(data)-1] == '"') {
+		var s string
+		if err := json.Unmarshal(data, &s); err != nil {
+			return err
+		}
+		*f = flexibleString(s)
+		return nil
+	}
+	var n json.Number
+	if err := json.Unmarshal(data, &n); err != nil {
+		return err
+	}
+	*f = flexibleString(n.String())
+	return nil
+}
+
 type KYCClient struct {
 	httpClient   *http.Client
 	baseURL      string
@@ -61,17 +80,17 @@ type AadhaarVerifyOTPRequest struct {
 }
 
 type AadhaarAddress struct {
-	Entity      string `json:"@entity"`
-	Country     string `json:"country"`
-	District    string `json:"district"`
-	House       string `json:"house"`
-	Landmark    string `json:"landmark"`
-	Pincode     string `json:"pincode"`
-	PostOffice  string `json:"post_office"`
-	State       string `json:"state"`
-	Street      string `json:"street"`
-	Subdistrict string `json:"subdistrict"`
-	VTC         string `json:"vtc"`
+	Entity      string         `json:"@entity"`
+	Country     string         `json:"country"`
+	District    string         `json:"district"`
+	House       string         `json:"house"`
+	Landmark    string         `json:"landmark"`
+	Pincode     flexibleString `json:"pincode"`
+	PostOffice  string         `json:"post_office"`
+	State       string         `json:"state"`
+	Street      string         `json:"street"`
+	Subdistrict string         `json:"subdistrict"`
+	VTC         string         `json:"vtc"`
 }
 
 type AadhaarVerifyOTPData struct {
@@ -86,7 +105,7 @@ type AadhaarVerifyOTPData struct {
 	Gender      string         `json:"gender"`
 	Name        string         `json:"name"`
 	Address     AadhaarAddress `json:"address"`
-	YearOfBirth string         `json:"year_of_birth"`
+	YearOfBirth flexibleString `json:"year_of_birth"`
 	MobileHash  string         `json:"mobile_hash"`
 	ShareCode   string         `json:"share_code"`
 }

@@ -18,9 +18,15 @@ import (
 type contextKey string
 
 const (
-	ContextUserIDKey contextKey = "user_id"
-	ContextRoleKey   contextKey = "role"
+	ContextUserIDKey   contextKey = "user_id"
+	ContextRoleKey     contextKey = "role"
+	ContextIdentityKey contextKey = "identity"
 )
+
+type Identity struct {
+	UserID uuid.UUID
+	Role   string
+}
 
 type RBACPolicy map[string][]string
 
@@ -129,6 +135,11 @@ func JWTUnaryInterceptor(cfg JWTConfig) grpc.UnaryServerInterceptor {
 
 		ctx = context.WithValue(ctx, ContextUserIDKey, userID)
 		ctx = context.WithValue(ctx, ContextRoleKey, claims.Role)
+
+		if identity, ok := ctx.Value(ContextIdentityKey).(*Identity); ok {
+			identity.UserID = userID
+			identity.Role = claims.Role
+		}
 
 		return handler(ctx, req)
 	}

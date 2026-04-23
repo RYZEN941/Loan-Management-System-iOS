@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -17,17 +18,17 @@ func LoggingUnaryInterceptor() grpc.UnaryServerInterceptor {
 		_ = req
 		started := time.Now()
 
+		identity := &Identity{}
+		ctx = context.WithValue(ctx, ContextIdentityKey, identity)
+
 		resp, err := handler(ctx, req)
 
 		userID := ""
-		if uid, ok := UserIDFromContext(ctx); ok {
-			userID = uid.String()
+		if identity.UserID != uuid.Nil {
+			userID = identity.UserID.String()
 		}
 
-		role := ""
-		if r, ok := ctx.Value(ContextRoleKey).(string); ok {
-			role = r
-		}
+		role := identity.Role
 
 		requestID := ""
 		if md, ok := metadata.FromIncomingContext(ctx); ok {

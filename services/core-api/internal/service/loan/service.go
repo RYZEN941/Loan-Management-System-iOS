@@ -831,8 +831,7 @@ func (s *service) AddApplicationDocument(ctx context.Context, req *loanv1.AddApp
 		fmt.Println("Error: ", err)
 		return nil, err
 	}
-	borrowerProfile, err := s.queries.GetBorrowerProfileByID(ctx, uuidToPg(borrowerProfileID))
-	if err != nil {
+	if _, err := s.queries.GetBorrowerProfileByID(ctx, uuidToPg(borrowerProfileID)); err != nil {
 		return nil, status.Error(codes.InvalidArgument, "borrower_profile_id not found")
 	}
 	participantCheck, err := s.queries.IsApplicationBorrowerParticipant(ctx, generated.IsApplicationBorrowerParticipantParams{
@@ -845,12 +844,16 @@ func (s *service) AddApplicationDocument(ctx context.Context, req *loanv1.AddApp
 	if !participantCheck {
 		return nil, status.Error(codes.InvalidArgument, "borrower_profile_id is not part of this application")
 	}
+	userID, _, err := requireUserAndRole(ctx)
+	if err != nil {
+		return nil, err
+	}
 	if _, err := s.queries.GetActiveMediaFileByIDAndUser(ctx, generated.GetActiveMediaFileByIDAndUserParams{
 		ID:     uuidToPg(mediaFileID),
-		UserID: borrowerProfile.UserID,
+		UserID: uuidToPg(userID),
 	}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, status.Error(codes.InvalidArgument, "media_file_id not found for borrower")
+			return nil, status.Error(codes.InvalidArgument, "media_file_id not found for current user")
 		}
 		return nil, status.Error(codes.Internal, "failed to validate media file")
 	}

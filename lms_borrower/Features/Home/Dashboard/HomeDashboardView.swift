@@ -73,6 +73,12 @@ struct HomeDashboardView: View {
                                 .padding(.top, 18)
                             }
 
+                            if viewModel.activeLoans.isEmpty && !viewModel.inProgressApplications.isEmpty {
+                                InProgressApplicationsCard(applications: viewModel.inProgressApplications)
+                                    .padding(.horizontal, 20)
+                                    .padding(.top, 18)
+                            }
+
                             // ── 3. NEXT EMI BANNER ─────────────────────────
                             if let nextEMI = viewModel.nextEMI {
                                 NextEMIBannerView(emi: nextEMI)
@@ -357,6 +363,52 @@ struct DashboardInfoCard: View {
     }
 }
 
+struct InProgressApplicationsCard: View {
+    let applications: [BorrowerLoanApplication]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Applications In Progress")
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            let topItems = Array(applications.prefix(2))
+            ForEach(topItems, id: \.id) { app in
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(app.loanProductName.isEmpty ? "Loan Application" : app.loanProductName)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+                        Text("Status: \(app.status.displayName)")
+                            .font(.caption)
+                            .foregroundColor(app.status.color)
+                    }
+                    Spacer()
+                    Text("₹\(app.requestedAmount)")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.mainBlue)
+                }
+                .padding(.vertical, 2)
+            }
+
+            if applications.count > 2 {
+                Text("+\(applications.count - 2) more application(s) in Track tab")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            } else {
+                Text("Track tab shows full application details.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(20)
+        .background(.white.opacity(0.96))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 4)
+    }
+}
+
 // MARK: - 3. Next EMI Banner
 struct NextEMIBannerView: View {
     let emi: NextEMIInfo
@@ -565,6 +617,7 @@ struct QuickAction: Identifiable { let id = UUID(); let icon: String; let label:
 @available(iOS 18.0, *)
 final class HomeDashboardViewModel: ObservableObject {
     @Published var activeLoans: [LoanSummary] = []
+    @Published var inProgressApplications: [BorrowerLoanApplication] = []
     @Published var nextEMI: NextEMIInfo? = nil
     @Published var credibilityScore: Int? = nil
     @Published var isLoading: Bool = false
@@ -605,6 +658,11 @@ final class HomeDashboardViewModel: ObservableObject {
             let (applications, loans) = try await (applicationsTask, loansTask)
             let applicationsById = Dictionary(uniqueKeysWithValues: applications.map { ($0.id, $0) })
             let schedules = try await loadSchedules(for: loans)
+            let activeApplicationIDs = Set(loans.map(\.applicationId))
+
+            inProgressApplications = applications
+                .filter { !activeApplicationIDs.contains($0.id) && $0.status.isInProgressForDashboard }
+                .sorted { parseDate($0.updatedAt) > parseDate($1.updatedAt) }
 
             activeLoans = loans.compactMap { loan in
                 guard let application = applicationsById[loan.applicationId] else { return nil }
@@ -632,6 +690,7 @@ final class HomeDashboardViewModel: ObservableObject {
         } catch {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to load your live loan dashboard."
             activeLoans = []
+            inProgressApplications = []
             nextEMI = nil
         }
     }
@@ -706,5 +765,28 @@ final class HomeDashboardViewModel: ObservableObject {
 
     private func formatDate(_ date: Date) -> String {
         date.formatted(date: .abbreviated, time: .omitted)
+    }
+}
+
+private extension LoanApplicationStatus {
+    var isInProgressForDashboard: Bool {
+        switch self {
+        case .draft,
+             .submitted,
+             .underReview,
+             .officerReview,
+             .officerApproved,
+             .officerRejected,
+             .managerReview,
+             .managerApproved,
+             .managerRejected:
+            return true
+        case .approved,
+             .rejected,
+             .disbursed,
+             .cancelled,
+             .unspecified:
+            return false
+        }
     }
 }

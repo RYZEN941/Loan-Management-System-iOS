@@ -50,7 +50,9 @@ func RBACUnaryInterceptor(policy RBACPolicy) grpc.UnaryServerInterceptor {
 }
 
 type AuthClaims struct {
-	Role string `json:"role"`
+	Role                      string `json:"role"`
+	IsRequiringPasswordChange bool   `json:"is_requiring_password_change"`
+	IsActive                  bool   `json:"is_active"`
 	jwt.RegisteredClaims
 }
 
@@ -62,6 +64,7 @@ type JWTConfig struct {
 
 // JWTUnaryInterceptor validates bearer JWTs and verifies active session state in Redis.
 // For non-public methods, it injects authenticated user ID and role into context.
+// It also enforces password change and active state requirements.
 func JWTUnaryInterceptor(cfg JWTConfig) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		_ = req
@@ -95,6 +98,28 @@ func JWTUnaryInterceptor(cfg JWTConfig) grpc.UnaryServerInterceptor {
 
 		if activeJTI != claims.ID {
 			return nil, status.Error(codes.Unauthenticated, "token is no longer active")
+		}
+
+		// Enforce password change requirement
+		if claims.IsRequiringPasswordChange {
+			if info.FullMethod != "/auth.v1.AuthService/ChangePassword" && info.FullMethod != "/auth.v1.AuthService/Logout" {
+				return nil, status.Error(codes.FailedPrecondition, "password change required")
+			}
+		}
+
+		// Enforce active profile requirement (onboarding)
+		if !claims.IsActive {
+			switch info.FullMethod {
+			case "/auth.v1.AuthService/Logout",
+				"/auth.v1.AuthService/GetMyProfile",
+				"/onboarding.v1.OnboardingService/CompleteBorrowerOnboarding",
+				"/auth.v1.AuthService/ChangePassword",
+				"/auth.v1.AuthService/SetupTOTP",
+				"/auth.v1.AuthService/VerifyTOTPSetup":
+				// Allowed
+			default:
+				return nil, status.Error(codes.PermissionDenied, "user account is inactive. please complete onboarding.")
+			}
 		}
 
 		userID, err := uuid.Parse(claims.Subject)

@@ -147,28 +147,22 @@ func (s *service) Hello(ctx context.Context, name string) (string, error) {
 	return "hello " + trimmed, nil
 }
 
-// InitiateSignup creates an unverified user and starts a short-lived OTP verification session.
+// InitiateSignup creates an unverified user session and starts a short-lived OTP verification session.
 func (s *service) InitiateSignup(ctx context.Context, req *authv1.SignupRequest) (*authv1.SignupResponse, error) {
+	_, err := s.queries.GetUserByEmailOrPhone(ctx, req.GetEmail())
+	if err == nil {
+		return nil, status.Error(codes.AlreadyExists, "email already registered")
+	}
+	_, err = s.queries.GetUserByEmailOrPhone(ctx, req.GetPhone())
+	if err == nil {
+		return nil, status.Error(codes.AlreadyExists, "phone number already registered")
+	}
+
 	hash, err := argon2.HashPassword(req.GetPassword(), argon2.DefaultConfig())
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to hash password")
 	}
 
-	user, err := s.queries.CreateUser(ctx, generated.CreateUserParams{
-		Email:        req.GetEmail(),
-		Phone:        req.GetPhone(),
-		PasswordHash: hash,
-		Role:         generated.UserRoleBorrower,
-	})
-	if err != nil {
-		if strings.Contains(err.Error(), "users_email_key") {
-			return nil, status.Error(codes.AlreadyExists, "email already registered")
-		}
-		if strings.Contains(err.Error(), "users_phone_key") {
-			return nil, status.Error(codes.AlreadyExists, "phone number already registered")
-		}
-		return nil, status.Error(codes.Internal, "failed to create user")
-	}
 	// Uncomment this after otp sender integrations
 	//emailOTP := generateOTP()
 	//phoneOTP := generateOTP()
@@ -179,9 +173,11 @@ func (s *service) InitiateSignup(ctx context.Context, req *authv1.SignupRequest)
 
 	regID := uuid.New().String()
 	regData, _ := json.Marshal(map[string]string{
-		"user_id":   user.ID.String(),
-		"email_otp": emailOTP,
-		"phone_otp": phoneOTP,
+		"email":         req.GetEmail(),
+		"phone":         req.GetPhone(),
+		"password_hash": hash,
+		"email_otp":     emailOTP,
+		"phone_otp":     phoneOTP,
 	})
 
 	err = s.redis.Set(ctx, fmt.Sprintf("signup_reg:%s", regID), regData, 10*time.Minute).Err()
@@ -197,7 +193,7 @@ func (s *service) InitiateSignup(ctx context.Context, req *authv1.SignupRequest)
 	}, nil
 }
 
-// VerifySignupOTPs validates email/phone OTPs and marks the user as verified.
+// VerifySignupOTPs validates email/phone OTPs, creates the user, and marks them as verified.
 // Activation remains false until role-specific onboarding is completed.
 func (s *service) VerifySignupOTPs(ctx context.Context, req *authv1.VerifyOTPsRequest) (*authv1.VerifyOTPsResponse, error) {
 	key := fmt.Sprintf("signup_reg:%s", req.GetRegistrationId())
@@ -218,13 +214,24 @@ func (s *service) VerifySignupOTPs(ctx context.Context, req *authv1.VerifyOTPsRe
 		return nil, status.Error(codes.InvalidArgument, "invalid verification codes")
 	}
 
-	userUUID, err := uuid.Parse(data["user_id"])
+	user, err := s.queries.CreateUser(ctx, generated.CreateUserParams{
+		Email:        data["email"],
+		Phone:        data["phone"],
+		PasswordHash: data["password_hash"],
+		Role:         generated.UserRoleBorrower,
+	})
 	if err != nil {
-		return nil, status.Error(codes.Internal, "invalid registration user id")
+		if strings.Contains(err.Error(), "users_email_key") {
+			return nil, status.Error(codes.AlreadyExists, "email already registered")
+		}
+		if strings.Contains(err.Error(), "users_phone_key") {
+			return nil, status.Error(codes.AlreadyExists, "phone number already registered")
+		}
+		return nil, status.Error(codes.Internal, "failed to create user")
 	}
 
 	err = s.queries.UpdateUserVerification(ctx, generated.UpdateUserVerificationParams{
-		ID:              pgtype.UUID{Bytes: userUUID, Valid: true},
+		ID:              user.ID,
 		IsActive:        pgtype.Bool{Bool: false, Valid: true},
 		IsEmailVerified: pgtype.Bool{Bool: true, Valid: true},
 		IsPhoneVerified: pgtype.Bool{Bool: true, Valid: true},
@@ -1321,8 +1328,15 @@ func (s *service) validateReopenAndRevoke(ctx context.Context, session *mfaSessi
 func (s *service) mintTokens(ctx context.Context, userID uuid.UUID, role, deviceID string) (*authv1.AuthTokens, error) {
 	jti := uuid.New().String()
 
+	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to fetch user for token minting")
+	}
+
 	claims := interceptors.AuthClaims{
-		Role: role,
+		Role:                      role,
+		IsActive:                  user.IsActive.Bool,
+		IsRequiringPasswordChange: user.IsRequiringPasswordChange.Bool,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   userID.String(),
 			ID:        jti,
@@ -1337,7 +1351,7 @@ func (s *service) mintTokens(ctx context.Context, userID uuid.UUID, role, device
 	hashedToken := hex.EncodeToString(hash[:])
 
 	expiresAt := time.Now().Add(7 * 24 * time.Hour)
-	_, err := s.queries.CreateRefreshToken(ctx, generated.CreateRefreshTokenParams{
+	_, err = s.queries.CreateRefreshToken(ctx, generated.CreateRefreshTokenParams{
 		UserID:      pgtype.UUID{Bytes: userID, Valid: true},
 		DeviceID:    deviceID,
 		HashedToken: hashedToken,

@@ -112,18 +112,16 @@ func (s *service) InitiateAadhaarKyc(ctx context.Context, req *kycv1.InitiateAad
 		reason = "KYC verification"
 	}
 
-	if aadhaarNumber != "123412341234" {
-		return nil, status.Error(codes.InvalidArgument, "invalid aadhaar number (use 123412341234 for testing)")
+	apiReq := sandbox.AadhaarGenerateOTPRequest{
+		Entity:        "in.co.sandbox.kyc.aadhaar.okyc.otp.request",
+		AadhaarNumber: aadhaarNumber,
+		Consent:       "Y",
+		Reason:        reason,
 	}
-
-	apiResp := &sandbox.AadhaarGenerateOTPResponse{
-		TransactionID: uuid.NewString(),
-		Data: sandbox.AadhaarGenerateOTPData{
-			ReferenceID: 1234567,
-			Message:     "OTP sent successfully",
-		},
+	apiResp, raw, err := s.client.GenerateAadhaarOTP(ctx, apiReq)
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("aadhaar otp generation failed: %v", err))
 	}
-	raw := []byte(`{"mock":"true"}`)
 
 	attemptedAt := nowPgTimestamptz()
 	_, _ = s.queries.CreateBorrowerAadhaarKycHistory(ctx, generated.CreateBorrowerAadhaarKycHistoryParams{
@@ -162,26 +160,15 @@ func (s *service) VerifyAadhaarKycOtp(ctx context.Context, req *kycv1.VerifyAadh
 		return nil, status.Error(codes.InvalidArgument, "reference_id and otp are required")
 	}
 
-	if otp != "123456" {
-		return nil, status.Error(codes.InvalidArgument, "invalid otp (use 123456 for testing)")
+	apiReq := sandbox.AadhaarVerifyOTPRequest{
+		Entity:      "in.co.sandbox.kyc.aadhaar.okyc.request",
+		ReferenceID: ref,
+		OTP:         otp,
 	}
-
-	dobStr := ""
-	if profile.DateOfBirth.Valid {
-		dobStr = profile.DateOfBirth.Time.UTC().Format("2006-01-02")
+	apiResp, raw, err := s.client.VerifyAadhaarOTP(ctx, apiReq)
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("aadhaar otp verification failed: %v", err))
 	}
-
-	apiResp := &sandbox.AadhaarVerifyOTPResponse{
-		TransactionID: uuid.NewString(),
-		Data: sandbox.AadhaarVerifyOTPData{
-			Status:      "VALID",
-			Message:     "Aadhaar Card Exists",
-			Name:        profile.FirstName + " " + profile.LastName,
-			DateOfBirth: dobStr,
-			Gender:      string(profile.Gender),
-		},
-	}
-	raw := []byte(`{"mock":"true"}`)
 
 	isValid := strings.EqualFold(strings.TrimSpace(apiResp.Data.Status), "VALID")
 	mismatchFailure := false
@@ -278,19 +265,18 @@ func (s *service) VerifyPanKyc(ctx context.Context, req *kycv1.VerifyPanKycReque
 		reason = "KYC verification"
 	}
 
-	apiResp := &sandbox.PANVerifyResponse{
-		TransactionID: uuid.NewString(),
-		Data: sandbox.PANVerifyData{
-			Status:             "valid",
-			Remarks:            "PAN is active",
-			NameAsPerPANMatch:  true,
-			DateOfBirthMatch:   true,
-			AadhaarSeedingStat: "Y",
-			PAN:                pan,
-			Category:           "Individual",
-		},
+	apiReq := sandbox.PANVerifyRequest{
+		Entity:       "in.co.sandbox.kyc.pan",
+		PAN:          pan,
+		NameAsPerPAN: name,
+		DateOfBirth:  dob,
+		Consent:      "Y",
+		Reason:       reason,
 	}
-	raw := []byte(`{"mock":"true"}`)
+	apiResp, raw, err := s.client.VerifyPAN(ctx, apiReq)
+	if err != nil {
+		return nil, status.Error(codes.Internal, fmt.Sprintf("pan verification failed: %v", err))
+	}
 
 	isValid := strings.EqualFold(strings.TrimSpace(apiResp.Data.Status), "valid")
 	mismatchFailure := false

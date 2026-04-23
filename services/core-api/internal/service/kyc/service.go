@@ -293,10 +293,14 @@ func (s *service) VerifyPanKyc(ctx context.Context, req *kycv1.VerifyPanKycReque
 
 	pan := strings.TrimSpace(req.GetPan())
 	name := strings.TrimSpace(req.GetNameAsPerPan())
-	dob := strings.TrimSpace(req.GetDateOfBirth())
+	dobRaw := strings.TrimSpace(req.GetDateOfBirth())
 	reason := strings.TrimSpace(req.GetReason())
-	if pan == "" || name == "" || dob == "" {
+	if pan == "" || name == "" || dobRaw == "" {
 		return nil, status.Error(codes.InvalidArgument, "pan, name_as_per_pan, and date_of_birth are required")
+	}
+	dob, err := normalizeDOB(dobRaw)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid date_of_birth format: %v", err)
 	}
 	if reason == "" {
 		reason = "KYC verification"
@@ -704,7 +708,7 @@ func parseDateFlexible(v string) (time.Time, bool) {
 	if v == "" {
 		return time.Time{}, false
 	}
-	layouts := []string{"2006-01-02", "02-01-2006", "02/01/2006"}
+	layouts := []string{"2006-01-02", "02-01-2006", "02/01/2006", "01/02/2006"}
 	for _, layout := range layouts {
 		t, err := time.Parse(layout, v)
 		if err == nil {
@@ -712,6 +716,14 @@ func parseDateFlexible(v string) (time.Time, bool) {
 		}
 	}
 	return time.Time{}, false
+}
+
+func normalizeDOB(v string) (string, error) {
+	t, ok := parseDateFlexible(v)
+	if !ok {
+		return "", fmt.Errorf("unsupported date format: %q (expected DD/MM/YYYY, YYYY-MM-DD, or similar)", v)
+	}
+	return t.Format("02/01/2006"), nil
 }
 
 func normalizeName(v string) string {

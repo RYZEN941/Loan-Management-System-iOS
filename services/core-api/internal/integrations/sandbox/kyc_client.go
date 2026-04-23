@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -28,6 +29,21 @@ func (f *flexibleString) UnmarshalJSON(data []byte) error {
 	}
 	*f = flexibleString(n.String())
 	return nil
+}
+
+type SandboxError struct {
+	StatusCode    int
+	Code          int    `json:"code"`
+	Message       string `json:"message"`
+	TransactionID string `json:"transaction_id"`
+	RawBody       []byte
+}
+
+func (e *SandboxError) Error() string {
+	if e.Message != "" {
+		return fmt.Sprintf("sandbox api error: status=%d code=%d message=%s", e.StatusCode, e.Code, e.Message)
+	}
+	return fmt.Sprintf("sandbox http status %d", e.StatusCode)
 }
 
 type KYCClient struct {
@@ -188,7 +204,7 @@ func (c *KYCClient) VerifyPAN(ctx context.Context, req PANVerifyRequest) (*PANVe
 	if req.UseCache {
 		headers["x-accept-cache"] = "true"
 	}
-	body, respBody, err := c.postJSONWithRetry(ctx, "/kyc/pan", req, headers)
+	body, respBody, err := c.postJSONWithRetry(ctx, "/kyc/pan/verify", req, headers)
 	if err != nil {
 		return nil, respBody, err
 	}
@@ -233,11 +249,11 @@ func isRetryableError(err error) bool {
 	if err == nil {
 		return false
 	}
-	errStr := err.Error()
-	// Retry on network errors and 5xx status codes
-	if strings.Contains(errStr, "sandbox http status 5") {
-		return true
+	var sandboxErr *SandboxError
+	if errors.As(err, &sandboxErr) {
+		return sandboxErr.StatusCode >= 500
 	}
+	errStr := err.Error()
 	if strings.Contains(errStr, "call sandbox endpoint") {
 		return true
 	}
@@ -280,7 +296,12 @@ func (c *KYCClient) postJSON(ctx context.Context, path string, payload any, extr
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, respBody.Bytes(), fmt.Errorf("sandbox http status %d", resp.StatusCode)
+		sandboxErr := &SandboxError{
+			StatusCode: resp.StatusCode,
+			RawBody:    respBody.Bytes(),
+		}
+		_ = json.Unmarshal(respBody.Bytes(), sandboxErr)
+		return nil, respBody.Bytes(), sandboxErr
 	}
 
 	return respBody.Bytes(), respBody.Bytes(), nil

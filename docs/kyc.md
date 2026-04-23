@@ -144,15 +144,15 @@ When OTP is expired, the history record stores `failure_code: OTP_EXPIRED`.
 
 ## 4) VerifyPanKyc
 
-Runs PAN verification and persists history/current snapshot.
+Runs PAN verification against Sandbox API (`/kyc/pan/verify`) and persists history/current snapshot.
 
 Example request:
 
 ```json
 {
   "pan": "XXXPX1234A",
-  "name_as_per_pan": "John Doe",
-  "date_of_birth": "21-04-1985",
+  "name_as_per_pan": "John Ronald Doe",
+  "date_of_birth": "11/11/2001",
   "reason": "KYC verification"
 }
 ```
@@ -244,4 +244,4 @@ Example response:
 - `InvalidArgument`: missing/invalid input (including enum value).
 - `FailedPrecondition`: consent missing for requested KYC operation.
 - `PermissionDenied`: non-borrower user calls KYC endpoints.
-- `Unavailable`: Sandbox API call failed.
+- `Internal` with Sandbox error details: API subscription/wallet issues (404, 403) or upstream failures (5xx).

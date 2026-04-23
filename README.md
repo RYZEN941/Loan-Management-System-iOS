@@ -1,23 +1,27 @@
 # LMS Monorepo
 
-This repository contains the backend API, protobuf contracts, and frontend integration docs for the LMS project.
+This repository contains the backend API, protobuf contracts, and frontend integration docs for the Loan Management System (LMS) project.
 
-The main runnable service today is `core-api` (Go + gRPC), backed by Postgres and Redis.
+## Purpose of the Backend
+
+The backend is designed to provide a robust, scalable, and secure API for the LMS platform. It handles all core business logic including user authentication and session management, borrower onboarding, KYC processing, direct sales team (DST) management, loan product configurations, and media uploads. It serves as the single source of truth for the platform, ensuring data integrity across PostgreSQL and Redis.
+
+The main runnable service is `core-api` (Go + gRPC).
 
 ## Monorepo Layout
 
 ```text
 lms-monorepo/
-├── proto/
+├── proto/                             # Protobuf definitions for all gRPC APIs (See proto/README.md)
 │   ├── admin/v1/admin.proto           # Admin and employee management contract
 │   ├── auth/v1/auth.proto             # Auth and session contract
 │   ├── dst/v1/dst.proto               # DST account retrieval contract
 │   ├── kyc/v1/kyc.proto               # Borrower KYC contract
 │   ├── media/v1/media.proto           # Media upload/list contract
 │   ├── onboarding/v1/onboarding.proto # Borrower onboarding contract
-│   └── loan/v1/loan.proto             # Loan service contract (stub)
+│   └── loan/v1/loan.proto             # Loan service contract
 ├── services/
-│   └── core-api/                      # Go backend (main service)
+│   └── core-api/                      # Go backend main service (See services/core-api/README.md)
 ├── docker-compose.yml                 # Local infra + core-api
 ├── docs/                              # Frontend integration docs
 ├── Makefile                           # Helper commands (proto, sqlc, docker)

@@ -23,7 +23,8 @@ proto:
 		$(PROTO_DIR)/kyc/v1/kyc.proto \
 		$(PROTO_DIR)/media/v1/media.proto \
 		$(PROTO_DIR)/onboarding/v1/onboarding.proto \
-		$(PROTO_DIR)/loan/v1/loan.proto
+		$(PROTO_DIR)/loan/v1/loan.proto \
+		$(PROTO_DIR)/branch/v1/branch.proto
 
 sqlc:
 	cd $(CORE_API_DIR) && sqlc generate

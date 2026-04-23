@@ -21,6 +21,7 @@ import (
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/loan"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/media"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/onboarding"
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/branch"
 	adminv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/adminv1"
 	authv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/authv1"
 	chatv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/chatv1"
@@ -29,6 +30,7 @@ import (
 	loanv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/loanv1"
 	mediav1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/mediav1"
 	onboardingv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/onboardingv1"
+	branchv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/branchv1"
 	grpcinterceptors "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/interceptors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -71,7 +73,8 @@ func Run() error {
 	}
 	mediaService := media.NewService(queries, r2Client, time.Duration(cfg.R2UploadURLTTLSecs)*time.Second, cfg.MediaMaxUploadSize)
 	onboardingService := onboarding.NewService(queries)
-	application := app.New(adminService, authService, chatService, dstService, kycService, loanService, mediaService, onboardingService)
+	branchService := branch.NewService(queries)
+	application := app.New(adminService, authService, chatService, dstService, kycService, loanService, mediaService, onboardingService, branchService)
 
 	publicMethods := map[string]struct{}{
 		// BOOTSTRAP ADMIN ONLY:
@@ -148,6 +151,7 @@ func Run() error {
 		"/media.v1.MediaService/ListMedia":                            {"borrower", "officer", "manager", "admin", "dst"},
 		"/onboarding.v1.OnboardingService/CompleteBorrowerOnboarding": {"borrower", "officer", "manager", "admin", "dst"},
 		"/auth.v1.AuthService/Logout":                                 {"borrower", "officer", "manager", "admin", "dst"},
+		"/branch.v1.BranchService/ListBranches":                       {"borrower", "officer", "manager", "admin", "dst"},
 		"/chat.v1.ChatService/ListChatEligibleUsers":                  {"borrower", "officer", "manager", "admin", "dst"},
 		"/chat.v1.ChatService/CreateOrGetDirectRoom":                  {"borrower", "officer", "manager", "admin", "dst"},
 		"/chat.v1.ChatService/ListMyChatRooms":                        {"borrower", "officer", "manager", "admin", "dst"},
@@ -182,6 +186,7 @@ func Run() error {
 	loanv1.RegisterLoanServiceServer(grpcServer, application.LoanHandler)
 	mediav1.RegisterMediaServiceServer(grpcServer, application.MediaHandler)
 	onboardingv1.RegisterOnboardingServiceServer(grpcServer, application.OnboardingHandler)
+	branchv1.RegisterBranchServiceServer(grpcServer, application.BranchHandler)
 	reflection.Register(grpcServer)
 
 	log.Printf("grpc server listening on :%s", cfg.GRPCPort)

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -369,7 +368,7 @@ func (s *service) GetLoanApplication(ctx context.Context, req *loanv1.GetLoanApp
 		}
 		return nil, status.Error(codes.Internal, "failed to fetch loan application")
 	}
-	if err := s.ensureCanAccessApplication(ctx, view.PrimaryBorrowerProfileID, view.BranchID); err != nil {
+	if err := s.ensureCanAccessApplication(ctx, view.PrimaryBorrowerProfileID, view.BranchID, view.ID); err != nil {
 		return nil, err
 	}
 
@@ -496,7 +495,7 @@ func (s *service) UpdateLoanApplicationStatus(ctx context.Context, req *loanv1.U
 		}
 		return nil, status.Error(codes.Internal, "failed to fetch application")
 	}
-	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID); err != nil {
+	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID, appRow.ID); err != nil {
 		return nil, err
 	}
 	statusValue := toDBApplicationStatus(req.GetStatus())
@@ -583,7 +582,7 @@ func (s *service) UpdateLoanApplicationTerms(ctx context.Context, req *loanv1.Up
 		}
 		return nil, status.Error(codes.Internal, "failed to fetch application")
 	}
-	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID); err != nil {
+	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID, appRow.ID); err != nil {
 		return nil, err
 	}
 	if role == "officer" {
@@ -632,7 +631,7 @@ func (s *service) AssignLoanApplicationOfficer(ctx context.Context, req *loanv1.
 		}
 		return nil, status.Error(codes.Internal, "failed to fetch loan application")
 	}
-	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID); err != nil {
+	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID, appRow.ID); err != nil {
 		return nil, err
 	}
 	officerProfile, err := s.queries.GetOfficerProfileByUserID(ctx, uuidToPg(officerUserID))
@@ -664,7 +663,7 @@ func (s *service) AddApplicationCoapplicant(ctx context.Context, req *loanv1.Add
 	if err != nil {
 		return nil, status.Error(codes.NotFound, "loan application not found")
 	}
-	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID); err != nil {
+	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID, appRow.ID); err != nil {
 		return nil, err
 	}
 	consentAt := pgtype.Timestamptz{}
@@ -696,7 +695,7 @@ func (s *service) UpsertApplicationCollateral(ctx context.Context, req *loanv1.U
 	if err != nil {
 		return nil, status.Error(codes.NotFound, "loan application not found")
 	}
-	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID); err != nil {
+	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID, appRow.ID); err != nil {
 		return nil, err
 	}
 
@@ -738,7 +737,7 @@ func (s *service) UpsertLoanVehicle(ctx context.Context, req *loanv1.UpsertLoanV
 	if err != nil {
 		return nil, status.Error(codes.NotFound, "loan application not found")
 	}
-	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID); err != nil {
+	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID, appRow.ID); err != nil {
 		return nil, err
 	}
 	price, err := parseNumeric(req.GetOnRoadPrice(), "on_road_price")
@@ -783,7 +782,7 @@ func (s *service) UpsertLoanRealEstate(ctx context.Context, req *loanv1.UpsertLo
 	if err != nil {
 		return nil, status.Error(codes.NotFound, "loan application not found")
 	}
-	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID); err != nil {
+	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID, appRow.ID); err != nil {
 		return nil, err
 	}
 	areaSqft, err := parseNumeric(req.GetAreaSqft(), "area_sqft")
@@ -827,8 +826,7 @@ func (s *service) AddApplicationDocument(ctx context.Context, req *loanv1.AddApp
 	if err != nil {
 		return nil, status.Error(codes.NotFound, "loan application not found")
 	}
-	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID); err != nil {
-		fmt.Println("Error: ", err)
+	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID, appRow.ID); err != nil {
 		return nil, err
 	}
 	if _, err := s.queries.GetBorrowerProfileByID(ctx, uuidToPg(borrowerProfileID)); err != nil {
@@ -839,7 +837,7 @@ func (s *service) AddApplicationDocument(ctx context.Context, req *loanv1.AddApp
 		PrimaryBorrowerProfileID: uuidToPg(borrowerProfileID),
 	})
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to validate borrower participation")
+		return nil, status.Errorf(codes.Internal, "failed to validate borrower participation: %v", err)
 	}
 	if !participantCheck {
 		return nil, status.Error(codes.InvalidArgument, "borrower_profile_id is not part of this application")
@@ -855,7 +853,7 @@ func (s *service) AddApplicationDocument(ctx context.Context, req *loanv1.AddApp
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, status.Error(codes.InvalidArgument, "media_file_id not found for current user")
 		}
-		return nil, status.Error(codes.Internal, "failed to validate media file")
+		return nil, status.Errorf(codes.Internal, "failed to validate media file: %v", err)
 	}
 	requiredDocID := pgtype.UUID{}
 	if strings.TrimSpace(req.GetRequiredDocId()) != "" {
@@ -870,21 +868,25 @@ func (s *service) AddApplicationDocument(ctx context.Context, req *loanv1.AddApp
 			if errors.Is(err, pgx.ErrNoRows) {
 				return nil, status.Error(codes.InvalidArgument, "required_doc_id is not valid for this application product")
 			}
-			return nil, status.Error(codes.Internal, "failed to validate required document")
+			return nil, status.Errorf(codes.Internal, "failed to validate required document: %v", err)
 		}
 		requiredDocID = uuidToPg(docID)
+	}
+	qualityFlags := req.GetQualityFlags()
+	if qualityFlags == nil {
+		qualityFlags = []string{}
 	}
 	row, err := s.queries.CreateApplicationDocument(ctx, generated.CreateApplicationDocumentParams{
 		ApplicationID:      appRow.ID,
 		BorrowerProfileID:  uuidToPg(borrowerProfileID),
 		RequiredDocID:      requiredDocID,
 		MediaFileID:        uuidToPg(mediaFileID),
-		QualityFlags:       req.GetQualityFlags(),
+		QualityFlags:       qualityFlags,
 		VerificationStatus: toDBDocumentVerificationStatus(req.GetVerificationStatus()),
 		RejectionReason:    pgtype.Text{},
 	})
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to add document")
+		return nil, status.Errorf(codes.Internal, "failed to add document: %v", err)
 	}
 	return &loanv1.AddApplicationDocumentResponse{Document: mapDocument(row)}, nil
 }
@@ -950,7 +952,7 @@ func (s *service) CreateLoan(ctx context.Context, req *loanv1.CreateLoanRequest)
 		}
 		return nil, status.Error(codes.Internal, "failed to fetch application")
 	}
-	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID); err != nil {
+	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID, appRow.ID); err != nil {
 		return nil, err
 	}
 	if role == "manager" {
@@ -1289,7 +1291,7 @@ func (s *service) ListPayments(ctx context.Context, req *loanv1.ListPaymentsRequ
 	return &loanv1.ListPaymentsResponse{Items: items}, nil
 }
 
-func (s *service) ensureCanAccessApplication(ctx context.Context, borrowerProfileID pgtype.UUID, branchID pgtype.UUID) error {
+func (s *service) ensureCanAccessApplication(ctx context.Context, primaryBorrowerProfileID pgtype.UUID, branchID pgtype.UUID, applicationID pgtype.UUID) error {
 	userID, role, err := requireUserAndRole(ctx)
 	if err != nil {
 		return err
@@ -1299,8 +1301,22 @@ func (s *service) ensureCanAccessApplication(ctx context.Context, borrowerProfil
 		return nil
 	case "borrower":
 		profile, err := s.queries.GetBorrowerProfileByUserID(ctx, uuidToPg(userID))
-		if err != nil || profile.ID.Bytes != borrowerProfileID.Bytes {
-			return status.Error(codes.PermissionDenied, "borrower can only access own applications")
+		if err != nil {
+			return status.Error(codes.PermissionDenied, "borrower profile not found")
+		}
+
+		// Check if primary borrower
+		if profile.ID.Bytes == primaryBorrowerProfileID.Bytes {
+			return nil
+		}
+
+		// Check if co-applicant
+		isParticipant, err := s.queries.IsApplicationBorrowerParticipant(ctx, generated.IsApplicationBorrowerParticipantParams{
+			ID:                       applicationID,
+			PrimaryBorrowerProfileID: profile.ID,
+		})
+		if err != nil || !isParticipant {
+			return status.Error(codes.PermissionDenied, "borrower is not a participant in this application")
 		}
 		return nil
 	case "dst", "officer", "manager":

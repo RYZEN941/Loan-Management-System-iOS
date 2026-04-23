@@ -33,7 +33,7 @@ struct AdminTabView: View {
                 .environmentObject(authVM)
                 .environmentObject(loansVM)
                 .tabItem {
-                    Label("Dashboard", systemImage: "chart.bar.fill")
+                    Label("Dashboard", systemImage: "chart.bar")
                 }
                 .tag(0)
 
@@ -41,17 +41,17 @@ struct AdminTabView: View {
             AdminLoansView(showProfile: $showProfile)
                 .environmentObject(loansVM)
                 .tabItem {
-                    Label("Loans", systemImage: "doc.text.fill")
+                    Label("Loans", systemImage: "doc.text")
                 }
                 .tag(1)
 
             // ── TAB 2 ── Risk & Collections
-            AdminRiskView(showProfile: $showProfile)
+            AdminRiskView(showProfile: $showProfile, selectedTab: $selectedTab)
                 .environmentObject(adminVM)
                 .environmentObject(riskVM)
                 .environmentObject(collectionsVM)
                 .tabItem {
-                    Label("Risk", systemImage: "exclamationmark.shield.fill")
+                    Label("Risk", systemImage: "exclamationmark.shield")
                 }
                 .tag(2)
 
@@ -59,7 +59,7 @@ struct AdminTabView: View {
             AdminReportsView(showProfile: $showProfile)
                 .environmentObject(reportsVM)
                 .tabItem {
-                    Label("Reports", systemImage: "doc.richtext.fill")
+                    Label("Reports", systemImage: "doc.text")
                 }
                 .tag(3)
 
@@ -68,13 +68,13 @@ struct AdminTabView: View {
                 .environmentObject(adminVM)
                 .environmentObject(messagesVM)
                 .tabItem {
-                    Label("System", systemImage: "gearshape.2.fill")
+                    Label("System", systemImage: "gearshape")
                 }
                 .tag(4)
         }
         .tint(Theme.Colors.primary)
         .sheet(isPresented: $showProfile) {
-            AdminGlobalSettingsView()
+            AdminProfileSettingsView()
                 .environmentObject(authVM)
                 .environmentObject(adminVM)
         }

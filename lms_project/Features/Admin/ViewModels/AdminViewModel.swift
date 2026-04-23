@@ -6,6 +6,30 @@
 import SwiftUI
 import Combine
 
+enum RiskSection: String, CaseIterable, Identifiable {
+    case overview = "Overview"
+    case actionRequired = "Action Required"
+    case collections = "Collections"
+    case npa = "NPA"
+    var id: String { rawValue }
+    var icon: String {
+        switch self {
+        case .overview: return "chart.pie.fill"
+        case .actionRequired: return "exclamationmark.triangle.fill"
+        case .collections: return "tray.full.fill"
+        case .npa: return "exclamationmark.octagon.fill"
+        }
+    }
+}
+
+enum ActionRequiredFilter: String, CaseIterable, Identifiable {
+    case slaBreach = "SLA Breaches"
+    case fraudAlert = "Fraud Alerts"
+    case policyViolation = "Policy Violations"
+    case stuckApplication = "Stuck Applications"
+    var id: String { rawValue }
+}
+
 @MainActor
 class AdminViewModel: ObservableObject {
     @Published var users: [User] = []
@@ -14,6 +38,13 @@ class AdminViewModel: ObservableObject {
     @Published var requestError: String? = nil
     @Published var requestSuccess: String? = nil
     @Published var searchText = ""
+    
+    // Risk Navigation
+    @Published var selectedRiskSection: RiskSection = .overview
+    @Published var selectedRiskFilter: ActionRequiredFilter = .slaBreach
+    
+    // System Control Navigation
+    @Published var selectedSystemSection: String = "User Management"
     
     // System Control
     @Published var maxLoanAmount: Double = 50_000_000
@@ -31,6 +62,35 @@ class AdminViewModel: ObservableObject {
     
     // Audit Logs
     @Published var auditLogs: [AuditLog] = []
+    
+    // Editable Policies
+    @Published var eligibilityRules: [String] = [
+        "Min income ₹25,000/month for Personal Loan",
+        "Co-applicant required for loans > ₹15L",
+        "Max 3 active loans per borrower",
+        "Employment tenure ≥ 1 year"
+    ]
+    
+    func deleteEligibilityRule(at index: Int) {
+        if eligibilityRules.indices.contains(index) {
+            eligibilityRules.remove(at: index)
+        }
+    }
+    
+    @Published var documentChecklist: [DocumentChecklistItem] = [
+        DocumentChecklistItem(name: "PAN Card", isRequired: true),
+        DocumentChecklistItem(name: "Aadhaar Card", isRequired: true),
+        DocumentChecklistItem(name: "Bank Statements (6 months)", isRequired: true),
+        DocumentChecklistItem(name: "Salary Slips (3 months)", isRequired: true),
+        DocumentChecklistItem(name: "Address Proof", isRequired: false)
+    ]
+    
+    // Notifications for Profile
+    @Published var notifications: [AdminNotification] = [
+        AdminNotification(title: "System Maintenance", message: "Scheduled for Sunday 2 AM", time: "2h ago", icon: "wrench.and.screwdriver", color: .orange),
+        AdminNotification(title: "New Policy Update", message: "CIBIL threshold updated to 600", time: "5h ago", icon: "shield", color: .blue),
+        AdminNotification(title: "Critical Alert", message: "SLA breach spike detected in Mumbai", time: "1d ago", icon: "exclamationmark.triangle", color: .red)
+    ]
     
     // Performance Trends
     @Published var slaBreachTrendData: [Double] = [8, 5, 12, 7, 4, 9, 3]
@@ -99,6 +159,23 @@ class AdminViewModel: ObservableObject {
                 selectedUser = users[index]
             }
         }
+    }
+    
+    // Notification Actions
+    func markNotificationRead(_ id: UUID) {
+        if let idx = notifications.firstIndex(where: { $0.id == id }) {
+            notifications[idx].isRead = true
+        }
+    }
+    
+    func markAllNotificationsRead() {
+        for i in notifications.indices {
+            notifications[i].isRead = true
+        }
+    }
+    
+    func deleteNotification(_ id: UUID) {
+        notifications.removeAll(where: { $0.id == id })
     }
 
     func createUser(name: String, email: String, password: String, phone: String, role: UserRole, branch: String, employeeId: String) {
@@ -252,16 +329,16 @@ class AdminViewModel: ObservableObject {
     
     static func mockAuditLogs() -> [AuditLog] {
         [
-            AuditLog(id: "AUD-001", action: "User Created", user: "Sunita Patel", detail: "Created user Ravi Shankar (LO)",
-                     timestamp: Date().addingTimeInterval(-3600)),
-            AuditLog(id: "AUD-002", action: "Config Updated", user: "Sunita Patel", detail: "Max DTI ratio changed to 0.50",
-                     timestamp: Date().addingTimeInterval(-7200)),
-            AuditLog(id: "AUD-003", action: "User Deactivated", user: "Sunita Patel", detail: "Deactivated user Prakash Jha",
-                     timestamp: Date().addingTimeInterval(-86400)),
-            AuditLog(id: "AUD-004", action: "Application Override", user: "Deepak Mehta", detail: "Overrode risk score for APP-2024-003",
-                     timestamp: Date().addingTimeInterval(-172800)),
-            AuditLog(id: "AUD-005", action: "Rule Modified", user: "Sunita Patel", detail: "Min CIBIL score changed from 650 to 600",
-                     timestamp: Date().addingTimeInterval(-259200))
+            AuditLog(id: "AUD-001", action: "APP-2024-006 approved", user: "Deepak Mehta", detail: "Loan approved after credit verification",
+                     timestamp: Date().addingTimeInterval(-720)), // 12m ago
+            AuditLog(id: "AUD-002", action: "Policy Update: Min CIBIL Score matched", user: "System Rule", detail: "Automated policy check passed",
+                     timestamp: Date().addingTimeInterval(-3600)), // 1h ago
+            AuditLog(id: "AUD-003", action: "APP-2024-009 escalated to Admin", user: "Sunita Patel", detail: "Manual review required for high-value asset",
+                     timestamp: Date().addingTimeInterval(-7200)), // 2h ago
+            AuditLog(id: "AUD-004", action: "Suspicious Application detected", user: "Fraud Engine", detail: "Fraud flag raised for loan APP-2024-021",
+                     timestamp: Date().addingTimeInterval(-10800)), // 3h ago
+            AuditLog(id: "AUD-005", action: "Config Updated", user: "Sunita Patel", detail: "Max DTI ratio changed to 0.50",
+                     timestamp: Date().addingTimeInterval(-86400))
         ]
     }
 
@@ -335,4 +412,24 @@ struct BranchModel: Identifiable, Hashable {
     let id = UUID()
     var name: String
     var location: String
+}
+
+// MARK: - Document Checklist Item
+
+struct DocumentChecklistItem: Identifiable {
+    let id = UUID()
+    var name: String
+    var isRequired: Bool
+}
+
+// MARK: - Admin Notification
+
+struct AdminNotification: Identifiable {
+    let id = UUID()
+    let title: String
+    let message: String
+    let time: String
+    let icon: String
+    let color: Color
+    var isRead: Bool = false
 }

@@ -22,6 +22,7 @@ struct AdminReportsView: View {
     @State private var loanTypeFilter = "All Types"
     @State private var regionFilter = "All Regions"
     @State private var statusFilter = "All"
+    @State private var showCustomBuilder = false
 
     private let categories = ["Portfolio","Disbursement","Collection","NPA","Risk & Credit"]
     private let dateRanges = ["Last 7 Days","Last 30 Days","Last 90 Days","This FY"]
@@ -41,21 +42,36 @@ struct AdminReportsView: View {
         NavigationStack {
             ZStack(alignment:.top) {
                 Theme.Colors.adaptiveBackground(colorScheme).ignoresSafeArea()
+                
                 ScrollView {
-                    VStack(spacing:Theme.Spacing.lg) {
-                        headerCard
-                        filtersSection
-                        reportCategoryTabs
-                        reportListSection
+                    VStack(spacing: 24) {
+                        // 0. Filter Strip
+                        filterStrip
+                        
+                        // 1. Custom Report Builder Module
+                        Button {
+                            showCustomBuilder = true
+                        } label: {
+                            customReportBuilderCard
+                        }
+                        .buttonStyle(.plain)
+                        
+                        // 2. All Reports List
+                        allReportsSection
                     }
-                    .padding(.horizontal,Theme.Spacing.lg)
-                    .padding(.bottom,Theme.Spacing.lg)
+                    .padding(.top, 8)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 40)
                 }
+                
                 if showingBanner { exportBanner.padding(.top,8).transition(.move(edge:.top).combined(with:.opacity)) }
             }
             .animation(.spring(response:0.35,dampingFraction:0.8),value:showingBanner)
-            .navigationTitle("Reports").navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement:.topBarTrailing) { ProfileNavButton(showProfile:$showProfile) } }
+            .navigationTitle("Reports")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar { 
+                ToolbarItem(placement: .topBarTrailing) { ProfileNavButton(showProfile: $showProfile) }
+            }
             .sheet(item:$showExportSheet) { report in
                 ExportOptionsSheet(report:report,onExport:{format in triggerExport(report:report,format:format)})
             }
@@ -65,77 +81,103 @@ struct AdminReportsView: View {
             .sheet(item: $shareItem) { item in
                 ShareSheet(activityItems: [item.url])
             }
-        }
-    }
-
-    // MARK: - Header
-    private var headerCard: some View {
-        HStack(spacing:Theme.Spacing.lg) {
-            VStack(alignment:.leading,spacing:Theme.Spacing.xs) {
-                Text("Report Centre").font(Theme.Typography.title)
-                Text("Generate, preview, and export compliance-ready reports").font(Theme.Typography.caption).foregroundStyle(.secondary)
-            }
-            Spacer()
-            Image(systemName:"doc.richtext").font(.system(size:32)).foregroundStyle(Theme.Colors.primary.opacity(0.4))
-        }.padding(Theme.Spacing.lg).cardStyle(colorScheme:colorScheme)
-    }
-
-    // MARK: - Filters
-    private var filtersSection: some View {
-        VStack(alignment:.leading,spacing:Theme.Spacing.md) {
-            SectionHeader(title:"Filters",icon:"line.3.horizontal.decrease.circle")
-            HStack(spacing:Theme.Spacing.sm) {
-                filterPicker(label:"Date Range",selection:$dateRange,options:dateRanges)
-                filterPicker(label:"Loan Type",selection:$loanTypeFilter,options:loanTypes)
-                filterPicker(label:"Region",selection:$regionFilter,options:regions)
-                filterPicker(label:"Status",selection:$statusFilter,options:statuses)
+            .sheet(isPresented: $showCustomBuilder) {
+                AdminCustomReportBuilderSheet()
             }
         }
     }
 
-    private func filterPicker(label:String,selection:Binding<String>,options:[String]) -> some View {
-        VStack(alignment:.leading,spacing:4) {
-            Text(label).font(Theme.Typography.caption).foregroundStyle(.secondary)
-            Picker(label,selection:selection) {
-                ForEach(options,id:\.self) { Text($0).tag($0) }
+    // MARK: - Native Filters Strip
+    private var filterStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                filterChip(selection: $dateRange, options: dateRanges, icon: "calendar")
+                filterChip(selection: $loanTypeFilter, options: loanTypes, icon: "briefcase")
+                filterChip(selection: $regionFilter, options: regions, icon: "mappin.and.ellipse")
+                filterChip(selection: $statusFilter, options: statuses, icon: "flag")
             }
-            .pickerStyle(.menu)
-            .padding(.horizontal,12).padding(.vertical,8)
-            .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius:Theme.Radius.sm))
-        }.frame(maxWidth:.infinity,alignment:.leading)
+            .padding(.horizontal, 20)
+        }
+        .padding(.horizontal, -20)
+    }
+    
+    private func filterChip(selection: Binding<String>, options: [String], icon: String) -> some View {
+        Menu {
+            Picker("", selection: selection) {
+                ForEach(options, id: \.self) { Text($0).tag($0) }
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: icon).font(.system(size: 14)).foregroundStyle(Theme.Colors.primary)
+                Text(selection.wrappedValue).font(Theme.Typography.caption.weight(.medium)).foregroundStyle(.primary)
+                Image(systemName: "chevron.down").font(.system(size: 10)).foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Theme.Colors.adaptiveSurface(colorScheme))
+            .clipShape(Capsule())
+            .overlay(Capsule().strokeBorder(Color.gray.opacity(0.15), lineWidth: 1))
+        }
     }
 
-    // MARK: - Category Tabs
-    private var reportCategoryTabs: some View {
-        ScrollView(.horizontal,showsIndicators:false) {
-            HStack(spacing:Theme.Spacing.sm) {
-                ForEach(categories.indices,id:\.self) { idx in
-                    Button {
-                        withAnimation { selectedCategory = idx }
-                    } label: {
-                        Text(categories[idx])
-                            .font(Theme.Typography.caption).fontWeight(selectedCategory==idx ? .semibold : .regular)
-                            .foregroundStyle(selectedCategory==idx ? .white : Theme.Colors.primary)
-                            .padding(.horizontal,14).padding(.vertical,8)
-                            .background(selectedCategory==idx ? Theme.Colors.primary : Theme.Colors.primary.opacity(0.08))
-                            .clipShape(Capsule())
-                    }.buttonStyle(.plain)
+    // MARK: - Custom Report Builder
+    private var customReportBuilderCard: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 20) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Custom Report Builder")
+                        .font(Theme.Typography.headline)
+                        .foregroundStyle(.white)
+                    Text("Combine metrics across Portfolio, Risk, and Collections into a single dynamic export.")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(.white.opacity(0.8))
+                        .lineLimit(2)
+                }
+                Spacer()
+                ZStack {
+                    Circle().fill(Color.white.opacity(0.2)).frame(width: 48, height: 48)
+                    Image(systemName: "plus")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(.white)
                 }
             }
+            .padding(24)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                LinearGradient(
+                    colors: [Theme.Colors.primary, Theme.Colors.primary.opacity(0.8)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .shadow(color: Theme.Colors.primary.opacity(0.3), radius: 12, x: 0, y: 6)
+    }
+
+    // MARK: - All Reports List
+    private var allReportsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            SectionHeader(title: "All Reports", icon: "folder.fill")
+            
+            VStack(spacing: 0) {
+                ForEach(reports) { report in
+                    AdminReportItemRow(
+                        report: report, 
+                        onPreview: { previewingReport = report },
+                        onExport: { showExportSheet = report }
+                    )
+                    if report.id != reports.last?.id {
+                        Divider().padding(.leading, 64)
+                    }
+                }
+            }
+            .background(Theme.Colors.adaptiveSurface(colorScheme))
+            .cornerRadius(20)
+            .shadow(color: Color.black.opacity(0.03), radius: 8, x: 0, y: 4)
         }
     }
 
-    // MARK: - Report List
-    private var reportListSection: some View {
-        VStack(alignment:.leading,spacing:Theme.Spacing.md) {
-            SectionHeader(title:"Available Reports",icon:"doc.on.doc")
-            let filtered = selectedCategory < reports.count ? [reports[selectedCategory]] : reports
-            ForEach(filtered) { report in
-                ReportCard(report:report,colorScheme:colorScheme,onExport:{showExportSheet=report},onPreview:{previewingReport=report})
-            }
-        }
-    }
 
 
 
@@ -182,46 +224,159 @@ struct ShareSheet: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
-// MARK: - Report Card
-private struct ReportCard: View {
-    let report:ReportItem; let colorScheme:ColorScheme; let onExport:()->Void; let onPreview:()->Void
+// MARK: - Admin Report Item Row
+private struct AdminReportItemRow: View {
+    let report: ReportItem
+    let onPreview: () -> Void
+    let onExport: () -> Void
+    
     var body: some View {
-        VStack(alignment:.leading,spacing:Theme.Spacing.md) {
-            HStack(spacing:Theme.Spacing.md) {
+        Button(action: onPreview) {
+            HStack(spacing: 16) {
                 ZStack {
-                    RoundedRectangle(cornerRadius:Theme.Radius.md).fill(report.color.opacity(0.12)).frame(width:44,height:44)
-                    Image(systemName:report.icon).font(.system(size:20)).foregroundStyle(report.color)
+                    Circle().fill(report.color.opacity(0.1)).frame(width: 48, height: 48)
+                    Image(systemName: report.icon).font(.system(size: 20)).foregroundStyle(report.color)
                 }
-                VStack(alignment:.leading,spacing:3) {
+                
+                VStack(alignment: .leading, spacing: 4) {
                     Text(report.title).font(Theme.Typography.headline)
-                    Text(report.description).font(Theme.Typography.caption).foregroundStyle(.secondary)
+                    Text(report.description).font(Theme.Typography.caption).foregroundStyle(.secondary).lineLimit(1)
+                    
+                    HStack(spacing: 12) {
+                        Label(report.lastGenerated, systemImage: "clock").font(Theme.Typography.caption2).foregroundStyle(.tertiary)
+                        Label(report.size, systemImage: "doc").font(Theme.Typography.caption2).foregroundStyle(.tertiary)
+                    }
+                    .padding(.top, 2)
                 }
+                
                 Spacer()
+                
+                Menu {
+                    Button(action: onPreview) {
+                        Label("Preview Data", systemImage: "eye")
+                    }
+                    Divider()
+                    Button(action: onExport) {
+                        Label("Export PDF", systemImage: "doc.fill")
+                    }
+                    Button(action: onExport) {
+                        Label("Export Excel", systemImage: "tablecells.fill")
+                    }
+                    Button(action: onExport) {
+                        Label("Export CSV", systemImage: "list.bullet")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .font(.system(size: 20))
+                        .foregroundStyle(Theme.Colors.primary.opacity(0.8))
+                        .padding(8)
+                }
             }
-            HStack(spacing:Theme.Spacing.md) {
-                Label("Last: \(report.lastGenerated)",systemImage:"clock").font(Theme.Typography.caption).foregroundStyle(.secondary)
-                Spacer()
-                Label(report.size,systemImage:"doc").font(Theme.Typography.caption).foregroundStyle(.secondary)
-            }
-            HStack(spacing:Theme.Spacing.sm) {
-                expBtn(label:"Preview",icon:"eye",primary:false,action:onPreview)
-                expBtn(label:"PDF",icon:"doc.fill",primary:true,action:onExport)
-                expBtn(label:"Excel",icon:"tablecells.fill",primary:false,action:onExport)
-                expBtn(label:"CSV",icon:"list.bullet",primary:false,action:onExport)
-            }
-        }.padding(Theme.Spacing.md).cardStyle(colorScheme:colorScheme)
+            .padding(16)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
-    private func expBtn(label:String,icon:String,primary:Bool,action:@escaping ()->Void) -> some View {
-        Button(action:action) {
-            HStack(spacing:6) {
-                Image(systemName:icon).font(.system(size:13))
-                Text(label).font(.system(size:13,weight:.semibold))
+}
+
+// MARK: - Custom Report Builder Modal
+struct AdminCustomReportBuilderSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    
+    @State private var selectedSource = "Portfolio Data"
+    private let sources = ["Portfolio Data", "Active Collections", "Risk Flags", "Disbursement Logs"]
+    
+    @State private var columns: [String: Bool] = [
+        "Applicant Name": true,
+        "Loan Amount": true,
+        "Interest Rate": false,
+        "Current DPD": true,
+        "CIBIL Score": false,
+        "Origination Date": true,
+        "Risk Classification": false
+    ]
+    
+    @State private var selectedFormat: ExportFormat = .csv
+    @State private var isGenerating = false
+    @State private var shareItem: ShareItem? = nil
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section(header: Text("Base Dataset")) {
+                    Picker("Data Source", selection: $selectedSource) {
+                        ForEach(sources, id: \.self) { Text($0).tag($0) }
+                    }
+                }
+                
+                Section(header: Text("Data Columns")) {
+                    ForEach(Array(columns.keys.sorted()), id: \.self) { key in
+                        Toggle(key, isOn: Binding(
+                            get: { self.columns[key] ?? false },
+                            set: { self.columns[key] = $0 }
+                        ))
+                        .tint(Theme.Colors.primary)
+                    }
+                }
+                
+                Section(header: Text("Export Format")) {
+                    Picker("Format", selection: $selectedFormat) {
+                        ForEach(ExportFormat.allCases, id: \.self) { format in
+                            Text(format.displayName).tag(format)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
             }
-            .foregroundStyle(primary ? .white : Theme.Colors.primary)
-            .frame(maxWidth:.infinity).padding(.vertical,10)
-            .background(primary ? Theme.Colors.primary : Theme.Colors.primary.opacity(0.1))
-            .clipShape(RoundedRectangle(cornerRadius:Theme.Radius.sm))
-        }.buttonStyle(.plain)
+            .navigationTitle("Custom Report")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                Button {
+                    generateReport()
+                } label: {
+                    if isGenerating {
+                        ProgressView().tint(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                    } else {
+                        Text("Generate Report")
+                            .font(.system(size: 16, weight: .bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                    }
+                }
+                .foregroundStyle(.white)
+                .background(Theme.Colors.primary)
+                .cornerRadius(16)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(Theme.Colors.adaptiveBackground(colorScheme).shadow(color: .black.opacity(0.05), radius: 10, y: -5))
+            }
+            .sheet(item: $shareItem) { item in
+                ShareSheet(activityItems: [item.url]) // Let them share immediately
+                    .onDisappear {
+                        // After share sheet closes, dismiss the whole builder
+                        dismiss()
+                    }
+            }
+        }
+    }
+    
+    private func generateReport() {
+        isGenerating = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            isGenerating = false
+            let fileName = "Custom_\(selectedSource.replacingOccurrences(of: " ", with: "_")).\(selectedFormat.rawValue)"
+            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+            try? "Mock dynamically generated data for \(selectedSource)".write(to: tempURL, atomically: true, encoding: .utf8)
+            shareItem = ShareItem(url: tempURL)
+        }
     }
 }
 
@@ -353,13 +508,14 @@ private struct ReportPreviewSheet: View {
                         previewStat(label: "Rejected", value: "38", color: Theme.Colors.critical)
                     }
 
-                    // Export buttons
-                    VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                        Text("Export Full Report").font(Theme.Typography.subheadline).fontWeight(.medium)
-                        HStack(spacing: Theme.Spacing.sm) {
-                            exportButton("PDF", icon: "doc.fill", format: .pdf)
-                            exportButton("Excel", icon: "tablecells.fill", format: .excel)
-                            exportButton("CSV", icon: "list.bullet", format: .csv)
+                    // Export actions
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Export Options").font(Theme.Typography.subheadline).foregroundStyle(.secondary).padding(.leading, 4)
+                        
+                        HStack(spacing: 16) {
+                            exportButton("PDF", icon: "doc.text.fill", format: .pdf, color: .red)
+                            exportButton("Excel", icon: "tablecells.fill", format: .excel, color: .green)
+                            exportButton("CSV", icon: "list.bullet.rectangle.fill", format: .csv, color: .blue)
                         }
                     }
                 }
@@ -386,19 +542,23 @@ private struct ReportPreviewSheet: View {
         .cardStyle(colorScheme: colorScheme)
     }
 
-    private func exportButton(_ label: String, icon: String, format: ExportFormat) -> some View {
+    private func exportButton(_ label: String, icon: String, format: ExportFormat, color: Color) -> some View {
         Button {
             dismiss()
             onExport(format)
         } label: {
-            HStack(spacing: 6) {
-                Image(systemName: icon).font(.system(size: 13))
-                Text(label).font(.system(size: 13, weight: .semibold))
+            VStack(spacing: 8) {
+                ZStack {
+                    Circle().fill(color.opacity(0.1)).frame(width: 50, height: 50)
+                    Image(systemName: icon).font(.system(size: 22)).foregroundStyle(color)
+                }
+                Text(label).font(.system(size: 13, weight: .medium)).foregroundStyle(.primary)
             }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity).padding(.vertical, 10)
-            .background(Theme.Colors.primary)
-            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(Theme.Colors.adaptiveSurface(colorScheme))
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
         }
         .buttonStyle(.plain)
     }

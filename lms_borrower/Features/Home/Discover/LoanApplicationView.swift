@@ -6,7 +6,6 @@ struct LoanApplicationView: View {
 
     @StateObject private var viewModel = LoanApplicationViewModel(service: ServiceContainer.loanService)
     @EnvironmentObject private var router: AppRouter
-    @AppStorage("loanOS_selectedBranchId") private var persistedBranchId = ""
 
     private var minAmount: Double { max(Double(loan.minAmount) ?? 10_000, 1) }
     private var maxAmount: Double { max(Double(loan.maxAmount) ?? minAmount, minAmount) }
@@ -75,7 +74,7 @@ struct LoanApplicationView: View {
             if viewModel.tenureMonths <= 0 {
                 viewModel.tenureMonths = Int(minimumTenure)
             }
-            viewModel.preloadSubmissionContext(persistedBranchId: persistedBranchId)
+            viewModel.preloadSubmissionContext()
         }
     }
 
@@ -149,24 +148,55 @@ struct LoanApplicationView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Processing Branch")
                         .font(.headline)
-                    Text("This backend still requires a branch UUID. We auto-fill it from your latest application when available.")
+                    Text("Choose the branch where you want your application to be processed.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
 
-            TextField("Enter branch UUID", text: $viewModel.selectedBranchId)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .font(.footnote.monospaced())
-                .padding(14)
-                .background(Color(UIColor.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+            if viewModel.isLoadingBranches {
+                ProgressView("Loading branches...")
+                    .font(.footnote)
+            } else {
+                Picker("Select Branch", selection: $viewModel.selectedBranchId) {
+                    Text("Select a branch").tag("")
+                    ForEach(viewModel.branches) { branch in
+                        Text("\(branch.name) (\(branch.locationLabel))").tag(branch.id)
+                    }
+                }
+                .pickerStyle(.menu)
+                .onChange(of: viewModel.selectedBranchId) { _, newValue in
+                    viewModel.updateSelectedBranch(newValue)
+                }
+            }
 
             if !viewModel.detectedBranchName.isEmpty {
                 Text("Resolved branch: \(viewModel.detectedBranchName)")
                     .font(.caption)
                     .foregroundColor(.secondaryBlue)
+            }
+
+            let location = viewModel.selectedBranchLocation()
+            if !location.isEmpty {
+                Text("Location: \(location)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            if let branchLoadError = viewModel.branchLoadError {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(branchLoadError)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                    Button("Retry") {
+                        viewModel.retryLoadingBranches()
+                    }
+                    .font(.caption.bold())
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.red.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
             }
         }
         .cardStyle()
@@ -227,7 +257,6 @@ struct LoanApplicationView: View {
                 Button {
                     Task {
                         guard let application = await viewModel.submitApplication() else { return }
-                        persistedBranchId = application.branchId
                         if loan.requiredDocuments.isEmpty {
                             router.push(.reviewApplication(application))
                         } else {
@@ -252,7 +281,7 @@ struct LoanApplicationView: View {
                             .clipShape(Capsule())
                     }
                 }
-                .disabled(viewModel.isSubmitting)
+                .disabled(!viewModel.canSubmit())
             }
             .padding(.horizontal, 24)
             .padding(.top, 8)

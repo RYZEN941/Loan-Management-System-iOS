@@ -23,6 +23,7 @@ public enum KYCRoute: Hashable {
 public struct KYCFlowController: View {
     @State private var path = NavigationPath()
     @StateObject private var viewModel: KYCViewModel
+    @State private var didRestoreProgress = false
     
     @EnvironmentObject private var session: SessionStore
     @Environment(\.dismiss) private var dismiss
@@ -85,9 +86,10 @@ public struct KYCFlowController: View {
         }
         .onAppear {
             AnalyticsManager.shared.logEvent(.kycStarted)
-            if let pending = session.pendingKYCRoute {
-                path.append(pending)
-                session.pendingKYCRoute = nil
+            guard !didRestoreProgress else { return }
+            didRestoreProgress = true
+            Task {
+                await restoreInitialRoute()
             }
         }
         .onChange(of: session.pendingKYCRoute) { _, newRoute in
@@ -95,6 +97,27 @@ public struct KYCFlowController: View {
                 path.append(route)
                 session.pendingKYCRoute = nil
             }
+        }
+    }
+
+    @MainActor
+    private func restoreInitialRoute() async {
+        if let pending = session.pendingKYCRoute {
+            path.append(pending)
+            session.pendingKYCRoute = nil
+            return
+        }
+
+        guard let backendStatus = await viewModel.restoreKYCProgressFromBackend() else { return }
+        session.kycStatus = backendStatus
+
+        if viewModel.isAadhaarVerified && !viewModel.isPanVerified {
+            path.append(.panInput)
+            return
+        }
+
+        if backendStatus == .approved {
+            dismiss()
         }
     }
 }

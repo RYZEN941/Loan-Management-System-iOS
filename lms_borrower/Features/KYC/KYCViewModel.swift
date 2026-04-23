@@ -85,6 +85,25 @@ public final class KYCViewModel: ObservableObject {
         isAadhaarVerified && isPanVerified
     }
 
+    /// Restores local KYC flags from backend so interrupted flows can resume correctly.
+    public func restoreKYCProgressFromBackend() async -> KYCStatus? {
+        do {
+            let snapshot = try await kycRepository.getBorrowerKycStatus()
+            isAadhaarVerified = snapshot.isAadhaarVerified
+            isPanVerified = snapshot.isPanVerified
+
+            if snapshot.isAadhaarVerified && snapshot.isPanVerified {
+                return .approved
+            }
+            if snapshot.isAadhaarVerified || snapshot.isPanVerified {
+                return .pending
+            }
+            return .notStarted
+        } catch {
+            return nil
+        }
+    }
+
     public var hasUploadedIncomeDocument: Bool {
         uploadedIncomeDocument != nil
     }

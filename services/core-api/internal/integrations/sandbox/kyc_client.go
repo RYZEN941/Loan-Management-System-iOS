@@ -23,6 +23,8 @@ type KYCClient struct {
 	lastAuthErr  error
 	authLeeway   time.Duration
 	defaultReqTO time.Duration
+	maxRetries   int
+	retryBackoff time.Duration
 }
 
 type authenticateResponse struct {
@@ -103,6 +105,7 @@ type PANVerifyRequest struct {
 	DateOfBirth  string `json:"date_of_birth"`
 	Consent      string `json:"consent"`
 	Reason       string `json:"reason"`
+	UseCache     bool   `json:"-"` // Controls x-accept-cache header; not sent in JSON body
 }
 
 type PANVerifyData struct {
@@ -132,11 +135,13 @@ func NewKYCClient(baseURL, apiKey, apiSecret string) *KYCClient {
 		apiVersion:   "1.0.0",
 		authLeeway:   2 * time.Minute,
 		defaultReqTO: 20 * time.Second,
+		maxRetries:   3,
+		retryBackoff: 1 * time.Second,
 	}
 }
 
 func (c *KYCClient) GenerateAadhaarOTP(ctx context.Context, req AadhaarGenerateOTPRequest) (*AadhaarGenerateOTPResponse, []byte, error) {
-	body, respBody, err := c.postJSON(ctx, "/kyc/aadhaar/okyc/otp", req)
+	body, respBody, err := c.postJSONWithRetry(ctx, "/kyc/aadhaar/okyc/otp", req, nil)
 	if err != nil {
 		return nil, respBody, err
 	}
@@ -148,7 +153,7 @@ func (c *KYCClient) GenerateAadhaarOTP(ctx context.Context, req AadhaarGenerateO
 }
 
 func (c *KYCClient) VerifyAadhaarOTP(ctx context.Context, req AadhaarVerifyOTPRequest) (*AadhaarVerifyOTPResponse, []byte, error) {
-	body, respBody, err := c.postJSON(ctx, "/kyc/aadhaar/okyc/otp/verify", req)
+	body, respBody, err := c.postJSONWithRetry(ctx, "/kyc/aadhaar/okyc/otp/verify", req, nil)
 	if err != nil {
 		return nil, respBody, err
 	}
@@ -160,7 +165,11 @@ func (c *KYCClient) VerifyAadhaarOTP(ctx context.Context, req AadhaarVerifyOTPRe
 }
 
 func (c *KYCClient) VerifyPAN(ctx context.Context, req PANVerifyRequest) (*PANVerifyResponse, []byte, error) {
-	body, respBody, err := c.postJSON(ctx, "/kyc/pan", req)
+	headers := make(map[string]string)
+	if req.UseCache {
+		headers["x-accept-cache"] = "true"
+	}
+	body, respBody, err := c.postJSONWithRetry(ctx, "/kyc/pan", req, headers)
 	if err != nil {
 		return nil, respBody, err
 	}
@@ -171,7 +180,52 @@ func (c *KYCClient) VerifyPAN(ctx context.Context, req PANVerifyRequest) (*PANVe
 	return &out, respBody, nil
 }
 
-func (c *KYCClient) postJSON(ctx context.Context, path string, payload any) ([]byte, []byte, error) {
+func (c *KYCClient) postJSONWithRetry(ctx context.Context, path string, payload any, extraHeaders map[string]string) ([]byte, []byte, error) {
+	var lastErr error
+	var lastRespBody []byte
+
+	for attempt := 0; attempt <= c.maxRetries; attempt++ {
+		if attempt > 0 {
+			backoff := c.retryBackoff * time.Duration(1<<(attempt-1))
+			select {
+			case <-time.After(backoff):
+			case <-ctx.Done():
+				return nil, lastRespBody, ctx.Err()
+			}
+		}
+
+		body, respBody, err := c.postJSON(ctx, path, payload, extraHeaders)
+		if err == nil {
+			return body, respBody, nil
+		}
+
+		lastErr = err
+		lastRespBody = respBody
+
+		if !isRetryableError(err) {
+			break
+		}
+	}
+
+	return nil, lastRespBody, lastErr
+}
+
+func isRetryableError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	// Retry on network errors and 5xx status codes
+	if strings.Contains(errStr, "sandbox http status 5") {
+		return true
+	}
+	if strings.Contains(errStr, "call sandbox endpoint") {
+		return true
+	}
+	return false
+}
+
+func (c *KYCClient) postJSON(ctx context.Context, path string, payload any, extraHeaders map[string]string) ([]byte, []byte, error) {
 	b, err := json.Marshal(payload)
 	if err != nil {
 		return nil, nil, fmt.Errorf("marshal request: %w", err)
@@ -191,6 +245,9 @@ func (c *KYCClient) postJSON(ctx context.Context, path string, payload any) ([]b
 	req.Header.Set("x-api-key", c.apiKey)
 	req.Header.Set("x-api-version", c.apiVersion)
 	req.Header.Set("authorization", token)
+	for k, v := range extraHeaders {
+		req.Header.Set(k, v)
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

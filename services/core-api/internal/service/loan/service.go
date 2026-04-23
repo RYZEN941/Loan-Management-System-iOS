@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -348,7 +349,7 @@ func (s *service) CreateLoanApplication(ctx context.Context, req *loanv1.CreateL
 		CreatedByUserID:          uuidToPg(callerUserID),
 		CreatedByRole:            generated.UserRole(role),
 		CreatedByChannel:         channel,
-		ProductSnapshotJson: []byte(buildProductSnapshotJSON(product)),
+		ProductSnapshotJson:      []byte(buildProductSnapshotJSON(product)),
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to create loan application")
@@ -827,6 +828,7 @@ func (s *service) AddApplicationDocument(ctx context.Context, req *loanv1.AddApp
 		return nil, status.Error(codes.NotFound, "loan application not found")
 	}
 	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID); err != nil {
+		fmt.Println("Error: ", err)
 		return nil, err
 	}
 	borrowerProfile, err := s.queries.GetBorrowerProfileByID(ctx, uuidToPg(borrowerProfileID))
@@ -1013,8 +1015,8 @@ func (s *service) CreateLoan(ctx context.Context, req *loanv1.CreateLoanRequest)
 func (s *service) GetLoan(ctx context.Context, req *loanv1.GetLoanRequest) (*loanv1.GetLoanResponse, error) {
 	var (
 		loanRow generated.Loan
-		meta   generated.GetLoanByIDWithApplicationRow
-		err    error
+		meta    generated.GetLoanByIDWithApplicationRow
+		err     error
 	)
 	if strings.TrimSpace(req.GetLoanId()) != "" {
 		loanID, parseErr := parseUUID(req.GetLoanId(), "loan_id")
@@ -1737,13 +1739,13 @@ func mapDocument(row generated.ApplicationDocument) *loanv1.ApplicationDocument 
 
 func buildProductSnapshotJSON(product generated.LoanProduct) string {
 	payload := map[string]any{
-		"id":                     product.ID.String(),
-		"name":                   product.Name,
-		"category":               string(product.Category),
-		"interest_type":          string(product.InterestType),
-		"base_interest_rate":     numericToString(product.BaseInterestRate),
-		"min_amount":             numericToString(product.MinAmount),
-		"max_amount":             numericToString(product.MaxAmount),
+		"id":                      product.ID.String(),
+		"name":                    product.Name,
+		"category":                string(product.Category),
+		"interest_type":           string(product.InterestType),
+		"base_interest_rate":      numericToString(product.BaseInterestRate),
+		"min_amount":              numericToString(product.MinAmount),
+		"max_amount":              numericToString(product.MaxAmount),
 		"is_requiring_collateral": product.IsRequiringCollateral,
 	}
 	b, err := json.Marshal(payload)

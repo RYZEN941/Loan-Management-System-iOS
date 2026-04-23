@@ -183,6 +183,88 @@ func (ns NullBureauProvider) Value() (driver.Value, error) {
 	return string(ns.BureauProvider), nil
 }
 
+type ChatMessageType string
+
+const (
+	ChatMessageTypeTEXT ChatMessageType = "TEXT"
+)
+
+func (e *ChatMessageType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ChatMessageType(s)
+	case string:
+		*e = ChatMessageType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ChatMessageType: %T", src)
+	}
+	return nil
+}
+
+type NullChatMessageType struct {
+	ChatMessageType ChatMessageType `json:"chat_message_type"`
+	Valid           bool            `json:"valid"` // Valid is true if ChatMessageType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullChatMessageType) Scan(value interface{}) error {
+	if value == nil {
+		ns.ChatMessageType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ChatMessageType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullChatMessageType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ChatMessageType), nil
+}
+
+type ChatRoomType string
+
+const (
+	ChatRoomTypeDIRECT ChatRoomType = "DIRECT"
+)
+
+func (e *ChatRoomType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ChatRoomType(s)
+	case string:
+		*e = ChatRoomType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ChatRoomType: %T", src)
+	}
+	return nil
+}
+
+type NullChatRoomType struct {
+	ChatRoomType ChatRoomType `json:"chat_room_type"`
+	Valid        bool         `json:"valid"` // Valid is true if ChatRoomType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullChatRoomType) Scan(value interface{}) error {
+	if value == nil {
+		ns.ChatRoomType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ChatRoomType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullChatRoomType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ChatRoomType), nil
+}
+
 type CoapplicantRelationship string
 
 const (
@@ -1109,6 +1191,27 @@ type BureauScore struct {
 	Score             int32              `json:"score"`
 	FetchedAt         pgtype.Timestamptz `json:"fetched_at"`
 	ExpiresAt         pgtype.Timestamptz `json:"expires_at"`
+}
+
+type ChatMessage struct {
+	ID           pgtype.UUID        `json:"id"`
+	RoomID       pgtype.UUID        `json:"room_id"`
+	SenderUserID pgtype.UUID        `json:"sender_user_id"`
+	MessageType  ChatMessageType    `json:"message_type"`
+	Body         string             `json:"body"`
+	MetadataJson []byte             `json:"metadata_json"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type ChatRoom struct {
+	ID                   pgtype.UUID        `json:"id"`
+	RoomType             ChatRoomType       `json:"room_type"`
+	UserAID              pgtype.UUID        `json:"user_a_id"`
+	UserBID              pgtype.UUID        `json:"user_b_id"`
+	CreatedByUserID      pgtype.UUID        `json:"created_by_user_id"`
+	ContextApplicationID pgtype.UUID        `json:"context_application_id"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 }
 
 type DstProfile struct {

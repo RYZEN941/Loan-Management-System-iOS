@@ -235,3 +235,8 @@ SET password_hash = $2,
     is_requiring_password_change = true
 WHERE id = $1
   AND is_deleted = false;
+
+-- name: ListBankBranches :many
+SELECT * FROM bank_branches
+ORDER BY name ASC
+LIMIT $1 OFFSET $2;

@@ -7,6 +7,7 @@ import (
 type Application struct {
 	AdminHandler      *transportgrpc.AdminHandler
 	AuthHandler       *transportgrpc.AuthHandler
+	ChatHandler       *transportgrpc.ChatHandler
 	DstHandler        *transportgrpc.DstHandler
 	KycHandler        *transportgrpc.KycHandler
 	LoanHandler       *transportgrpc.LoanHandler
@@ -14,10 +15,11 @@ type Application struct {
 	OnboardingHandler *transportgrpc.OnboardingHandler
 }
 
-func New(adminService transportgrpc.AdminService, authService transportgrpc.AuthService, dstService transportgrpc.DstService, kycService transportgrpc.KycService, loanService transportgrpc.LoanService, mediaService transportgrpc.MediaService, onboardingService transportgrpc.OnboardingService) *Application {
+func New(adminService transportgrpc.AdminService, authService transportgrpc.AuthService, chatService transportgrpc.ChatService, dstService transportgrpc.DstService, kycService transportgrpc.KycService, loanService transportgrpc.LoanService, mediaService transportgrpc.MediaService, onboardingService transportgrpc.OnboardingService) *Application {
 	return &Application{
 		AdminHandler:      transportgrpc.NewAdminHandler(adminService),
 		AuthHandler:       transportgrpc.NewAuthHandler(authService),
+		ChatHandler:       transportgrpc.NewChatHandler(chatService),
 		DstHandler:        transportgrpc.NewDstHandler(dstService),
 		KycHandler:        transportgrpc.NewKycHandler(kycService),
 		LoanHandler:       transportgrpc.NewLoanHandler(loanService),

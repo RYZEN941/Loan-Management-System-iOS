@@ -469,6 +469,44 @@ func (q *Queries) GetOfficerProfileByUserID(ctx context.Context, userID pgtype.U
 	return i, err
 }
 
+const listBankBranches = `-- name: ListBankBranches :many
+SELECT id, name, region, city, dst_commission, created_at FROM bank_branches
+ORDER BY name ASC
+LIMIT $1 OFFSET $2
+`
+
+type ListBankBranchesParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) ListBankBranches(ctx context.Context, arg ListBankBranchesParams) ([]BankBranch, error) {
+	rows, err := q.db.Query(ctx, listBankBranches, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []BankBranch
+	for rows.Next() {
+		var i BankBranch
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Region,
+			&i.City,
+			&i.DstCommission,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listDstAccountsByBranchID = `-- name: ListDstAccountsByBranchID :many
 SELECT
     u.id AS user_id,

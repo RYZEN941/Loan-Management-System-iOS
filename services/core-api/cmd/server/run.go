@@ -15,6 +15,7 @@ import (
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/repository/generated"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/admin"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/auth"
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/chat"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/dst"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/kyc"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/loan"
@@ -22,6 +23,7 @@ import (
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/onboarding"
 	adminv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/adminv1"
 	authv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/authv1"
+	chatv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/chatv1"
 	dstv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/dstv1"
 	kycv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/kycv1"
 	loanv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/loanv1"
@@ -58,6 +60,7 @@ func Run() error {
 
 	adminService := admin.NewService(queries)
 	authService := auth.NewService(queries, redisClient, cfg)
+	chatService := chat.NewService(queries)
 	dstService := dst.NewService(queries)
 	sandboxKYCClient := sandbox.NewKYCClient(cfg.SandboxBaseURL, cfg.SandboxAPIKey, cfg.SandboxSecret)
 	kycService := kyc.NewService(pgPool, queries, sandboxKYCClient)
@@ -68,7 +71,7 @@ func Run() error {
 	}
 	mediaService := media.NewService(queries, r2Client, time.Duration(cfg.R2UploadURLTTLSecs)*time.Second, cfg.MediaMaxUploadSize)
 	onboardingService := onboarding.NewService(queries)
-	application := app.New(adminService, authService, dstService, kycService, loanService, mediaService, onboardingService)
+	application := app.New(adminService, authService, chatService, dstService, kycService, loanService, mediaService, onboardingService)
 
 	publicMethods := map[string]struct{}{
 		// BOOTSTRAP ADMIN ONLY:
@@ -145,6 +148,12 @@ func Run() error {
 		"/media.v1.MediaService/ListMedia":                            {"borrower", "officer", "manager", "admin", "dst"},
 		"/onboarding.v1.OnboardingService/CompleteBorrowerOnboarding": {"borrower", "officer", "manager", "admin", "dst"},
 		"/auth.v1.AuthService/Logout":                                 {"borrower", "officer", "manager", "admin", "dst"},
+		"/chat.v1.ChatService/ListChatEligibleUsers":                  {"borrower", "officer", "manager", "admin", "dst"},
+		"/chat.v1.ChatService/CreateOrGetDirectRoom":                  {"borrower", "officer", "manager", "admin", "dst"},
+		"/chat.v1.ChatService/ListMyChatRooms":                        {"borrower", "officer", "manager", "admin", "dst"},
+		"/chat.v1.ChatService/ListRoomMessages":                       {"borrower", "officer", "manager", "admin", "dst"},
+		"/chat.v1.ChatService/SendMessage":                            {"borrower", "officer", "manager", "admin", "dst"},
+		"/chat.v1.ChatService/SubscribeRoomMessages":                  {"borrower", "officer", "manager", "admin", "dst"},
 		// Example future loan roles
 		// "/loan.v1.LoanService/ApproveLoan": {"officer", "manager", "admin"},
 	}
@@ -167,6 +176,7 @@ func Run() error {
 
 	adminv1.RegisterAdminServiceServer(grpcServer, application.AdminHandler)
 	authv1.RegisterAuthServiceServer(grpcServer, application.AuthHandler)
+	chatv1.RegisterChatServiceServer(grpcServer, application.ChatHandler)
 	dstv1.RegisterDstServiceServer(grpcServer, application.DstHandler)
 	kycv1.RegisterKycServiceServer(grpcServer, application.KycHandler)
 	loanv1.RegisterLoanServiceServer(grpcServer, application.LoanHandler)

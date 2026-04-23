@@ -88,7 +88,7 @@ struct AdminSystemControlView: View {
                 GeometryReader { geo in
                     HStack(spacing: 1) {
                         if !sidebarCollapsed {
-                            sidebar.frame(width: geo.size.width * 0.28)
+                            sidebar.frame(width: min(geo.size.width * 0.28, 320))
                                 .transition(.move(edge: .leading).combined(with: .opacity))
                             Divider()
                         }

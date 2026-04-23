@@ -5,10 +5,11 @@ struct AdminLoansView: View {
     @Binding var showProfile: Bool
     @Environment(\.colorScheme) private var colorScheme
 
-    private let columns = [
-        GridItem(.flexible(), spacing: Theme.Spacing.lg),
-        GridItem(.flexible(), spacing: Theme.Spacing.lg)
-    ]
+    private var columns: [GridItem] {
+        [
+            GridItem(.adaptive(minimum: 340, maximum: 600), spacing: Theme.Spacing.lg)
+        ]
+    }
 
     private var addLoanSheetBinding: Binding<Bool> {
         Binding(
@@ -37,9 +38,9 @@ struct AdminLoansView: View {
                 Theme.Colors.adaptiveBackground(colorScheme).ignoresSafeArea()
 
                 ScrollView {
-                    VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                        searchBar
+                    VStack(alignment: .leading, spacing: Theme.Spacing.md) {
                         header
+                        searchBar
 
                         if loansVM.isLoading && loansVM.loanProducts.isEmpty {
                             ProgressView()
@@ -62,7 +63,7 @@ struct AdminLoansView: View {
                     await loansVM.refresh()
                 }
             }
-            .navigationTitle("Loans")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -76,7 +77,7 @@ struct AdminLoansView: View {
                             loansVM.showAddLoanSheet = true
                         } label: {
                             Image(systemName: "plus")
-                                .font(.system(size: 22, weight: .light))
+                                .font(.system(size: 20, weight: .light))
                                 .foregroundStyle(Theme.Colors.primary)
                                 .frame(width: 44, height: 44)
                         }
@@ -105,32 +106,35 @@ struct AdminLoansView: View {
     }
 
     private var searchBar: some View {
-        HStack {
-            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-            TextField("Search loan products...", text: $loansVM.searchText)
-                .font(Theme.Typography.subheadline)
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 13))
+                .foregroundStyle(.secondary)
+            
+            TextField("Search catalog...", text: $loansVM.searchText)
+                .font(.system(size: 14))
         }
-        .padding(12)
-        .background(Theme.Colors.adaptiveSurface(colorScheme))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.md)
-                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 0.5)
-        )
         .padding(.horizontal, Theme.Spacing.lg)
-        .padding(.top, Theme.Spacing.md)
     }
 
     private var header: some View {
-        HStack {
-            Text("Loan Products")
-                .font(Theme.Typography.title)
+        HStack(alignment: .firstTextBaseline) {
+            Text("Loan Catalog")
+                .font(.system(size: 24, weight: .semibold))
+                .foregroundStyle(.primary)
+            
             Spacer()
-            Text("\(loansVM.filteredProducts.count) live")
-                .font(Theme.Typography.caption)
+            
+            Text("\(loansVM.filteredProducts.count) Products")
+                .font(.system(size: 12))
                 .foregroundStyle(.secondary)
         }
         .padding(.horizontal, Theme.Spacing.lg)
+        .padding(.top, Theme.Spacing.md)
     }
 
     private var emptyState: some View {
@@ -157,85 +161,86 @@ struct LoanProductCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            HStack(alignment: .top) {
+            HStack(alignment: .center, spacing: 16) {
+                // Symbol
                 ZStack {
                     RoundedRectangle(cornerRadius: Theme.Radius.md)
-                        .fill(Theme.Colors.primary.opacity(0.1))
-                        .frame(width: 48, height: 48)
+                        .fill(Theme.Colors.primary.opacity(0.08))
+                        .frame(width: 44, height: 44)
                     Image(systemName: product.icon)
-                        .font(.system(size: 22))
+                        .font(.system(size: 18))
                         .foregroundStyle(Theme.Colors.primary)
                 }
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 2) {
                     Text(product.name)
-                        .font(Theme.Typography.headline)
-                    HStack(spacing: 8) {
+                        .font(.system(size: 16, weight: .semibold))
+                    HStack(spacing: 6) {
                         pill(product.categoryLabel, color: Theme.Colors.primary)
-                        pill(product.statusLabel, color: product.isActive ? Theme.Colors.secondary : .orange)
+                        if !product.isActive { pill("Inactive", color: .secondary) }
                     }
                 }
 
                 Spacer()
 
-                HStack(spacing: Theme.Spacing.sm) {
+                HStack(spacing: 12) {
                     Button { loansVM.editingLoan = product } label: {
                         Image(systemName: "pencil")
                             .font(.system(size: 14))
-                            .foregroundStyle(Theme.Colors.primary.opacity(0.8))
-                            .padding(8)
-                            .background(Theme.Colors.primary.opacity(0.05))
-                            .clipShape(Circle())
+                            .foregroundStyle(.secondary.opacity(0.6))
                     }
                     .buttonStyle(.plain)
 
                     Button { loansVM.deleteLoanProduct(product) } label: {
                         Image(systemName: "trash")
                             .font(.system(size: 14))
-                            .foregroundStyle(.red.opacity(0.7))
-                            .padding(8)
-                            .background(Color.red.opacity(0.05))
-                            .clipShape(Circle())
+                            .foregroundStyle(.red.opacity(0.4))
                     }
                     .buttonStyle(.plain)
-                    .disabled(loansVM.isSaving)
                 }
             }
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(product.amountRangeDisplay)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: 14, weight: .medium))
                 Text(product.rateDisplay)
-                    .font(Theme.Typography.subheadline)
+                    .font(.system(size: 12))
                     .foregroundStyle(.secondary)
-                if let rule = product.eligibilityRule {
-                    Text("Min age \(rule.minAge) • Bureau \(rule.minBureauScore) • Income \(LoanProduct.currency(rule.minMonthlyIncome))")
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(.secondary)
-                }
             }
 
-            Divider()
-
-            HStack(spacing: 0) {
-                cardKPI(title: "Fees", value: "\(product.fees.count)", icon: "percent")
-                divider
-                cardKPI(title: "Docs", value: "\(product.requiredDocuments.count)", icon: "doc.text")
-                divider
-                cardKPI(title: "Collateral", value: product.isRequiringCollateral ? "Yes" : "No", icon: "shield")
+            HStack(spacing: 12) {
+                miniKPI(label: "Fees", value: "\(product.fees.count)")
+                miniKPI(label: "Docs", value: "\(product.requiredDocuments.count)")
+                if product.isRequiringCollateral { miniKPI(label: "Collateral", value: "Yes") }
             }
         }
-        .padding(Theme.Spacing.md)
-        .cardStyle(colorScheme: colorScheme)
+        .padding(16)
+        .background(Theme.Colors.adaptiveSurface(colorScheme))
+        .cornerRadius(Theme.Radius.lg)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 0.5)
+        )
+    }
+
+    private func miniKPI(label: String, value: String) -> some View {
+        HStack(spacing: 4) {
+            Text(label + ":")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.primary)
+        }
     }
 
     private func pill(_ label: String, color: Color) -> some View {
         Text(label)
-            .font(.system(size: 11, weight: .bold))
-            .padding(.horizontal, 8)
+            .font(.system(size: 10, weight: .medium))
+            .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(color.opacity(0.1))
-            .foregroundStyle(color)
+            .background(color.opacity(0.05))
+            .foregroundStyle(color.opacity(0.8))
             .clipShape(Capsule())
     }
 
@@ -306,8 +311,9 @@ private struct LoanProductEditor: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Basic") {
+                Section {
                     TextField("Product name", text: $draft.name)
+                        .font(.system(size: 16, weight: .medium))
                     Picker("Category", selection: $draft.category) {
                         ForEach(LoanDraft.availableCategories, id: \.self) { category in
                             Text(LoanDraft.categoryLabel(for: category)).tag(category)
@@ -319,76 +325,175 @@ private struct LoanProductEditor: View {
                         }
                     }
                     Toggle("Requires collateral", isOn: $draft.isRequiringCollateral)
-                    Toggle("Visible to borrowers", isOn: $draft.isActive)
+                    Toggle("Active", isOn: $draft.isActive)
+                } header: {
+                    Text("General").font(.system(size: 12, weight: .bold)).foregroundStyle(.secondary)
                 }
 
-                Section("Pricing") {
-                    numericField("Base interest rate (%)", text: $draft.baseInterestRate)
-                    numericField("Minimum amount", text: $draft.minAmount, prefix: "₹")
-                    numericField("Maximum amount", text: $draft.maxAmount, prefix: "₹")
+                Section {
+                    numericField("Interest rate (%)", text: $draft.baseInterestRate)
+                    numericField("Min amount", text: $draft.minAmount, prefix: "₹")
+                    numericField("Max amount", text: $draft.maxAmount, prefix: "₹")
+                } header: {
+                    Text("Pricing").font(.system(size: 12, weight: .bold)).foregroundStyle(.secondary)
                 }
 
-                Section("Eligibility") {
-                    integerField("Minimum age", text: $draft.minAge)
-                    numericField("Minimum monthly income", text: $draft.minMonthlyIncome, prefix: "₹")
-                    integerField("Minimum bureau score", text: $draft.minBureauScore)
-                    TextField("Employment types (comma separated)", text: $draft.allowedEmploymentTypes)
+                Section {
+                    integerField("Min age", text: $draft.minAge)
+                    numericField("Min monthly income", text: $draft.minMonthlyIncome, prefix: "₹")
+                    integerField("Min bureau score", text: $draft.minBureauScore)
+                    TextField("Employment types", text: $draft.allowedEmploymentTypes)
+                        .font(.system(size: 14))
+                } header: {
+                    Text("Eligibility").font(.system(size: 12, weight: .bold)).foregroundStyle(.secondary)
                 }
 
-                Section("Fees") {
+                Section {
+                    if draft.fees.isEmpty {
+                        Text("No fees").font(.system(size: 14)).foregroundStyle(.secondary).padding(.vertical, 4)
+                    }
+                    
                     ForEach($draft.fees) { $fee in
                         VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text("Fee Item").font(Theme.Typography.caption2).foregroundStyle(.secondary)
+                                Spacer()
+                                Button(role: .destructive) {
+                                    if let idx = draft.fees.firstIndex(where: { $0.id == fee.id }) {
+                                        draft.fees.remove(at: idx)
+                                    }
+                                } label: {
+                                    Image(systemName: "trash")
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(.red)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            
                             Picker("Type", selection: $fee.type) {
                                 ForEach(LoanDraft.availableFeeTypes, id: \.self) { type in
                                     Text(LoanDraft.feeTypeLabel(for: type)).tag(type)
                                 }
                             }
+                            
+                            if fee.type == .unspecified {
+                                HStack {
+                                    Text("Custom Type")
+                                    Spacer()
+                                    TextField("e.g. Legal Fee", text: $fee.customType)
+                                        .multilineTextAlignment(.trailing)
+                                        .frame(width: 150)
+                                        .padding(8)
+                                        .background(Color.secondary.opacity(0.05))
+                                        .cornerRadius(8)
+                                }
+                            }
+                            
                             Picker("Calculation", selection: $fee.calcMethod) {
                                 ForEach(LoanDraft.availableCalcMethods, id: \.self) { method in
                                     Text(LoanDraft.calcMethodLabel(for: method)).tag(method)
                                 }
                             }
-                            TextField("Value", text: $fee.value)
-                                .keyboardType(.decimalPad)
+                            
+                            HStack {
+                                Text("Value")
+                                Spacer()
+                                TextField("0.00", text: $fee.value)
+                                    .keyboardType(.decimalPad)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(width: 100)
+                                    .padding(8)
+                                    .background(Color.secondary.opacity(0.05))
+                                    .cornerRadius(8)
+                            }
                         }
+                        .padding(.vertical, 8)
                     }
-                    .onDelete { draft.fees.remove(atOffsets: $0) }
-
-                    Button("Add Fee") {
-                        draft.fees.append(.empty)
+                    
+                    Button {
+                        withAnimation { draft.fees.append(.empty) }
+                    } label: {
+                        Label("Add Another Fee", systemImage: "plus.circle.fill")
+                            .font(Theme.Typography.caption)
+                            .fontWeight(.bold)
                     }
+                    .padding(.vertical, 4)
+                } header: {
+                    Text("Fees").font(.system(size: 12, weight: .bold)).foregroundStyle(.secondary)
                 }
 
-                Section("Required Documents") {
+                Section {
+                    if draft.documents.isEmpty {
+                        Text("No documents").font(.system(size: 14)).foregroundStyle(.secondary).padding(.vertical, 4)
+                    }
+                    
                     ForEach($draft.documents) { $document in
                         VStack(alignment: .leading, spacing: 12) {
-                            Picker("Document", selection: $document.requirementType) {
+                            HStack {
+                                Text("Document Requirement").font(Theme.Typography.caption2).foregroundStyle(.secondary)
+                                Spacer()
+                                Button(role: .destructive) {
+                                    if let idx = draft.documents.firstIndex(where: { $0.id == document.id }) {
+                                        draft.documents.remove(at: idx)
+                                    }
+                                } label: {
+                                    Image(systemName: "trash")
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(.red)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            
+                            Picker("Type", selection: $document.requirementType) {
                                 ForEach(LoanDraft.availableDocumentTypes, id: \.self) { type in
                                     Text(LoanDraft.documentLabel(for: type)).tag(type)
                                 }
                             }
-                            Toggle("Mandatory", isOn: $document.isMandatory)
-                        }
-                    }
-                    .onDelete { draft.documents.remove(atOffsets: $0) }
 
-                    Button("Add Document") {
-                        draft.documents.append(.empty)
+                            if document.requirementType == .unspecified {
+                                HStack {
+                                    Text("Custom Document")
+                                    Spacer()
+                                    TextField("e.g. Birth Certificate", text: $document.customType)
+                                        .multilineTextAlignment(.trailing)
+                                        .frame(width: 150)
+                                        .padding(8)
+                                        .background(Color.secondary.opacity(0.05))
+                                        .cornerRadius(8)
+                                }
+                            }
+                            
+                            Toggle("Mandatory Requirement", isOn: $document.isMandatory)
+                                .font(Theme.Typography.subheadline)
+                        }
+                        .padding(.vertical, 8)
                     }
+                    
+                    Button {
+                        withAnimation { draft.documents.append(.empty) }
+                    } label: {
+                        Label("Add Another Document", systemImage: "plus.circle.fill")
+                            .font(Theme.Typography.caption)
+                            .fontWeight(.bold)
+                    }
+                    .padding(.vertical, 4)
+                } header: {
+                    Text("Documents").font(.system(size: 12, weight: .bold)).foregroundStyle(.secondary)
                 }
             }
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Close") { dismiss() }
+                        .foregroundStyle(.secondary)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(isSaving ? "Saving..." : "Save") {
+                    Button(isSaving ? "Saving..." : "Done") {
                         onSave(draft.toProduct())
                     }
                     .disabled(!draft.isValid || isSaving)
-                    .fontWeight(.bold)
+                    .fontWeight(.semibold)
                 }
             }
         }
@@ -424,6 +529,7 @@ private struct LoanDraft {
     struct FeeDraft: Identifiable {
         var id = UUID()
         var type: Loan_V1_ProductFeeType
+        var customType: String = ""
         var calcMethod: Loan_V1_FeeCalcMethod
         var value: String
 
@@ -433,6 +539,7 @@ private struct LoanDraft {
     struct DocumentDraft: Identifiable {
         var id = UUID()
         var requirementType: Loan_V1_DocumentRequirementType
+        var customType: String = ""
         var isMandatory: Bool
 
         static let empty = DocumentDraft(requirementType: .identity, isMandatory: true)
@@ -456,9 +563,9 @@ private struct LoanDraft {
 
     static let availableCategories: [Loan_V1_LoanProductCategory] = [.home, .personal, .vehicle, .education]
     static let availableInterestTypes: [Loan_V1_InterestType] = [.fixed, .floating]
-    static let availableFeeTypes: [Loan_V1_ProductFeeType] = [.processing, .prepayment, .latePayment]
+    static let availableFeeTypes: [Loan_V1_ProductFeeType] = [.processing, .prepayment, .latePayment, .unspecified]
     static let availableCalcMethods: [Loan_V1_FeeCalcMethod] = [.flat, .percentage]
-    static let availableDocumentTypes: [Loan_V1_DocumentRequirementType] = [.identity, .address, .income, .collateral]
+    static let availableDocumentTypes: [Loan_V1_DocumentRequirementType] = [.identity, .address, .income, .collateral, .unspecified]
 
     init(
         id: String,
@@ -509,7 +616,12 @@ private struct LoanDraft {
         minBureauScore: "650",
         allowedEmploymentTypes: "Salaried, Self-employed",
         fees: [.init(type: .processing, calcMethod: .percentage, value: "1.0")],
-        documents: [.init(requirementType: .identity, isMandatory: true), .init(requirementType: .income, isMandatory: true)]
+        documents: [
+            .init(requirementType: .identity, isMandatory: true),
+            .init(requirementType: .address, isMandatory: true),
+            .init(requirementType: .income, isMandatory: true),
+            .init(requirementType: .collateral, isMandatory: false)
+        ]
     )
 
     init(product: LoanProduct) {

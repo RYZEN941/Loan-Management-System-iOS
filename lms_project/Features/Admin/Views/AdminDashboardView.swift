@@ -113,7 +113,7 @@ struct AdminDashboardView: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             MinimalHeader(title: "ACTION REQUIRED")
             
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: Theme.Spacing.md), GridItem(.flexible(), spacing: Theme.Spacing.md)], spacing: Theme.Spacing.md) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: Theme.Spacing.md)], spacing: Theme.Spacing.md) {
                 statusCard(title: "SLA Breaches", count: 5, color: .red, icon: "timer", trend: "↑ 20%", trendPositive: false, subtext: "Avg delay: 24m")
                 statusCard(title: "Fraud Alerts", count: 3, color: .orange, icon: "shield.righthalf.filled", subtext: "2 Critical level")
                 statusCard(title: "Policy Overrides", count: 2, color: .orange, icon: "doc.on.doc.fill", trend: "↓ 10%", trendPositive: true, subtext: "Auto-processed")
@@ -130,7 +130,7 @@ struct AdminDashboardView: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             MinimalHeader(title: "SYSTEM HEALTH")
             
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: Theme.Spacing.md), GridItem(.flexible(), spacing: Theme.Spacing.md)], spacing: Theme.Spacing.md) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: Theme.Spacing.md)], spacing: Theme.Spacing.md) {
                 statusCard(title: "Processing Time", value: "4.2h", color: .blue, icon: "clock.fill", trend: "↓ 8%", trendPositive: true, subtext: "Limit: 12h")
                 statusCard(title: "Applications Today", value: "48", color: .purple, icon: "doc.text.fill", trend: "↑ 15%", trendPositive: true, subtext: "Forecast: 60")
                 statusCard(title: "Active Users", value: "12", color: .green, icon: "person.2.fill", subtext: "Peak: 24 (10 AM)")
@@ -366,12 +366,11 @@ struct AdminDashboardView: View {
         var body: some View {
             VStack(spacing: 0) {
                 // Table Header
-                HStack(spacing: 0) {
-                    tableHeaderLabel("MONITOR", width: 140)
-                    tableHeaderLabel("SCORE", width: 80)
-                    tableHeaderLabel("RISK LEVEL", width: 100)
-                    tableHeaderLabel("STATUS", width: 100)
-                    Spacer()
+                HStack(spacing: Theme.Spacing.md) {
+                    tableHeaderLabel("MONITOR", width: nil).frame(maxWidth: .infinity, alignment: .leading)
+                    tableHeaderLabel("SCORE", width: 70)
+                    tableHeaderLabel("RISK LEVEL", width: 90)
+                    tableHeaderLabel("STATUS", width: 90)
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 12)
@@ -398,9 +397,10 @@ struct AdminDashboardView: View {
             )
         }
         
-        private func tableHeaderLabel(_ title: String, width: CGFloat) -> some View {
+        private func tableHeaderLabel(_ title: String, width: CGFloat?) -> some View {
             Text(title)
                 .font(Theme.Typography.caption2)
+                .fontWeight(.bold)
                 .foregroundStyle(.secondary)
                 .frame(width: width, alignment: .leading)
         }
@@ -415,7 +415,7 @@ struct AdminDashboardView: View {
         let icon: String
         
         var body: some View {
-            HStack(spacing: 0) {
+            HStack(spacing: Theme.Spacing.md) {
                 // Category
                 HStack(spacing: 12) {
                     Image(systemName: icon)
@@ -425,16 +425,16 @@ struct AdminDashboardView: View {
                     Text(title)
                         .font(Theme.Typography.subheadline.weight(.semibold))
                 }
-                .frame(width: 140, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 
                 // Value
                 Text(value)
                     .font(Theme.Typography.mono)
-                    .frame(width: 80, alignment: .leading)
+                    .frame(width: 70, alignment: .leading)
                 
                 // Risk Badge
                 riskBadge(text: risk, color: color)
-                    .frame(width: 100, alignment: .leading)
+                    .frame(width: 90, alignment: .leading)
                 
                 // Status
                 HStack(spacing: 4) {
@@ -444,9 +444,7 @@ struct AdminDashboardView: View {
                         .font(.system(size: 11, weight: .medium))
                 }
                 .foregroundStyle(.secondary)
-                .frame(width: 100, alignment: .leading)
-                
-                Spacer()
+                .frame(width: 90, alignment: .leading)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 14)

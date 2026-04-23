@@ -329,17 +329,16 @@ struct AdminRiskView: View {
             // Table
             VStack(spacing: 0) {
                 // Table Header
-                HStack {
-                    tableHeaderLabel("ID", width: 80)
-                    tableHeaderLabel("ISSUE", width: 100)
-                    tableHeaderLabel("SEV", width: 60)
-                    tableHeaderLabel("TIME", width: 60)
-                    tableHeaderLabel(adminVM.selectedRiskFilter == .fraudAlert ? "DETECTED BY" : "OFFICER", width: 120)
-                    Spacer()
-                    tableHeaderLabel("ACTIONS", width: 180)
+                HStack(spacing: Theme.Spacing.md) {
+                    tableHeaderLabel("ID", width: 90)
+                    tableHeaderLabel("ISSUE", width: nil).frame(maxWidth: .infinity, alignment: .leading)
+                    tableHeaderLabel("SEV", width: 70)
+                    tableHeaderLabel("TIME", width: 75)
+                    tableHeaderLabel(adminVM.selectedRiskFilter == .fraudAlert ? "DETECTED BY" : "OFFICER", width: 140)
+                    tableHeaderLabel("ACTIONS", width: 180).frame(alignment: .trailing)
                 }
                 .padding(.horizontal, 20)
-                .padding(.vertical, 12)
+                .padding(.vertical, 14)
                 .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
                 
                 let items = filteredActionItems
@@ -357,22 +356,37 @@ struct AdminRiskView: View {
                     .frame(maxWidth: .infinity, minHeight: 300)
                 } else {
                     ForEach(items) { item in
-                        HStack {
-                            Text(item.loanId).font(Theme.Typography.mono).font(.system(size: 11)).frame(width: 80, alignment: .leading)
-                            Text(item.issue).font(Theme.Typography.subheadline).font(.system(size: 11)).frame(width: 100, alignment: .leading).lineLimit(1)
-                            severityBadge(text: item.severity).frame(width: 60, alignment: .leading)
-                            Text(item.time).font(Theme.Typography.caption).font(.system(size: 10)).foregroundStyle(.secondary).frame(width: 60, alignment: .leading)
-                            Text(adminVM.selectedRiskFilter == .fraudAlert ? "System" : item.officer).font(Theme.Typography.subheadline).font(.system(size: 11)).frame(width: 120, alignment: .leading).lineLimit(1)
+                        HStack(spacing: Theme.Spacing.md) {
+                            Text(item.loanId)
+                                .font(Theme.Typography.mono)
+                                .font(.system(size: 12))
+                                .frame(width: 90, alignment: .leading)
                             
-                            Spacer()
+                            Text(item.issue)
+                                .font(Theme.Typography.subheadline)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .lineLimit(1)
                             
-                            HStack(spacing: 6) {
+                            severityBadge(text: item.severity)
+                                .frame(width: 70, alignment: .leading)
+                            
+                            Text(item.time)
+                                .font(Theme.Typography.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 75, alignment: .leading)
+                            
+                            Text(adminVM.selectedRiskFilter == .fraudAlert ? "System" : item.officer)
+                                .font(Theme.Typography.subheadline)
+                                .frame(width: 140, alignment: .leading)
+                                .lineLimit(1)
+                            
+                            HStack(spacing: 8) {
                                 renderActions(for: item)
                             }
-                            .frame(width: 180, alignment: .leading)
+                            .frame(width: 180, alignment: .trailing)
                         }
                         .padding(.horizontal, 20)
-                        .padding(.vertical, 14)
+                        .padding(.vertical, 16)
                         
                         if item.id != items.last?.id { Divider().padding(.horizontal, 12) }
                     }
@@ -525,9 +539,10 @@ struct AdminRiskView: View {
             .clipShape(Capsule())
     }
     
-    private func tableHeaderLabel(_ title: String, width: CGFloat) -> some View {
+    private func tableHeaderLabel(_ title: String, width: CGFloat?) -> some View {
         Text(title)
             .font(Theme.Typography.caption2)
+            .fontWeight(.bold)
             .foregroundStyle(.secondary)
             .frame(width: width, alignment: .leading)
     }

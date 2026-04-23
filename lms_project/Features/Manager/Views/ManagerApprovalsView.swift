@@ -13,6 +13,13 @@ struct ManagerApprovalsView: View {
 
     @State private var sidebarCollapsed = false
     private let sidebarWidth: CGFloat = 320
+    
+    // Sanction Letter State
+    @State private var showApprovalConfirmation = false
+    @State private var showRegenerateConfirmation = false
+    @State private var showRevokeConfirmation = false
+    @State private var previewLetter: SanctionLetterVersion? = nil
+    @State private var selectedVersionIndex = 0
 
     var body: some View {
         NavigationStack {
@@ -53,6 +60,31 @@ struct ManagerApprovalsView: View {
             } message: { Text(applicationsVM.actionMessage ?? "") }
             .sheet(isPresented: $applicationsVM.showRejectionRemarksSheet) { rejectionSheet }
             .sheet(isPresented: $applicationsVM.showSendBackSheet) { sendBackSheet }
+            .sheet(item: $previewLetter) { version in sanctionLetterPreview(version) }
+            .alert("Approve this application?", isPresented: $showApprovalConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Confirm") { 
+                    if let app = applicationsVM.selectedApplication {
+                        applicationsVM.approveApplication(app)
+                    }
+                }
+            } message: { Text("This will generate and send the sanction letter to the borrower.") }
+            .alert("Regenerate sanction letter?", isPresented: $showRegenerateConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Regenerate") {
+                    if let app = applicationsVM.selectedApplication {
+                        applicationsVM.regenerateSanctionLetter(app)
+                    }
+                }
+            } message: { Text("This will create a new version and resend it to the borrower.") }
+            .alert("Revoke this sanction letter?", isPresented: $showRevokeConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Revoke", role: .destructive) {
+                    if let app = applicationsVM.selectedApplication {
+                        applicationsVM.revokeSanctionLetter(app)
+                    }
+                }
+            } message: { Text("This will mark it as inactive but retain history.") }
         }
     }
 
@@ -61,7 +93,7 @@ struct ManagerApprovalsView: View {
         VStack(spacing: 0) {
             // Search
             HStack(spacing: 12) {
-                Image(systemName: "magnifyingglass").foregroundStyle(Theme.Colors.primary).font(.system(size: 14, weight: .bold))
+                Image(systemName: "magnifyingglass").foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme)).font(.system(size: 14, weight: .bold))
                 TextField("Search applications...", text: $applicationsVM.searchText)
                     .font(Theme.Typography.subheadline)
             }
@@ -87,10 +119,10 @@ struct ManagerApprovalsView: View {
                 Spacer()
                 Text("\(applicationsVM.filteredApplications.count)")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Theme.Colors.primary)
+                    .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
-                    .background(Theme.Colors.primary.opacity(0.1))
+                    .background(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.1))
                     .clipShape(Capsule())
             }
             .padding(.horizontal, 16)
@@ -120,7 +152,7 @@ struct ManagerApprovalsView: View {
 
             if applicationsVM.filteredApplications.isEmpty {
                 VStack(spacing: 12) {
-                    Image(systemName: "doc.text.magnifyingglass").font(.system(size: 32, weight: .thin)).foregroundStyle(Theme.Colors.primary.opacity(0.3))
+                    Image(systemName: "doc.text.magnifyingglass").font(.system(size: 32, weight: .thin)).foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.3))
                     Text("No applications found").font(Theme.Typography.subheadline).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -157,6 +189,7 @@ struct ManagerApprovalsView: View {
                         financialSection(app)
                         borrowerInfoSection(app)
                         documentsSummarySection(app)
+                        sanctionLetterSection(app)
                         verificationSection(app)
                         conversationSection(app)
                     }
@@ -164,9 +197,9 @@ struct ManagerApprovalsView: View {
                 }
                 .background(Theme.Colors.adaptiveBackground(colorScheme))
                 .safeAreaInset(edge: .bottom) {
-                    if app.status == .underReview {
+                    if app.status == .underReview || app.status == .pending {
                         ManagerActionPanel(
-                            onApprove: { applicationsVM.approveApplication(app) },
+                            onApprove: { showApprovalConfirmation = true },
                             onRejectWithRemarks: { applicationsVM.beginRejectWithRemarks(app) },
                             onSendBack: { applicationsVM.beginSendBack(app) }
                         )
@@ -174,9 +207,12 @@ struct ManagerApprovalsView: View {
                         .shadow(color: Color.black.opacity(0.05), radius: 10, y: -5)
                     }
                 }
+                .onChange(of: applicationsVM.selectedApplication) { _ in
+                    selectedVersionIndex = 0
+                }
             } else {
                 VStack(spacing: 16) {
-                    Image(systemName: "checkmark.circle.badge.questionmark").font(.system(size: 48, weight: .thin)).foregroundStyle(Theme.Colors.primary.opacity(0.4))
+                    Image(systemName: "checkmark.circle.badge.questionmark").font(.system(size: 48, weight: .thin)).foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.4))
                     Text("Select an application to review").font(Theme.Typography.subheadline).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -189,10 +225,10 @@ struct ManagerApprovalsView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top, spacing: 16) {
                 ZStack {
-                    Circle().fill(Theme.Colors.primary.opacity(0.12)).frame(width: 56, height: 56)
+                    Circle().fill(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.12)).frame(width: 56, height: 56)
                     Text(app.borrower.name.prefix(1))
                         .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundStyle(Theme.Colors.primary)
+                        .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
                 }
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
@@ -201,7 +237,7 @@ struct ManagerApprovalsView: View {
                         StatusBadge(status: app.status)
                     }
                     Text(app.loan.amount.currencyFormatted + " · " + app.loan.type.displayName)
-                        .font(.system(size: 17, weight: .bold, design: .rounded)).foregroundStyle(Theme.Colors.primary)
+                        .font(.system(size: 17, weight: .bold, design: .rounded)).foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
                     Text("ID: \(app.id)").font(.system(size: 11, weight: .medium, design: .monospaced)).foregroundStyle(.tertiary)
                 }
             }
@@ -216,14 +252,14 @@ struct ManagerApprovalsView: View {
             HStack {
                 Label("Loan Officer Assessed", systemImage: "person.badge.shield.checkered.fill")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Theme.Colors.primary)
+                    .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
                 Spacer()
                 Text("Due: \(app.slaDeadline.shortFormatted)")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(.secondary)
             }
             .padding(10)
-            .background(Theme.Colors.primary.opacity(0.08))
+            .background(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.08))
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
         .padding(20)
@@ -286,12 +322,12 @@ struct ManagerApprovalsView: View {
             SectionHeader(title: "Risk & Credit Analysis", icon: "gauge.with.needle.fill")
                 .description("Key financial indicators, CIBIL score, and DTI ratios for risk mitigation.")
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                finCard("Monthly Income",  app.financials.monthlyIncome.currencyFormatted, "dollarsign.circle.fill", Theme.Colors.primary)
+                finCard("Monthly Income",  app.financials.monthlyIncome.currencyFormatted, "dollarsign.circle.fill", Theme.Colors.adaptivePrimary(colorScheme))
                 finCard("CIBIL Score",     "\(app.financials.cibilScore)", "bolt.fill", cibilColor(app.financials.cibilScore))
                 finCard("DTI Ratio",       app.financials.dtiRatio.percentFormatted, "chart.pie.fill", dtiColor(app.financials.dtiRatio))
-                finCard("Annual Income",   app.financials.annualIncome.currencyFormatted, "calendar.badge.clock", Theme.Colors.primary)
-                finCard("Bank Balance",    app.financials.bankBalance.currencyFormatted, "building.columns.fill", Theme.Colors.primary)
-                finCard("Risk Assessment", app.riskLevel.displayName, "shield.lefthalf.filled", app.riskLevel.color)
+                finCard("Annual Income",   app.financials.annualIncome.currencyFormatted, "calendar.badge.clock", Theme.Colors.adaptivePrimary(colorScheme))
+                finCard("Bank Balance",    app.financials.bankBalance.currencyFormatted, "building.columns.fill", Theme.Colors.adaptivePrimary(colorScheme))
+                finCard("Risk Assessment", app.riskLevel.displayName, "shield.lefthalf.filled", app.riskLevel.adaptiveColor(colorScheme))
             }
         }
         .padding(18)
@@ -320,8 +356,12 @@ struct ManagerApprovalsView: View {
         )
     }
 
-    private func cibilColor(_ s: Int) -> Color { s >= 750 ? Theme.Colors.success : s >= 650 ? Theme.Colors.warning : Theme.Colors.critical }
-    private func dtiColor(_ r: Double) -> Color { r <= 0.30 ? Theme.Colors.success : r <= 0.40 ? Theme.Colors.warning : Theme.Colors.critical }
+    private func cibilColor(_ s: Int) -> Color { 
+        s >= 750 ? Theme.Colors.adaptiveSuccess(colorScheme) : s >= 650 ? Theme.Colors.adaptiveWarning(colorScheme) : Theme.Colors.adaptiveCritical(colorScheme) 
+    }
+    private func dtiColor(_ r: Double) -> Color { 
+        r <= 0.30 ? Theme.Colors.adaptiveSuccess(colorScheme) : r <= 0.40 ? Theme.Colors.adaptiveWarning(colorScheme) : Theme.Colors.adaptiveCritical(colorScheme) 
+    }
 
     // MARK: - Documents
     private func documentsSummarySection(_ app: LoanApplication) -> some View {
@@ -331,7 +371,7 @@ struct ManagerApprovalsView: View {
             VStack(spacing: 0) {
                 ForEach(app.documents) { doc in
                     HStack {
-                        Image(systemName: doc.type.icon).font(.system(size: 14)).foregroundStyle(Theme.Colors.primary).frame(width: 24)
+                        Image(systemName: doc.type.icon).font(.system(size: 14)).foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme)).frame(width: 24)
                         Text(doc.label).font(Theme.Typography.subheadline).foregroundStyle(.primary)
                         Spacer()
                         DocStatusBadge(status: doc.status)
@@ -347,6 +387,191 @@ struct ManagerApprovalsView: View {
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
                 .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
         )
+    }
+
+    // MARK: - Sanction Letter
+    private func sanctionLetterSection(_ app: LoanApplication) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Sanction Letter", icon: "doc.badge.shield.fill")
+                .description("Official loan approval document and version history.")
+            
+            if app.status == .approved, let sanction = app.sanctionLetter {
+                // Ensure index is valid
+                let versions = sanction.versions.sorted(by: { $0.version > $1.version })
+                let safeIndex = min(max(0, selectedVersionIndex), versions.count - 1)
+                let current = versions[safeIndex]
+                
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Menu {
+                                ForEach(versions.indices, id: \.self) { idx in
+                                    Button {
+                                        selectedVersionIndex = idx
+                                    } label: {
+                                        HStack {
+                                            Text("Version: v\(versions[idx].version)")
+                                            if idx == selectedVersionIndex {
+                                                Image(systemName: "checkmark")
+                                            }
+                                        }
+                                    }
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Text("Version: v\(current.version)").font(.system(size: 14, weight: .bold))
+                                    Image(systemName: "chevron.down").font(.system(size: 10))
+                                }
+                                .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.1))
+                                .clipShape(RoundedRectangle(cornerRadius: 6))
+                            }
+                            
+                            HStack(spacing: 6) {
+                                Circle().fill(current.status == .sent ? Theme.Colors.success : Theme.Colors.critical).frame(width: 8, height: 8)
+                                Text("Status: \(current.status.displayName)").font(.system(size: 13, weight: .medium))
+                            }
+                            Text("Generated on: \(current.generatedAt.shortFormatted)").font(.system(size: 11)).foregroundStyle(.tertiary)
+                        }
+                        Spacer()
+                    }
+                    
+                    HStack(spacing: 12) {
+                        letterActionBtn(title: "View Document", icon: "eye") { previewLetter = current }
+                        letterActionBtn(title: "Download PDF", icon: "arrow.down.doc") { downloadSanctionLetter(current) }
+                        letterActionBtn(title: "Regenerate", icon: "arrow.clockwise") { showRegenerateConfirmation = true }
+                        letterActionBtn(title: "Mark as Revoked", icon: "xmark.shield", isDestructive: true) { showRevokeConfirmation = true }
+                    }
+                }
+                .padding(16)
+                .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            } else {
+                HStack {
+                    Image(systemName: "doc.text.fill").foregroundStyle(.tertiary)
+                    Text("Not generated yet").font(Theme.Typography.subheadline).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme).opacity(0.5))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+        }
+        .padding(18)
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(Theme.Colors.adaptiveSurface(colorScheme)))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+        )
+    }
+
+    private func downloadSanctionLetter(_ version: SanctionLetterVersion) {
+        let fileName = "Sanction_Letter_v\(version.version).pdf"
+        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+        let content = "SANCTION LETTER v\(version.version)\nGenerated on: \(version.generatedAt)\nStatus: \(version.status.displayName)"
+        try? content.write(to: tempURL, atomically: true, encoding: .utf8)
+        
+        let activityVC = UIActivityViewController(activityItems: [tempURL], applicationActivities: nil)
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootVC = windowScene.windows.first?.rootViewController {
+            // On iPad, we need to provide a source view for the popover
+            activityVC.popoverPresentationController?.sourceView = rootVC.view
+            rootVC.present(activityVC, animated: true, completion: nil)
+        }
+    }
+    
+    private func letterActionBtn(title: String, icon: String, isDestructive: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Image(systemName: icon).font(.system(size: 16))
+                Text(title).font(.system(size: 10, weight: .medium))
+            }
+            .foregroundStyle(isDestructive ? Theme.Colors.adaptiveCritical(colorScheme) : Theme.Colors.adaptivePrimary(colorScheme))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(isDestructive ? Theme.Colors.adaptiveCritical(colorScheme).opacity(0.08) : Theme.Colors.adaptivePrimary(colorScheme).opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
+    }
+    
+    private func sanctionLetterPreview(_ version: SanctionLetterVersion) -> some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 30) {
+                        // Letter Header
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("SANCTION LETTER").font(.system(size: 24, weight: .black))
+                                Text("LMS BANKING CORP").font(.system(size: 12, weight: .bold)).foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
+                            }
+                            Spacer()
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text("Version: v\(version.version)").font(.system(size: 10, weight: .bold))
+                                Text("Date: \(version.generatedAt.shortFormatted)").font(.system(size: 10))
+                            }
+                        }
+                        
+                        Divider()
+                        
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Dear Borrower,").font(.system(size: 16, weight: .semibold))
+                            Text("We are pleased to inform you that your loan application has been approved under the following terms and conditions:")
+                                .font(.system(size: 14))
+                                .lineSpacing(4)
+                        }
+                        
+                        VStack(spacing: 0) {
+                            previewRow(label: "Loan ID", value: "LOAN-\(version.version)001")
+                            previewRow(label: "Approved Amount", value: "₹25,00,000")
+                            previewRow(label: "Interest Rate", value: "10.5% p.a.")
+                            previewRow(label: "Tenure", value: "60 Months")
+                            previewRow(label: "EMI Amount", value: "₹53,745")
+                        }
+                        .background(Color.secondary.opacity(0.05))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        
+                        Text("Please review and sign the attached documents to proceed with the disbursement.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                        
+                        Spacer(minLength: 100)
+                        
+                        HStack {
+                            Spacer()
+                            VStack(spacing: 4) {
+                                Rectangle().frame(width: 120, height: 1)
+                                Text("Authorized Signatory").font(.system(size: 10, weight: .bold))
+                                Text("LMS Manager").font(.system(size: 8)).foregroundStyle(.tertiary)
+                            }
+                        }
+                    }
+                    .padding(40)
+                }
+            }
+            .navigationTitle("Sanction Letter Preview")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { previewLetter = nil } label: {
+                        Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func previewRow(label: String, value: String) -> some View {
+        HStack {
+            Text(label).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
+            Spacer()
+            Text(value).font(.system(size: 12, weight: .bold))
+        }
+        .padding(12)
+        .overlay(Divider(), alignment: .bottom)
     }
 
     // MARK: - Verification
@@ -389,7 +614,7 @@ struct ManagerApprovalsView: View {
                 } label: {
                     Image(systemName: "arrow.up.circle.fill").font(.system(size: 32))
                         .foregroundStyle(applicationsVM.chatText.trimmingCharacters(in: .whitespaces).isEmpty
-                                         ? Color.secondary.opacity(0.3) : Theme.Colors.primary)
+                                         ? Color.secondary.opacity(0.3) : Theme.Colors.adaptivePrimary(colorScheme))
                 }
                 .buttonStyle(.plain)
                 .disabled(applicationsVM.chatText.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -410,7 +635,7 @@ struct ManagerApprovalsView: View {
                         Image(systemName: "shield.fill").font(.system(size: 10))
                         Text("MANAGER REMARK").font(.system(size: 9, weight: .bold))
                     }
-                    .foregroundStyle(Theme.Colors.primary)
+                    .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
                 } else {
                     Text("\(msg.senderName)").font(Theme.Typography.caption2).foregroundStyle(.secondary)
                 }
@@ -419,8 +644,8 @@ struct ManagerApprovalsView: View {
                     .foregroundStyle(msg.type == .managerRemark ? .white : (msg.isFromCurrentUser ? .white : .primary))
                     .padding(.horizontal, 14).padding(.vertical, 10)
                     .background(
-                        msg.type == .managerRemark ? Theme.Colors.primary
-                        : (msg.isFromCurrentUser ? Theme.Colors.primary.opacity(0.8) : Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+                        msg.type == .managerRemark ? Theme.Colors.adaptivePrimary(colorScheme)
+                        : (msg.isFromCurrentUser ? Theme.Colors.adaptivePrimary(colorScheme).opacity(0.8) : Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                 Text(msg.timestamp.timeFormatted).font(.system(size: 10)).foregroundStyle(.tertiary)
@@ -432,7 +657,7 @@ struct ManagerApprovalsView: View {
     // MARK: - Section Label
     private func sectionLabel(_ title: String, icon: String) -> some View {
         HStack(spacing: 8) {
-            Image(systemName: icon).font(.system(size: 12)).foregroundStyle(Theme.Colors.primary)
+            Image(systemName: icon).font(.system(size: 12)).foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
             Text(title).font(.system(size: 11, weight: .bold)).foregroundStyle(.secondary)
                 .textCase(.uppercase).tracking(1.0)
         }
@@ -443,7 +668,7 @@ struct ManagerApprovalsView: View {
         NavigationStack {
             VStack(spacing: 24) {
                 VStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.octagon.fill").font(.system(size: 48)).foregroundStyle(Theme.Colors.critical)
+                    Image(systemName: "exclamationmark.octagon.fill").font(.system(size: 48)).foregroundStyle(Theme.Colors.adaptiveCritical(colorScheme))
                     Text("Rejection Remarks").font(Theme.Typography.title)
                 }
                 .padding(.top)
@@ -461,7 +686,7 @@ struct ManagerApprovalsView: View {
                 Button { applicationsVM.confirmRejectWithRemarks() } label: {
                     Text("Confirm Rejection").font(.headline).foregroundColor(.white)
                         .frame(maxWidth: .infinity).padding(.vertical, 16)
-                        .background(Theme.Colors.critical)
+                        .background(Theme.Colors.adaptiveCritical(colorScheme))
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 .padding(.horizontal)
@@ -471,8 +696,10 @@ struct ManagerApprovalsView: View {
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { applicationsVM.showRejectionRemarksSheet = false }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { applicationsVM.showRejectionRemarksSheet = false } label: {
+                        Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                    }
                 }
             }
         }
@@ -485,6 +712,7 @@ struct ManagerApprovalsView: View {
             Form {
                 Section {
                     Picker("Reason", selection: $applicationsVM.sendBackReason) {
+                        Text("Select a reason").tag("Select a reason")
                         Text("Incomplete documentation").tag("Incomplete documentation")
                         Text("Income mismatch detected").tag("Income mismatch detected")
                         Text("Property documents unclear").tag("Property documents unclear")
@@ -505,14 +733,17 @@ struct ManagerApprovalsView: View {
                             .frame(maxWidth: .infinity).padding(.vertical, 8)
                     }
                     .listRowBackground(Theme.Colors.warning)
-                    .disabled(applicationsVM.sendBackReason == "Other" &&
-                              applicationsVM.sendBackCustomRemark.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .disabled(applicationsVM.sendBackReason == "Select a reason" || 
+                              (applicationsVM.sendBackReason == "Other" &&
+                               applicationsVM.sendBackCustomRemark.trimmingCharacters(in: .whitespaces).isEmpty))
                 }
             }
             .navigationTitle("Send Back").navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { applicationsVM.showSendBackSheet = false }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { applicationsVM.showSendBackSheet = false } label: {
+                        Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                    }
                 }
             }
         }

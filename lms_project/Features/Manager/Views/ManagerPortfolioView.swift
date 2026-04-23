@@ -66,12 +66,12 @@ struct ManagerPortfolioView: View {
             
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 280))], spacing: Theme.Spacing.md) {
                 KPICard(title: "Total Applications", value: "\(dashboardVM.applications.count)",
-                        icon: "doc.text.fill", color: Theme.Colors.primary)
+                        icon: "doc.text.fill", color: Theme.Colors.adaptivePrimary(colorScheme))
                 KPICard(title: "Total Value", value: totalLoanValue.compactFormatted,
-                        icon: "indianrupeesign.circle.fill", color: Theme.Colors.success,
+                        icon: "indianrupeesign.circle.fill", color: Theme.Colors.adaptiveSuccess(colorScheme),
                         subtitle: "Across all applications")
                 KPICard(title: "Avg. Loan Size", value: avgLoanSize.compactFormatted,
-                        icon: "chart.bar.fill", color: Theme.Colors.warning)
+                        icon: "chart.bar.fill", color: Theme.Colors.adaptiveWarning(colorScheme))
             }
         }
     }
@@ -102,13 +102,13 @@ struct ManagerPortfolioView: View {
                     Spacer()
                     Text("+14.2%")
                         .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(Theme.Colors.success)
+                        .foregroundStyle(Theme.Colors.adaptiveSuccess(colorScheme))
                 }
                 
                 PremiumLineChart(
                     data: [3200000, 3800000, 3500000, 4200000, 4800000, 5100000],
                     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-                    accentColor: Theme.Colors.primary,
+                    accentColor: Theme.Colors.adaptivePrimary(colorScheme),
                     showPoints: true,
                     unit: "cr"
                 )
@@ -143,7 +143,7 @@ struct ManagerPortfolioView: View {
             HStack {
                 Image(systemName: "circle.fill")
                     .font(.system(size: 8))
-                    .foregroundStyle(level.color)
+                    .foregroundStyle(level.adaptiveColor(colorScheme))
                 Text(level.displayName)
                     .font(Theme.Typography.caption)
                     .foregroundStyle(.secondary)

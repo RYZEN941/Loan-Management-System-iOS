@@ -109,6 +109,22 @@ enum DocumentStatus: String, CaseIterable, Identifiable, Codable {
     }
 }
 
+// MARK: - Sanction Letter Status
+
+enum SanctionLetterStatus: String, CaseIterable, Identifiable, Codable {
+    case sent = "sent"
+    case revoked = "revoked"
+    
+    var id: String { rawValue }
+    
+    var displayName: String {
+        switch self {
+        case .sent: return "Sent to Borrower"
+        case .revoked: return "Revoked"
+        }
+    }
+}
+
 // MARK: - Document Type
 
 enum DocumentType: String, CaseIterable, Identifiable, Codable {
@@ -166,6 +182,14 @@ enum RiskLevel: String, CaseIterable, Identifiable, Codable {
         case .low:    return Theme.Colors.secondary
         case .medium: return Theme.Colors.primary
         case .high:   return Theme.Colors.critical
+        }
+    }
+
+    func adaptiveColor(_ colorScheme: ColorScheme) -> Color {
+        switch self {
+        case .low:    return Theme.Colors.adaptiveSecondary(colorScheme)
+        case .medium: return Theme.Colors.adaptivePrimary(colorScheme)
+        case .high:   return Theme.Colors.adaptiveCritical(colorScheme)
         }
     }
 }

@@ -41,6 +41,7 @@ struct ManagerDstView: View {
                     ProfileNavButton(showProfile: $showProfile)
                 }
             }
+            .tint(Theme.Colors.adaptivePrimary(colorScheme))
             .sheet(isPresented: $showAddDst) {
                 AddDstSheet(adminVM: adminVM, authVM: authVM)
             }
@@ -89,7 +90,7 @@ struct ManagerDstView: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .background(Theme.Colors.primary)
+                .background(Theme.Colors.adaptivePrimary(colorScheme))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
@@ -108,17 +109,17 @@ struct ManagerDstView: View {
             DstKPICard(title: "Total Agents", 
                         value: "\(branchDst.count)", 
                         icon: "person.2.fill", 
-                        color: Theme.Colors.primary)
+                        color: Theme.Colors.adaptivePrimary(colorScheme))
             
             DstKPICard(title: "Active Portfolio", 
                         value: "₹\((branchDst.count * 14))L",
                         icon: "indianrupeesign.circle.fill", 
-                        color: Theme.Colors.secondary)
+                        color: Theme.Colors.adaptiveSecondary(colorScheme))
             
             DstKPICard(title: "Active Ratio", 
                         value: branchDst.isEmpty ? "0%" : "\(Int(Double(branchDst.filter { $0.isActive }.count) / Double(branchDst.count) * 100))%", 
                         icon: "chart.bar.fill", 
-                        color: Theme.Colors.success)
+                        color: Theme.Colors.adaptiveSuccess(colorScheme))
         }
     }
     
@@ -237,11 +238,11 @@ private struct DstCard: View {
             HStack(spacing: 16) {
                 ZStack {
                     Circle()
-                        .fill(Theme.Colors.primary.opacity(0.1))
+                        .fill(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.1))
                         .frame(width: 52, height: 52)
                     Text(agent.initials)
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(Theme.Colors.primary)
+                        .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
                 }
                 
                 VStack(alignment: .leading, spacing: 2) {
@@ -275,9 +276,9 @@ private struct DstCard: View {
                 Spacer()
                 
                 HStack(spacing: 8) {
-                    actionButton(icon: agent.isActive ? "person.fill.xmark" : "person.fill.checkmark", color: agent.isActive ? .orange : .green, action: onToggle)
-                    actionButton(icon: "pencil", color: Theme.Colors.primary, action: onEdit)
-                    actionButton(icon: "trash", color: .red, action: onDelete)
+                    actionButton(icon: agent.isActive ? "person.fill.xmark" : "person.fill.checkmark", color: agent.isActive ? .orange : Theme.Colors.adaptiveSuccess(colorScheme), action: onToggle)
+                    actionButton(icon: "pencil", color: Theme.Colors.adaptivePrimary(colorScheme), action: onEdit)
+                    actionButton(icon: "trash", color: Theme.Colors.adaptiveCritical(colorScheme), action: onDelete)
                 }
                 .padding(.trailing, 16)
             }
@@ -308,19 +309,20 @@ private struct DstCard: View {
 
 private struct DstStatusBadge: View {
     let isActive: Bool
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         HStack(spacing: 4) {
             Circle()
-                .fill(isActive ? Theme.Colors.success : Color.gray)
+                .fill(isActive ? Theme.Colors.adaptiveSuccess(colorScheme) : Color.gray)
                 .frame(width: 6, height: 6)
             Text(isActive ? "Active" : "Inactive")
                 .font(.system(size: 11, weight: .bold, design: .rounded))
         }
-        .foregroundStyle(isActive ? Theme.Colors.success : .gray)
+        .foregroundStyle(isActive ? Theme.Colors.adaptiveSuccess(colorScheme) : .gray)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background((isActive ? Theme.Colors.success : Color.gray).opacity(0.08))
+        .background((isActive ? Theme.Colors.adaptiveSuccess(colorScheme) : Color.gray).opacity(0.08))
         .clipShape(Capsule())
     }
 }

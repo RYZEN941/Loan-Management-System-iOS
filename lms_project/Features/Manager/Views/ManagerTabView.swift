@@ -8,8 +8,8 @@ import SwiftUI
 struct ManagerTabView: View {
 
     
-    @EnvironmentObject var adminVM: AdminViewModel
     @EnvironmentObject var authVM: AuthViewModel
+    @Environment(\.colorScheme) private var colorScheme
     @State private var selectedTab = 0
     @State private var showProfile = false
     
@@ -45,7 +45,7 @@ struct ManagerTabView: View {
                 }
                 .tag(4)
         }
-        .tint(Theme.Colors.primary)
+        .tint(Theme.Colors.adaptivePrimary(colorScheme))
         .sheet(isPresented: $showProfile) {
             ManagerProfileView()
         }

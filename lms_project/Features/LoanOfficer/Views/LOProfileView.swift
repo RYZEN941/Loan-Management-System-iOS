@@ -12,7 +12,7 @@ struct LOProfileView: View {
     
     @State private var notificationsEnabled = true
     @State private var biometricEnabled = false
-    @State private var darkModeEnabled = false
+    @State private var showLogoutConfirmation = false
     
     var isModal: Bool = true
     
@@ -43,13 +43,25 @@ struct LOProfileView: View {
                 }
             }
             .navigationTitle("Profile")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 if isModal {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("Done") { dismiss() }
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button { dismiss() } label: {
+                            Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                        }
                     }
                 }
+            }
+            .alert("Sign Out", isPresented: $showLogoutConfirmation) {
+                Button("Cancel", role: .cancel) {}
+                Button("Sign Out", role: .destructive) {
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        authVM.logout()
+                    }
+                }
+            } message: {
+                Text("Are you sure you want to sign out?")
             }
         }
     }
@@ -125,7 +137,7 @@ struct LOProfileView: View {
                 Divider().padding(.leading, 48)
                 settingsToggle(icon: "faceid", label: "Biometric Login", isOn: $biometricEnabled)
                 Divider().padding(.leading, 48)
-                settingsToggle(icon: "moon", label: "Dark Mode", isOn: $darkModeEnabled)
+                settingsToggle(icon: "moon", label: "Dark Mode", isOn: $authVM.isDarkMode)
             }
             .background(Theme.Colors.adaptiveSurface(colorScheme))
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
@@ -140,10 +152,7 @@ struct LOProfileView: View {
     
     private var signOutButton: some View {
         Button {
-            dismiss()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                authVM.logout()
-            }
+            showLogoutConfirmation = true
         } label: {
             Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                 .font(Theme.Typography.headline)

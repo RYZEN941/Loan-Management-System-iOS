@@ -57,7 +57,7 @@ struct ManagerDashboardView: View {
                 HStack(spacing: Theme.Spacing.sm) {
                     Image(systemName: "building.2.fill")
                         .font(.system(size: 11))
-                        .foregroundStyle(Theme.Colors.primary)
+                        .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
                     Text("Branch Operations Oversight")
                         .font(Theme.Typography.subheadline)
                         .foregroundStyle(.secondary)
@@ -81,11 +81,11 @@ struct ManagerDashboardView: View {
             
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 280))], spacing: Theme.Spacing.md) {
                 KPIDataCard(title: "Pending Approvals", value: "12",
-                        icon: "clock.fill", color: Theme.Colors.warning)
+                        icon: "clock.fill", color: Theme.Colors.adaptiveWarning(colorScheme))
                 KPIDataCard(title: "Total Disbursed", value: "₹4.2Cr",
-                        icon: "checkmark.circle.fill", color: Theme.Colors.primary)
+                        icon: "checkmark.circle.fill", color: Theme.Colors.adaptivePrimary(colorScheme))
                 KPIDataCard(title: "Portfolio Risk", value: "Low",
-                        icon: "shield.fill", color: Theme.Colors.success)
+                        icon: "shield.fill", color: Theme.Colors.adaptiveSuccess(colorScheme))
             }
         }
     }
@@ -98,9 +98,9 @@ struct ManagerDashboardView: View {
             
             VStack(alignment: .leading, spacing: Theme.Spacing.md) {
                 PremiumLineChart(
-                    data: [20, 25, 22, 30, 28, 35, 42],
-                    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"],
-                    accentColor: Theme.Colors.secondary,
+                    data: [3200000, 3800000, 3500000, 4200000, 4800000, 5100000],
+                    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+                    accentColor: Theme.Colors.adaptivePrimary(colorScheme),
                     showPoints: true,
                     unit: "loans"
                 )

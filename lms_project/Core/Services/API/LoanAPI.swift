@@ -75,6 +75,38 @@ struct LoanAPI {
         }
     }
 
+    func createLoanApplication(
+        primaryBorrowerProfileID: String,
+        loanProductID: String,
+        branchID: String,
+        requestedAmount: String,
+        tenureMonths: Int32,
+        status: Loan_V1_LoanApplicationStatus = .submitted
+    ) async throws -> Loan_V1_LoanApplication {
+        var request = Loan_V1_CreateLoanApplicationRequest()
+        request.primaryBorrowerProfileID = primaryBorrowerProfileID
+        request.loanProductID = loanProductID
+        request.branchID = branchID
+        request.requestedAmount = requestedAmount
+        request.tenureMonths = tenureMonths
+        request.status = status
+
+        return try await perform(request, authorized: true) { service, req, metadata in
+            try await service.createLoanApplication(req, metadata: metadata).application
+        }
+    }
+
+    func listLoanApplications(limit: Int32 = 100, offset: Int32 = 0, branchID: String = "") async throws -> [Loan_V1_LoanApplication] {
+        var request = Loan_V1_ListLoanApplicationsRequest()
+        request.limit = limit
+        request.offset = offset
+        request.branchID = branchID
+
+        return try await perform(request, authorized: true) { service, req, metadata in
+            try await service.listLoanApplications(req, metadata: metadata).items
+        }
+    }
+
     private func perform<Request, Result>(
         _ request: Request,
         authorized: Bool,

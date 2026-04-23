@@ -964,13 +964,20 @@ struct CreateApplicationSheet: View {
     @State private var borrowerName    = ""
     @State private var borrowerPhone   = ""
     @State private var borrowerEmail   = ""
+    @State private var borrowerProfileID = ""
     @State private var borrowerAddress = ""
-    @State private var selectedLoanType: LoanType = .homeLoan
+    @State private var selectedLoanProductID = ""
     @State private var loanAmountText  = ""
     @State private var tenureText      = ""
     @State private var monthlyIncomeText = ""
     @State private var existingEMIText   = ""
     @State private var xmlParsed         = false
+    @State private var isSubmitting      = false
+    @State private var submitError       = ""
+    @State private var showSubmitError   = false
+    @State private var isResolvingBorrower = false
+    @State private var borrowerLookupHint = ""
+    @State private var lookupTask: Task<Void, Never>? = nil
     
     // Dynamic documents
     struct NewDocument: Identifiable {
@@ -1000,6 +1007,21 @@ struct CreateApplicationSheet: View {
                                     customTextField("Phone", text: $borrowerPhone, icon: "phone").keyboardType(.phonePad)
                                     customTextField("Email", text: $borrowerEmail, icon: "envelope").keyboardType(.emailAddress).autocapitalization(.none)
                                 }
+                                customTextField("Borrower Profile ID", text: $borrowerProfileID, icon: "person.text.rectangle")
+                                if isResolvingBorrower || !borrowerLookupHint.isEmpty {
+                                    HStack(spacing: 6) {
+                                        if isResolvingBorrower {
+                                            ProgressView().controlSize(.small)
+                                        } else {
+                                            Image(systemName: borrowerProfileID.isEmpty ? "exclamationmark.circle" : "checkmark.circle")
+                                                .foregroundStyle(borrowerProfileID.isEmpty ? Theme.Colors.warning : Theme.Colors.success)
+                                        }
+                                        Text(isResolvingBorrower ? "Resolving borrower profile..." : borrowerLookupHint)
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
                                 customTextField("Residential Address", text: $borrowerAddress, icon: "mappin.and.ellipse", isMultiline: true)
                             }
                         }
@@ -1010,8 +1032,14 @@ struct CreateApplicationSheet: View {
                                 HStack(spacing: 16) {
                                     VStack(alignment: .leading, spacing: 8) {
                                         Text("Loan Type").font(Theme.Typography.caption2).foregroundStyle(.secondary)
-                                        Picker("Loan Type", selection: $selectedLoanType) {
-                                            ForEach(LoanType.allCases) { t in Text(t.displayName).tag(t) }
+                                        Picker("Loan Type", selection: $selectedLoanProductID) {
+                                            if applicationsVM.availableLoanProducts.isEmpty {
+                                                Text("No products available").tag("")
+                                            } else {
+                                                ForEach(applicationsVM.availableLoanProducts) { product in
+                                                    Text(product.name).tag(product.id)
+                                                }
+                                            }
                                         }
                                         .pickerStyle(.menu)
                                         .padding(.horizontal, 12)
@@ -1120,19 +1148,51 @@ struct CreateApplicationSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button {
-                        submit(draft: false)
+                        submit()
                     } label: {
-                        Text("Create Application")
-                            .fontWeight(.bold)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(borrowerName.isEmpty ? Theme.Colors.neutral.opacity(0.2) : Theme.Colors.primary)
-                            .foregroundStyle(borrowerName.isEmpty ? Color.secondary : Color.white)
-                            .clipShape(Capsule())
+                        Group {
+                            if isSubmitting {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .tint(.white)
+                            } else {
+                                Text("Create Application")
+                                    .fontWeight(.bold)
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(canSubmit ? Theme.Colors.primary : Theme.Colors.neutral.opacity(0.2))
+                        .foregroundStyle(canSubmit ? Color.white : Color.secondary)
+                        .clipShape(Capsule())
                     }
-                    .disabled(borrowerName.isEmpty || loanAmountText.isEmpty)
+                    .disabled(!canSubmit || isSubmitting)
                 }
             }
+        }
+        .alert("Unable to Create Application", isPresented: $showSubmitError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(submitError)
+        }
+        .task {
+            if applicationsVM.availableLoanProducts.isEmpty {
+                await applicationsVM.loadAvailableLoanProducts()
+            }
+            if selectedLoanProductID.isEmpty {
+                selectedLoanProductID = applicationsVM.availableLoanProducts.first?.id ?? ""
+            }
+        }
+        .onChange(of: applicationsVM.availableLoanProducts) { _, updatedProducts in
+            if selectedLoanProductID.isEmpty {
+                selectedLoanProductID = updatedProducts.first?.id ?? ""
+            }
+        }
+        .onChange(of: borrowerEmail) { _, _ in
+            scheduleBorrowerLookup()
+        }
+        .onChange(of: borrowerPhone) { _, _ in
+            scheduleBorrowerLookup()
         }
     }
 
@@ -1183,60 +1243,101 @@ struct CreateApplicationSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func submit(draft: Bool) {
+    private var canSubmit: Bool {
+        !borrowerName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !loanAmountText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !borrowerProfileID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !selectedLoanProductID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func submit() {
         let amount = Double(loanAmountText) ?? 0
         let tenure = Int(tenureText) ?? 12
         let income = Double(monthlyIncomeText) ?? 0
         let emi    = Double(existingEMIText) ?? 0
+        let docs = newDocuments.map { doc in
+            LoanDocument(
+                id: UUID().uuidString,
+                type: doc.type,
+                label: doc.label,
+                status: doc.isUploaded ? .uploaded : .pending,
+                uploadedAt: doc.isUploaded ? Date() : nil
+            )
+        }
 
-        let newApp = LoanApplication(
-            id: "APP-\(Int(Date().timeIntervalSince1970))",
-            borrower: Borrower(
-                name: borrowerName,
-                dob: Calendar.current.date(byAdding: .year, value: -30, to: Date())!,
-                address: borrowerAddress.isEmpty ? "Address TBD" : borrowerAddress,
-                employer: "To be verified",
-                employmentType: "Salaried",
-                phone: borrowerPhone,
-                email: borrowerEmail
-            ),
-            loan: LoanDetails(
-                amount: amount,
-                type: selectedLoanType,
-                tenure: tenure,
-                interestRate: selectedLoanType == .homeLoan ? 8.5 : 12.0,
-                emi: amount * 0.008
-            ),
-            financials: Financials(
-                monthlyIncome: income,
-                annualIncome: income * 12,
-                existingEMI: emi,
-                dtiRatio: income > 0 ? (emi / income) : 0,
-                cibilScore: 0,
-                bankBalance: 0
-            ),
-            documents: newDocuments.map { doc in
-                LoanDocument(
-                    id: UUID().uuidString,
-                    type: doc.type,
-                    label: doc.label,
-                    status: doc.isUploaded ? .uploaded : .pending,
-                    uploadedAt: doc.isUploaded ? Date() : nil
+        isSubmitting = true
+        Task {
+            do {
+                guard let selectedProduct = applicationsVM.availableLoanProducts.first(where: { $0.id == selectedLoanProductID }) else {
+                    throw APIError.invalidArgument("Please select a valid loan product.")
+                }
+                try await applicationsVM.createBackendApplication(
+                    borrowerProfileID: borrowerProfileID,
+                    borrowerName: borrowerName,
+                    borrowerPhone: borrowerPhone,
+                    borrowerEmail: borrowerEmail,
+                    borrowerAddress: borrowerAddress,
+                    selectedLoanProduct: selectedProduct,
+                    requestedAmount: amount,
+                    tenureMonths: tenure,
+                    monthlyIncome: income,
+                    existingEMI: emi,
+                    documents: docs
                 )
-            },
-            verification: [],
-            notes: [],
-            internalRemarks: [],
-            status: draft ? .pending : .underReview,
-            assignedTo: "LO-001",
-            branch: "Mumbai Central",
-            riskLevel: .medium,
-            createdAt: Date(),
-            slaDeadline: Calendar.current.date(byAdding: .day, value: 7, to: Date())!
-        )
+                await MainActor.run {
+                    isSubmitting = false
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    isSubmitting = false
+                    submitError = (error as? LocalizedError)?.errorDescription ?? "Could not create application."
+                    showSubmitError = true
+                }
+            }
+        }
+    }
 
-        applicationsVM.applications.insert(newApp, at: 0)
-        applicationsVM.selectedApplication = newApp
-        dismiss()
+    private func scheduleBorrowerLookup() {
+        lookupTask?.cancel()
+
+        let email = borrowerEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+        let phone = borrowerPhone.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !email.isEmpty || !phone.isEmpty else {
+            isResolvingBorrower = false
+            borrowerLookupHint = ""
+            return
+        }
+
+        lookupTask = Task {
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            if Task.isCancelled { return }
+
+            await MainActor.run {
+                isResolvingBorrower = true
+                borrowerLookupHint = ""
+            }
+
+            do {
+                let resolved = try await applicationsVM.resolveBorrowerProfileID(email: email, phone: phone)
+                if Task.isCancelled { return }
+                await MainActor.run {
+                    isResolvingBorrower = false
+                    if let resolved, !resolved.isEmpty {
+                        borrowerProfileID = resolved
+                        borrowerLookupHint = "Borrower profile ID auto-filled."
+                    } else {
+                        borrowerLookupHint = "No borrower found for this email/phone."
+                    }
+                }
+            } catch {
+                if Task.isCancelled { return }
+                await MainActor.run {
+                    isResolvingBorrower = false
+                    borrowerLookupHint = "Could not auto-fetch borrower profile ID."
+                }
+            }
+        }
     }
 }

@@ -13,7 +13,7 @@ struct ManagerPortfolioView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.Colors.adaptiveBackground(colorScheme).ignoresSafeArea()
+                ManagerTheme.Colors.background(colorScheme).ignoresSafeArea()
                 
                 VStack(spacing: 0) {
                     // Simple Elegant Header
@@ -32,7 +32,7 @@ struct ManagerPortfolioView: View {
                         .padding(.bottom, Theme.Spacing.md)
                         .padding(.top, Theme.Spacing.md)
                     }
-                    .background(Theme.Colors.adaptiveBackground(colorScheme))
+                    .background(ManagerTheme.Colors.background(colorScheme))
                     .foregroundStyle(.primary)
                     
                     ScrollView {
@@ -66,7 +66,7 @@ struct ManagerPortfolioView: View {
             
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 280))], spacing: Theme.Spacing.md) {
                 KPICard(title: "Total Applications", value: "\(dashboardVM.applications.count)",
-                        icon: "doc.text.fill", color: Theme.Colors.adaptivePrimary(colorScheme))
+                        icon: "doc.text.fill", color: ManagerTheme.Colors.primary(colorScheme))
                 KPICard(title: "Total Value", value: totalLoanValue.compactFormatted,
                         icon: "indianrupeesign.circle.fill", color: Theme.Colors.adaptiveSuccess(colorScheme),
                         subtitle: "Across all applications")
@@ -108,18 +108,18 @@ struct ManagerPortfolioView: View {
                 PremiumLineChart(
                     data: [3200000, 3800000, 3500000, 4200000, 4800000, 5100000],
                     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-                    accentColor: Theme.Colors.adaptivePrimary(colorScheme),
+                    accentColor: ManagerTheme.Colors.primary(colorScheme),
                     showPoints: true,
                     unit: "cr"
                 )
                 .frame(height: 200)
             }
             .padding(Theme.Spacing.lg)
-            .background(Theme.Colors.adaptiveSurface(colorScheme))
+            .background(ManagerTheme.Colors.surface(colorScheme))
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                    .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+                    .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
             )
         }
     }
@@ -158,11 +158,11 @@ struct ManagerPortfolioView: View {
         }
         .padding(Theme.Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.Colors.adaptiveSurface(colorScheme))
+        .background(ManagerTheme.Colors.surface(colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
         )
     }
 }

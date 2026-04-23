@@ -20,11 +20,12 @@ struct ManagerApprovalsView: View {
     @State private var showRevokeConfirmation = false
     @State private var previewLetter: SanctionLetterVersion? = nil
     @State private var selectedVersionIndex = 0
+    @State private var highRiskOnly = false
 
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.Colors.adaptiveBackground(colorScheme).ignoresSafeArea()
+                ManagerTheme.Colors.background(colorScheme).ignoresSafeArea()
 
                 GeometryReader { _ in
                     HStack(spacing: 0) {
@@ -93,16 +94,16 @@ struct ManagerApprovalsView: View {
         VStack(spacing: 0) {
             // Search
             HStack(spacing: 12) {
-                Image(systemName: "magnifyingglass").foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme)).font(.system(size: 14, weight: .bold))
+                Image(systemName: "magnifyingglass").foregroundStyle(ManagerTheme.Colors.primary(colorScheme)).font(.system(size: 14, weight: .bold))
                 TextField("Search applications...", text: $applicationsVM.searchText)
                     .font(Theme.Typography.subheadline)
             }
             .padding(12)
-            .background(Theme.Colors.adaptiveSurface(colorScheme))
+            .background(ManagerTheme.Colors.surface(colorScheme))
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.Radius.md)
-                    .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+                    .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
             )
             .padding(.horizontal, 16)
             .padding(.top, 16)
@@ -119,10 +120,10 @@ struct ManagerApprovalsView: View {
                 Spacer()
                 Text("\(applicationsVM.filteredApplications.count)")
                     .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
+                    .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
-                    .background(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.1))
+                    .background(ManagerTheme.Colors.primary(colorScheme).opacity(0.1))
                     .clipShape(Capsule())
             }
             .padding(.horizontal, 16)
@@ -143,6 +144,9 @@ struct ManagerApprovalsView: View {
                     AppFilterChip(label: "Rejected", isSelected: applicationsVM.filterStatus == .rejected) {
                         withAnimation { applicationsVM.filterStatus = .rejected }
                     }
+                    AppFilterChip(label: "High Risk", isSelected: highRiskOnly) {
+                        withAnimation { highRiskOnly.toggle() }
+                    }
                 }
                 .padding(.horizontal, 16)
             }
@@ -150,17 +154,17 @@ struct ManagerApprovalsView: View {
 
             Divider()
 
-            if applicationsVM.filteredApplications.isEmpty {
+            if displayedApplications.isEmpty {
                 VStack(spacing: 12) {
-                    Image(systemName: "doc.text.magnifyingglass").font(.system(size: 32, weight: .thin)).foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.3))
+                    Image(systemName: "doc.text.magnifyingglass").font(.system(size: 32, weight: .thin)).foregroundStyle(ManagerTheme.Colors.primary(colorScheme).opacity(0.3))
                     Text("No applications found").font(Theme.Typography.subheadline).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        ForEach(applicationsVM.filteredApplications) { app in
-                            ApplicationRow(
+                        ForEach(displayedApplications) { app in
+                            ManagerApplicationRow(
                                 application: app,
                                 isSelected: applicationsVM.selectedApplication?.id == app.id,
                                 useMinimalStyle: true
@@ -176,7 +180,7 @@ struct ManagerApprovalsView: View {
                 }
             }
         }
-        .background(Theme.Colors.adaptiveSurface(colorScheme))
+        .background(ManagerTheme.Colors.surface(colorScheme))
     }
 
     // MARK: - Detail Panel
@@ -185,6 +189,7 @@ struct ManagerApprovalsView: View {
             if let app = applicationsVM.selectedApplication {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
+                        selectedApplicationHint(app)
                         detailHeader(app)
                         financialSection(app)
                         borrowerInfoSection(app)
@@ -195,7 +200,7 @@ struct ManagerApprovalsView: View {
                     }
                     .padding(20)
                 }
-                .background(Theme.Colors.adaptiveBackground(colorScheme))
+                .background(ManagerTheme.Colors.background(colorScheme))
                 .safeAreaInset(edge: .bottom) {
                     if app.status == .underReview || app.status == .pending {
                         ManagerActionPanel(
@@ -203,7 +208,7 @@ struct ManagerApprovalsView: View {
                             onRejectWithRemarks: { applicationsVM.beginRejectWithRemarks(app) },
                             onSendBack: { applicationsVM.beginSendBack(app) }
                         )
-                        .background(Theme.Colors.adaptiveSurface(colorScheme))
+                        .background(ManagerTheme.Colors.surface(colorScheme))
                         .shadow(color: Color.black.opacity(0.05), radius: 10, y: -5)
                     }
                 }
@@ -212,7 +217,7 @@ struct ManagerApprovalsView: View {
                 }
             } else {
                 VStack(spacing: 16) {
-                    Image(systemName: "checkmark.circle.badge.questionmark").font(.system(size: 48, weight: .thin)).foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.4))
+                    Image(systemName: "checkmark.circle.badge.questionmark").font(.system(size: 48, weight: .thin)).foregroundStyle(ManagerTheme.Colors.primary(colorScheme).opacity(0.4))
                     Text("Select an application to review").font(Theme.Typography.subheadline).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -220,15 +225,39 @@ struct ManagerApprovalsView: View {
         }
     }
 
+    private var displayedApplications: [LoanApplication] {
+        let base = applicationsVM.filteredApplications
+        return highRiskOnly ? base.filter { $0.riskLevel == .high } : base
+    }
+
+    private func selectedApplicationHint(_ app: LoanApplication) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.circle")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
+            Text("Reviewing: \(app.id)")
+                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .foregroundStyle(ManagerTheme.Colors.textSecondary(colorScheme))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(ManagerTheme.Colors.surface(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
+        )
+    }
+
     // MARK: - Detail Header
     private func detailHeader(_ app: LoanApplication) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top, spacing: 16) {
                 ZStack {
-                    Circle().fill(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.12)).frame(width: 56, height: 56)
+                    Circle().fill(ManagerTheme.Colors.primary(colorScheme).opacity(0.12)).frame(width: 56, height: 56)
                     Text(app.borrower.name.prefix(1))
                         .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
+                        .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
                 }
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
@@ -237,7 +266,7 @@ struct ManagerApprovalsView: View {
                         StatusBadge(status: app.status)
                     }
                     Text(app.loan.amount.currencyFormatted + " · " + app.loan.type.displayName)
-                        .font(.system(size: 17, weight: .bold, design: .rounded)).foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
+                        .font(.system(size: 17, weight: .bold, design: .rounded)).foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
                     Text("ID: \(app.id)").font(.system(size: 11, weight: .medium, design: .monospaced)).foregroundStyle(.tertiary)
                 }
             }
@@ -252,21 +281,21 @@ struct ManagerApprovalsView: View {
             HStack {
                 Label("Loan Officer Assessed", systemImage: "person.badge.shield.checkered.fill")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
+                    .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
                 Spacer()
                 Text("Due: \(app.slaDeadline.shortFormatted)")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(.secondary)
             }
             .padding(10)
-            .background(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.08))
+            .background(ManagerTheme.Colors.primary(colorScheme).opacity(0.08))
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
         .padding(20)
-        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(Theme.Colors.adaptiveSurface(colorScheme)))
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(ManagerTheme.Colors.surface(colorScheme)))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
         )
     }
     
@@ -294,10 +323,10 @@ struct ManagerApprovalsView: View {
             }
         }
         .padding(18)
-        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(Theme.Colors.adaptiveSurface(colorScheme)))
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(ManagerTheme.Colors.surface(colorScheme)))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
         )
     }
 
@@ -308,11 +337,11 @@ struct ManagerApprovalsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(Theme.Colors.adaptiveSurface(colorScheme))
+        .background(ManagerTheme.Colors.surface(colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.sm)
-                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 0.5)
+                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 0.5)
         )
     }
 
@@ -322,19 +351,19 @@ struct ManagerApprovalsView: View {
             SectionHeader(title: "Risk & Credit Analysis", icon: "gauge.with.needle.fill")
                 .description("Key financial indicators, CIBIL score, and DTI ratios for risk mitigation.")
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                finCard("Monthly Income",  app.financials.monthlyIncome.currencyFormatted, "dollarsign.circle.fill", Theme.Colors.adaptivePrimary(colorScheme))
+                finCard("Monthly Income",  app.financials.monthlyIncome.currencyFormatted, "dollarsign.circle.fill", ManagerTheme.Colors.primary(colorScheme))
                 finCard("CIBIL Score",     "\(app.financials.cibilScore)", "bolt.fill", cibilColor(app.financials.cibilScore))
                 finCard("DTI Ratio",       app.financials.dtiRatio.percentFormatted, "chart.pie.fill", dtiColor(app.financials.dtiRatio))
-                finCard("Annual Income",   app.financials.annualIncome.currencyFormatted, "calendar.badge.clock", Theme.Colors.adaptivePrimary(colorScheme))
-                finCard("Bank Balance",    app.financials.bankBalance.currencyFormatted, "building.columns.fill", Theme.Colors.adaptivePrimary(colorScheme))
+                finCard("Annual Income",   app.financials.annualIncome.currencyFormatted, "calendar.badge.clock", ManagerTheme.Colors.primary(colorScheme))
+                finCard("Bank Balance",    app.financials.bankBalance.currencyFormatted, "building.columns.fill", ManagerTheme.Colors.primary(colorScheme))
                 finCard("Risk Assessment", app.riskLevel.displayName, "shield.lefthalf.filled", app.riskLevel.adaptiveColor(colorScheme))
             }
         }
         .padding(18)
-        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(Theme.Colors.adaptiveSurface(colorScheme)))
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(ManagerTheme.Colors.surface(colorScheme)))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
         )
     }
 
@@ -348,11 +377,11 @@ struct ManagerApprovalsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(Theme.Colors.adaptiveSurface(colorScheme))
+        .background(ManagerTheme.Colors.surface(colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.sm)
-                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 0.5)
+                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 0.5)
         )
     }
 
@@ -371,7 +400,7 @@ struct ManagerApprovalsView: View {
             VStack(spacing: 0) {
                 ForEach(app.documents) { doc in
                     HStack {
-                        Image(systemName: doc.type.icon).font(.system(size: 14)).foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme)).frame(width: 24)
+                        Image(systemName: doc.type.icon).font(.system(size: 14)).foregroundStyle(ManagerTheme.Colors.primary(colorScheme)).frame(width: 24)
                         Text(doc.label).font(Theme.Typography.subheadline).foregroundStyle(.primary)
                         Spacer()
                         DocStatusBadge(status: doc.status)
@@ -382,10 +411,10 @@ struct ManagerApprovalsView: View {
             }
         }
         .padding(18)
-        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(Theme.Colors.adaptiveSurface(colorScheme)))
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(ManagerTheme.Colors.surface(colorScheme)))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
         )
     }
 
@@ -422,10 +451,10 @@ struct ManagerApprovalsView: View {
                                     Text("Version: v\(current.version)").font(.system(size: 14, weight: .bold))
                                     Image(systemName: "chevron.down").font(.system(size: 10))
                                 }
-                                .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
+                                .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.1))
+                                .background(ManagerTheme.Colors.primary(colorScheme).opacity(0.1))
                                 .clipShape(RoundedRectangle(cornerRadius: 6))
                             }
                             
@@ -446,7 +475,7 @@ struct ManagerApprovalsView: View {
                     }
                 }
                 .padding(16)
-                .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+                .background(ManagerTheme.Colors.surfaceSecondary(colorScheme))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             } else {
                 HStack {
@@ -455,15 +484,15 @@ struct ManagerApprovalsView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
-                .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme).opacity(0.5))
+                .background(ManagerTheme.Colors.surfaceSecondary(colorScheme).opacity(0.5))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
         }
         .padding(18)
-        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(Theme.Colors.adaptiveSurface(colorScheme)))
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(ManagerTheme.Colors.surface(colorScheme)))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
         )
     }
 
@@ -488,10 +517,10 @@ struct ManagerApprovalsView: View {
                 Image(systemName: icon).font(.system(size: 16))
                 Text(title).font(.system(size: 10, weight: .medium))
             }
-            .foregroundStyle(isDestructive ? Theme.Colors.adaptiveCritical(colorScheme) : Theme.Colors.adaptivePrimary(colorScheme))
+            .foregroundStyle(isDestructive ? Theme.Colors.adaptiveCritical(colorScheme) : ManagerTheme.Colors.primary(colorScheme))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
-            .background(isDestructive ? Theme.Colors.adaptiveCritical(colorScheme).opacity(0.08) : Theme.Colors.adaptivePrimary(colorScheme).opacity(0.08))
+            .background(isDestructive ? Theme.Colors.adaptiveCritical(colorScheme).opacity(0.08) : ManagerTheme.Colors.primary(colorScheme).opacity(0.08))
             .clipShape(RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.plain)
@@ -506,7 +535,7 @@ struct ManagerApprovalsView: View {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("SANCTION LETTER").font(.system(size: 24, weight: .black))
-                                Text("LMS BANKING CORP").font(.system(size: 12, weight: .bold)).foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
+                                Text("LMS BANKING CORP").font(.system(size: 12, weight: .bold)).foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
                             }
                             Spacer()
                             VStack(alignment: .trailing, spacing: 2) {
@@ -582,10 +611,10 @@ struct ManagerApprovalsView: View {
             ForEach(app.verification) { item in VerificationRow(item: item) }
         }
         .padding(18)
-        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(Theme.Colors.adaptiveSurface(colorScheme)))
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(ManagerTheme.Colors.surface(colorScheme)))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
         )
     }
 
@@ -601,11 +630,11 @@ struct ManagerApprovalsView: View {
                 TextField("Add remark for Loan Officer...", text: $applicationsVM.chatText)
                     .font(Theme.Typography.subheadline)
                     .padding(.horizontal, 16).padding(.vertical, 12)
-                    .background(Theme.Colors.adaptiveSurface(colorScheme))
+                    .background(ManagerTheme.Colors.surface(colorScheme))
                     .clipShape(RoundedRectangle(cornerRadius: 24))
                     .overlay(
                         RoundedRectangle(cornerRadius: 24)
-                            .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+                            .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
                     )
                 Button {
                     applicationsVM.sendApplicationMessage(
@@ -614,7 +643,7 @@ struct ManagerApprovalsView: View {
                 } label: {
                     Image(systemName: "arrow.up.circle.fill").font(.system(size: 32))
                         .foregroundStyle(applicationsVM.chatText.trimmingCharacters(in: .whitespaces).isEmpty
-                                         ? Color.secondary.opacity(0.3) : Theme.Colors.adaptivePrimary(colorScheme))
+                                         ? Color.secondary.opacity(0.3) : ManagerTheme.Colors.primary(colorScheme))
                 }
                 .buttonStyle(.plain)
                 .disabled(applicationsVM.chatText.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -622,7 +651,7 @@ struct ManagerApprovalsView: View {
             .padding(.top, 8)
         }
         .padding(18)
-        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(Theme.Colors.adaptiveSurface(colorScheme)))
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(ManagerTheme.Colors.surface(colorScheme)))
         .onAppear { applicationsVM.loadApplicationMessages(for: app.id) }
     }
 
@@ -635,7 +664,7 @@ struct ManagerApprovalsView: View {
                         Image(systemName: "shield.fill").font(.system(size: 10))
                         Text("MANAGER REMARK").font(.system(size: 9, weight: .bold))
                     }
-                    .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
+                    .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
                 } else {
                     Text("\(msg.senderName)").font(Theme.Typography.caption2).foregroundStyle(.secondary)
                 }
@@ -644,8 +673,8 @@ struct ManagerApprovalsView: View {
                     .foregroundStyle(msg.type == .managerRemark ? .white : (msg.isFromCurrentUser ? .white : .primary))
                     .padding(.horizontal, 14).padding(.vertical, 10)
                     .background(
-                        msg.type == .managerRemark ? Theme.Colors.adaptivePrimary(colorScheme)
-                        : (msg.isFromCurrentUser ? Theme.Colors.adaptivePrimary(colorScheme).opacity(0.8) : Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+                        msg.type == .managerRemark ? ManagerTheme.Colors.primary(colorScheme)
+                        : (msg.isFromCurrentUser ? ManagerTheme.Colors.primary(colorScheme).opacity(0.8) : ManagerTheme.Colors.surfaceSecondary(colorScheme))
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                 Text(msg.timestamp.timeFormatted).font(.system(size: 10)).foregroundStyle(.tertiary)
@@ -657,7 +686,7 @@ struct ManagerApprovalsView: View {
     // MARK: - Section Label
     private func sectionLabel(_ title: String, icon: String) -> some View {
         HStack(spacing: 8) {
-            Image(systemName: icon).font(.system(size: 12)).foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
+            Image(systemName: icon).font(.system(size: 12)).foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
             Text(title).font(.system(size: 11, weight: .bold)).foregroundStyle(.secondary)
                 .textCase(.uppercase).tracking(1.0)
         }
@@ -678,9 +707,9 @@ struct ManagerApprovalsView: View {
                 
                 TextEditor(text: $applicationsVM.rejectionRemarksText)
                     .padding(12)
-                    .background(Theme.Colors.adaptiveSurface(colorScheme))
+                    .background(ManagerTheme.Colors.surface(colorScheme))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1))
                     .frame(height: 180).padding(.horizontal)
                 
                 Button { applicationsVM.confirmRejectWithRemarks() } label: {

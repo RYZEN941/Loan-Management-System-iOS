@@ -19,7 +19,7 @@ struct ManagerDstView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.Colors.adaptiveBackground(colorScheme).ignoresSafeArea()
+                ManagerTheme.Colors.background(colorScheme).ignoresSafeArea()
                 
                 VStack(spacing: 0) {
                     header
@@ -41,7 +41,7 @@ struct ManagerDstView: View {
                     ProfileNavButton(showProfile: $showProfile)
                 }
             }
-            .tint(Theme.Colors.adaptivePrimary(colorScheme))
+            .tint(ManagerTheme.Colors.primary(colorScheme))
             .sheet(isPresented: $showAddDst) {
                 AddDstSheet(adminVM: adminVM, authVM: authVM)
             }
@@ -90,7 +90,7 @@ struct ManagerDstView: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
-                .background(Theme.Colors.adaptivePrimary(colorScheme))
+                .background(ManagerTheme.Colors.primary(colorScheme))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
@@ -109,12 +109,12 @@ struct ManagerDstView: View {
             DstKPICard(title: "Total Agents", 
                         value: "\(branchDst.count)", 
                         icon: "person.2.fill", 
-                        color: Theme.Colors.adaptivePrimary(colorScheme))
+                        color: ManagerTheme.Colors.primary(colorScheme))
             
             DstKPICard(title: "Active Portfolio", 
                         value: "₹\((branchDst.count * 14))L",
                         icon: "indianrupeesign.circle.fill", 
-                        color: Theme.Colors.adaptiveSecondary(colorScheme))
+                        color: ManagerTheme.Colors.secondary(colorScheme))
             
             DstKPICard(title: "Active Ratio", 
                         value: branchDst.isEmpty ? "0%" : "\(Int(Double(branchDst.filter { $0.isActive }.count) / Double(branchDst.count) * 100))%", 
@@ -134,11 +134,11 @@ struct ManagerDstView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(Theme.Colors.adaptiveSurface(colorScheme))
+        .background(ManagerTheme.Colors.surface(colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.md)
-                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 0.5)
+                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 0.5)
         )
     }
     
@@ -217,11 +217,11 @@ private struct DstKPICard: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.Colors.adaptiveSurface(colorScheme))
+        .background(ManagerTheme.Colors.surface(colorScheme))
         .cornerRadius(Theme.Radius.lg)
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 0.5)
+                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 0.5)
         )
     }
 }
@@ -238,11 +238,11 @@ private struct DstCard: View {
             HStack(spacing: 16) {
                 ZStack {
                     Circle()
-                        .fill(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.1))
+                        .fill(ManagerTheme.Colors.primary(colorScheme).opacity(0.1))
                         .frame(width: 52, height: 52)
                     Text(agent.initials)
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
+                        .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
                 }
                 
                 VStack(alignment: .leading, spacing: 2) {
@@ -277,18 +277,18 @@ private struct DstCard: View {
                 
                 HStack(spacing: 8) {
                     actionButton(icon: agent.isActive ? "person.fill.xmark" : "person.fill.checkmark", color: agent.isActive ? .orange : Theme.Colors.adaptiveSuccess(colorScheme), action: onToggle)
-                    actionButton(icon: "pencil", color: Theme.Colors.adaptivePrimary(colorScheme), action: onEdit)
+                    actionButton(icon: "pencil", color: ManagerTheme.Colors.primary(colorScheme), action: onEdit)
                     actionButton(icon: "trash", color: Theme.Colors.adaptiveCritical(colorScheme), action: onDelete)
                 }
                 .padding(.trailing, 16)
             }
-            .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme).opacity(0.3))
+            .background(ManagerTheme.Colors.surfaceSecondary(colorScheme).opacity(0.3))
         }
-        .background(Theme.Colors.adaptiveSurface(colorScheme))
+        .background(ManagerTheme.Colors.surface(colorScheme))
         .cornerRadius(Theme.Radius.md)
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.md)
-                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 0.5)
+                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 0.5)
         )
         .shadow(color: Color.black.opacity(0.02), radius: 8, y: 4)
     }
@@ -299,7 +299,7 @@ private struct DstCard: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(color)
                 .frame(width: 38, height: 38)
-                .background(Theme.Colors.adaptiveSurface(colorScheme))
+                .background(ManagerTheme.Colors.surface(colorScheme))
                 .clipShape(Circle())
                 .shadow(color: Color.black.opacity(0.05), radius: 2, y: 1)
         }

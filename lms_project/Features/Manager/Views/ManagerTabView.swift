@@ -45,7 +45,7 @@ struct ManagerTabView: View {
                 }
                 .tag(4)
         }
-        .tint(Theme.Colors.adaptivePrimary(colorScheme))
+        .tint(ManagerTheme.Colors.primary(colorScheme))
         .sheet(isPresented: $showProfile) {
             ManagerProfileView()
         }

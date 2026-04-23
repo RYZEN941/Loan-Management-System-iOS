@@ -118,7 +118,7 @@ Example success response:
 }
 ```
 
-Example failure response:
+Example failure response (invalid OTP):
 
 ```json
 {
@@ -128,6 +128,19 @@ Example failure response:
   "provider_transaction_id": "98a4f051-7e2a-4117-bd71-3396555c74ee"
 }
 ```
+
+Example failure response (OTP expired):
+
+```json
+{
+  "success": false,
+  "status": "",
+  "message": "aadhaar otp has expired, please request a new one",
+  "provider_transaction_id": "cd820d41-3a81-47c8-b370-1e8d9935fb85"
+}
+```
+
+When OTP is expired, the history record stores `failure_code: OTP_EXPIRED`.
 
 ## 4) VerifyPanKyc
 

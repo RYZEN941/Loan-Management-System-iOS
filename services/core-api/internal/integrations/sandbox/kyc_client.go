@@ -132,7 +132,7 @@ func NewKYCClient(baseURL, apiKey, apiSecret string) *KYCClient {
 		baseURL:      strings.TrimSuffix(baseURL, "/"),
 		apiKey:       apiKey,
 		apiSecret:    apiSecret,
-		apiVersion:   "1.0.0",
+		apiVersion:   "2.0",
 		authLeeway:   2 * time.Minute,
 		defaultReqTO: 20 * time.Second,
 		maxRetries:   3,

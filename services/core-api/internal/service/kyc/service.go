@@ -195,6 +195,12 @@ func (s *service) VerifyAadhaarKycOtp(ctx context.Context, req *kycv1.VerifyAadh
 
 	isValid := strings.EqualFold(strings.TrimSpace(apiResp.Data.Status), "VALID")
 	log.Printf("VerifyAadhaarKycOtp: isValid=%v for user=%s", isValid, userID)
+
+	otpExpired := !isValid && strings.EqualFold(strings.TrimSpace(apiResp.Data.Message), "OTP Expired")
+	if otpExpired {
+		log.Printf("VerifyAadhaarKycOtp: OTP expired for user=%s ref=%s (status=%q message=%q)", userID, ref, apiResp.Data.Status, apiResp.Data.Message)
+	}
+
 	mismatchFailure := false
 	if isValid && !aadhaarMatchesProfile(profile, apiResp.Data.Name, apiResp.Data.DateOfBirth, apiResp.Data.Gender) {
 		log.Printf("VerifyAadhaarKycOtp: profile mismatch for user=%s profile_name=%s api_name=%s profile_dob=%s api_dob=%s profile_gender=%s api_gender=%s",
@@ -207,7 +213,10 @@ func (s *service) VerifyAadhaarKycOtp(ctx context.Context, req *kycv1.VerifyAadh
 	statusValue := "FAILED"
 	failureCode := textOrNull("AADHAAR_VERIFY_FAILED")
 	failureReason := textOrNull(apiResp.Data.Message)
-	if mismatchFailure {
+	if otpExpired {
+		failureCode = textOrNull("OTP_EXPIRED")
+		failureReason = textOrNull("aadhaar otp has expired, please request a new one")
+	} else if mismatchFailure {
 		failureCode = textOrNull("PROFILE_MISMATCH")
 		failureReason = textOrNull("profile details do not match with aadhaar data")
 	}
@@ -219,7 +228,7 @@ func (s *service) VerifyAadhaarKycOtp(ctx context.Context, req *kycv1.VerifyAadh
 		failureCode = pgtype.Text{}
 		failureReason = pgtype.Text{}
 	}
-	log.Printf("VerifyAadhaarKycOtp: final statusValue=%s isValid=%v mismatchFailure=%v for user=%s", statusValue, isValid, mismatchFailure, userID)
+	log.Printf("VerifyAadhaarKycOtp: final statusValue=%s isValid=%v otpExpired=%v mismatchFailure=%v for user=%s", statusValue, isValid, otpExpired, mismatchFailure, userID)
 
 	historyRow, err := s.queries.CreateBorrowerAadhaarKycHistory(ctx, generated.CreateBorrowerAadhaarKycHistoryParams{
 		UserID:                pgtype.UUID{Bytes: userID, Valid: true},
@@ -266,7 +275,17 @@ func (s *service) VerifyAadhaarKycOtp(ctx context.Context, req *kycv1.VerifyAadh
 		log.Printf("VerifyAadhaarKycOtp: marked aadhaar verified for user=%s", userID)
 	}
 
-	log.Printf("VerifyAadhaarKycOtp: completed for user=%s success=%v status=%s", userID, isValid, apiResp.Data.Status)
+	log.Printf("VerifyAadhaarKycOtp: completed for user=%s success=%v status=%s otpExpired=%v", userID, isValid, apiResp.Data.Status, otpExpired)
+
+	if otpExpired {
+		return &kycv1.VerifyAadhaarKycOtpResponse{
+			Success:               false,
+			Status:                apiResp.Data.Status,
+			Message:               "aadhaar otp has expired, please request a new one",
+			ProviderTransactionId: apiResp.TransactionID,
+		}, nil
+	}
+
 	return &kycv1.VerifyAadhaarKycOtpResponse{
 		Success:               isValid,
 		Status:                apiResp.Data.Status,

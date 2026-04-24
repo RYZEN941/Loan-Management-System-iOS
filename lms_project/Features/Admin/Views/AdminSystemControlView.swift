@@ -848,22 +848,27 @@ struct EditUserSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        var finalBranchID = branchID
-                        if branchID == "+ Create New Branch" {
-                            adminVM.createBranch(newBranchName)
-                            finalBranchID = ""
+                        Task {
+                            var finalBranchID = branchID
+                            if branchID == "+ Create New Branch" {
+                                finalBranchID = await adminVM.createBranch(newBranchName) ?? ""
+                            }
+                            let finalBranchName = adminVM.branches.first(where: { $0.id == finalBranchID })?.name ?? user.branch
+                            let success = await adminVM.updateUser(
+                                userId: user.id,
+                                name: name,
+                                email: email,
+                                phone: phone,
+                                role: selectedRole,
+                                branchID: finalBranchID.isEmpty ? nil : finalBranchID,
+                                branchName: finalBranchName
+                            )
+                            await MainActor.run {
+                                if success {
+                                    dismiss()
+                                }
+                            }
                         }
-                        let finalBranchName = adminVM.branches.first(where: { $0.id == finalBranchID })?.name ?? user.branch
-                        adminVM.updateUser(
-                            userId: user.id,
-                            name: name,
-                            email: email,
-                            phone: phone,
-                            role: selectedRole,
-                            branchID: finalBranchID.isEmpty ? nil : finalBranchID,
-                            branchName: finalBranchName
-                        )
-                        dismiss()
                     }
                     .fontWeight(.semibold)
                 }
@@ -896,8 +901,14 @@ struct CreateBranchSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        adminVM.createBranch(name, location: location)
-                        dismiss()
+                        Task {
+                            let success = await adminVM.createBranch(name, location: location) != nil
+                            await MainActor.run {
+                                if success {
+                                    dismiss()
+                                }
+                            }
+                        }
                     }
                     .fontWeight(.semibold)
                     .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)

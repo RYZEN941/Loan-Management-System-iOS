@@ -33,6 +33,7 @@ enum ActionRequiredFilter: String, CaseIterable, Identifiable {
 @MainActor
 class AdminViewModel: ObservableObject {
     @Published var users: [User] = []
+    @Published var dstUsers: [User] = []
     @Published var selectedUser: User? = nil
     @Published var isLoading = false
     @Published var requestError: String? = nil
@@ -94,6 +95,7 @@ class AdminViewModel: ObservableObject {
     
     private let adminAPI = AdminAPI()
     private let branchAPI = BranchAPI()
+    private let dstAPI = DstAPI()
     
     var filteredUsers: [User] {
         if searchText.isEmpty { return users }
@@ -145,6 +147,22 @@ class AdminViewModel: ObservableObject {
             isLoading = false
         }
     }
+
+    func loadDstDataForManagerScope() async {
+        requestError = nil
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let dstAccounts = try await dstAPI.listDstAccounts(limit: 200, offset: 0)
+            let mapped = dstAccounts.map(Self.mapDstAccount)
+            withAnimation {
+                dstUsers = mapped
+            }
+        } catch {
+            dstUsers = []
+            requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to load DST accounts"
+        }
+    }
     
     func toggleUserStatus(_ user: User) {
         if let index = users.firstIndex(where: { $0.id == user.id }) {
@@ -181,13 +199,13 @@ class AdminViewModel: ObservableObject {
         branchID: String?,
         branchName: String,
         employeeId: String
-    ) {
+    ) async -> Bool {
         requestError = nil
         requestSuccess = nil
 
         guard role == .loanOfficer || role == .manager else {
             requestError = "Only Manager and Loan Officer accounts can be created from this screen."
-            return
+            return false
         }
 
         let resolvedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -196,45 +214,31 @@ class AdminViewModel: ObservableObject {
         let finalPhone = resolvedPhone.isEmpty ? "+91-0000000000" : resolvedPhone
 
         isLoading = true
-        Task {
-            do {
-                var userId = employeeId
-                let response = try await adminAPI.createEmployeeAccount(
-                    name: name,
-                    email: finalEmail,
-                    phoneNumber: finalPhone,
-                    password: password,
-                    role: role,
-                    branchID: branchID
-                )
-                if !response.userID.isEmpty {
-                    userId = response.userID
-                }
-
-                if let branchID, !branchID.isEmpty, !userId.isEmpty {
-                    _ = try await adminAPI.assignEmployeeBranch(userID: userId, branchID: branchID)
-                }
-
-                let newUser = User(
-                    id: userId,
-                    name: name,
-                    email: finalEmail,
-                    role: role,
-                    branch: branchName,
-                    phone: finalPhone,
-                    isActive: true,
-                    joinedAt: Date()
-                )
-
-                withAnimation {
-                    users.append(newUser)
-                }
-                requestSuccess = "User created successfully."
-                loadData()
-            } catch {
-                requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to create user"
+        defer { isLoading = false }
+        do {
+            var userId = employeeId
+            let response = try await adminAPI.createEmployeeAccount(
+                name: name,
+                email: finalEmail,
+                phoneNumber: finalPhone,
+                password: password,
+                role: role,
+                branchID: branchID
+            )
+            if !response.userID.isEmpty {
+                userId = response.userID
             }
-            isLoading = false
+
+            if let branchID, !branchID.isEmpty, !userId.isEmpty {
+                _ = try await adminAPI.assignEmployeeBranch(userID: userId, branchID: branchID)
+            }
+
+            requestSuccess = "User created successfully."
+            loadData()
+            return true
+        } catch {
+            requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to create user"
+            return false
         }
     }
     
@@ -246,89 +250,79 @@ class AdminViewModel: ObservableObject {
         role: UserRole,
         branchID: String?,
         branchName: String
-    ) {
+    ) async -> Bool {
         requestError = nil
         requestSuccess = nil
         isLoading = true
+        defer { isLoading = false }
 
-        Task {
-            do {
-                if let existingUser = users.first(where: { $0.id == userId }), existingUser.role != role {
-                    requestError = "Role change is not supported by backend yet. Create a new user with the desired role."
-                    isLoading = false
-                    return
-                }
-
-                _ = try await adminAPI.updateEmployeeAccount(
-                    userID: userId,
-                    email: email,
-                    phoneNumber: phone,
-                    newPassword: nil
-                )
-
-                if let branchID, !branchID.isEmpty {
-                    _ = try await adminAPI.assignEmployeeBranch(userID: userId, branchID: branchID)
-                } else {
-                    _ = try await adminAPI.assignEmployeeBranch(userID: userId, branchID: "", clearBranch: true)
-                }
-
-                if let index = users.firstIndex(where: { $0.id == userId }) {
-                    withAnimation {
-                        users[index].name = name
-                        users[index].email = email
-                        users[index].phone = phone
-                        users[index].role = role
-                        users[index].branch = branchName
-                        selectedUser = users[index]
-                    }
-                }
-
-                requestSuccess = "User updated successfully."
-                loadData()
-            } catch {
-                requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to update user"
+        do {
+            if let existingUser = users.first(where: { $0.id == userId }), existingUser.role != role {
+                requestError = "Role change is not supported by backend yet. Create a new user with the desired role."
+                return false
             }
 
-            isLoading = false
+            _ = try await adminAPI.updateEmployeeAccount(
+                userID: userId,
+                email: email,
+                phoneNumber: phone,
+                newPassword: nil
+            )
+
+            if let branchID, !branchID.isEmpty {
+                _ = try await adminAPI.assignEmployeeBranch(userID: userId, branchID: branchID)
+            } else {
+                _ = try await adminAPI.assignEmployeeBranch(userID: userId, branchID: "", clearBranch: true)
+            }
+
+            if let index = users.firstIndex(where: { $0.id == userId }) {
+                withAnimation {
+                    users[index].name = name
+                    users[index].email = email
+                    users[index].phone = phone
+                    users[index].role = role
+                    users[index].branch = branchName
+                    selectedUser = users[index]
+                }
+            }
+
+            requestSuccess = "User updated successfully."
+            loadData()
+            return true
+        } catch {
+            requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to update user"
+            return false
         }
     }
     
     func deleteUser(_ user: User) {
-        if let index = users.firstIndex(where: { $0.id == user.id }) {
-            withAnimation {
-                users.remove(at: index)
-                if selectedUser?.id == user.id {
-                    selectedUser = nil
-                }
-            }
-        }
+        requestError = "Delete is not exposed by current backend Admin API. User was not removed from database."
     }
     
     func saveConfig(baseRate: Double, maxTenure: Int, slaDays: Int) {
         // Persist to published properties
     }
     
-    func createBranch(_ branchName: String, location: String = "") {
+    func createBranch(_ branchName: String, location: String = "") async -> String? {
         let trimmed = branchName.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedLocation = location.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            return
+            return nil
         }
 
         requestError = nil
         requestSuccess = nil
         isLoading = true
-
-        Task {
-            do {
-                _ = try await adminAPI.createBankBranch(name: trimmed, region: trimmedLocation, city: trimmedLocation)
-                let backendBranches = try await branchAPI.listBranches(limit: 200, offset: 0)
-                branches = backendBranches.map(Self.mapBranch).sorted(by: { $0.name < $1.name })
-                requestSuccess = "Branch created successfully."
-            } catch {
-                requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to create branch"
-            }
-            isLoading = false
+        defer { isLoading = false }
+        do {
+            let response = try await adminAPI.createBankBranch(name: trimmed, region: trimmedLocation, city: trimmedLocation)
+            let backendBranches = try await branchAPI.listBranches(limit: 200, offset: 0)
+            branches = backendBranches.map(Self.mapBranch).sorted(by: { $0.name < $1.name })
+            requestSuccess = "Branch created successfully."
+            return response.branchID.isEmpty ? nil : response.branchID
+        } catch {
+            requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to create branch"
+            return nil
         }
     }
 
@@ -376,12 +370,11 @@ class AdminViewModel: ObservableObject {
         do {
             _ = try await adminAPI.createDstAccount(name: name, email: email, phoneNumber: phone, password: password)
             requestSuccess = "DST account created successfully."
+            await loadDstDataForManagerScope()
             return true
         } catch {
-            // For prototyping: allow success even if API fails, but set error for info
-            requestError = (error as? LocalizedError)?.errorDescription ?? "API Error (Mocking success for demo)"
-            requestSuccess = "DST account created (Demo Mode)"
-            return true 
+            requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to create DST account"
+            return false
         }
     }
 
@@ -398,6 +391,25 @@ class AdminViewModel: ObservableObject {
         )
         withAnimation {
             users.insert(newUser, at: 0)
+        }
+    }
+
+    func updateDstAccount(userID: String, email: String, phone: String) async -> Bool {
+        requestError = nil
+        requestSuccess = nil
+        do {
+            _ = try await adminAPI.updateEmployeeAccount(
+                userID: userID,
+                email: email,
+                phoneNumber: phone,
+                newPassword: nil
+            )
+            requestSuccess = "DST account updated successfully."
+            await loadDstDataForManagerScope()
+            return true
+        } catch {
+            requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to update DST account"
+            return false
         }
     }
 
@@ -493,6 +505,29 @@ class AdminViewModel: ObservableObject {
             id: branch.id,
             name: branch.name,
             location: location
+        )
+    }
+
+    private static func mapDstAccount(_ account: Dst_V1_DstAccount) -> User {
+        let joinedAt: Date = {
+            guard !account.createdAt.isEmpty else { return Date() }
+            return ISO8601DateFormatter().date(from: account.createdAt) ?? Date()
+        }()
+
+        let resolvedName = account.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let fallbackName = account.email.components(separatedBy: "@").first?
+            .replacingOccurrences(of: ".", with: " ")
+            .capitalized ?? "DST Agent"
+
+        return User(
+            id: account.userID,
+            name: resolvedName.isEmpty ? fallbackName : resolvedName,
+            email: account.email,
+            role: .dst,
+            branch: account.branchName.isEmpty ? "Unassigned" : account.branchName,
+            phone: account.phoneNumber,
+            isActive: account.isActive,
+            joinedAt: joinedAt
         )
     }
 }

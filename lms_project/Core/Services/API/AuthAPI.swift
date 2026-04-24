@@ -73,9 +73,9 @@ struct AuthAPI {
     func getMyProfile() async throws -> Auth_V1_GetMyProfileResponse {
         let request = Auth_V1_GetMyProfileRequest()
         do {
-            return try await CoreAPIClient.withClient { client in
+            return try await CoreAPIClient.withAuthorizedClient { client, metadata in
                 let auth = Auth_V1_AuthService.Client(wrapping: client)
-                return try await auth.getMyProfile(request, metadata: await CoreAPIClient.authorizedMetadata())
+                return try await auth.getMyProfile(request, metadata: metadata)
             }
         } catch {
             throw APIError.from(error)
@@ -95,10 +95,10 @@ struct AuthAPI {
         }()
 
         do {
-            return try await CoreAPIClient.withClient { client in
+            return try await CoreAPIClient.withAuthorizedClient { client, metadata in
                 let rpcRequest = ClientRequest<Auth_SearchBorrowerSignupStatusRequest>(
                     message: request,
-                    metadata: await CoreAPIClient.authorizedMetadata()
+                    metadata: metadata
                 )
                 let response: ClientResponse<Auth_SearchBorrowerSignupStatusResponse> = try await client.unary(
                     request: rpcRequest,
@@ -128,9 +128,9 @@ struct AuthAPI {
         }()
 
         do {
-            return try await CoreAPIClient.withClient { client in
+            return try await CoreAPIClient.withAuthorizedClient { client, metadata in
                 let auth = Auth_V1_AuthService.Client(wrapping: client)
-                return try await auth.changePassword(request, metadata: await CoreAPIClient.authorizedMetadata())
+                return try await auth.changePassword(request, metadata: metadata)
             }
         } catch {
             throw APIError.from(error)
@@ -146,9 +146,9 @@ struct AuthAPI {
         }()
 
         do {
-            return try await CoreAPIClient.withClient { client in
+            return try await CoreAPIClient.withAuthorizedClient { client, metadata in
                 let auth = Auth_V1_AuthService.Client(wrapping: client)
-                return try await auth.logout(request, metadata: await CoreAPIClient.authorizedMetadata())
+                return try await auth.logout(request, metadata: metadata)
             }
         } catch {
             throw APIError.from(error)

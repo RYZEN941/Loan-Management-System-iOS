@@ -296,6 +296,7 @@ struct CreateUserSheet: View {
     @State private var employeeId   = ""
     @State private var showPassword = false
     @State private var emailError: String? = nil
+    @State private var isSubmitting = false
 
     private var isFormValid: Bool {
         let branchValid = branchID == "+ Create New Branch" ? !newBranchName.trimmingCharacters(in: .whitespaces).isEmpty : !branchID.isEmpty
@@ -376,32 +377,34 @@ struct CreateUserSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Create") {
-                        let store = UserStore.shared
-                        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                        if store.credentials.contains(where: { $0.email.lowercased() == trimmedEmail }) {
-                            emailError = "An account with this email already exists."
-                            return
+                        isSubmitting = true
+                        Task {
+                            var finalBranchID = branchID
+                            if branchID == "+ Create New Branch" {
+                                finalBranchID = await adminVM.createBranch(newBranchName) ?? ""
+                            }
+                            let finalBranchName = adminVM.branches.first(where: { $0.id == finalBranchID })?.name ?? newBranchName
+                            let success = await adminVM.createUser(
+                                name: name,
+                                email: email,
+                                password: password,
+                                phone: phone,
+                                role: selectedRole,
+                                branchID: finalBranchID.isEmpty ? nil : finalBranchID,
+                                branchName: finalBranchName,
+                                employeeId: employeeId
+                            )
+                            await MainActor.run {
+                                isSubmitting = false
+                                if success {
+                                    dismiss()
+                                } else {
+                                    emailError = adminVM.requestError
+                                }
+                            }
                         }
-                        var finalBranchID = branchID
-                        if branchID == "+ Create New Branch" {
-                            adminVM.createBranch(newBranchName)
-                            finalBranchID = ""
-                        }
-                        let finalBranchName = adminVM.branches.first(where: { $0.id == finalBranchID })?.name ?? newBranchName
-                        
-                        adminVM.createUser(
-                            name: name,
-                            email: email,
-                            password: password,
-                            phone: phone,
-                            role: selectedRole,
-                            branchID: finalBranchID.isEmpty ? nil : finalBranchID,
-                            branchName: finalBranchName,
-                            employeeId: employeeId
-                        )
-                        dismiss()
                     }
-                    .disabled(!isFormValid)
+                    .disabled(!isFormValid || isSubmitting)
                 }
             }
         }
@@ -427,6 +430,7 @@ struct InlineEditUserView: View {
     @State private var selectedRole: UserRole
     @State private var branchID: String
     @State private var newBranchName = ""
+    @State private var isSaving = false
     
     private var editableRoles: [UserRole] {
         [.loanOfficer, .manager]
@@ -458,25 +462,33 @@ struct InlineEditUserView: View {
                 Spacer()
                 
                 Button("Save") {
-                    var finalBranchID = branchID
-                    if branchID == "+ Create New Branch" {
-                        adminVM.createBranch(newBranchName)
-                        finalBranchID = ""
+                    isSaving = true
+                    Task {
+                        var finalBranchID = branchID
+                        if branchID == "+ Create New Branch" {
+                            finalBranchID = await adminVM.createBranch(newBranchName) ?? ""
+                        }
+                        let finalBranchName = adminVM.branches.first(where: { $0.id == finalBranchID })?.name ?? user.branch
+                        let success = await adminVM.updateUser(
+                            userId: user.id,
+                            name: name,
+                            email: email,
+                            phone: phone,
+                            role: selectedRole,
+                            branchID: finalBranchID.isEmpty ? nil : finalBranchID,
+                            branchName: finalBranchName
+                        )
+                        await MainActor.run {
+                            isSaving = false
+                            if success {
+                                withAnimation { isEditing = false }
+                            }
+                        }
                     }
-                    let finalBranchName = adminVM.branches.first(where: { $0.id == finalBranchID })?.name ?? user.branch
-                    adminVM.updateUser(
-                        userId: user.id,
-                        name: name,
-                        email: email,
-                        phone: phone,
-                        role: selectedRole,
-                        branchID: finalBranchID.isEmpty ? nil : finalBranchID,
-                        branchName: finalBranchName
-                    )
-                    withAnimation { isEditing = false }
                 }
                 .font(Theme.Typography.subheadline.weight(.semibold))
                 .foregroundStyle(Theme.Colors.primary)
+                .disabled(isSaving)
             }
             .padding()
             .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))

@@ -32,4 +32,56 @@ enum CoreAPIClient {
         metadata.addString(UUID().uuidString, forKey: "x-request-id")
         return metadata
     }
+
+    static func withAuthorizedClient<Result>(
+        operation: @escaping @Sendable (GRPCClient<HTTP2ClientTransport.Posix>, Metadata) async throws -> Result
+    ) async throws -> Result {
+        do {
+            return try await withClient { client in
+                let metadata = await authorizedMetadata()
+                return try await operation(client, metadata)
+            }
+        } catch let rpcError as RPCError {
+            guard rpcError.code == .unauthenticated else {
+                throw rpcError
+            }
+
+            try await refreshAccessToken()
+
+            return try await withClient { client in
+                let metadata = await authorizedMetadata()
+                return try await operation(client, metadata)
+            }
+        }
+    }
+
+    private static func refreshAccessToken() async throws {
+        let (refreshToken, deviceID) = await MainActor.run {
+            (SessionStore.shared.refreshToken, SessionStore.shared.deviceID)
+        }
+
+        guard !refreshToken.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw APIError.unauthenticated("Session expired. Please sign in again.")
+        }
+
+        var request = Auth_V1_RefreshTokenRequest()
+        request.refreshToken = refreshToken
+        request.deviceID = deviceID
+
+        do {
+            let tokens = try await withClient { client in
+                let auth = Auth_V1_AuthService.Client(wrapping: client)
+                return try await auth.refreshToken(request, metadata: anonymousMetadata())
+            }
+
+            await MainActor.run {
+                SessionStore.shared.updateTokens(accessToken: tokens.accessToken, refreshToken: tokens.refreshToken)
+            }
+        } catch {
+            await MainActor.run {
+                SessionStore.shared.clear()
+            }
+            throw APIError.from(error)
+        }
+    }
 }

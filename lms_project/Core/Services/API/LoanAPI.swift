@@ -270,10 +270,16 @@ struct LoanAPI {
         operation: @escaping @Sendable (Loan_V1_LoanService.Client<HTTP2ClientTransport.Posix>, Request, Metadata) async throws -> Result
     ) async throws -> Result {
         do {
-            return try await CoreAPIClient.withClient { client in
-                let service = Loan_V1_LoanService.Client(wrapping: client)
-                let metadata = authorized ? await CoreAPIClient.authorizedMetadata() : CoreAPIClient.anonymousMetadata()
-                return try await operation(service, request, metadata)
+            if authorized {
+                return try await CoreAPIClient.withAuthorizedClient { client, metadata in
+                    let service = Loan_V1_LoanService.Client(wrapping: client)
+                    return try await operation(service, request, metadata)
+                }
+            } else {
+                return try await CoreAPIClient.withClient { client in
+                    let service = Loan_V1_LoanService.Client(wrapping: client)
+                    return try await operation(service, request, CoreAPIClient.anonymousMetadata())
+                }
             }
         } catch {
             throw APIError.from(error)

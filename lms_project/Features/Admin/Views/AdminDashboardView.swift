@@ -26,7 +26,7 @@ struct AdminDashboardView: View {
                     .ignoresSafeArea()
                 
                 // Executive Layer
-                LinearGradient(colors: [Theme.Colors.primary.opacity(0.03), .clear], startPoint: .topLeading, endPoint: .bottomTrailing)
+                LinearGradient(colors: [Theme.Colors.adaptivePrimary(colorScheme).opacity(0.04), .clear], startPoint: .topLeading, endPoint: .bottomTrailing)
                     .ignoresSafeArea()
                 
                 ScrollView {
@@ -174,10 +174,10 @@ struct AdminDashboardView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top) {
                     ZStack {
-                        Circle().fill(Theme.Colors.primary.opacity(0.08)).frame(width: 32, height: 32)
+                        Circle().fill(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.10)).frame(width: 32, height: 32)
                         Image(systemName: icon).font(.system(size: 14, weight: .bold))
                     }
-                    .foregroundStyle(Theme.Colors.primary.opacity(0.8))
+                    .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
                     
                     Spacer()
                     if let trend = trend {
@@ -205,7 +205,7 @@ struct AdminDashboardView: View {
                     
                     if let subtext = subtext {
                         Text(subtext)
-                            .font(.system(size: 9, weight: .medium))
+                            .font(Theme.Typography.caption2)
                             .foregroundStyle(.tertiary)
                             .padding(.top, 2)
                     }
@@ -219,7 +219,7 @@ struct AdminDashboardView: View {
                     
                     // Neutral Mini Sparkline
                     GeometryReader { geo in
-                        MiniSparkline(color: Theme.Colors.primary.opacity(0.06))
+                        MiniSparkline(color: Theme.Colors.adaptivePrimary(colorScheme).opacity(0.10))
                             .frame(width: geo.size.width * 0.6)
                             .offset(x: geo.size.width * 0.4, y: geo.size.height * 0.5)
                     }
@@ -258,7 +258,7 @@ struct AdminDashboardView: View {
                 HStack(spacing: 4) {
                     Circle().fill(Color.red).frame(width: 6, height: 6)
                     Text("SLA BREACHES")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(Theme.Typography.caption2.weight(.bold))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -268,7 +268,7 @@ struct AdminDashboardView: View {
                     Text("SLA Breach Trend")
                         .font(Theme.Typography.headline)
                     Text("Daily volume of applications exceeding response time threshold")
-                        .font(.system(size: 11))
+                        .font(Theme.Typography.caption2)
                         .foregroundStyle(.secondary)
                 }
                 .padding([.horizontal, .top], 20)
@@ -477,7 +477,7 @@ struct AdminDashboardView: View {
             MinimalHeader(title: "FINAL OUTCOMES")
             
             HStack(spacing: Theme.Spacing.md) {
-                outcomeCard(label: "NPA RATIO", value: "2.4%", status: "Good", color: Theme.Colors.primary)
+                outcomeCard(label: "NPA RATIO", value: "2.4%", status: "Good", color: Theme.Colors.adaptivePrimary(colorScheme))
                 outcomeCard(label: "COLLECTION EFFICIENCY", value: "94.7%", status: "On Track", color: Theme.Colors.success)
             }
         }
@@ -494,15 +494,15 @@ struct AdminDashboardView: View {
                     .tracking(0.5)
                 Text(value)
                     .font(.system(size: 32, weight: .bold))
-                    .foregroundStyle(Theme.Colors.primary)
+                    .foregroundStyle(color)
             }
             Spacer()
             Text(status)
                 .font(Theme.Typography.caption2)
-                .foregroundStyle(Theme.Colors.primary)
+                .foregroundStyle(color)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .background(Theme.Colors.primary.opacity(0.08))
+                .background(color.opacity(0.12))
                 .clipShape(Capsule())
         }
         .padding(20)

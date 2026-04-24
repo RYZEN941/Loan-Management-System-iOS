@@ -23,20 +23,23 @@ struct AdminProfileSettingsView: View {
                         // Header profile snippet
                         VStack(spacing: Theme.Spacing.sm) {
                             ZStack {
-                                Circle().fill(Theme.Colors.primary.opacity(0.12)).frame(width: 80, height: 80)
+                                Circle().fill(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.12)).frame(width: 80, height: 80)
                                 Text(authVM.currentUser?.initials ?? "AD")
                                     .font(.system(size: 32, weight: .semibold))
-                                    .foregroundStyle(Theme.Colors.primary)
+                                    .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
                             }
                             Text(authVM.currentUser?.name ?? "Admin")
                                 .font(Theme.Typography.titleLarge)
-                            GenericBadge(text: "System Administrator", color: Theme.Colors.primary)
+                            GenericBadge(text: "System Administrator", color: Theme.Colors.adaptivePrimary(colorScheme))
                         }
                         .padding(.top, Theme.Spacing.xl)
 
                         VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                             SectionHeader(title: "Basic Information", icon: "person.text.rectangle")
                             profileContent
+                            
+                            SectionHeader(title: "Appearance", icon: "paintbrush")
+                            appearanceContent
                             
                             HStack {
                                 SectionHeader(title: "Notifications", icon: "bell")
@@ -46,7 +49,7 @@ struct AdminProfileSettingsView: View {
                                 } label: {
                                     Text("Mark all as read")
                                         .font(Theme.Typography.caption)
-                                        .foregroundStyle(Theme.Colors.primary)
+                                        .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
                                 }
                             }
                             notificationsList
@@ -92,6 +95,13 @@ struct AdminProfileSettingsView: View {
             }
         }
     }
+    
+    private var appearanceContent: some View {
+        VStack(spacing: 0) {
+            toggleRow("Dark Mode", isOn: $authVM.isDarkMode)
+        }
+        .cardStyle(colorScheme: colorScheme)
+    }
 
     private var notificationsList: some View {
         VStack(spacing: 0) {
@@ -117,7 +127,7 @@ struct AdminProfileSettingsView: View {
                                 .fontWeight(note.isRead ? .medium : .bold)
                                 .foregroundStyle(note.isRead ? .secondary : .primary)
                             Text(note.message).font(Theme.Typography.caption).foregroundStyle(.secondary)
-                            Text(note.time).font(.system(size: 10)).foregroundStyle(.tertiary)
+                            Text(note.time).font(Theme.Typography.caption2).foregroundStyle(.tertiary)
                         }
                         Spacer()
                         
@@ -125,8 +135,10 @@ struct AdminProfileSettingsView: View {
                             Button {
                                 adminVM.markNotificationRead(note.id)
                             } label: {
-                                Circle().fill(Theme.Colors.primary).frame(width: 8, height: 8)
+                                Circle().fill(Theme.Colors.adaptivePrimary(colorScheme)).frame(width: 8, height: 8)
                             }
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                         }
                         
                         Button {
@@ -134,6 +146,8 @@ struct AdminProfileSettingsView: View {
                         } label: {
                             Image(systemName: "xmark").font(.system(size: 12, weight: .bold)).foregroundStyle(.tertiary)
                         }
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                         .padding(.leading, 8)
                     }
                     .padding(.horizontal, Theme.Spacing.md).padding(.vertical, 12)
@@ -166,7 +180,7 @@ struct AdminProfileSettingsView: View {
         HStack {
             Text(label).font(Theme.Typography.subheadline)
             Spacer()
-            Toggle("", isOn: isOn).labelsHidden().tint(Theme.Colors.primary)
+            Toggle("", isOn: isOn).labelsHidden().tint(Theme.Colors.adaptivePrimary(colorScheme))
         }
         .padding(.horizontal, Theme.Spacing.md).padding(.vertical, 10)
     }
@@ -182,7 +196,7 @@ struct AdminProfileSettingsView: View {
 
     private func integrationCard(_ name: String, status: String, color: Color) -> some View {
         HStack {
-            Image(systemName: "network").font(.system(size: 20)).foregroundStyle(Theme.Colors.primary)
+            Image(systemName: "network").font(.system(size: 20)).foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
             Text(name).font(Theme.Typography.subheadline).padding(.leading, 8)
             Spacer()
             GenericBadge(text: status, color: color)

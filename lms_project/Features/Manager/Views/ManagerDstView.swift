@@ -53,16 +53,23 @@ struct ManagerDstView: View {
                 set: { if !$0 { agentToDelete = nil } }
             )) {
                 Button("Cancel", role: .cancel) {}
-                Button("Delete", role: .destructive) {
+                Button("Remove", role: .destructive) {
                     if let agent = agentToDelete {
-                        adminVM.deleteUser(agent)
+                        adminVM.removeDstLocally(agent)
                     }
                 }
             } message: {
-                Text("Are you sure you want to remove \(agentToDelete?.name ?? "this agent")? This action cannot be undone.")
+                Text("Remove \(agentToDelete?.name ?? "this agent") from this list? This is a frontend-only action.")
+            }
+            .overlay(alignment: .top) {
+                feedbackBanner
+                    .padding(.top, 8)
             }
             .onAppear {
                 adminVM.loadData()
+                Task {
+                    await adminVM.loadDstDataForManagerScope()
+                }
             }
         }
     }
@@ -101,10 +108,7 @@ struct ManagerDstView: View {
     
     private var dstStatsStrip: some View {
         HStack(spacing: Theme.Spacing.lg) {
-            let branchDst = adminVM.users.filter { 
-                $0.role == .dst && 
-                (authVM.currentUser?.branch == nil || $0.branch == authVM.currentUser?.branch)
-            }
+            let branchDst = adminVM.dstUsers
             
             DstKPICard(title: "Total Agents", 
                         value: "\(branchDst.count)", 
@@ -144,10 +148,7 @@ struct ManagerDstView: View {
     
     private var dstList: some View {
         VStack(spacing: Theme.Spacing.lg) {
-            let branchDst = adminVM.users.filter { 
-                $0.role == .dst && 
-                (authVM.currentUser?.branch == nil || $0.branch == authVM.currentUser?.branch)
-            }
+            let branchDst = adminVM.dstUsers
             let filteredDst = branchDst.filter {
                 searchText.isEmpty || 
                 $0.name.localizedCaseInsensitiveContains(searchText) ||
@@ -180,6 +181,31 @@ struct ManagerDstView: View {
                 }
             }
         }
+    }
+    
+    private var feedbackBanner: some View {
+        Group {
+            if let error = adminVM.requestError, !error.isEmpty {
+                banner(text: error, color: Theme.Colors.adaptiveCritical(colorScheme))
+            } else if let success = adminVM.requestSuccess, !success.isEmpty {
+                banner(text: success, color: Theme.Colors.adaptiveSuccess(colorScheme))
+            }
+        }
+    }
+    
+    private func banner(text: String, color: Color) -> some View {
+        Text(text)
+            .font(Theme.Typography.caption)
+            .foregroundStyle(.primary)
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.vertical, 10)
+            .background(ManagerTheme.Colors.surface(colorScheme))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.md)
+                    .stroke(color.opacity(0.45), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
+            .padding(.horizontal, Theme.Spacing.lg)
     }
 }
 
@@ -359,18 +385,6 @@ private struct AddDstSheet: View {
                 } footer: {
                     Text("Agents will use their email and this password to sign in.")
                 }
-                
-                Section {
-                    HStack {
-                        Text("Assigned Branch")
-                        Spacer()
-                        Text(authVM.currentUser?.branch ?? "Unassigned")
-                            .foregroundStyle(.secondary)
-                            .fontWeight(.medium)
-                    }
-                } header: {
-                    Text("Workplace")
-                }
             }
             .navigationTitle("New DST Account")
             .navigationBarTitleDisplayMode(.inline)
@@ -392,7 +406,7 @@ private struct AddDstSheet: View {
     private func saveAgent() {
         isSaving = true
         Task {
-            _ = await adminVM.createDstAccount(
+            let success = await adminVM.createDstAccount(
                 name: name,
                 email: email,
                 phone: phone,
@@ -400,14 +414,10 @@ private struct AddDstSheet: View {
             )
             
             await MainActor.run {
-                adminVM.addDstLocally(
-                    name: name,
-                    email: email,
-                    phone: phone,
-                    branch: authVM.currentUser?.branch ?? "Unassigned"
-                )
-                dismiss()
                 isSaving = false
+                if success {
+                    dismiss()
+                }
             }
         }
     }
@@ -484,17 +494,19 @@ private struct EditDstSheet: View {
     
     private func updateAgent() {
         isSaving = true
-        let branchID = adminVM.branches.first(where: { $0.name == agent.branch })?.id
-        adminVM.updateUser(
-            userId: agent.id,
-            name: name,
-            email: email,
-            phone: phone,
-            role: .dst,
-            branchID: branchID,
-            branchName: agent.branch
-        )
-        dismiss()
-        isSaving = false
+        Task {
+            let success = await adminVM.updateDstAccount(
+                userID: agent.id,
+                name: name,
+                email: email,
+                phone: phone
+            )
+            await MainActor.run {
+                isSaving = false
+                if success {
+                    dismiss()
+                }
+            }
+        }
     }
 }

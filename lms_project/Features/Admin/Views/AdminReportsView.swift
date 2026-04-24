@@ -68,7 +68,7 @@ struct AdminReportsView: View {
             }
             .animation(.spring(response:0.35,dampingFraction:0.8),value:showingBanner)
             .navigationTitle("Reports")
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar { 
                 ToolbarItem(placement: .topBarTrailing) { ProfileNavButton(showProfile: $showProfile) }
             }
@@ -108,7 +108,7 @@ struct AdminReportsView: View {
             }
         } label: {
             HStack(spacing: 6) {
-                Image(systemName: icon).font(.system(size: 14)).foregroundStyle(Theme.Colors.primary)
+                Image(systemName: icon).font(.system(size: 14)).foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
                 Text(selection.wrappedValue).font(Theme.Typography.caption.weight(.medium)).foregroundStyle(.primary)
                 Image(systemName: "chevron.down").font(.system(size: 10)).foregroundStyle(.secondary)
             }
@@ -145,14 +145,14 @@ struct AdminReportsView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 LinearGradient(
-                    colors: [Theme.Colors.primary, Theme.Colors.primary.opacity(0.8)],
+                    colors: [Theme.Colors.adaptivePrimary(colorScheme), Theme.Colors.adaptivePrimary(colorScheme).opacity(0.85)],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
             )
         }
         .clipShape(RoundedRectangle(cornerRadius: 24))
-        .shadow(color: Theme.Colors.primary.opacity(0.3), radius: 12, x: 0, y: 6)
+        .shadow(color: Theme.Colors.adaptivePrimary(colorScheme).opacity(0.3), radius: 12, x: 0, y: 6)
     }
 
     // MARK: - All Reports List
@@ -186,7 +186,7 @@ struct AdminReportsView: View {
         HStack(spacing:Theme.Spacing.sm) {
             ProgressView().progressViewStyle(.circular).scaleEffect(0.8).tint(.white)
             Text(bannerMessage).font(Theme.Typography.subheadline).fontWeight(.medium).foregroundStyle(.white)
-        }.frame(maxWidth:.infinity).padding(.vertical,12).background(Theme.Colors.primary)
+        }.frame(maxWidth:.infinity).padding(.vertical,12).background(Theme.Colors.adaptivePrimary(colorScheme))
         .clipShape(RoundedRectangle(cornerRadius:Theme.Radius.md)).padding(.horizontal,Theme.Spacing.lg)
     }
 

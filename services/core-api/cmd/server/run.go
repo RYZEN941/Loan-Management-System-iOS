@@ -95,7 +95,6 @@ func Run() error {
 		"/auth.v1.AuthService/RefreshToken":             {},
 		"/grpc.health.v1.Health/Check":                  {},
 		"/grpc.health.v1.Health/Watch":                  {},
-		"/auth.v1.AuthService/GetBorrowerProfile":       {},
 	}
 
 	rbacPolicy := grpcinterceptors.RBACPolicy{
@@ -109,6 +108,7 @@ func Run() error {
 		"/admin.v1.AdminService/UpdateEmployeeAccount":     {"admin"},
 		"/admin.v1.AdminService/DeleteEmployeeAccount":     {"admin"},
 		"/admin.v1.AdminService/AssignEmployeeBranch":      {"admin"},
+		"/auth.v1.AuthService/GetBorrowerProfile":          {"borrower", "officer", "manager", "admin", "dst"},
 		"/dst.v1.DstService/GetDstAccount":                 {"manager", "admin"},
 		"/dst.v1.DstService/ListDstAccounts":               {"manager", "admin"},
 		"/auth.v1.AuthService/SetupTOTP":                   {"borrower", "officer", "manager", "admin", "dst"},

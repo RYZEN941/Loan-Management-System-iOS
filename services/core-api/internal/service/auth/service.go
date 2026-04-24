@@ -870,6 +870,7 @@ func (s *service) GetMyProfile(ctx context.Context, req *authv1.GetMyProfileRequ
 				AadhaarVerifiedAt:          timeToString(profile.AadhaarVerifiedAt),
 				PanVerifiedAt:              timeToString(profile.PanVerifiedAt),
 				CreatedAt:                  timeToString(profile.CreatedAt),
+				CibilScore:                 profile.CibilScore,
 			}}
 		}
 	case generated.UserRoleDst:
@@ -890,20 +891,41 @@ func (s *service) GetMyProfile(ctx context.Context, req *authv1.GetMyProfileRequ
 	return response, nil
 }
 
-func (s *service) GetBorrowerProfile(ctx context.Context, req *authv1.GetBorrowerProfileRequest) (res *authv1.BorrowerProfile, err error) {
-	userID := req.GetUserID()
-	var userUUID [16]byte
-	copy(userUUID[:], userID)
-	profile, err := s.queries.GetBorrowerProfileByUserID(ctx, pgtype.UUID{
-		Bytes: userUUID,
-		Valid: true,
-	})
+func (s *service) GetBorrowerProfile(ctx context.Context, req *authv1.GetBorrowerProfileRequest) (*authv1.BorrowerProfile, error) {
+	callerUserID, ok := interceptors.UserIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing user context")
+	}
+	role, _ := ctx.Value(interceptors.ContextRoleKey).(string)
 
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return nil, status.Error(codes.Internal, "Failed to fetch profile")
+	targetUserIDStr := strings.TrimSpace(req.GetUserID())
+	if targetUserIDStr == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+	targetUserID, err := uuid.Parse(targetUserIDStr)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "user_id must be a valid uuid")
 	}
 
-	return &authv1.BorrowerProfile{
+	switch role {
+	case "borrower":
+		if targetUserID != callerUserID {
+			return nil, status.Error(codes.PermissionDenied, "borrower can only view own profile")
+		}
+	case "officer", "manager", "admin", "dst":
+	default:
+		return nil, status.Error(codes.PermissionDenied, "access denied")
+	}
+
+	profile, err := s.queries.GetBorrowerProfileByUserID(ctx, pgtype.UUID{Bytes: targetUserID, Valid: true})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, status.Error(codes.NotFound, "borrower profile not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to fetch profile")
+	}
+
+	result := &authv1.BorrowerProfile{
 		ProfileId:                  profile.ID.String(),
 		FirstName:                  profile.FirstName,
 		LastName:                   profile.LastName,
@@ -921,8 +943,10 @@ func (s *service) GetBorrowerProfile(ctx context.Context, req *authv1.GetBorrowe
 		AadhaarVerifiedAt:          timeToString(profile.AadhaarVerifiedAt),
 		PanVerifiedAt:              timeToString(profile.PanVerifiedAt),
 		CreatedAt:                  timeToString(profile.CreatedAt),
-	}, nil
+		CibilScore:                 profile.CibilScore,
+	}
 
+	return result, nil
 }
 
 func (s *service) SearchBorrowerSignupStatus(ctx context.Context, req *authv1.SearchBorrowerSignupStatusRequest) (*authv1.SearchBorrowerSignupStatusResponse, error) {

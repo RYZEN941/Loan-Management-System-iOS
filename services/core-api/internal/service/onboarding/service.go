@@ -2,6 +2,7 @@ package onboarding
 
 import (
 	"context"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -98,6 +99,7 @@ func (s *service) CompleteBorrowerOnboarding(ctx context.Context, req *onboardin
 		EmploymentType:             employmentType,
 		MonthlyIncome:              monthlyIncome,
 		ProfileCompletenessPercent: req.GetProfileCompletenessPercent(),
+		CibilScore:                 int32(700 + rand.Intn(201)),
 	})
 	if err != nil {
 		lowerErr := strings.ToLower(err.Error())
@@ -129,7 +131,7 @@ func (s *service) UpdateBorrowerProfile(ctx context.Context, req *onboardingv1.U
 	}
 
 	// Verify the borrower profile already exists before updating.
-	_, err = s.queries.GetBorrowerProfileByUserID(ctx, pgtype.UUID{Bytes: targetUserID, Valid: true})
+	existingProfile, err := s.queries.GetBorrowerProfileByUserID(ctx, pgtype.UUID{Bytes: targetUserID, Valid: true})
 	if err != nil {
 		return nil, status.Error(codes.NotFound, "borrower profile not found — complete onboarding first")
 	}
@@ -168,6 +170,11 @@ func (s *service) UpdateBorrowerProfile(ctx context.Context, req *onboardingv1.U
 		return nil, status.Error(codes.InvalidArgument, "monthly_income must be a valid decimal")
 	}
 
+	cibilScore := existingProfile.CibilScore
+	if req.GetCibilScore() != 0 {
+		cibilScore = req.GetCibilScore()
+	}
+
 	if err := s.queries.UpdateBorrowerProfile(ctx, generated.UpdateBorrowerProfileParams{
 		UserID:                     pgtype.UUID{Bytes: targetUserID, Valid: true},
 		FirstName:                  firstName,
@@ -181,6 +188,7 @@ func (s *service) UpdateBorrowerProfile(ctx context.Context, req *onboardingv1.U
 		EmploymentType:             employmentType,
 		MonthlyIncome:              monthlyIncome,
 		ProfileCompletenessPercent: req.GetProfileCompletenessPercent(),
+		CibilScore:                 cibilScore,
 	}); err != nil {
 		return nil, status.Error(codes.Internal, "failed to update borrower profile")
 	}

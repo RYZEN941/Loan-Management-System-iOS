@@ -28,6 +28,7 @@ service AuthService {
   rpc FinishWebAuthnLogin(WebAuthnFinishLoginRequest) returns (AuthTokens);
 
   rpc GetMyProfile(GetMyProfileRequest) returns (GetMyProfileResponse);
+  rpc GetBorrowerProfile(GetBorrowerProfileRequest) returns (BorrowerProfile);
   rpc SearchBorrowerSignupStatus(SearchBorrowerSignupStatusRequest) returns (SearchBorrowerSignupStatusResponse);
   rpc RefreshToken(RefreshTokenRequest) returns (AuthTokens);
   rpc Logout(LogoutRequest) returns (LogoutResponse);
@@ -50,6 +51,10 @@ message SignupRequest {
   string email = 1;
   string phone = 2;
   string password = 3;
+}
+
+message GetBorrowerProfileRequest {
+  string userID = 1;
 }
 
 enum UserRole {
@@ -251,6 +256,7 @@ message BorrowerProfile {
   string aadhaar_verified_at = 15;
   string pan_verified_at = 16;
   string created_at = 17;
+  int32 cibil_score = 18;
 }
 
 message GetMyProfileResponse {

@@ -58,6 +58,7 @@ message UpdateBorrowerProfileRequest {
   BorrowerEmploymentType employment_type = 9;
   string monthly_income = 10;
   int32 profile_completeness_percent = 11;
+  int32 cibil_score = 13;
 }
 
 message UpdateBorrowerProfileResponse {

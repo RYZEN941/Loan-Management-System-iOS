@@ -11,7 +11,8 @@ INSERT INTO borrower_profiles (
     pincode,
     employment_type,
     monthly_income,
-    profile_completeness_percent
+    profile_completeness_percent,
+    cibil_score
 ) VALUES (
     $1,
     $2,
@@ -24,7 +25,8 @@ INSERT INTO borrower_profiles (
     $9,
     $10,
     $11,
-    $12
+    $12,
+    $13
 ) RETURNING *;
 
 -- name: GetBorrowerProfileByUserID :one
@@ -50,5 +52,6 @@ SET first_name                 = $2,
     pincode                    = $9,
     employment_type            = $10,
     monthly_income             = $11,
-    profile_completeness_percent = $12
+    profile_completeness_percent = $12,
+    cibil_score                = $13
 WHERE user_id = $1;

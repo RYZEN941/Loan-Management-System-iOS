@@ -87,6 +87,7 @@ CREATE TABLE borrower_profiles (
     is_pan_verified BOOLEAN NOT NULL DEFAULT false,
     aadhaar_verified_at TIMESTAMP WITH TIME ZONE,
     pan_verified_at TIMESTAMP WITH TIME ZONE,
+    cibil_score INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

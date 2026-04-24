@@ -108,7 +108,7 @@ struct AdminRiskView: View {
                     } label: {
                         Image(systemName: "sidebar.left")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(Theme.Colors.primary)
+                            .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) { ProfileNavButton(showProfile: $showProfile) }
@@ -209,10 +209,10 @@ struct AdminRiskView: View {
             .background {
                 if adminVM.selectedRiskSection == section {
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(Theme.Colors.primary.opacity(0.1))
+                        .fill(Theme.Colors.adaptivePrimary(colorScheme).opacity(colorScheme == .dark ? 0.22 : 0.12))
                 }
             }
-            .foregroundStyle(adminVM.selectedRiskSection == section ? Theme.Colors.primary : .secondary)
+            .foregroundStyle(adminVM.selectedRiskSection == section ? Theme.Colors.adaptivePrimary(colorScheme) : .secondary)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -316,9 +316,9 @@ struct AdminRiskView: View {
                             Text(filter.rawValue)
                                 .font(Theme.Typography.caption)
                                 .fontWeight(adminVM.selectedRiskFilter == filter ? .semibold : .regular)
-                                .foregroundStyle(adminVM.selectedRiskFilter == filter ? .white : Theme.Colors.primary)
+                                .foregroundStyle(adminVM.selectedRiskFilter == filter ? .white : Theme.Colors.adaptivePrimary(colorScheme))
                                 .padding(.horizontal, 14).padding(.vertical, 8)
-                                .background(adminVM.selectedRiskFilter == filter ? Theme.Colors.primary : Theme.Colors.primary.opacity(0.08))
+                                .background(adminVM.selectedRiskFilter == filter ? Theme.Colors.adaptivePrimary(colorScheme) : Theme.Colors.adaptivePrimary(colorScheme).opacity(0.12))
                                 .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)
@@ -425,17 +425,18 @@ struct AdminRiskView: View {
         }
     }
     
-    private func actionButton(title: String, icon: String, color: Color = Theme.Colors.primary, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+    private func actionButton(title: String, icon: String, color: Color? = nil, action: @escaping () -> Void) -> some View {
+        let resolvedColor = color ?? Theme.Colors.adaptivePrimary(colorScheme)
+        return Button(action: action) {
             HStack(spacing: 3) {
                 Image(systemName: icon)
                 Text(title)
             }
-            .font(.system(size: 10, weight: .bold))
-            .foregroundStyle(color)
+            .font(Theme.Typography.caption2.weight(.bold))
+            .foregroundStyle(resolvedColor)
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
-            .background(color.opacity(0.1))
+            .background(resolvedColor.opacity(0.12))
             .clipShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -772,18 +773,18 @@ private struct MessageOfficerSheet: View {
 
 private struct RiskBarRow: View {
     let label:String; let value:Double; let valueText:String; let warningThreshold:Double; let dangerThreshold:Double; let colorScheme:ColorScheme
-    private var barColor: Color {
+    private var textColor: Color {
         if value >= dangerThreshold { return Theme.Colors.critical }
         if value >= warningThreshold { return Theme.Colors.warning }
         return Theme.Colors.success
     }
     var body: some View {
         VStack(spacing:6) {
-            HStack { Text(label).font(Theme.Typography.subheadline); Spacer(); Text(valueText).font(Theme.Typography.mono).foregroundStyle(barColor) }
+            HStack { Text(label).font(Theme.Typography.subheadline); Spacer(); Text(valueText).font(Theme.Typography.mono).foregroundStyle(textColor) }
             GeometryReader { geo in
                 ZStack(alignment:.leading) {
-                    RoundedRectangle(cornerRadius:4).fill(barColor.opacity(0.12)).frame(height:6)
-                    RoundedRectangle(cornerRadius:4).fill(barColor).frame(width:geo.size.width*min(value,1.0),height:6)
+                    RoundedRectangle(cornerRadius:4).fill(Theme.Colors.primary.opacity(0.12)).frame(height:6)
+                    RoundedRectangle(cornerRadius:4).fill(Theme.Colors.primary).frame(width:geo.size.width*min(value,1.0),height:6)
                     Rectangle().fill(Theme.Colors.neutral.opacity(0.4)).frame(width:1.5,height:10).offset(x:geo.size.width*warningThreshold-0.75,y:-2)
                 }
             }.frame(height:6)

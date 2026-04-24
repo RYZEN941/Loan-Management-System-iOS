@@ -220,6 +220,22 @@ struct LoanAPI {
         }
     }
 
+    func addApplicationDocument(
+        applicationID: String,
+        borrowerProfileID: String,
+        requiredDocID: String,
+        mediaFileID: String
+    ) async throws -> Loan_V1_ApplicationDocument {
+        var req = Loan_V1_AddApplicationDocumentRequest()
+        req.applicationID = applicationID
+        req.borrowerProfileID = borrowerProfileID
+        req.requiredDocID = requiredDocID
+        req.mediaFileID = mediaFileID
+        return try await perform(req, authorized: true) { service, r, metadata in
+            try await service.addApplicationDocument(r, metadata: metadata).document
+        }
+    }
+
     // MARK: - Terms & Assignment (Manager/Admin actions)
 
     func updateLoanApplicationTerms(

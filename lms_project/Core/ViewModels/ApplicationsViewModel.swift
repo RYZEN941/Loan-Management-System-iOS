@@ -25,6 +25,11 @@ class ApplicationsViewModel: ObservableObject {
     @Published var pendingRejectionApp: LoanApplication? = nil
     @Published var rejectionRemarksText = ""
     
+    @Published var availableLoanProducts: [LoanProduct] = []
+    
+    // Auth API for fetching profile
+    private let authAPI = AuthAPI()
+    
     // Manager send back sheet
     @Published var showSendBackSheet = false
     @Published var pendingSendBackApp: LoanApplication? = nil
@@ -61,6 +66,17 @@ class ApplicationsViewModel: ObservableObject {
     }
     
     // MARK: - Load Data
+    
+    func loadAvailableLoanProducts() async {
+        guard #available(iOS 18.0, *) else { return }
+        do {
+            let products = try await LoanAPI().listLoanProducts(limit: 100, offset: 0, includeDeleted: false, authorized: true)
+            let mapped = products.map { LoanProduct(proto: $0) }
+            self.availableLoanProducts = mapped
+        } catch {
+            print("Failed to load loan products: \(error)")
+        }
+    }
     
     func loadData() {
         isLoading = true
@@ -191,31 +207,95 @@ class ApplicationsViewModel: ObservableObject {
         pendingRejectionApp = nil
         rejectionRemarksText = ""
     }
-
-    func createApplication(
+    func createBackendApplication(
+        borrowerProfileID: String,
         borrowerName: String,
-        loanType: LoanType,
-        amount: Double,
+        borrowerPhone: String,
+        borrowerEmail: String,
+        borrowerAddress: String,
+        selectedLoanProduct: LoanProduct,
+        requestedAmount: Double,
         tenureMonths: Int,
-        branchID: String? = nil
-    ) async throws -> LoanApplication {
+        monthlyIncome: Double,
+        existingEMI: Double,
+        documents: [LoanDocument]
+    ) async throws -> String {
+        let cleanBorrowerProfileID = borrowerProfileID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanBorrowerProfileID.isEmpty else {
+            throw APIError.invalidArgument("Borrower profile ID is required.")
+        }
+        guard requestedAmount > 0 else {
+            throw APIError.invalidArgument("Requested loan amount must be greater than 0.")
+        }
+        guard tenureMonths > 0 else {
+            throw APIError.invalidArgument("Tenure must be greater than 0.")
+        }
+
         guard #available(iOS 18.0, *) else {
             throw APIError.failedPrecondition("Loan application APIs require iOS 18 or later.")
         }
-        let created = try await LoanAPI().createLoanApplication(
-            primaryBorrowerProfileID: defaultBorrowerProfileID,
-            loanProductID: defaultLoanProductID,
-            branchID: branchID ?? defaultBranchID,
-            requestedAmount: String(format: "%.0f", amount),
-            tenureMonths: Int32(max(1, tenureMonths)),
-            status: .officerReview
-        )
-        let mapped = LoanApplication.from(proto: created)
-        withAnimation {
-            selectedApplication = mapped
+
+        let profile = try await authAPI.getMyProfile()
+        guard case .officerProfile(let officerProfile) = profile.profile else {
+            throw APIError.permissionDenied("Only Officer profile can create applications from this screen.")
         }
-        try await refreshApplications(selectApplicationID: mapped.id)
-        return mapped
+        let branchID = officerProfile.branch.branchID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !branchID.isEmpty else {
+            throw APIError.failedPrecondition("Officer is not assigned to a branch.")
+        }
+
+        let created = try await LoanAPI().createLoanApplication(
+            primaryBorrowerProfileID: cleanBorrowerProfileID,
+            loanProductID: selectedLoanProduct.id,
+            branchID: branchID,
+            requestedAmount: String(Int(requestedAmount)),
+            tenureMonths: Int32(tenureMonths),
+            status: .submitted
+        )
+
+        let localApp = LoanApplication(
+            id: created.id,
+            borrower: Borrower(
+                name: borrowerName.isEmpty ? "Borrower" : borrowerName,
+                dob: Calendar.current.date(byAdding: .year, value: -30, to: Date()) ?? Date(),
+                address: borrowerAddress.isEmpty ? "Address TBD" : borrowerAddress,
+                employer: "To be verified",
+                employmentType: "To be verified",
+                phone: borrowerPhone,
+                email: borrowerEmail
+            ),
+            loan: LoanDetails(
+                amount: requestedAmount,
+                type: selectedLoanProduct.loanTypeForUI,
+                tenure: tenureMonths,
+                interestRate: Double(created.offeredInterestRate) ?? 0,
+                emi: 0
+            ),
+            financials: Financials(
+                monthlyIncome: monthlyIncome,
+                annualIncome: monthlyIncome * 12,
+                existingEMI: existingEMI,
+                dtiRatio: monthlyIncome > 0 ? (existingEMI / monthlyIncome) : 0,
+                cibilScore: 0,
+                bankBalance: 0
+            ),
+            documents: documents,
+            verification: [],
+            notes: [],
+            internalRemarks: [],
+            status: created.status.employeeStatus,
+            assignedTo: "LO-001",
+            branch: created.branchName.isEmpty ? officerProfile.branch.name : created.branchName,
+            riskLevel: .medium,
+            createdAt: Date(),
+            slaDeadline: Calendar.current.date(byAdding: .day, value: 7, to: Date()) ?? Date()
+        )
+
+        withAnimation {
+            applications.insert(localApp, at: 0)
+            selectedApplication = localApp
+        }
+        return created.id
     }
 
     // MARK: - Document Verification
@@ -545,6 +625,38 @@ class ApplicationsViewModel: ObservableObject {
             // Keep list data if detail fetch fails.
         }
     }
+
+    @MainActor
+    func resolveBorrowerProfileID(email: String, phone: String) async throws -> String? {
+        let cleanEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let cleanPhone = phone.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        func exactMatch(from items: [Auth_V1_BorrowerSignupStatusItem]) -> Auth_V1_BorrowerSignupStatusItem? {
+            let direct = items.first { item in
+                let emailMatch = !cleanEmail.isEmpty && item.email.lowercased() == cleanEmail
+                let phoneMatch = !cleanPhone.isEmpty && item.phone == cleanPhone
+                return emailMatch || phoneMatch
+            }
+            if let direct { return direct }
+            return items.first
+        }
+
+        if !cleanEmail.isEmpty {
+            let emailResults = try await authAPI.searchBorrowerSignupStatus(query: cleanEmail, limit: 20, offset: 0)
+            if let found = exactMatch(from: emailResults.items), !found.borrowerProfileId.isEmpty {
+                return found.borrowerProfileId
+            }
+        }
+
+        if !cleanPhone.isEmpty {
+            let phoneResults = try await authAPI.searchBorrowerSignupStatus(query: cleanPhone, limit: 20, offset: 0)
+            if let found = exactMatch(from: phoneResults.items), !found.borrowerProfileId.isEmpty {
+                return found.borrowerProfileId
+            }
+        }
+
+        return nil
+    }
 }
 
 // MARK: - Uploaded Doc File
@@ -555,4 +667,38 @@ struct UploadedDocFile: Identifiable {
     let url: URL?
     let isImage: Bool
     let uploadedAt: Date
+}
+
+private extension Loan_V1_LoanApplicationStatus {
+    var employeeStatus: ApplicationStatus {
+        switch self {
+        case .draft, .submitted:
+            return .pending
+        case .underReview:
+            return .underReview
+        case .approved:
+            return .approved
+        case .rejected:
+            return .rejected
+        case .disbursed, .cancelled, .officerReview, .officerApproved, .officerRejected, .managerReview, .managerApproved, .managerRejected, .unspecified, .UNRECOGNIZED:
+            return .underReview
+        }
+    }
+}
+
+private extension LoanProduct {
+    var loanTypeForUI: LoanType {
+        switch category {
+        case .home:
+            return .homeLoan
+        case .vehicle:
+            return .vehicleLoan
+        case .education:
+            return .educationLoan
+        case .personal:
+            return .personalLoan
+        case .unspecified, .UNRECOGNIZED:
+            return .businessLoan
+        }
+    }
 }

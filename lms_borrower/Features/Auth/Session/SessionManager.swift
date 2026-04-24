@@ -36,32 +36,17 @@ public final class SessionManager: Sendable {
     
     // MARK: - Lifecycle Auth
     
-    /// Attempts to silently restore the session by refreshing the access token.
+    /// Attempts to silently restore the session.
     ///
-    /// - Parameter notifyOnFailure: When `true` (the default), posts the global
-    ///   `.sessionExpired` notification if the refresh fails, causing the app to
-    ///   route the user to the login screen. Pass `false` when the caller handles
-    ///   the failure itself (e.g. TOTP setup, which retries locally and must not
-    ///   trigger a premature logout).
-    /// - Returns: `true` if a valid session was restored, `false` otherwise.
+    /// Since the backend has disabled the RefreshToken RPC, silent restoration
+    /// is not possible. The user must always re-authenticate via InitiateReopen + MFA.
+    /// This method always returns `false` and does NOT clear tokens or post
+    /// the `.sessionExpired` notification.
     public func attemptSilentRestore(notifyOnFailure: Bool = true) async -> Bool {
-        if !tokenStore.hasStoredSession() {
-            return false
-        }
-        
-        do {
-            let tokens = try await authRepository.refreshSession()
-            try tokenStore.save(accessToken: tokens.accessToken, refreshToken: tokens.refreshToken)
-            return true
-        } catch {
-            // Only broadcast the global notification when the caller has no
-            // local recovery path – i.e. this is a true, unrecoverable expiry.
-            if notifyOnFailure {
-                NotificationCenter.default.post(name: .sessionExpired, object: nil)
-            }
-            try? tokenStore.clearAll()
-            return false
-        }
+        // RefreshToken is disabled on the backend. Silent restore is not possible.
+        // Return false without clearing tokens — the user will be presented with
+        // the QuickLoginGate and must re-authenticate via InitiateReopen + MFA.
+        return false
     }
     
     /// Call this when the user successfully authenticates via MFA or new signup auto-login.

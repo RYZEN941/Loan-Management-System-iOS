@@ -284,7 +284,9 @@ public final class AuthRepository: Sendable {
 
     // MARK: - Session Management
 
-    /// Refreshes the session using the stored refresh token.
+    /// ⚠️ DEPRECATED: RefreshToken is disabled on the backend.
+    /// Do not call this method. It will always return a FailedPrecondition error.
+    /// Use InitiateReopen + MFA step-up instead.
     public func refreshSession() async throws -> Auth_V1_AuthTokens {
         guard let refreshTokenStr = try tokenStore.refreshToken() else { throw AuthError.sessionExpired }
         let deviceID = try deviceStore.getOrCreate()

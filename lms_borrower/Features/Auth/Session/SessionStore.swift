@@ -190,34 +190,6 @@ final class SessionStore: ObservableObject {
         }
     }
 
-    /// Verifies a TOTP code during quick login using local TOTP validation.
-    func verifyQuickTOTP(code: String) async throws -> Bool {
-        if #available(iOS 18.0, *) {
-            guard let accessToken = try TokenStore.shared.accessToken(),
-                  let userID = JWTClaimsDecoder.subject(from: accessToken) else {
-                throw AuthError.unauthenticated
-            }
-
-            guard let secret = try TOTPSecretStore.shared.secret(for: userID) else {
-                throw AuthError.invalidServerResponse(
-                    "Authenticator not set up on this device. Please log in with your password."
-                )
-            }
-
-            guard TOTPProvider.isValid(code: code, secret: secret) else {
-                return false
-            }
-
-            let restored = await SessionManager.shared.attemptSilentRestore(notifyOnFailure: false)
-            if restored {
-                unlockAppSession()
-                return true
-            }
-            throw AuthError.sessionExpired
-        }
-        return false
-    }
-
     /// Quick login using backend "reopen + MFA" flow (no direct refresh).
     func verifyQuickReopenMFA(
         factor: String,
@@ -227,6 +199,10 @@ final class SessionStore: ObservableObject {
 
         let repository = AuthRepository()
         let reopen = try await repository.initiateReopen()
+
+        guard reopen.allowedFactors.contains(factor) else {
+            throw AuthError.invalidServerResponse("Factor \(factor) is not available for this account.")
+        }
 
         let factorSelection: Auth_V1_VerifyLoginMFARequest.OneOf_Factor
         switch factor {
@@ -257,6 +233,11 @@ final class SessionStore: ObservableObject {
 
         let repository = AuthRepository()
         let reopen = try await repository.initiateReopen()
+
+        guard reopen.allowedFactors.contains(factor) else {
+            throw AuthError.invalidServerResponse("Factor \(factor) is not available for this account.")
+        }
+
         let selection = try await repository.selectLoginFactor(mfaSessionID: reopen.mfaSessionID, factor: factor)
         return (mfaSessionID: reopen.mfaSessionID, challengeTarget: selection.challengeTarget)
     }

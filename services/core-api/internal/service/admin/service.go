@@ -23,8 +23,10 @@ type Service interface {
 	CreateBankBranch(ctx context.Context, req *adminv1.CreateBankBranchRequest) (*adminv1.CreateBankBranchResponse, error)
 	ListEmployeeAccounts(ctx context.Context, req *adminv1.ListEmployeeAccountsRequest) (*adminv1.ListEmployeeAccountsResponse, error)
 	UpdateBankBranch(ctx context.Context, req *adminv1.UpdateBankBranchRequest) (*adminv1.UpdateBankBranchResponse, error)
+	DeleteBankBranch(ctx context.Context, req *adminv1.DeleteBankBranchRequest) (*adminv1.DeleteBankBranchResponse, error)
 	UpdateBranchDstCommission(ctx context.Context, req *adminv1.UpdateBranchDstCommissionRequest) (*adminv1.UpdateBranchDstCommissionResponse, error)
 	UpdateEmployeeAccount(ctx context.Context, req *adminv1.UpdateEmployeeAccountRequest) (*adminv1.UpdateEmployeeAccountResponse, error)
+	DeleteEmployeeAccount(ctx context.Context, req *adminv1.DeleteEmployeeAccountRequest) (*adminv1.DeleteEmployeeAccountResponse, error)
 	AssignEmployeeBranch(ctx context.Context, req *adminv1.AssignEmployeeBranchRequest) (*adminv1.AssignEmployeeBranchResponse, error)
 }
 
@@ -575,6 +577,73 @@ func (s *service) AssignEmployeeBranch(ctx context.Context, req *adminv1.AssignE
 	}
 
 	return &adminv1.AssignEmployeeBranchResponse{Success: true}, nil
+}
+
+// DeleteBankBranch soft-deletes a branch. Admin only.
+func (s *service) DeleteBankBranch(ctx context.Context, req *adminv1.DeleteBankBranchRequest) (*adminv1.DeleteBankBranchResponse, error) {
+	if _, ok := interceptors.UserIDFromContext(ctx); !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing user context")
+	}
+	role, _ := ctx.Value(interceptors.ContextRoleKey).(string)
+	if role != "admin" {
+		return nil, status.Error(codes.PermissionDenied, "only admin can delete branches")
+	}
+
+	branchIDStr := strings.TrimSpace(req.GetBranchId())
+	if branchIDStr == "" {
+		return nil, status.Error(codes.InvalidArgument, "branch_id is required")
+	}
+	branchID, err := uuid.Parse(branchIDStr)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "branch_id must be a valid uuid")
+	}
+
+	if _, err := s.queries.GetBankBranchByID(ctx, pgtype.UUID{Bytes: branchID, Valid: true}); err != nil {
+		return nil, status.Error(codes.NotFound, "branch not found or already deleted")
+	}
+
+	if err := s.queries.SoftDeleteBankBranch(ctx, pgtype.UUID{Bytes: branchID, Valid: true}); err != nil {
+		return nil, status.Error(codes.Internal, "failed to delete branch")
+	}
+
+	return &adminv1.DeleteBankBranchResponse{Success: true}, nil
+}
+
+// DeleteEmployeeAccount soft-deletes a manager or officer user account. Admin only.
+func (s *service) DeleteEmployeeAccount(ctx context.Context, req *adminv1.DeleteEmployeeAccountRequest) (*adminv1.DeleteEmployeeAccountResponse, error) {
+	if _, ok := interceptors.UserIDFromContext(ctx); !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing user context")
+	}
+	role, _ := ctx.Value(interceptors.ContextRoleKey).(string)
+	if role != "admin" {
+		return nil, status.Error(codes.PermissionDenied, "only admin can delete employee accounts")
+	}
+
+	userIDStr := strings.TrimSpace(req.GetUserId())
+	if userIDStr == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "user_id must be a valid uuid")
+	}
+
+	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "employee user not found")
+	}
+	if user.IsDeleted.Valid && user.IsDeleted.Bool {
+		return nil, status.Error(codes.FailedPrecondition, "account is already deleted")
+	}
+	if user.Role != generated.UserRoleManager && user.Role != generated.UserRoleOfficer {
+		return nil, status.Error(codes.InvalidArgument, "only manager or officer accounts can be deleted")
+	}
+
+	if err := s.queries.SoftDeleteUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true}); err != nil {
+		return nil, status.Error(codes.Internal, "failed to delete employee account")
+	}
+
+	return &adminv1.DeleteEmployeeAccountResponse{Success: true}, nil
 }
 
 func mapEmployeeTypeToRole(employeeType adminv1.EmployeeType) (generated.UserRole, error) {

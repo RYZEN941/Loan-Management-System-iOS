@@ -11,8 +11,10 @@ service AdminService {
   rpc CreateDstAccount(CreateDstAccountRequest) returns (CreateDstAccountResponse);
   rpc CreateBankBranch(CreateBankBranchRequest) returns (CreateBankBranchResponse);
   rpc UpdateBankBranch(UpdateBankBranchRequest) returns (UpdateBankBranchResponse);
+  rpc DeleteBankBranch(DeleteBankBranchRequest) returns (DeleteBankBranchResponse);
   rpc UpdateBranchDstCommission(UpdateBranchDstCommissionRequest) returns (UpdateBranchDstCommissionResponse);
   rpc UpdateEmployeeAccount(UpdateEmployeeAccountRequest) returns (UpdateEmployeeAccountResponse);
+  rpc DeleteEmployeeAccount(DeleteEmployeeAccountRequest) returns (DeleteEmployeeAccountResponse);
   rpc AssignEmployeeBranch(AssignEmployeeBranchRequest) returns (AssignEmployeeBranchResponse);
 }
 
@@ -146,5 +148,21 @@ message AssignEmployeeBranchRequest {
 }
 
 message AssignEmployeeBranchResponse {
+  bool success = 1;
+}
+
+message DeleteBankBranchRequest {
+  string branch_id = 1;
+}
+
+message DeleteBankBranchResponse {
+  bool success = 1;
+}
+
+message DeleteEmployeeAccountRequest {
+  string user_id = 1;
+}
+
+message DeleteEmployeeAccountResponse {
   bool success = 1;
 }

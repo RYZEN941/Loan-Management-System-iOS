@@ -97,6 +97,7 @@ type Querier interface {
 	ListDstChatTargets(ctx context.Context, arg ListDstChatTargetsParams) ([]ListDstChatTargetsRow, error)
 	ListEmiScheduleByLoanID(ctx context.Context, loanID pgtype.UUID) ([]EmiSchedule, error)
 	ListEmployeeAccounts(ctx context.Context, arg ListEmployeeAccountsParams) ([]ListEmployeeAccountsRow, error)
+	ListLoanApplicationsByAssignedOfficer(ctx context.Context, arg ListLoanApplicationsByAssignedOfficerParams) ([]ListLoanApplicationsByAssignedOfficerRow, error)
 	ListLoanApplicationsByBranchID(ctx context.Context, arg ListLoanApplicationsByBranchIDParams) ([]ListLoanApplicationsByBranchIDRow, error)
 	ListLoanApplicationsForBorrowerProfile(ctx context.Context, arg ListLoanApplicationsForBorrowerProfileParams) ([]ListLoanApplicationsForBorrowerProfileRow, error)
 	ListLoanProducts(ctx context.Context, arg ListLoanProductsParams) ([]LoanProduct, error)
@@ -117,7 +118,9 @@ type Querier interface {
 	RevokeRefreshTokensForUserDevice(ctx context.Context, arg RevokeRefreshTokensForUserDeviceParams) error
 	SearchBorrowerSignupStatus(ctx context.Context, arg SearchBorrowerSignupStatusParams) ([]SearchBorrowerSignupStatusRow, error)
 	SetTOTPSecret(ctx context.Context, arg SetTOTPSecretParams) error
+	SoftDeleteBankBranch(ctx context.Context, id pgtype.UUID) error
 	SoftDeleteLoanProduct(ctx context.Context, id pgtype.UUID) error
+	SoftDeleteUserByID(ctx context.Context, id pgtype.UUID) error
 	UpdateApplicationDocumentVerification(ctx context.Context, arg UpdateApplicationDocumentVerificationParams) error
 	UpdateBankBranch(ctx context.Context, arg UpdateBankBranchParams) error
 	UpdateBranchDstCommissionByID(ctx context.Context, arg UpdateBranchDstCommissionByIDParams) error

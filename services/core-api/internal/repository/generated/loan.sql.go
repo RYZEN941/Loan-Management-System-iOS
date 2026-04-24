@@ -1348,6 +1348,87 @@ func (q *Queries) ListEmiScheduleByLoanID(ctx context.Context, loanID pgtype.UUI
 	return items, nil
 }
 
+const listLoanApplicationsByAssignedOfficer = `-- name: ListLoanApplicationsByAssignedOfficer :many
+SELECT
+    la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at,
+    lp.name AS product_name,
+    bb.name AS branch_name
+FROM loan_applications la
+JOIN loan_products lp ON lp.id = la.loan_product_id
+JOIN bank_branches bb ON bb.id = la.branch_id
+WHERE la.assigned_officer_user_id = $1
+ORDER BY la.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListLoanApplicationsByAssignedOfficerParams struct {
+	AssignedOfficerUserID pgtype.UUID `json:"assigned_officer_user_id"`
+	Limit                 int32       `json:"limit"`
+	Offset                int32       `json:"offset"`
+}
+
+type ListLoanApplicationsByAssignedOfficerRow struct {
+	ID                       pgtype.UUID                 `json:"id"`
+	ReferenceNumber          string                      `json:"reference_number"`
+	PrimaryBorrowerProfileID pgtype.UUID                 `json:"primary_borrower_profile_id"`
+	LoanProductID            pgtype.UUID                 `json:"loan_product_id"`
+	BranchID                 pgtype.UUID                 `json:"branch_id"`
+	RequestedAmount          pgtype.Numeric              `json:"requested_amount"`
+	TenureMonths             int32                       `json:"tenure_months"`
+	OfferedInterestRate      pgtype.Numeric              `json:"offered_interest_rate"`
+	Status                   LoanApplicationStatus       `json:"status"`
+	AssignedOfficerUserID    pgtype.UUID                 `json:"assigned_officer_user_id"`
+	EscalationReason         pgtype.Text                 `json:"escalation_reason"`
+	CreatedByUserID          pgtype.UUID                 `json:"created_by_user_id"`
+	CreatedByRole            UserRole                    `json:"created_by_role"`
+	CreatedByChannel         ApplicationCreatedByChannel `json:"created_by_channel"`
+	ProductSnapshotJson      []byte                      `json:"product_snapshot_json"`
+	CreatedAt                pgtype.Timestamptz          `json:"created_at"`
+	UpdatedAt                pgtype.Timestamptz          `json:"updated_at"`
+	ProductName              string                      `json:"product_name"`
+	BranchName               string                      `json:"branch_name"`
+}
+
+func (q *Queries) ListLoanApplicationsByAssignedOfficer(ctx context.Context, arg ListLoanApplicationsByAssignedOfficerParams) ([]ListLoanApplicationsByAssignedOfficerRow, error) {
+	rows, err := q.db.Query(ctx, listLoanApplicationsByAssignedOfficer, arg.AssignedOfficerUserID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListLoanApplicationsByAssignedOfficerRow
+	for rows.Next() {
+		var i ListLoanApplicationsByAssignedOfficerRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ReferenceNumber,
+			&i.PrimaryBorrowerProfileID,
+			&i.LoanProductID,
+			&i.BranchID,
+			&i.RequestedAmount,
+			&i.TenureMonths,
+			&i.OfferedInterestRate,
+			&i.Status,
+			&i.AssignedOfficerUserID,
+			&i.EscalationReason,
+			&i.CreatedByUserID,
+			&i.CreatedByRole,
+			&i.CreatedByChannel,
+			&i.ProductSnapshotJson,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ProductName,
+			&i.BranchName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listLoanApplicationsByBranchID = `-- name: ListLoanApplicationsByBranchID :many
 SELECT
     la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at,

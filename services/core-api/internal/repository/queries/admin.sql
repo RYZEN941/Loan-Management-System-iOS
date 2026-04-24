@@ -198,7 +198,7 @@ INSERT INTO bank_branches (
 ) RETURNING *;
 
 -- name: GetBankBranchByID :one
-SELECT * FROM bank_branches WHERE id = $1 LIMIT 1;
+SELECT * FROM bank_branches WHERE id = $1 AND is_deleted = false LIMIT 1;
 
 -- name: UpdateBranchDstCommissionByID :exec
 UPDATE bank_branches
@@ -238,6 +238,7 @@ WHERE id = $1
 
 -- name: ListBankBranches :many
 SELECT * FROM bank_branches
+WHERE is_deleted = false
 ORDER BY name ASC
 LIMIT $1 OFFSET $2;
 
@@ -248,3 +249,14 @@ JOIN users u ON u.id = op.user_id
 WHERE op.branch_id = $1
   AND u.is_active = true
   AND u.is_deleted = false;
+
+-- name: SoftDeleteBankBranch :exec
+UPDATE bank_branches
+SET is_deleted = true
+WHERE id = $1;
+
+-- name: SoftDeleteUserByID :exec
+UPDATE users
+SET is_deleted  = true,
+    is_active   = false
+WHERE id = $1;

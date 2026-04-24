@@ -320,7 +320,7 @@ func (q *Queries) GetAdminProfileByUserID(ctx context.Context, userID pgtype.UUI
 }
 
 const getBankBranchByID = `-- name: GetBankBranchByID :one
-SELECT id, name, region, city, dst_commission, created_at FROM bank_branches WHERE id = $1 LIMIT 1
+SELECT id, name, region, city, dst_commission, created_at FROM bank_branches WHERE id = $1 AND is_deleted = false LIMIT 1
 `
 
 func (q *Queries) GetBankBranchByID(ctx context.Context, id pgtype.UUID) (BankBranch, error) {
@@ -471,6 +471,7 @@ func (q *Queries) GetOfficerProfileByUserID(ctx context.Context, userID pgtype.U
 
 const listBankBranches = `-- name: ListBankBranches :many
 SELECT id, name, region, city, dst_commission, created_at FROM bank_branches
+WHERE is_deleted = false
 ORDER BY name ASC
 LIMIT $1 OFFSET $2
 `
@@ -695,6 +696,29 @@ func (q *Queries) ListOfficerUserIDsByBranchID(ctx context.Context, branchID pgt
 		return nil, err
 	}
 	return items, nil
+}
+
+const softDeleteBankBranch = `-- name: SoftDeleteBankBranch :exec
+UPDATE bank_branches
+SET is_deleted = true
+WHERE id = $1
+`
+
+func (q *Queries) SoftDeleteBankBranch(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, softDeleteBankBranch, id)
+	return err
+}
+
+const softDeleteUserByID = `-- name: SoftDeleteUserByID :exec
+UPDATE users
+SET is_deleted  = true,
+    is_active   = false
+WHERE id = $1
+`
+
+func (q *Queries) SoftDeleteUserByID(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, softDeleteUserByID, id)
+	return err
 }
 
 const updateBankBranch = `-- name: UpdateBankBranch :exec

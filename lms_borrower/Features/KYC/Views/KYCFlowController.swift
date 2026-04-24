@@ -112,7 +112,7 @@ public struct KYCFlowController: View {
         session.kycStatus = backendStatus
 
         if viewModel.isAadhaarVerified && !viewModel.isPanVerified {
-            path.append(.panInput)
+            path.append(KYCRoute.panInput)
             return
         }
 

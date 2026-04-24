@@ -45,20 +45,22 @@ struct HomeDashboardView: View {
                                 .padding(.top, 18)
                             }
 
-                            if viewModel.activeLoans.isEmpty {
+                            if viewModel.activeLoans.isEmpty && !viewModel.hasAnyLoanRecord {
                                 DashboardInfoCard(
                                     title: "No active loans yet",
                                     message: "Once a loan is disbursed, your live balance, EMI schedule, and repayment details will appear here."
                                 )
                                 .padding(.horizontal, 20)
                                 .padding(.top, 18)
-                            } else {
+                            } else if !viewModel.activeLoans.isEmpty {
                                 // ── 2. LOAN SUMMARY CARDS (Paging Scroll) ──────
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     LazyHStack(spacing: 16) {
                                         ForEach(viewModel.activeLoans) { loan in
                                             Button {
-                                                router.push(.activeLoanDetails(loan.application))
+                                                if let application = loan.application {
+                                                    router.push(.activeLoanDetails(application))
+                                                }
                                             } label: {
                                                 LoanSummaryCardView(loan: loan)
                                                     .frame(width: UIScreen.main.bounds.width * 0.85)
@@ -595,7 +597,7 @@ struct CredibilityScoreUnavailableView: View {
 // MARK: - Models & ViewModel
 struct LoanSummary: Identifiable {
     let id: String
-    let application: BorrowerLoanApplication
+    let application: BorrowerLoanApplication?
     let title: String
     let totalAmount: Double
     let outstandingBalance: Double
@@ -618,6 +620,7 @@ struct QuickAction: Identifiable { let id = UUID(); let icon: String; let label:
 final class HomeDashboardViewModel: ObservableObject {
     @Published var activeLoans: [LoanSummary] = []
     @Published var inProgressApplications: [BorrowerLoanApplication] = []
+    @Published var hasAnyLoanRecord: Bool = false
     @Published var nextEMI: NextEMIInfo? = nil
     @Published var credibilityScore: Int? = nil
     @Published var isLoading: Bool = false
@@ -659,27 +662,28 @@ final class HomeDashboardViewModel: ObservableObject {
             let applicationsById = Dictionary(uniqueKeysWithValues: applications.map { ($0.id, $0) })
             let schedules = try await loadSchedules(for: loans)
             let activeApplicationIDs = Set(loans.map(\.applicationId))
+            hasAnyLoanRecord = !loans.isEmpty
 
             inProgressApplications = applications
                 .filter { !activeApplicationIDs.contains($0.id) && $0.status.isInProgressForDashboard }
                 .sorted { parseDate($0.updatedAt) > parseDate($1.updatedAt) }
 
-            activeLoans = loans.compactMap { loan in
-                guard let application = applicationsById[loan.applicationId] else { return nil }
-                let totalAmount = Double(loan.principalAmount) ?? Double(application.requestedAmount) ?? 0
+            activeLoans = loans.map { loan in
+                let application = applicationsById[loan.applicationId]
+                let totalAmount = Double(loan.principalAmount) ?? Double(application?.requestedAmount ?? "") ?? 0
                 let outstanding = Double(loan.outstandingBalance) ?? 0
                 let remainingEMIs = (schedules[loan.id] ?? []).filter { $0.status != .paid }.count
                 return LoanSummary(
                     id: loan.id,
                     application: application,
-                    title: application.loanProductName,
+                    title: (application?.loanProductName.isEmpty == false ? application!.loanProductName : "Active Loan"),
                     totalAmount: totalAmount,
                     outstandingBalance: outstanding,
                     remainingEMIs: remainingEMIs
                 )
             }
             .sorted { lhs, rhs in
-                parseDate(lhs.application.updatedAt) > parseDate(rhs.application.updatedAt)
+                parseDate(lhs.application?.updatedAt ?? "") > parseDate(rhs.application?.updatedAt ?? "")
             }
 
             nextEMI = buildNextEMI(
@@ -691,6 +695,7 @@ final class HomeDashboardViewModel: ObservableObject {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to load your live loan dashboard."
             activeLoans = []
             inProgressApplications = []
+            hasAnyLoanRecord = false
             nextEMI = nil
         }
     }
@@ -718,7 +723,6 @@ final class HomeDashboardViewModel: ObservableObject {
         schedules: [String: [EmiScheduleItem]]
     ) -> NextEMIInfo? {
         let nextSchedule = loans.compactMap { loan -> (ActiveLoan, EmiScheduleItem)? in
-            guard applicationsById[loan.applicationId] != nil else { return nil }
             let upcoming = (schedules[loan.id] ?? [])
                 .filter { $0.status == .upcoming || $0.status == .overdue }
                 .sorted { parseDate($0.dueDate) < parseDate($1.dueDate) }

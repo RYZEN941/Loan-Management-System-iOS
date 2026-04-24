@@ -6,6 +6,7 @@
 
 import Foundation
 import GRPCCore
+import SwiftProtobuf
 import Combine
 
 // MARK: - ChatServiceProtocol
@@ -26,14 +27,11 @@ public protocol ChatServiceProtocol: Sendable {
 public final class ChatService: ChatServiceProtocol {
 
     private let grpcClient: ChatGRPCClientProtocol
-    private let callOptionsFactory: AuthCallOptionsFactory
 
     public init(
-        grpcClient: ChatGRPCClientProtocol = ChatGRPCClient(),
-        callOptionsFactory: AuthCallOptionsFactory = AuthCallOptionsFactory()
+        grpcClient: ChatGRPCClientProtocol = ChatGRPCClient()
     ) {
         self.grpcClient = grpcClient
-        self.callOptionsFactory = callOptionsFactory
     }
 
     // MARK: - User Discovery
@@ -49,9 +47,11 @@ public final class ChatService: ChatServiceProtocol {
             $0.offset = Int32(offset)
         }
 
-        let options = try callOptionsFactory.makeCallOptions()
+        let accessToken = try TokenStore.shared.accessToken() ?? ""
+        let (options, metadata) = AuthCallOptionsFactory.authenticated(accessToken: accessToken)
         let response = try await grpcClient.listChatEligibleUsers(
             request: request,
+            metadata: metadata,
             options: options
         )
 
@@ -71,9 +71,11 @@ public final class ChatService: ChatServiceProtocol {
             }
         }
 
-        let options = try callOptionsFactory.makeCallOptions()
+        let accessToken = try TokenStore.shared.accessToken() ?? ""
+        let (options, metadata) = AuthCallOptionsFactory.authenticated(accessToken: accessToken)
         let response = try await grpcClient.createOrGetDirectRoom(
             request: request,
+            metadata: metadata,
             options: options
         )
 
@@ -89,9 +91,11 @@ public final class ChatService: ChatServiceProtocol {
             $0.offset = Int32(offset)
         }
 
-        let options = try callOptionsFactory.makeCallOptions()
+        let accessToken = try TokenStore.shared.accessToken() ?? ""
+        let (options, metadata) = AuthCallOptionsFactory.authenticated(accessToken: accessToken)
         let response = try await grpcClient.listMyChatRooms(
             request: request,
+            metadata: metadata,
             options: options
         )
 
@@ -111,9 +115,11 @@ public final class ChatService: ChatServiceProtocol {
             $0.offset = Int32(offset)
         }
 
-        let options = try callOptionsFactory.makeCallOptions()
+        let accessToken = try TokenStore.shared.accessToken() ?? ""
+        let (options, metadata) = AuthCallOptionsFactory.authenticated(accessToken: accessToken)
         let response = try await grpcClient.listRoomMessages(
             request: request,
+            metadata: metadata,
             options: options
         )
 
@@ -131,13 +137,15 @@ public final class ChatService: ChatServiceProtocol {
             $0.messageType = messageType.protoValue
             $0.body = body
             if let metadata = metadataJSON {
-                $0.metadataJSON = metadata
+                $0.metadataJson = metadata
             }
         }
 
-        let options = try callOptionsFactory.makeCallOptions()
+        let accessToken = try TokenStore.shared.accessToken() ?? ""
+        let (options, metadata) = AuthCallOptionsFactory.authenticated(accessToken: accessToken)
         let response = try await grpcClient.sendMessage(
             request: request,
+            metadata: metadata,
             options: options
         )
 
@@ -160,9 +168,11 @@ public final class ChatService: ChatServiceProtocol {
                         }
                     }
 
-                    let options = try callOptionsFactory.makeCallOptions()
+                    let accessToken = try TokenStore.shared.accessToken() ?? ""
+                    let (options, metadata) = AuthCallOptionsFactory.authenticated(accessToken: accessToken)
                     let protoStream = try await grpcClient.subscribeRoomMessages(
                         request: request,
+                        metadata: metadata,
                         options: options
                     )
 

@@ -61,9 +61,9 @@ public enum ChatRoomType: String, Equatable {
 
     public init(from proto: Chat_V1_ChatRoomType) {
         switch proto {
-        case .chatRoomTypeUnspecified:
+        case .unspecified:
             self = .unspecified
-        case .chatRoomTypeDirect:
+        case .direct:
             self = .direct
         case .UNRECOGNIZED:
             self = .unspecified
@@ -73,9 +73,9 @@ public enum ChatRoomType: String, Equatable {
     public var protoValue: Chat_V1_ChatRoomType {
         switch self {
         case .unspecified:
-            return .chatRoomTypeUnspecified
+            return .unspecified
         case .direct:
-            return .chatRoomTypeDirect
+            return .direct
         }
     }
 }
@@ -88,9 +88,9 @@ public enum ChatMessageType: String, Equatable {
 
     public init(from proto: Chat_V1_ChatMessageType) {
         switch proto {
-        case .chatMessageTypeUnspecified:
+        case .unspecified:
             self = .unspecified
-        case .chatMessageTypeText:
+        case .text:
             self = .text
         case .UNRECOGNIZED:
             self = .unspecified
@@ -100,9 +100,9 @@ public enum ChatMessageType: String, Equatable {
     public var protoValue: Chat_V1_ChatMessageType {
         switch self {
         case .unspecified:
-            return .chatMessageTypeUnspecified
+            return .unspecified
         case .text:
-            return .chatMessageTypeText
+            return .text
         }
     }
 }
@@ -143,7 +143,7 @@ public struct ChatMessage: Identifiable, Equatable {
         self.senderUserID = proto.senderUserID
         self.messageType = ChatMessageType(from: proto.messageType)
         self.body = proto.body
-        self.metadataJSON = proto.metadataJSON
+        self.metadataJSON = proto.metadataJson
         self.createdAt = ISO8601DateFormatter().date(from: proto.createdAt) ?? Date()
     }
 

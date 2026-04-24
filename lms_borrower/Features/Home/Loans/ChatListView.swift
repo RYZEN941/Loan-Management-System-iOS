@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ChatListView: View {
     @EnvironmentObject var router: AppRouter
+    @EnvironmentObject var sessionStore: SessionStore
     @StateObject private var viewModel = ChatListViewModel()
     @State private var showNewChatSheet = false
     
@@ -61,7 +62,9 @@ struct ChatListView: View {
                                 Button {
                                     router.push(.chatConversation(roomID: room.id))
                                 } label: {
-                                    ChatRoomPreviewRow(room: room)
+                                    let otherUserID = room.otherUserID(currentUserID: sessionStore.borrowerProfileId.isEmpty ? "" : sessionStore.borrowerProfileId)
+                                    let participantName = viewModel.participantNames[otherUserID] ?? "Unknown"
+                                    ChatRoomPreviewRow(room: room, participantName: participantName)
                                 }
                                 .buttonStyle(PlainButtonStyle())
                             }
@@ -108,8 +111,16 @@ struct ChatListView: View {
 
 struct ChatRoomPreviewRow: View {
     let room: ChatRoom
-    // TODO: Get current user ID from auth service
-    private let currentUserID = ""
+    let participantName: String
+    @EnvironmentObject var sessionStore: SessionStore
+
+    private var currentUserID: String {
+        guard let accessToken = try? TokenStore.shared.accessToken(),
+              let userID = JWTClaimsDecoder.subject(from: accessToken) else {
+            return ""
+        }
+        return userID
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
@@ -119,7 +130,7 @@ struct ChatRoomPreviewRow: View {
                     .fill(DS.primaryLight)
                     .frame(width: 50, height: 50)
 
-                Text("U") // Placeholder - should be participant initials
+                Text(String(participantName.prefix(1)).uppercased())
                     .font(.title3).bold()
                     .foregroundColor(.mainBlue)
             }
@@ -127,7 +138,7 @@ struct ChatRoomPreviewRow: View {
             // Content
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text("User") // Placeholder - should be participant name
+                    Text(participantName)
                         .font(.headline)
                         .foregroundColor(.primary)
                     Spacer()

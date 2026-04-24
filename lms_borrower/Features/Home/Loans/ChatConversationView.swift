@@ -12,13 +12,23 @@ class ChatConversationViewModel: ObservableObject {
 
     private let chatService: ChatServiceProtocol
     private let roomID: String
+    private var currentUserID: String = ""
     private var messageStreamTask: Task<Void, Never>?
 
     init(roomID: String, chatService: ChatServiceProtocol = ServiceContainer.chatService) {
         self.roomID = roomID
         self.chatService = chatService
+        self.currentUserID = getCurrentUserID()
         loadMessages()
         startStreaming()
+    }
+
+    private func getCurrentUserID() -> String {
+        guard let accessToken = try? TokenStore.shared.accessToken(),
+              let userID = JWTClaimsDecoder.subject(from: accessToken) else {
+            return ""
+        }
+        return userID
     }
 
     deinit {
@@ -55,7 +65,7 @@ class ChatConversationViewModel: ObservableObject {
 
     private func startStreaming() {
         messageStreamTask = Task {
-            let stream = chatService.subscribeToRoomMessages(roomID: roomID)
+            let stream = chatService.subscribeToRoomMessages(roomID: roomID, afterMessageID: nil)
 
             do {
                 for try await event in stream {
@@ -297,8 +307,15 @@ struct MessagesNavigationBar: View {
 struct ChatBubble: View {
     let message: ChatMessage
     let participantName: String
-    // TODO: Get current user ID from auth service
-    private let currentUserID = ""
+    @EnvironmentObject var sessionStore: SessionStore
+
+    private var currentUserID: String {
+        guard let accessToken = try? TokenStore.shared.accessToken(),
+              let userID = JWTClaimsDecoder.subject(from: accessToken) else {
+            return ""
+        }
+        return userID
+    }
 
     var isCurrentUser: Bool {
         message.isFromCurrentUser(currentUserID: currentUserID)
@@ -395,7 +412,7 @@ struct BubbleShape: Shape {
 }
 
 struct InputBarView: View {
-    @ObservedObject var viewModel: ChatViewModel
+    @ObservedObject var viewModel: ChatConversationViewModel
 
     var body: some View {
         VStack(spacing: 0) {

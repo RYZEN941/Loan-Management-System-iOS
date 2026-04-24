@@ -14,13 +14,24 @@ final class ChatListViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
     @Published var searchQuery: String = ""
+    @Published var participantNames: [String: String] = [:] // Cache for participant names
 
     private let chatService: ChatServiceProtocol
     private var cancellables = Set<AnyCancellable>()
+    private var currentUserID: String = ""
 
     init(chatService: ChatServiceProtocol = ServiceContainer.chatService) {
         self.chatService = chatService
+        self.currentUserID = getCurrentUserID()
         loadChatRooms()
+    }
+
+    private func getCurrentUserID() -> String {
+        guard let accessToken = try? TokenStore.shared.accessToken(),
+              let userID = JWTClaimsDecoder.subject(from: accessToken) else {
+            return ""
+        }
+        return userID
     }
 
     // MARK: - Data Loading
@@ -34,6 +45,16 @@ final class ChatListViewModel: ObservableObject {
                 let rooms = try await chatService.listMyChatRooms(limit: 50, offset: 0)
                 await MainActor.run {
                     self.chatRooms = rooms
+                    // Populate participant names from eligible users if available
+                    for room in rooms {
+                        let otherUserID = room.otherUserID(currentUserID: currentUserID)
+                        if participantNames[otherUserID] == nil {
+                            // Check if we have this user in eligible users
+                            if let user = eligibleUsers.first(where: { $0.id == otherUserID }) {
+                                participantNames[otherUserID] = user.displayName
+                            }
+                        }
+                    }
                     self.isLoading = false
                 }
             } catch {
@@ -101,7 +122,7 @@ final class ChatListViewModel: ObservableObject {
 
     func chatPreviewModels(participantNames: [String: String]) -> [ChatPreviewModel] {
         return chatRooms.map { room in
-            let otherUserID = room.otherUserID(currentUserID: "") // Will need actual current user ID
+            let otherUserID = room.otherUserID(currentUserID: currentUserID)
             let participantName = participantNames[otherUserID] ?? "Unknown"
             return ChatPreviewModel(from: room, participantName: participantName, hasUnread: false)
         }

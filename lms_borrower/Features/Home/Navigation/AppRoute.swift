@@ -49,7 +49,7 @@ enum AppRoute: Hashable {
     
     // Feature 11: Messaging
     case chatList
-    case chatConversation(agentName: String)
+    case chatConversation(roomID: String)
     
     // Feature 12: Profile & Settings
     case editProfile

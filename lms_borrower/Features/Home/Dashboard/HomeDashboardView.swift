@@ -494,7 +494,7 @@ struct QuickActionItemView: View {
             // For safety: these buttons rely on HomeDashboardView's viewModel.
             // If no active loan, the destination view will show a "no loan" empty state.
             else if action.label == String(localized: "Pay EMI") {
-                let appId = viewModel.activeLoans.first?.application.id ?? ""
+                let appId = viewModel.activeLoans.first?.application?.id ?? ""
                 router.push(.repaymentDashboard(applicationId: appId))
             }
             else if action.label == String(localized: "History") {

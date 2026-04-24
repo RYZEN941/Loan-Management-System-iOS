@@ -1,29 +1,15 @@
 import SwiftUI
 
-struct ChatPreviewModel: Identifiable {
-    let id = UUID()
-    let agentName: String
-    let topic: String
-    let lastMessage: String
-    let time: String
-    let hasUnread: Bool
-    let isClosed: Bool
-}
-
 struct ChatListView: View {
     @EnvironmentObject var router: AppRouter
-    
-    let chats: [ChatPreviewModel] = [
-            ChatPreviewModel(agentName: "Rajesh K.", topic: String(localized: "Document Verification"), lastMessage: String(localized: "Yes, the PAN card upload is confirmed. We will..."), time: "10:42 AM", hasUnread: true, isClosed: false),
-            ChatPreviewModel(agentName: "Support Bot", topic: String(localized: "General Inquiry"), lastMessage: String(localized: "Your EMI has been successfully received."), time: String(localized: "Yesterday"), hasUnread: false, isClosed: false),
-            ChatPreviewModel(agentName: "Priya S.", topic: String(localized: "Prepayment Query"), lastMessage: String(localized: "You can close this ticket if you have no further questions."), time: "12 Apr", hasUnread: false, isClosed: true)
-    ]
+    @StateObject private var viewModel = ChatListViewModel()
+    @State private var showNewChatSheet = false
     
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    
+
                     // Header
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Support & Chat")
@@ -35,37 +21,63 @@ struct ChatListView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
-                    
-                    // Search Bar Placeholder
+
+                    // Search Bar
                     HStack {
                         Image(systemName: "magnifyingglass").foregroundColor(.secondary)
-                        Text("Search conversations...").foregroundColor(.secondary)
+                        TextField("Search conversations...", text: $viewModel.searchQuery)
+                            .onChange(of: viewModel.searchQuery) { _, _ in
+                                viewModel.searchEligibleUsers()
+                            }
                         Spacer()
                     }
                     .padding(12)
                     .background(Color.secondary.opacity(0.1))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .padding(.horizontal, 20)
-                    
+
                     // Chat List
-                    LazyVStack(spacing: 16) {
-                        ForEach(chats) { chat in
-                            Button {
-                                router.push(.chatConversation(agentName: chat.agentName))
-                            } label: {
-                                ChatPreviewRow(chat: chat)
-                            }
-                            .buttonStyle(PlainButtonStyle())
+                    if viewModel.isLoading {
+                        ProgressView("Loading conversations...")
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.vertical, 40)
+                    } else if viewModel.chatRooms.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "bubble.left.and.bubble.right")
+                                .font(.system(size: 44))
+                                .foregroundColor(.secondary)
+                            Text("No conversations yet")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                            Text("Start a new conversation to get help with your loan.")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
                         }
+                        .padding(.vertical, 40)
+                    } else {
+                        LazyVStack(spacing: 16) {
+                            ForEach(viewModel.chatRooms) { room in
+                                Button {
+                                    router.push(.chatConversation(roomID: room.id))
+                                } label: {
+                                    ChatRoomPreviewRow(room: room)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 80) // Space for floating button
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 80) // Space for floating button
                 }
             }
-            
+            .refreshable {
+                viewModel.refresh()
+            }
+
             // Floating New Chat Button
             Button {
-                router.push(.chatConversation(agentName: "Support Agent"))
+                showNewChatSheet = true
             } label: {
                 Image(systemName: "plus.message.fill")
                     .font(.title2)
@@ -76,63 +88,137 @@ struct ChatListView: View {
                     .shadow(color: .mainBlue.opacity(0.4), radius: 8, x: 0, y: 4)
             }
             .padding(20)
+            .sheet(isPresented: $showNewChatSheet) {
+                NewChatSheet(viewModel: viewModel)
+            }
         }
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
+            Button("OK") {
+                viewModel.errorMessage = nil
+            }
+        } message: {
+            if let error = viewModel.errorMessage {
+                Text(error)
+            }
+        }
     }
 }
 
-struct ChatPreviewRow: View {
-    let chat: ChatPreviewModel
-    
+struct ChatRoomPreviewRow: View {
+    let room: ChatRoom
+    // TODO: Get current user ID from auth service
+    private let currentUserID = ""
+
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
-            
             // Avatar
             ZStack {
                 Circle()
-                    .fill(chat.isClosed ? Color.secondary.opacity(0.2) : DS.primaryLight)
+                    .fill(DS.primaryLight)
                     .frame(width: 50, height: 50)
-                
-                Text(String(chat.agentName.prefix(1)))
+
+                Text("U") // Placeholder - should be participant initials
                     .font(.title3).bold()
-                    .foregroundColor(chat.isClosed ? .secondary : .mainBlue)
+                    .foregroundColor(.mainBlue)
             }
-            
+
             // Content
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text(chat.agentName)
+                    Text("User") // Placeholder - should be participant name
                         .font(.headline)
-                        .foregroundColor(chat.isClosed ? .secondary : .primary)
+                        .foregroundColor(.primary)
                     Spacer()
-                    Text(chat.time)
+                    Text(room.lastMessageTime)
                         .font(.caption)
-                        .foregroundColor(chat.hasUnread ? .mainBlue : .secondary)
+                        .foregroundColor(.secondary)
                 }
-                
-                Text(chat.topic)
+
+                Text(room.contextApplicationID != nil ? "Loan Application" : "General")
                     .font(.caption).bold()
                     .foregroundColor(.secondary)
-                
-                Text(chat.lastMessage)
+
+                Text(room.lastMessageText)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
-            }
-            
-            // Unread Badge
-            if chat.hasUnread {
-                Circle()
-                    .fill(DS.primary)
-                    .frame(width: 10, height: 10)
-                    .padding(.top, 6)
             }
         }
         .padding(16)
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
+    }
+}
+
+struct NewChatSheet: View {
+    @ObservedObject var viewModel: ChatListViewModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedUser: ChatUser?
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 20) {
+                if viewModel.eligibleUsers.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 44))
+                            .foregroundColor(.secondary)
+                        Text("Search for users to start a conversation")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.vertical, 40)
+                } else {
+                    List {
+                        ForEach(viewModel.eligibleUsers) { user in
+                            Button {
+                                selectedUser = user
+                                if let room = viewModel.createRoomWithUser(userID: user.id) {
+                                    dismiss()
+                                }
+                            } label: {
+                                HStack {
+                                    Circle()
+                                        .fill(DS.primaryLight)
+                                        .frame(width: 40, height: 40)
+                                        .overlay(
+                                            Text(user.initials)
+                                                .font(.headline)
+                                                .foregroundColor(.mainBlue)
+                                        )
+
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(user.displayName)
+                                            .font(.headline)
+                                        Text(user.role)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+
+                                    Spacer()
+                                }
+                                .padding(.vertical, 4)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                    .listStyle(.plain)
+                }
+            }
+            .navigationTitle("New Conversation")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -15,22 +15,22 @@ import (
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/repository/generated"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/admin"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/auth"
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/branch"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/chat"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/dst"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/kyc"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/loan"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/media"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/onboarding"
-	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/branch"
 	adminv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/adminv1"
 	authv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/authv1"
+	branchv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/branchv1"
 	chatv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/chatv1"
 	dstv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/dstv1"
 	kycv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/kycv1"
 	loanv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/loanv1"
 	mediav1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/mediav1"
 	onboardingv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/onboardingv1"
-	branchv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/branchv1"
 	grpcinterceptors "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/interceptors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -113,6 +113,7 @@ func Run() error {
 		"/auth.v1.AuthService/SetupTOTP":                              {"borrower", "officer", "manager", "admin", "dst"},
 		"/auth.v1.AuthService/VerifyTOTPSetup":                        {"borrower", "officer", "manager", "admin", "dst"},
 		"/auth.v1.AuthService/GetMyProfile":                           {"borrower", "officer", "manager", "admin", "dst"},
+		"/auth.v1.AuthService/GetBorrowerProfile":                     {"borrower", "officer", "manager", "admin", "dst"},
 		"/auth.v1.AuthService/SearchBorrowerSignupStatus":             {"officer", "manager", "admin", "dst"},
 		"/auth.v1.AuthService/ChangePassword":                         {"borrower", "officer", "manager", "admin", "dst"},
 		"/kyc.v1.KycService/RecordUserConsent":                        {"borrower", "officer", "manager", "admin", "dst"},

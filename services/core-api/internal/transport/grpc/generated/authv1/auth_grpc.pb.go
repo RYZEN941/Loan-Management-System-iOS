@@ -37,6 +37,7 @@ const (
 	AuthService_BeginWebAuthnLogin_FullMethodName         = "/auth.v1.AuthService/BeginWebAuthnLogin"
 	AuthService_FinishWebAuthnLogin_FullMethodName        = "/auth.v1.AuthService/FinishWebAuthnLogin"
 	AuthService_GetMyProfile_FullMethodName               = "/auth.v1.AuthService/GetMyProfile"
+	AuthService_GetBorrowerProfile_FullMethodName         = "/auth.v1.AuthService/GetBorrowerProfile"
 	AuthService_SearchBorrowerSignupStatus_FullMethodName = "/auth.v1.AuthService/SearchBorrowerSignupStatus"
 	AuthService_RefreshToken_FullMethodName               = "/auth.v1.AuthService/RefreshToken"
 	AuthService_Logout_FullMethodName                     = "/auth.v1.AuthService/Logout"
@@ -64,6 +65,7 @@ type AuthServiceClient interface {
 	BeginWebAuthnLogin(ctx context.Context, in *WebAuthnLoginRequest, opts ...grpc.CallOption) (*WebAuthnLoginResponse, error)
 	FinishWebAuthnLogin(ctx context.Context, in *WebAuthnFinishLoginRequest, opts ...grpc.CallOption) (*AuthTokens, error)
 	GetMyProfile(ctx context.Context, in *GetMyProfileRequest, opts ...grpc.CallOption) (*GetMyProfileResponse, error)
+	GetBorrowerProfile(ctx context.Context, in *GetBorrowerProfileRequest, opts ...grpc.CallOption) (*BorrowerProfile, error)
 	SearchBorrowerSignupStatus(ctx context.Context, in *SearchBorrowerSignupStatusRequest, opts ...grpc.CallOption) (*SearchBorrowerSignupStatusResponse, error)
 	RefreshToken(ctx context.Context, in *RefreshTokenRequest, opts ...grpc.CallOption) (*AuthTokens, error)
 	Logout(ctx context.Context, in *LogoutRequest, opts ...grpc.CallOption) (*LogoutResponse, error)
@@ -257,6 +259,16 @@ func (c *authServiceClient) GetMyProfile(ctx context.Context, in *GetMyProfileRe
 	return out, nil
 }
 
+func (c *authServiceClient) GetBorrowerProfile(ctx context.Context, in *GetBorrowerProfileRequest, opts ...grpc.CallOption) (*BorrowerProfile, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BorrowerProfile)
+	err := c.cc.Invoke(ctx, AuthService_GetBorrowerProfile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authServiceClient) SearchBorrowerSignupStatus(ctx context.Context, in *SearchBorrowerSignupStatusRequest, opts ...grpc.CallOption) (*SearchBorrowerSignupStatusResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SearchBorrowerSignupStatusResponse)
@@ -309,6 +321,7 @@ type AuthServiceServer interface {
 	BeginWebAuthnLogin(context.Context, *WebAuthnLoginRequest) (*WebAuthnLoginResponse, error)
 	FinishWebAuthnLogin(context.Context, *WebAuthnFinishLoginRequest) (*AuthTokens, error)
 	GetMyProfile(context.Context, *GetMyProfileRequest) (*GetMyProfileResponse, error)
+	GetBorrowerProfile(context.Context, *GetBorrowerProfileRequest) (*BorrowerProfile, error)
 	SearchBorrowerSignupStatus(context.Context, *SearchBorrowerSignupStatusRequest) (*SearchBorrowerSignupStatusResponse, error)
 	RefreshToken(context.Context, *RefreshTokenRequest) (*AuthTokens, error)
 	Logout(context.Context, *LogoutRequest) (*LogoutResponse, error)
@@ -375,6 +388,9 @@ func (UnimplementedAuthServiceServer) FinishWebAuthnLogin(context.Context, *WebA
 }
 func (UnimplementedAuthServiceServer) GetMyProfile(context.Context, *GetMyProfileRequest) (*GetMyProfileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetMyProfile not implemented")
+}
+func (UnimplementedAuthServiceServer) GetBorrowerProfile(context.Context, *GetBorrowerProfileRequest) (*BorrowerProfile, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBorrowerProfile not implemented")
 }
 func (UnimplementedAuthServiceServer) SearchBorrowerSignupStatus(context.Context, *SearchBorrowerSignupStatusRequest) (*SearchBorrowerSignupStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SearchBorrowerSignupStatus not implemented")
@@ -730,6 +746,24 @@ func _AuthService_GetMyProfile_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_GetBorrowerProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBorrowerProfileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).GetBorrowerProfile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_GetBorrowerProfile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).GetBorrowerProfile(ctx, req.(*GetBorrowerProfileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AuthService_SearchBorrowerSignupStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SearchBorrowerSignupStatusRequest)
 	if err := dec(in); err != nil {
@@ -862,6 +896,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetMyProfile",
 			Handler:    _AuthService_GetMyProfile_Handler,
+		},
+		{
+			MethodName: "GetBorrowerProfile",
+			Handler:    _AuthService_GetBorrowerProfile_Handler,
 		},
 		{
 			MethodName: "SearchBorrowerSignupStatus",

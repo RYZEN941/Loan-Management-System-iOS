@@ -46,6 +46,7 @@ type Service interface {
 	VerifyForgotPasswordOTPs(ctx context.Context, req *authv1.VerifyForgotPasswordOTPsRequest) (*authv1.VerifyForgotPasswordOTPsResponse, error)
 	ResetForgotPassword(ctx context.Context, req *authv1.ResetForgotPasswordRequest) (*authv1.ResetForgotPasswordResponse, error)
 	GetMyProfile(ctx context.Context, req *authv1.GetMyProfileRequest) (*authv1.GetMyProfileResponse, error)
+	GetBorrowerProfile(ctx context.Context, req *authv1.GetBorrowerProfileRequest) (*authv1.BorrowerProfile, error)
 	SearchBorrowerSignupStatus(ctx context.Context, req *authv1.SearchBorrowerSignupStatusRequest) (*authv1.SearchBorrowerSignupStatusResponse, error)
 	RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequest) (*authv1.AuthTokens, error)
 	Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv1.LogoutResponse, error)
@@ -887,6 +888,41 @@ func (s *service) GetMyProfile(ctx context.Context, req *authv1.GetMyProfileRequ
 	}
 
 	return response, nil
+}
+
+func (s *service) GetBorrowerProfile(ctx context.Context, req *authv1.GetBorrowerProfileRequest) (res *authv1.BorrowerProfile, err error) {
+	userID := req.GetUserID()
+	var userUUID [16]byte
+	copy(userUUID[:], userID)
+	profile, err := s.queries.GetBorrowerProfileByUserID(ctx, pgtype.UUID{
+		Bytes: userUUID,
+		Valid: true,
+	})
+
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, status.Error(codes.Internal, "Failed to fetch profile")
+	}
+
+	return &authv1.BorrowerProfile{
+		ProfileId:                  profile.ID.String(),
+		FirstName:                  profile.FirstName,
+		LastName:                   profile.LastName,
+		DateOfBirth:                dateToString(profile.DateOfBirth),
+		Gender:                     string(profile.Gender),
+		AddressLine1:               profile.AddressLine1,
+		City:                       profile.City,
+		State:                      profile.State,
+		Pincode:                    profile.Pincode,
+		EmploymentType:             string(profile.EmploymentType),
+		MonthlyIncome:              numericToString(profile.MonthlyIncome),
+		ProfileCompletenessPercent: profile.ProfileCompletenessPercent,
+		IsAadhaarVerified:          profile.IsAadhaarVerified,
+		IsPanVerified:              profile.IsPanVerified,
+		AadhaarVerifiedAt:          timeToString(profile.AadhaarVerifiedAt),
+		PanVerifiedAt:              timeToString(profile.PanVerifiedAt),
+		CreatedAt:                  timeToString(profile.CreatedAt),
+	}, nil
+
 }
 
 func (s *service) SearchBorrowerSignupStatus(ctx context.Context, req *authv1.SearchBorrowerSignupStatusRequest) (*authv1.SearchBorrowerSignupStatusResponse, error) {

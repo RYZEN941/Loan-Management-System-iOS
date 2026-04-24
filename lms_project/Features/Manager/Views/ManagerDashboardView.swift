@@ -45,7 +45,7 @@ struct ManagerDashboardView: View {
                 }
             }
             .onAppear {
-                dashboardVM.loadData()
+                applicationsVM.loadData()
             }
         }
     }
@@ -98,31 +98,31 @@ struct ManagerDashboardView: View {
                 .description("Actionable metrics requiring immediate manager attention.")
             
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.md) {
-                KPIDataCard(title: "Pending", value: "12",
+                KPIDataCard(title: "Pending", value: "\(pendingCount)",
                         icon: "clock.fill", color: Theme.Colors.adaptiveWarning(colorScheme),
                         showCTA: true) {
                     navigateToApprovals(status: .underReview)
                 }
                 
-                KPIDataCard(title: "Overdue", value: "3",
+                KPIDataCard(title: "Overdue", value: "\(overdueCount)",
                         icon: "timer", color: Theme.Colors.adaptiveCritical(colorScheme),
                         showCTA: true) {
                     navigateToApprovals(sla: .overdue)
                 }
                 
-                KPIDataCard(title: "High Risk", value: "5",
+                KPIDataCard(title: "High Risk", value: "\(highRiskCount)",
                         icon: "shield.fill", color: Theme.Colors.adaptiveCritical(colorScheme),
                         showCTA: true) {
                     navigateToApprovals(risk: .high)
                 }
                 
-                KPIDataCard(title: "Near SLA", value: "2",
+                KPIDataCard(title: "Near SLA", value: "\(nearSLACount)",
                         icon: "clock.badge.exclamationmark", color: Theme.Colors.adaptiveWarning(colorScheme),
                         showCTA: true) {
                     navigateToApprovals(sla: .urgent)
                 }
                 
-                KPIDataCard(title: "High Value", value: "4",
+                KPIDataCard(title: "High Value", value: "\(highValueCount)",
                         icon: "indianrupeesign.circle.fill", color: ManagerTheme.Colors.primary(colorScheme),
                         showCTA: true) {
                     navigateToApprovals(highValue: true)
@@ -140,9 +140,9 @@ struct ManagerDashboardView: View {
                     .font(.system(size: 14, weight: .bold))
                 
                 HStack(spacing: 16) {
-                    actionPill("3 high-risk applications")
-                    actionPill("2 nearing SLA breach")
-                    actionPill("Personal loan NPA rising")
+                    actionPill("\(highRiskCount) high-risk applications")
+                    actionPill("\(nearSLACount) nearing SLA breach")
+                    actionPill("\(approvedHighRiskCount) high-risk already approved")
                 }
             }
             .padding(.horizontal, Theme.Spacing.md)
@@ -178,12 +178,11 @@ struct ManagerDashboardView: View {
             SectionHeader(title: "Risk Snapshot", icon: "chart.pie.fill")
             
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.md) {
-                KPIDataCard(title: "High Risk Pending", value: "3",
+                KPIDataCard(title: "High Risk Pending", value: "\(highRiskPendingCount)",
                         icon: "shield.exclamationmark.fill", color: Theme.Colors.adaptiveCritical(colorScheme)) {
                     navigateToApprovals(status: .underReview, risk: .high)
                 }
                 
-                let approvedHighRiskCount = dashboardVM.applications.filter { $0.riskLevel == .high && $0.status == .approved }.count
                 KPIDataCard(title: "High Risk Approved", value: "\(approvedHighRiskCount)",
                         icon: "shield.checkmark.fill", color: Theme.Colors.adaptiveSuccess(colorScheme)) {
                     navigateToApprovals(status: .approved, risk: .high)
@@ -198,13 +197,64 @@ struct ManagerDashboardView: View {
             SectionHeader(title: "Portfolio Health", icon: "heart.text.square.fill")
             
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.md) {
-                KPIDataCard(title: "NPA %", value: "1.2%",
+                KPIDataCard(title: "NPA %", value: String(format: "%.1f%%", npaPercent),
                         icon: "percent", color: Theme.Colors.adaptiveSuccess(colorScheme))
                 
-                KPIDataCard(title: "Portfolio Size", value: "₹4.2Cr",
+                KPIDataCard(title: "Portfolio Size", value: portfolioSizeText,
                         icon: "briefcase.fill", color: ManagerTheme.Colors.primary(colorScheme))
             }
         }
+    }
+    
+    // MARK: - Live Metrics (Aligned with Applications tab)
+    private var liveApplications: [LoanApplication] { applicationsVM.applications }
+    
+    private var pendingCount: Int {
+        liveApplications.filter { $0.status == .underReview || $0.status == .managerReview || $0.status == .officerApproved }.count
+    }
+    
+    private var overdueCount: Int {
+        liveApplications.filter { $0.slaStatus == .overdue }.count
+    }
+    
+    private var nearSLACount: Int {
+        liveApplications.filter { $0.slaStatus == .urgent }.count
+    }
+    
+    private var highRiskCount: Int {
+        liveApplications.filter { $0.riskLevel == .high && $0.status != .rejected && $0.status != .managerRejected }.count
+    }
+    
+    private var highValueCount: Int {
+        liveApplications.filter { $0.loan.amount >= 5_000_000 }.count
+    }
+    
+    private var highRiskPendingCount: Int {
+        liveApplications.filter {
+            $0.riskLevel == .high &&
+            ($0.status == .underReview || $0.status == .managerReview || $0.status == .officerApproved)
+        }.count
+    }
+    
+    private var approvedHighRiskCount: Int {
+        liveApplications.filter {
+            $0.riskLevel == .high &&
+            ($0.status == .approved || $0.status == .managerApproved)
+        }.count
+    }
+    
+    private var npaPercent: Double {
+        let relevant = liveApplications.filter { $0.status != .pending && $0.status != .underReview && $0.status != .officerReview && $0.status != .managerReview && $0.status != .officerApproved }
+        guard !relevant.isEmpty else { return 0 }
+        let nonPerforming = relevant.filter { $0.riskLevel == .high && ($0.status == .rejected || $0.status == .managerRejected) }.count
+        return (Double(nonPerforming) / Double(relevant.count)) * 100
+    }
+    
+    private var portfolioSizeText: String {
+        let total = liveApplications
+            .filter { $0.status == .approved || $0.status == .managerApproved }
+            .reduce(0.0) { $0 + $1.loan.amount }
+        return total.currencyFormatted
     }
     
 }

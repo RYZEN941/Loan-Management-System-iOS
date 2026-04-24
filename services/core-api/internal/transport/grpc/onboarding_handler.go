@@ -8,6 +8,7 @@ import (
 
 type OnboardingService interface {
 	CompleteBorrowerOnboarding(ctx context.Context, req *onboardingv1.CompleteBorrowerOnboardingRequest) (*onboardingv1.CompleteBorrowerOnboardingResponse, error)
+	UpdateBorrowerProfile(ctx context.Context, req *onboardingv1.UpdateBorrowerProfileRequest) (*onboardingv1.UpdateBorrowerProfileResponse, error)
 }
 
 type OnboardingHandler struct {
@@ -21,4 +22,8 @@ func NewOnboardingHandler(onboardingService OnboardingService) *OnboardingHandle
 
 func (h *OnboardingHandler) CompleteBorrowerOnboarding(ctx context.Context, req *onboardingv1.CompleteBorrowerOnboardingRequest) (*onboardingv1.CompleteBorrowerOnboardingResponse, error) {
 	return h.onboardingService.CompleteBorrowerOnboarding(ctx, req)
+}
+
+func (h *OnboardingHandler) UpdateBorrowerProfile(ctx context.Context, req *onboardingv1.UpdateBorrowerProfileRequest) (*onboardingv1.UpdateBorrowerProfileResponse, error) {
+	return h.onboardingService.UpdateBorrowerProfile(ctx, req)
 }

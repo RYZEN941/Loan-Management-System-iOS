@@ -124,7 +124,9 @@ type Querier interface {
 	SoftDeleteUserByID(ctx context.Context, id pgtype.UUID) error
 	UpdateApplicationDocumentVerification(ctx context.Context, arg UpdateApplicationDocumentVerificationParams) error
 	UpdateBankBranch(ctx context.Context, arg UpdateBankBranchParams) error
+	UpdateBorrowerProfile(ctx context.Context, arg UpdateBorrowerProfileParams) error
 	UpdateBranchDstCommissionByID(ctx context.Context, arg UpdateBranchDstCommissionByIDParams) error
+	UpdateDstProfileName(ctx context.Context, arg UpdateDstProfileNameParams) error
 	UpdateEmiScheduleStatus(ctx context.Context, arg UpdateEmiScheduleStatusParams) error
 	UpdateEmployeeEmailAndPhone(ctx context.Context, arg UpdateEmployeeEmailAndPhoneParams) error
 	UpdateEmployeePasswordByAdmin(ctx context.Context, arg UpdateEmployeePasswordByAdminParams) error

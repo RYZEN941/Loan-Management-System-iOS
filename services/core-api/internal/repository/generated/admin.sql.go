@@ -762,6 +762,22 @@ func (q *Queries) UpdateBranchDstCommissionByID(ctx context.Context, arg UpdateB
 	return err
 }
 
+const updateDstProfileName = `-- name: UpdateDstProfileName :exec
+UPDATE dst_profiles
+SET name = $2
+WHERE user_id = $1
+`
+
+type UpdateDstProfileNameParams struct {
+	UserID pgtype.UUID `json:"user_id"`
+	Name   string      `json:"name"`
+}
+
+func (q *Queries) UpdateDstProfileName(ctx context.Context, arg UpdateDstProfileNameParams) error {
+	_, err := q.db.Exec(ctx, updateDstProfileName, arg.UserID, arg.Name)
+	return err
+}
+
 const updateEmployeeEmailAndPhone = `-- name: UpdateEmployeeEmailAndPhone :exec
 UPDATE users
 SET email = $2,

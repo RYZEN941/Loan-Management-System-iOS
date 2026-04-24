@@ -165,3 +165,52 @@ func (q *Queries) GetBorrowerProfileByUserID(ctx context.Context, userID pgtype.
 	)
 	return i, err
 }
+
+const updateBorrowerProfile = `-- name: UpdateBorrowerProfile :exec
+UPDATE borrower_profiles
+SET first_name                 = $2,
+    last_name                  = $3,
+    date_of_birth              = $4,
+    gender                     = $5,
+    address_line1              = $6,
+    city                       = $7,
+    state                      = $8,
+    pincode                    = $9,
+    employment_type            = $10,
+    monthly_income             = $11,
+    profile_completeness_percent = $12
+WHERE user_id = $1
+`
+
+type UpdateBorrowerProfileParams struct {
+	UserID                     pgtype.UUID            `json:"user_id"`
+	FirstName                  string                 `json:"first_name"`
+	LastName                   string                 `json:"last_name"`
+	DateOfBirth                pgtype.Date            `json:"date_of_birth"`
+	Gender                     BorrowerGender         `json:"gender"`
+	AddressLine1               string                 `json:"address_line1"`
+	City                       string                 `json:"city"`
+	State                      string                 `json:"state"`
+	Pincode                    string                 `json:"pincode"`
+	EmploymentType             BorrowerEmploymentType `json:"employment_type"`
+	MonthlyIncome              pgtype.Numeric         `json:"monthly_income"`
+	ProfileCompletenessPercent int32                  `json:"profile_completeness_percent"`
+}
+
+func (q *Queries) UpdateBorrowerProfile(ctx context.Context, arg UpdateBorrowerProfileParams) error {
+	_, err := q.db.Exec(ctx, updateBorrowerProfile,
+		arg.UserID,
+		arg.FirstName,
+		arg.LastName,
+		arg.DateOfBirth,
+		arg.Gender,
+		arg.AddressLine1,
+		arg.City,
+		arg.State,
+		arg.Pincode,
+		arg.EmploymentType,
+		arg.MonthlyIncome,
+		arg.ProfileCompletenessPercent,
+	)
+	return err
+}

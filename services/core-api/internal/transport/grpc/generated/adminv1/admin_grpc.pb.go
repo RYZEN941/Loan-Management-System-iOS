@@ -23,6 +23,7 @@ const (
 	AdminService_CreateEmployeeAccount_FullMethodName     = "/admin.v1.AdminService/CreateEmployeeAccount"
 	AdminService_ListEmployeeAccounts_FullMethodName      = "/admin.v1.AdminService/ListEmployeeAccounts"
 	AdminService_CreateDstAccount_FullMethodName          = "/admin.v1.AdminService/CreateDstAccount"
+	AdminService_UpdateDstAccount_FullMethodName          = "/admin.v1.AdminService/UpdateDstAccount"
 	AdminService_CreateBankBranch_FullMethodName          = "/admin.v1.AdminService/CreateBankBranch"
 	AdminService_UpdateBankBranch_FullMethodName          = "/admin.v1.AdminService/UpdateBankBranch"
 	AdminService_DeleteBankBranch_FullMethodName          = "/admin.v1.AdminService/DeleteBankBranch"
@@ -40,6 +41,7 @@ type AdminServiceClient interface {
 	CreateEmployeeAccount(ctx context.Context, in *CreateEmployeeAccountRequest, opts ...grpc.CallOption) (*CreateEmployeeAccountResponse, error)
 	ListEmployeeAccounts(ctx context.Context, in *ListEmployeeAccountsRequest, opts ...grpc.CallOption) (*ListEmployeeAccountsResponse, error)
 	CreateDstAccount(ctx context.Context, in *CreateDstAccountRequest, opts ...grpc.CallOption) (*CreateDstAccountResponse, error)
+	UpdateDstAccount(ctx context.Context, in *UpdateDstAccountRequest, opts ...grpc.CallOption) (*UpdateDstAccountResponse, error)
 	CreateBankBranch(ctx context.Context, in *CreateBankBranchRequest, opts ...grpc.CallOption) (*CreateBankBranchResponse, error)
 	UpdateBankBranch(ctx context.Context, in *UpdateBankBranchRequest, opts ...grpc.CallOption) (*UpdateBankBranchResponse, error)
 	DeleteBankBranch(ctx context.Context, in *DeleteBankBranchRequest, opts ...grpc.CallOption) (*DeleteBankBranchResponse, error)
@@ -91,6 +93,16 @@ func (c *adminServiceClient) CreateDstAccount(ctx context.Context, in *CreateDst
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateDstAccountResponse)
 	err := c.cc.Invoke(ctx, AdminService_CreateDstAccount_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) UpdateDstAccount(ctx context.Context, in *UpdateDstAccountRequest, opts ...grpc.CallOption) (*UpdateDstAccountResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateDstAccountResponse)
+	err := c.cc.Invoke(ctx, AdminService_UpdateDstAccount_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -175,6 +187,7 @@ type AdminServiceServer interface {
 	CreateEmployeeAccount(context.Context, *CreateEmployeeAccountRequest) (*CreateEmployeeAccountResponse, error)
 	ListEmployeeAccounts(context.Context, *ListEmployeeAccountsRequest) (*ListEmployeeAccountsResponse, error)
 	CreateDstAccount(context.Context, *CreateDstAccountRequest) (*CreateDstAccountResponse, error)
+	UpdateDstAccount(context.Context, *UpdateDstAccountRequest) (*UpdateDstAccountResponse, error)
 	CreateBankBranch(context.Context, *CreateBankBranchRequest) (*CreateBankBranchResponse, error)
 	UpdateBankBranch(context.Context, *UpdateBankBranchRequest) (*UpdateBankBranchResponse, error)
 	DeleteBankBranch(context.Context, *DeleteBankBranchRequest) (*DeleteBankBranchResponse, error)
@@ -203,6 +216,9 @@ func (UnimplementedAdminServiceServer) ListEmployeeAccounts(context.Context, *Li
 }
 func (UnimplementedAdminServiceServer) CreateDstAccount(context.Context, *CreateDstAccountRequest) (*CreateDstAccountResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateDstAccount not implemented")
+}
+func (UnimplementedAdminServiceServer) UpdateDstAccount(context.Context, *UpdateDstAccountRequest) (*UpdateDstAccountResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateDstAccount not implemented")
 }
 func (UnimplementedAdminServiceServer) CreateBankBranch(context.Context, *CreateBankBranchRequest) (*CreateBankBranchResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateBankBranch not implemented")
@@ -314,6 +330,24 @@ func _AdminService_CreateDstAccount_Handler(srv interface{}, ctx context.Context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AdminServiceServer).CreateDstAccount(ctx, req.(*CreateDstAccountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_UpdateDstAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateDstAccountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).UpdateDstAccount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_UpdateDstAccount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).UpdateDstAccount(ctx, req.(*UpdateDstAccountRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -466,6 +500,10 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateDstAccount",
 			Handler:    _AdminService_CreateDstAccount_Handler,
+		},
+		{
+			MethodName: "UpdateDstAccount",
+			Handler:    _AdminService_UpdateDstAccount_Handler,
 		},
 		{
 			MethodName: "CreateBankBranch",

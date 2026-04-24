@@ -11,6 +11,7 @@ type AdminService interface {
 	CreateEmployeeAccount(ctx context.Context, req *adminv1.CreateEmployeeAccountRequest) (*adminv1.CreateEmployeeAccountResponse, error)
 	ListEmployeeAccounts(ctx context.Context, req *adminv1.ListEmployeeAccountsRequest) (*adminv1.ListEmployeeAccountsResponse, error)
 	CreateDstAccount(ctx context.Context, req *adminv1.CreateDstAccountRequest) (*adminv1.CreateDstAccountResponse, error)
+	UpdateDstAccount(ctx context.Context, req *adminv1.UpdateDstAccountRequest) (*adminv1.UpdateDstAccountResponse, error)
 	CreateBankBranch(ctx context.Context, req *adminv1.CreateBankBranchRequest) (*adminv1.CreateBankBranchResponse, error)
 	UpdateBankBranch(ctx context.Context, req *adminv1.UpdateBankBranchRequest) (*adminv1.UpdateBankBranchResponse, error)
 	DeleteBankBranch(ctx context.Context, req *adminv1.DeleteBankBranchRequest) (*adminv1.DeleteBankBranchResponse, error)
@@ -43,6 +44,10 @@ func (h *AdminHandler) ListEmployeeAccounts(ctx context.Context, req *adminv1.Li
 
 func (h *AdminHandler) CreateDstAccount(ctx context.Context, req *adminv1.CreateDstAccountRequest) (*adminv1.CreateDstAccountResponse, error) {
 	return h.adminService.CreateDstAccount(ctx, req)
+}
+
+func (h *AdminHandler) UpdateDstAccount(ctx context.Context, req *adminv1.UpdateDstAccountRequest) (*adminv1.UpdateDstAccountResponse, error) {
+	return h.adminService.UpdateDstAccount(ctx, req)
 }
 
 func (h *AdminHandler) CreateBankBranch(ctx context.Context, req *adminv1.CreateBankBranchRequest) (*adminv1.CreateBankBranchResponse, error) {

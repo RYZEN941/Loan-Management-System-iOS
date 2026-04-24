@@ -16,6 +16,7 @@ import (
 
 type Service interface {
 	CompleteBorrowerOnboarding(ctx context.Context, req *onboardingv1.CompleteBorrowerOnboardingRequest) (*onboardingv1.CompleteBorrowerOnboardingResponse, error)
+	UpdateBorrowerProfile(ctx context.Context, req *onboardingv1.UpdateBorrowerProfileRequest) (*onboardingv1.UpdateBorrowerProfileResponse, error)
 }
 
 type service struct {
@@ -111,6 +112,80 @@ func (s *service) CompleteBorrowerOnboarding(ctx context.Context, req *onboardin
 	}
 
 	return &onboardingv1.CompleteBorrowerOnboardingResponse{Success: true}, nil
+}
+
+// UpdateBorrowerProfile updates an existing borrower profile.
+// Borrower can update their own; staff roles can supply borrower_user_id.
+func (s *service) UpdateBorrowerProfile(ctx context.Context, req *onboardingv1.UpdateBorrowerProfileRequest) (*onboardingv1.UpdateBorrowerProfileResponse, error) {
+	callerUserID, ok := interceptors.UserIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing user context")
+	}
+	role, _ := ctx.Value(interceptors.ContextRoleKey).(string)
+
+	targetUserID, err := resolveTargetBorrowerUser(ctx, s.queries, callerUserID, role, req.GetBorrowerUserId())
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify the borrower profile already exists before updating.
+	_, err = s.queries.GetBorrowerProfileByUserID(ctx, pgtype.UUID{Bytes: targetUserID, Valid: true})
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "borrower profile not found — complete onboarding first")
+	}
+
+	firstName := strings.TrimSpace(req.GetFirstName())
+	lastName := strings.TrimSpace(req.GetLastName())
+	addressLine1 := strings.TrimSpace(req.GetAddressLine1())
+	city := strings.TrimSpace(req.GetCity())
+	state := strings.TrimSpace(req.GetState())
+	pincode := strings.TrimSpace(req.GetPincode())
+	if firstName == "" || lastName == "" || addressLine1 == "" || city == "" || state == "" || pincode == "" {
+		return nil, status.Error(codes.InvalidArgument, "all profile fields are required")
+	}
+
+	dob, err := time.Parse("2006-01-02", req.GetDateOfBirth())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "date_of_birth must be YYYY-MM-DD")
+	}
+
+	if req.GetProfileCompletenessPercent() < 0 || req.GetProfileCompletenessPercent() > 100 {
+		return nil, status.Error(codes.InvalidArgument, "profile_completeness_percent must be between 0 and 100")
+	}
+
+	gender, err := mapProtoBorrowerGender(req.GetGender())
+	if err != nil {
+		return nil, err
+	}
+
+	employmentType, err := mapProtoBorrowerEmploymentType(req.GetEmploymentType())
+	if err != nil {
+		return nil, err
+	}
+
+	var monthlyIncome pgtype.Numeric
+	if err := monthlyIncome.Scan(strings.TrimSpace(req.GetMonthlyIncome())); err != nil {
+		return nil, status.Error(codes.InvalidArgument, "monthly_income must be a valid decimal")
+	}
+
+	if err := s.queries.UpdateBorrowerProfile(ctx, generated.UpdateBorrowerProfileParams{
+		UserID:                     pgtype.UUID{Bytes: targetUserID, Valid: true},
+		FirstName:                  firstName,
+		LastName:                   lastName,
+		DateOfBirth:                pgtype.Date{Time: dob, Valid: true},
+		Gender:                     gender,
+		AddressLine1:               addressLine1,
+		City:                       city,
+		State:                      state,
+		Pincode:                    pincode,
+		EmploymentType:             employmentType,
+		MonthlyIncome:              monthlyIncome,
+		ProfileCompletenessPercent: req.GetProfileCompletenessPercent(),
+	}); err != nil {
+		return nil, status.Error(codes.Internal, "failed to update borrower profile")
+	}
+
+	return &onboardingv1.UpdateBorrowerProfileResponse{Success: true}, nil
 }
 
 func resolveTargetBorrowerUser(ctx context.Context, queries generated.Querier, callerUserID uuid.UUID, role, borrowerUserID string) (uuid.UUID, error) {

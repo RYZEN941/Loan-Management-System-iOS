@@ -20,6 +20,7 @@ type Service interface {
 	CreateAdminAccount(ctx context.Context, req *adminv1.CreateAdminAccountRequest) (*adminv1.CreateAdminAccountResponse, error)
 	CreateEmployeeAccount(ctx context.Context, req *adminv1.CreateEmployeeAccountRequest) (*adminv1.CreateEmployeeAccountResponse, error)
 	CreateDstAccount(ctx context.Context, req *adminv1.CreateDstAccountRequest) (*adminv1.CreateDstAccountResponse, error)
+	UpdateDstAccount(ctx context.Context, req *adminv1.UpdateDstAccountRequest) (*adminv1.UpdateDstAccountResponse, error)
 	CreateBankBranch(ctx context.Context, req *adminv1.CreateBankBranchRequest) (*adminv1.CreateBankBranchResponse, error)
 	ListEmployeeAccounts(ctx context.Context, req *adminv1.ListEmployeeAccountsRequest) (*adminv1.ListEmployeeAccountsResponse, error)
 	UpdateBankBranch(ctx context.Context, req *adminv1.UpdateBankBranchRequest) (*adminv1.UpdateBankBranchResponse, error)
@@ -250,6 +251,104 @@ func (s *service) CreateDstAccount(ctx context.Context, req *adminv1.CreateDstAc
 		UserId:    user.ID.String(),
 		ProfileId: dstProfile.ID.String(),
 	}, nil
+}
+
+// UpdateDstAccount updates a DST user's profile name, credentials.
+// Admin can update any DST. Manager can only update DSTs in their own branch.
+func (s *service) UpdateDstAccount(ctx context.Context, req *adminv1.UpdateDstAccountRequest) (*adminv1.UpdateDstAccountResponse, error) {
+	callerUserID, ok := interceptors.UserIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing user context")
+	}
+	role, _ := ctx.Value(interceptors.ContextRoleKey).(string)
+	if role != "manager" && role != "admin" {
+		return nil, status.Error(codes.PermissionDenied, "only manager or admin can update DST accounts")
+	}
+
+	userIDStr := strings.TrimSpace(req.GetUserId())
+	if userIDStr == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "user_id must be a valid uuid")
+	}
+
+	// Fetch DST user and verify it is a DST role.
+	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "DST user not found")
+	}
+	if user.Role != generated.UserRoleDst {
+		return nil, status.Error(codes.InvalidArgument, "target user is not a DST")
+	}
+
+	// Manager scope check: DST must be in manager's branch.
+	if role == "manager" {
+		dstProfile, err := s.queries.GetDstProfileByUserID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+		if err != nil {
+			return nil, status.Error(codes.NotFound, "DST profile not found")
+		}
+		managerProfile, err := s.queries.GetManagerProfileByUserID(ctx, pgtype.UUID{Bytes: callerUserID, Valid: true})
+		if err != nil {
+			return nil, status.Error(codes.NotFound, "manager profile not found")
+		}
+		if !managerProfile.BranchID.Valid || dstProfile.BranchID != managerProfile.BranchID {
+			return nil, status.Error(codes.PermissionDenied, "manager can only update DSTs in their own branch")
+		}
+	}
+
+	// Update email / phone if provided.
+	email := strings.TrimSpace(req.GetEmail())
+	if email == "" {
+		email = user.Email
+	}
+	phone := strings.TrimSpace(req.GetPhoneNumber())
+	if phone == "" {
+		phone = user.Phone
+	}
+	if err := s.queries.UpdateEmployeeEmailAndPhone(ctx, generated.UpdateEmployeeEmailAndPhoneParams{
+		ID:    pgtype.UUID{Bytes: userID, Valid: true},
+		Email: email,
+		Phone: phone,
+	}); err != nil {
+		if strings.Contains(err.Error(), "users_email_key") {
+			return nil, status.Error(codes.AlreadyExists, "email already registered")
+		}
+		if strings.Contains(err.Error(), "users_phone_key") {
+			return nil, status.Error(codes.AlreadyExists, "phone number already registered")
+		}
+		return nil, status.Error(codes.Internal, "failed to update DST contact")
+	}
+
+	// Update name in dst_profiles if provided.
+	if name := strings.TrimSpace(req.GetName()); name != "" {
+		if err := s.queries.UpdateDstProfileName(ctx, generated.UpdateDstProfileNameParams{
+			UserID: pgtype.UUID{Bytes: userID, Valid: true},
+			Name:   name,
+		}); err != nil {
+			return nil, status.Error(codes.Internal, "failed to update DST profile name")
+		}
+	}
+
+	// Reset password if provided.
+	if newPassword := req.GetNewPassword(); strings.TrimSpace(newPassword) != "" {
+		if err := validatePasswordStrength(newPassword); err != nil {
+			return nil, err
+		}
+		hash, err := argon2.HashPassword(newPassword, argon2.DefaultConfig())
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed to hash password")
+		}
+		if err := s.queries.UpdateEmployeePasswordByAdmin(ctx, generated.UpdateEmployeePasswordByAdminParams{
+			ID:           pgtype.UUID{Bytes: userID, Valid: true},
+			PasswordHash: hash,
+		}); err != nil {
+			return nil, status.Error(codes.Internal, "failed to update DST password")
+		}
+	}
+
+	return &adminv1.UpdateDstAccountResponse{Success: true}, nil
 }
 
 // CreateBankBranch creates a branch.

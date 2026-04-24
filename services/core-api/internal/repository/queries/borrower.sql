@@ -37,3 +37,18 @@ SELECT * FROM borrower_profiles WHERE id = $1 LIMIT 1;
 UPDATE users
 SET is_active = true
 WHERE id = $1;
+
+-- name: UpdateBorrowerProfile :exec
+UPDATE borrower_profiles
+SET first_name                 = $2,
+    last_name                  = $3,
+    date_of_birth              = $4,
+    gender                     = $5,
+    address_line1              = $6,
+    city                       = $7,
+    state                      = $8,
+    pincode                    = $9,
+    employment_type            = $10,
+    monthly_income             = $11,
+    profile_completeness_percent = $12
+WHERE user_id = $1;

@@ -9,6 +9,7 @@ service AdminService {
   rpc CreateEmployeeAccount(CreateEmployeeAccountRequest) returns (CreateEmployeeAccountResponse);
   rpc ListEmployeeAccounts(ListEmployeeAccountsRequest) returns (ListEmployeeAccountsResponse);
   rpc CreateDstAccount(CreateDstAccountRequest) returns (CreateDstAccountResponse);
+  rpc UpdateDstAccount(UpdateDstAccountRequest) returns (UpdateDstAccountResponse);
   rpc CreateBankBranch(CreateBankBranchRequest) returns (CreateBankBranchResponse);
   rpc UpdateBankBranch(UpdateBankBranchRequest) returns (UpdateBankBranchResponse);
   rpc DeleteBankBranch(DeleteBankBranchRequest) returns (DeleteBankBranchResponse);
@@ -97,6 +98,18 @@ message CreateDstAccountResponse {
   bool success = 1;
   string user_id = 2;
   string profile_id = 3;
+}
+
+message UpdateDstAccountRequest {
+  string user_id = 1;
+  string name = 2;
+  string email = 3;
+  string phone_number = 4;
+  string new_password = 5;
+}
+
+message UpdateDstAccountResponse {
+  bool success = 1;
 }
 
 message CreateBankBranchRequest {

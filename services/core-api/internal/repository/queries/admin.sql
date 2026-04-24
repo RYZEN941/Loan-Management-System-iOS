@@ -260,3 +260,8 @@ UPDATE users
 SET is_deleted  = true,
     is_active   = false
 WHERE id = $1;
+
+-- name: UpdateDstProfileName :exec
+UPDATE dst_profiles
+SET name = $2
+WHERE user_id = $1;

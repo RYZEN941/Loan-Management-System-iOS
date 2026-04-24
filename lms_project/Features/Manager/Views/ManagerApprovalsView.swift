@@ -22,6 +22,14 @@ struct ManagerApprovalsView: View {
     @State private var selectedVersionIndex = 0
     @State private var highRiskOnly = false
 
+    // Edit Terms State
+    @State private var showEditTerms = false
+    @State private var editTenureText = ""
+    @State private var editInterestRateText = ""
+
+    // Assign Officer State
+    @State private var showAssignOfficerAlert = false
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -62,6 +70,11 @@ struct ManagerApprovalsView: View {
             .sheet(isPresented: $applicationsVM.showRejectionRemarksSheet) { rejectionSheet }
             .sheet(isPresented: $applicationsVM.showSendBackSheet) { sendBackSheet }
             .sheet(item: $previewLetter) { version in sanctionLetterPreview(version) }
+            .sheet(isPresented: $showEditTerms) {
+                if let app = applicationsVM.selectedApplication {
+                    editTermsSheet(app)
+                }
+            }
             .alert("Approve this application?", isPresented: $showApprovalConfirmation) {
                 Button("Cancel", role: .cancel) {}
                 Button("Confirm") { 
@@ -69,7 +82,7 @@ struct ManagerApprovalsView: View {
                         applicationsVM.approveApplication(app)
                     }
                 }
-            } message: { Text("This will generate and send the sanction letter to the borrower.") }
+            } message: { Text("This will update the application status to Approved and create the loan ledger.") }
             .alert("Regenerate sanction letter?", isPresented: $showRegenerateConfirmation) {
                 Button("Cancel", role: .cancel) {}
                 Button("Regenerate") {
@@ -77,7 +90,7 @@ struct ManagerApprovalsView: View {
                         applicationsVM.regenerateSanctionLetter(app)
                     }
                 }
-            } message: { Text("This will create a new version and resend it to the borrower.") }
+            } message: { Text("Sanction letter generation is not implemented in the backend yet.") }
             .alert("Revoke this sanction letter?", isPresented: $showRevokeConfirmation) {
                 Button("Cancel", role: .cancel) {}
                 Button("Revoke", role: .destructive) {
@@ -85,7 +98,12 @@ struct ManagerApprovalsView: View {
                         applicationsVM.revokeSanctionLetter(app)
                     }
                 }
-            } message: { Text("This will mark it as inactive but retain history.") }
+            } message: { Text("Sanction letter revocation is not implemented in the backend yet.") }
+            .alert("Assign Officer", isPresented: $showAssignOfficerAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text("Officer assignment requires a staff directory endpoint that is not yet implemented in the backend. Please assign the officer manually in the admin panel.")
+            }
         }
     }
 
@@ -129,7 +147,7 @@ struct ManagerApprovalsView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 16)
 
-            // Filter chips
+            // Filter chips — all manager-relevant statuses
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     AppFilterChip(label: "All", isSelected: applicationsVM.filterStatus == nil && applicationsVM.filterRisk == nil && applicationsVM.filterSLA == nil && !applicationsVM.filterHighValue) {
@@ -140,7 +158,10 @@ struct ManagerApprovalsView: View {
                             applicationsVM.filterHighValue = false
                         }
                     }
-                    AppFilterChip(label: "Pending", isSelected: applicationsVM.filterStatus == .underReview) {
+                    AppFilterChip(label: "Forwarded", isSelected: applicationsVM.filterStatus == .officerApproved) {
+                        withAnimation { applicationsVM.filterStatus = .officerApproved }
+                    }
+                    AppFilterChip(label: "In Review", isSelected: applicationsVM.filterStatus == .underReview) {
                         withAnimation { applicationsVM.filterStatus = .underReview }
                     }
                     AppFilterChip(label: "Approved", isSelected: applicationsVM.filterStatus == .approved) {
@@ -198,6 +219,7 @@ struct ManagerApprovalsView: View {
                         detailHeader(app)
                         financialSection(app)
                         borrowerInfoSection(app)
+                        editTermsSummarySection(app)   // ← Manager can edit terms
                         documentsSummarySection(app)
                         sanctionLetterSection(app)
                         verificationSection(app)
@@ -207,11 +229,18 @@ struct ManagerApprovalsView: View {
                 }
                 .background(ManagerTheme.Colors.background(colorScheme))
                 .safeAreaInset(edge: .bottom) {
-                    if app.status == .underReview || app.status == .pending {
+                    if app.status == .officerApproved || app.status == .managerReview ||
+                       app.status == .underReview || app.status == .pending {
                         ManagerActionPanel(
                             onApprove: { showApprovalConfirmation = true },
                             onRejectWithRemarks: { applicationsVM.beginRejectWithRemarks(app) },
-                            onSendBack: { applicationsVM.beginSendBack(app) }
+                            onSendBack: { applicationsVM.beginSendBack(app) },
+                            onEditTerms: {
+                                editTenureText = "\(app.loan.tenure)"
+                                editInterestRateText = String(format: "%.2f", app.loan.interestRate)
+                                showEditTerms = true
+                            },
+                            onAssignOfficer: { showAssignOfficerAlert = true }
                         )
                         .background(ManagerTheme.Colors.surface(colorScheme))
                         .shadow(color: Color.black.opacity(0.05), radius: 10, y: -5)
@@ -691,8 +720,105 @@ struct ManagerApprovalsView: View {
         }
     }
 
+    // MARK: - Edit Terms Summary (in detail panel)
+    private func editTermsSummarySection(_ app: LoanApplication) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                SectionHeader(title: "Loan Terms", icon: "pencil.and.list.clipboard")
+                    .description("Offered tenure and interest rate for this application.")
+                Spacer()
+                Button {
+                    editTenureText = "\(app.loan.tenure)"
+                    editInterestRateText = String(format: "%.2f", app.loan.interestRate)
+                    showEditTerms = true
+                } label: {
+                    Label("Edit", systemImage: "pencil")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(ManagerTheme.Colors.primary(colorScheme).opacity(0.1))
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                infoCard("Requested Amount", app.loan.amount.currencyFormatted)
+                infoCard("Tenure", "\(app.loan.tenure) months")
+                infoCard("Interest Rate", String(format: "%.2f%%", app.loan.interestRate))
+                infoCard("EMI", app.loan.emi.currencyFormatted)
+                infoCard("Loan Type", app.loan.type.displayName)
+            }
+        }
+        .padding(18)
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(ManagerTheme.Colors.surface(colorScheme)))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
+        )
+    }
+
+    // MARK: - Edit Terms Sheet
+    private func editTermsSheet(_ app: LoanApplication) -> some View {
+        NavigationStack {
+            Form {
+                Section {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Tenure (months)").font(.caption).foregroundStyle(.secondary)
+                        TextField("e.g. 60", text: $editTenureText)
+                            .keyboardType(.numberPad)
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Interest Rate (% p.a.)").font(.caption).foregroundStyle(.secondary)
+                        TextField("e.g. 10.50", text: $editInterestRateText)
+                            .keyboardType(.decimalPad)
+                    }
+                } header: {
+                    Text("Update Loan Terms")
+                } footer: {
+                    Text("These terms will be saved via the backend and affect the EMI calculation. The borrower will need to re-acknowledge before disbursement.")
+                }
+
+                Section {
+                    Button {
+                        let tenure = Int(editTenureText) ?? app.loan.tenure
+                        let rate = Double(editInterestRateText) ?? app.loan.interestRate
+                        applicationsVM.updateLoanTerms(
+                            applicationId: app.id,
+                            tenureMonths: tenure,
+                            offeredInterestRate: rate
+                        )
+                        showEditTerms = false
+                    } label: {
+                        Text("Save Terms")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                    }
+                    .listRowBackground(ManagerTheme.Colors.primary(colorScheme))
+                    .disabled(
+                        editTenureText.isEmpty || editInterestRateText.isEmpty ||
+                        Int(editTenureText) == nil || Double(editInterestRateText) == nil
+                    )
+                }
+            }
+            .navigationTitle("Edit Loan Terms")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { showEditTerms = false } label: {
+                        Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
     // MARK: - Section Label
     private func sectionLabel(_ title: String, icon: String) -> some View {
+
         HStack(spacing: 8) {
             Image(systemName: icon).font(.system(size: 12)).foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
             Text(title).font(.system(size: 11, weight: .bold)).foregroundStyle(.secondary)

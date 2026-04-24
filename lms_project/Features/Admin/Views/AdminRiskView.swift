@@ -773,18 +773,18 @@ private struct MessageOfficerSheet: View {
 
 private struct RiskBarRow: View {
     let label:String; let value:Double; let valueText:String; let warningThreshold:Double; let dangerThreshold:Double; let colorScheme:ColorScheme
-    private var barColor: Color {
+    private var textColor: Color {
         if value >= dangerThreshold { return Theme.Colors.critical }
         if value >= warningThreshold { return Theme.Colors.warning }
         return Theme.Colors.success
     }
     var body: some View {
         VStack(spacing:6) {
-            HStack { Text(label).font(Theme.Typography.subheadline); Spacer(); Text(valueText).font(Theme.Typography.mono).foregroundStyle(barColor) }
+            HStack { Text(label).font(Theme.Typography.subheadline); Spacer(); Text(valueText).font(Theme.Typography.mono).foregroundStyle(textColor) }
             GeometryReader { geo in
                 ZStack(alignment:.leading) {
-                    RoundedRectangle(cornerRadius:4).fill(barColor.opacity(0.12)).frame(height:6)
-                    RoundedRectangle(cornerRadius:4).fill(barColor).frame(width:geo.size.width*min(value,1.0),height:6)
+                    RoundedRectangle(cornerRadius:4).fill(Theme.Colors.primary.opacity(0.12)).frame(height:6)
+                    RoundedRectangle(cornerRadius:4).fill(Theme.Colors.primary).frame(width:geo.size.width*min(value,1.0),height:6)
                     Rectangle().fill(Theme.Colors.neutral.opacity(0.4)).frame(width:1.5,height:10).offset(x:geo.size.width*warningThreshold-0.75,y:-2)
                 }
             }.frame(height:6)

@@ -77,13 +77,16 @@ struct ManagerActionPanel: View {
     let onApprove: () -> Void
     let onRejectWithRemarks: () -> Void   // triggers remarks sheet
     let onSendBack: () -> Void
-    
+    var onEditTerms: (() -> Void)? = nil
+    var onAssignOfficer: (() -> Void)? = nil
+
     @Environment(\.colorScheme) private var colorScheme
-    
+
     var body: some View {
-        VStack(spacing: Theme.Spacing.md) {
+        VStack(spacing: Theme.Spacing.sm) {
             Divider()
-            
+
+            // Row 1: Secondary actions
             HStack(spacing: Theme.Spacing.md) {
                 // Send Back
                 Button(action: onSendBack) {
@@ -96,8 +99,8 @@ struct ManagerActionPanel: View {
                         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
                 }
                 .buttonStyle(.plain)
-                
-                // Reject (opens remarks sheet)
+
+                // Reject
                 Button(action: onRejectWithRemarks) {
                     Label("Reject", systemImage: "xmark.circle")
                         .font(Theme.Typography.subheadline)
@@ -109,7 +112,47 @@ struct ManagerActionPanel: View {
                         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
                 }
                 .buttonStyle(.plain)
-                
+            }
+
+            // Row 2: Edit actions + final Approve
+            HStack(spacing: Theme.Spacing.md) {
+                // Edit Terms (calls UpdateLoanApplicationTerms)
+                Button { onEditTerms?() } label: {
+                    Label("Edit Terms", systemImage: "pencil.circle")
+                        .font(.system(size: 12, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 36)
+                        .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
+                }
+                .buttonStyle(.plain)
+
+                // Assign Officer (fallback alert — backend list not available)
+                Button { onAssignOfficer?() } label: {
+                    Label("Assign Officer", systemImage: "person.badge.plus")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 36)
+                        .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme).opacity(0.6))
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.Radius.sm)
+                                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+                .overlay(alignment: .topTrailing) {
+                    Text("N/A")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
+                        .background(Color.orange)
+                        .clipShape(Capsule())
+                        .offset(x: 4, y: -6)
+                }
+
                 // Approve
                 Button(action: onApprove) {
                     Label("Approve", systemImage: "checkmark.circle.fill")
@@ -117,9 +160,9 @@ struct ManagerActionPanel: View {
                         .fontWeight(.semibold)
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
-                        .frame(height: Theme.Layout.buttonHeight)
+                        .frame(height: 36)
                         .background(Theme.Colors.success)
-                        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
+                        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
                 }
                 .buttonStyle(.plain)
             }
@@ -127,3 +170,4 @@ struct ManagerActionPanel: View {
         .padding(Theme.Spacing.md)
     }
 }
+

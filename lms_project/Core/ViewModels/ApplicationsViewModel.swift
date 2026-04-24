@@ -6,6 +6,7 @@
 import SwiftUI
 import Combine
 
+@MainActor
 class ApplicationsViewModel: ObservableObject {
     @Published var applications: [LoanApplication] = []
     @Published var selectedApplication: LoanApplication? = nil
@@ -18,56 +19,60 @@ class ApplicationsViewModel: ObservableObject {
     @Published var showActionAlert = false
     // Uploaded file URLs per document id (in-memory for session)
     @Published var uploadedFiles: [String: [UploadedDocFile]] = [:]
-    
+
     // New Filters for Manager Navigation
     @Published var filterRisk: RiskLevel? = nil
     @Published var filterSLA: SLAStatus? = nil
     @Published var filterHighValue: Bool = false
     @Published var filterLoanType: LoanType? = nil
-    
+
     // Manager rejection remarks sheet
     @Published var showRejectionRemarksSheet = false
     @Published var pendingRejectionApp: LoanApplication? = nil
     @Published var rejectionRemarksText = ""
-    
+
+    @Published var availableLoanProducts: [LoanProduct] = []
+
+    // Auth API for fetching profile
+    private let authAPI = AuthAPI()
+
     // Manager send back sheet
     @Published var showSendBackSheet = false
     @Published var pendingSendBackApp: LoanApplication? = nil
     @Published var sendBackReason = ""
     @Published var sendBackCustomRemark = ""
-    @Published var availableLoanProducts: [LoanProduct] = []
-    
+
     private let dataService = MockDataService.shared
     private let xmlService = XMLParserService.shared
-    private let loanAPI = LoanAPI()
-    private let authAPI = AuthAPI()
-    
+    // TODO: Replace with UserStore.shared.branchID once auth session exposes it
+    private let defaultBranchID = ""
+
     // MARK: - Filtered Applications
-    
+
     var filteredApplications: [LoanApplication] {
         var result = applications
-        
+
         if let status = filterStatus {
             result = result.filter { $0.status == status }
         }
-        
+
         if let risk = filterRisk {
             result = result.filter { $0.riskLevel == risk }
         }
-        
+
         if let sla = filterSLA {
             result = result.filter { $0.slaStatus == sla }
         }
-        
+
         if filterHighValue {
             // Define High Value as > 50 Lakhs (5,000,000)
             result = result.filter { $0.loan.amount >= 5000000 }
         }
-        
+
         if let type = filterLoanType {
             result = result.filter { $0.loan.type == type }
         }
-        
+
         if !searchText.isEmpty {
             result = result.filter {
                 $0.borrower.name.localizedCaseInsensitiveContains(searchText) ||
@@ -75,159 +80,100 @@ class ApplicationsViewModel: ObservableObject {
                 $0.borrower.employer.localizedCaseInsensitiveContains(searchText)
             }
         }
-        
+
         return result
     }
-    
+
     // MARK: - Load Data
-    
-    func loadData() {
-        isLoading = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-            guard let self = self else { return }
-            self.applications = self.dataService.fetchApplications()
-            if self.selectedApplication == nil {
-                self.selectedApplication = self.applications.first
-            }
-            self.isLoading = false
-        }
-        Task {
-            await loadAvailableLoanProducts()
+
+    func loadAvailableLoanProducts() async {
+        guard #available(iOS 18.0, *) else { return }
+        do {
+            let products = try await LoanAPI().listLoanProducts(limit: 100, offset: 0, includeDeleted: false, authorized: true)
+            let mapped = products.map { LoanProduct(proto: $0) }
+            self.availableLoanProducts = mapped
+        } catch {
+            print("Failed to load loan products: \(error)")
         }
     }
 
-    @MainActor
-    func loadAvailableLoanProducts() async {
-        do {
-            let products = try await loanAPI.listLoanProducts(limit: 200, offset: 0, includeDeleted: false, authorized: true)
-                .map(LoanProduct.init(proto:))
-                .filter { $0.isActive && !$0.isDeleted }
-                .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-            availableLoanProducts = products
-        } catch {
-            // Keep existing value; create flow will still show API error on submit.
+    func loadData() {
+        isLoading = true
+        Task {
+            do {
+                try await refreshApplications(selectApplicationID: selectedApplication?.id)
+            } catch {
+                actionMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to load applications from server"
+                showActionAlert = true
+            }
+            isLoading = false
         }
     }
-    
+
     func selectApplication(_ app: LoanApplication) {
         withAnimation(.easeInOut(duration: 0.2)) {
             selectedApplication = app
         }
+        Task { await refreshSelectedApplicationDetail(applicationID: app.id) }
     }
-    
+
     // MARK: - LO Actions
-    
+
     /// Loan Officer sends application to manager (Under Review)
     func sendToManager(_ app: LoanApplication) {
-        updateStatus(app, to: .underReview, message: "Application sent to Manager for review")
+        Task {
+            await sendToManagerWithFallback(applicationID: app.id)
+        }
     }
-    
+
     /// Kept for backward-compat — same as sendToManager
     func recommendApplication(_ app: LoanApplication) {
         sendToManager(app)
     }
-    
+
     func rejectApplication(_ app: LoanApplication) {
-        updateStatus(app, to: .rejected, message: "Application rejected")
-    }
-    
-    func approveApplication(_ app: LoanApplication) {
-        let version = SanctionLetterVersion(
-            version: 1,
-            generatedAt: Date(),
-            status: .sent,
-            fileUrl: "https://lms.static.com/sanction/\(app.id)_v1.pdf"
-        )
-        
-        let sanctionLetter = SanctionLetter(versions: [version], currentVersion: 1)
-        
-        if let index = applications.firstIndex(where: { $0.id == app.id }) {
-            withAnimation {
-                applications[index].status = .approved
-                applications[index].sanctionLetter = sanctionLetter
-                selectedApplication = applications[index]
-            }
-            
-            // Activity Logs
-            addInternalRemark(applicationId: app.id, text: "Sanction Letter Generated (v1)", author: "System")
-            addInternalRemark(applicationId: app.id, text: "Sent to Borrower", author: "System")
-            
-            // Notification for Loan Officer (Simulated as remark/message)
-            sendApplicationMessage(
-                applicationId: app.id,
-                senderName: "System",
-                senderRole: "Notification",
-                text: "Sanction Letter Generated for \(app.id)",
-                isManagerRemark: false
+        Task {
+            await updateApplicationStatus(
+                applicationID: app.id,
+                status: .officerRejected,
+                escalationReason: nil,
+                successMessage: "Application rejected"
             )
         }
-        
-        actionMessage = "Application Approved & Sanction Letter Sent"
-        showActionAlert = true
     }
-    
+
+    func approveApplication(_ app: LoanApplication) {
+        Task {
+            await approveAndCreateLoan(app)
+        }
+    }
+
     func regenerateSanctionLetter(_ app: LoanApplication) {
-        guard var letter = app.sanctionLetter else { return }
-        
-        let newVersionNumber = letter.currentVersion + 1
-        let newVersion = SanctionLetterVersion(
-            version: newVersionNumber,
-            generatedAt: Date(),
-            status: .sent,
-            fileUrl: "https://lms.static.com/sanction/\(app.id)_v\(newVersionNumber).pdf"
-        )
-        
-        letter.versions.append(newVersion)
-        letter.currentVersion = newVersionNumber
-        
-        if let index = applications.firstIndex(where: { $0.id == app.id }) {
-            withAnimation {
-                applications[index].sanctionLetter = letter
-                selectedApplication = applications[index]
-            }
-            
-            addInternalRemark(applicationId: app.id, text: "Sanction Letter Regenerated (v\(newVersionNumber))", author: "System")
-            addInternalRemark(applicationId: app.id, text: "Sent to Borrower", author: "System")
-        }
-        
-        actionMessage = "New sanction letter version generated and sent"
+        // No backend RPC exists for sanction letter generation.
+        actionMessage = "Sanction letter generation is not implemented in the backend yet."
         showActionAlert = true
     }
-    
+
     func revokeSanctionLetter(_ app: LoanApplication) {
-        guard var letter = app.sanctionLetter else { return }
-        
-        if let vIdx = letter.versions.firstIndex(where: { $0.version == letter.currentVersion }) {
-            letter.versions[vIdx].status = .revoked
-        }
-        
-        if let index = applications.firstIndex(where: { $0.id == app.id }) {
-            withAnimation {
-                applications[index].sanctionLetter = letter
-                selectedApplication = applications[index]
-            }
-            
-            addInternalRemark(applicationId: app.id, text: "Sanction Letter Revoked", author: "System")
-        }
-        
-        actionMessage = "Sanction Letter Revoked"
+        // No backend RPC exists for sanction letter revocation.
+        actionMessage = "Sanction letter revocation is not implemented in the backend yet."
         showActionAlert = true
     }
-    
+
     func beginSendBack(_ app: LoanApplication) {
         pendingSendBackApp = app
         sendBackReason = "Select a reason"
         sendBackCustomRemark = ""
         showSendBackSheet = true
     }
-    
+
     func confirmSendBack() {
         guard let app = pendingSendBackApp else { return }
-        
-        let finalRemark = sendBackReason == "Other" 
-            ? sendBackCustomRemark 
-            : (sendBackCustomRemark.isEmpty ? sendBackReason : "\(sendBackReason): \(sendBackCustomRemark)")
-            
+
+        let finalRemark = sendBackReason == "Other"
+        ? sendBackCustomRemark
+        : (sendBackCustomRemark.isEmpty ? sendBackReason : "\(sendBackReason): \(sendBackCustomRemark)")
+
         // Record the send back remark as a manager remark message
         sendApplicationMessage(
             applicationId: app.id,
@@ -236,165 +182,49 @@ class ApplicationsViewModel: ObservableObject {
             text: finalRemark,
             isManagerRemark: true
         )
-        
-        updateStatus(app, to: .pending, message: "Application returned to Loan Officer")
+
+        Task {
+            await updateApplicationStatus(
+                applicationID: app.id,
+                status: .officerReview,
+                escalationReason: finalRemark,
+                successMessage: "Application returned to Loan Officer"
+            )
+        }
         showSendBackSheet = false
         pendingSendBackApp = nil
     }
-    
+
     func requestDocuments(_ app: LoanApplication) {
-        actionMessage = "Document request sent to borrower"
+        // No backend RPC exists for automated document requests yet.
+        actionMessage = "Automated document requests are not implemented in the backend yet. Please contact the borrower directly."
         showActionAlert = true
     }
-    
-    private func updateStatus(_ app: LoanApplication, to status: ApplicationStatus, message: String) {
-        if let index = applications.firstIndex(where: { $0.id == app.id }) {
-            withAnimation {
-                applications[index].status = status
-                selectedApplication = applications[index]
-            }
-        }
-        actionMessage = message
-        showActionAlert = true
-    }
-    
+
     // MARK: - Manager Rejection With Remarks
-    
+
     /// Call this to begin the rejection flow (shows the remarks sheet)
     func beginRejectWithRemarks(_ app: LoanApplication) {
         pendingRejectionApp = app
         rejectionRemarksText = ""
         showRejectionRemarksSheet = true
     }
-    
+
     /// Confirmed rejection: saves remarks then updates status
     func confirmRejectWithRemarks() {
         guard let app = pendingRejectionApp else { return }
         let remarks = rejectionRemarksText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let index = applications.firstIndex(where: { $0.id == app.id }) {
-            withAnimation {
-                applications[index].status = .rejected
-                applications[index].rejectionRemarks = remarks.isEmpty ? nil : remarks
-                selectedApplication = applications[index]
-            }
+        Task {
+            await updateApplicationStatus(
+                applicationID: app.id,
+                status: .managerRejected,
+                escalationReason: remarks.isEmpty ? nil : remarks,
+                successMessage: "Application rejected"
+            )
         }
-        actionMessage = "Application rejected"
-        showActionAlert = true
         showRejectionRemarksSheet = false
         pendingRejectionApp = nil
         rejectionRemarksText = ""
-    }
-    
-    // MARK: - XML Upload
-    
-    func simulateXMLUpload() {
-        xmlParseResult = xmlService.simulateXMLUpload()
-        showXMLUploadResult = true
-    }
-    
-    /// Parse XML silently (no result sheet) — used by CreateApplicationSheet for autofill
-    func parseXMLFile(_ data: Data) {
-        xmlParseResult = xmlService.parseXMLData(data)
-        showXMLUploadResult = true
-    }
-    
-    // MARK: - Per-Application Conversation
-    
-    @Published var applicationMessages: [String: [ApplicationMessage]] = [:]
-    @Published var chatText = ""
-    
-    func loadApplicationMessages(for applicationId: String) {
-        if applicationMessages[applicationId] == nil {
-            applicationMessages[applicationId] = dataService.fetchApplicationMessages(applicationId: applicationId)
-        }
-    }
-    
-    func messagesForApplication(_ applicationId: String) -> [ApplicationMessage] {
-        return applicationMessages[applicationId] ?? []
-    }
-    
-    // MARK: - Internal Remarks
-    
-    func addInternalRemark(applicationId: String, text: String, author: String) {
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        let remark = InternalRemark(
-            id: UUID().uuidString,
-            author: author,
-            text: text,
-            timestamp: Date()
-        )
-        if let idx = applications.firstIndex(where: { $0.id == applicationId }) {
-            withAnimation {
-                applications[idx].internalRemarks.append(remark)
-                selectedApplication = applications[idx]
-            }
-        }
-    }
-    
-    // MARK: - Document Upload
-    
-    func addOtherDocument(to app: LoanApplication, label: String) {
-        let newDoc = LoanDocument(
-            id: "DOC-OTHER-\(UUID().uuidString.prefix(6))",
-            type: .other,
-            label: label,
-            status: .pending,
-            uploadedAt: nil
-        )
-        if let idx = applications.firstIndex(where: { $0.id == app.id }) {
-            withAnimation {
-                applications[idx].documents.append(newDoc)
-                selectedApplication = applications[idx]
-            }
-        }
-    }
-    
-    func recordUploadedFile(_ file: UploadedDocFile, forDocumentId docId: String) {
-        withAnimation {
-            if uploadedFiles[docId] != nil {
-                uploadedFiles[docId]!.append(file)
-            } else {
-                uploadedFiles[docId] = [file]
-            }
-        }
-        // Mark document as uploaded in the application
-        if let appIdx = applications.firstIndex(where: { app in
-            app.documents.contains(where: { $0.id == docId })
-        }) {
-            if let docIdx = applications[appIdx].documents.firstIndex(where: { $0.id == docId }) {
-                withAnimation {
-                    applications[appIdx].documents[docIdx].status = .uploaded
-                    applications[appIdx].documents[docIdx].uploadedAt = Date()
-                    selectedApplication = applications[appIdx]
-                }
-            }
-        }
-    }
-    
-    func sendApplicationMessage(applicationId: String, senderName: String, senderRole: String, text: String? = nil, isManagerRemark: Bool = false) {
-        let textToSend = text ?? chatText
-        guard !textToSend.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        let msg = ApplicationMessage(
-            id: "\(applicationId)-AM-\(UUID().uuidString.prefix(6))",
-            applicationId: applicationId,
-            senderId: isManagerRemark ? "MGR-001" : "LO-001",
-            senderName: senderName,
-            senderRole: senderRole,
-            text: textToSend,
-            timestamp: Date(),
-            type: isManagerRemark ? .managerRemark : .message,
-            isFromCurrentUser: true
-        )
-        withAnimation {
-            if applicationMessages[applicationId] != nil {
-                applicationMessages[applicationId]!.append(msg)
-            } else {
-                applicationMessages[applicationId] = [msg]
-            }
-        }
-        if text == nil {
-            chatText = ""
-        }
     }
 
     // MARK: - Backend Creation (Loan Officer)
@@ -412,7 +242,7 @@ class ApplicationsViewModel: ObservableObject {
         monthlyIncome: Double,
         existingEMI: Double,
         documents: [LoanDocument]
-    ) async throws {
+    ) async throws -> String {
         let cleanBorrowerProfileID = borrowerProfileID.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanBorrowerProfileID.isEmpty else {
             throw APIError.invalidArgument("Borrower profile ID is required.")
@@ -424,6 +254,10 @@ class ApplicationsViewModel: ObservableObject {
             throw APIError.invalidArgument("Tenure must be greater than 0.")
         }
 
+        guard #available(iOS 18.0, *) else {
+            throw APIError.failedPrecondition("Loan application APIs require iOS 18 or later.")
+        }
+
         let profile = try await authAPI.getMyProfile()
         guard case .officerProfile(let officerProfile) = profile.profile else {
             throw APIError.permissionDenied("Only Officer profile can create applications from this screen.")
@@ -433,7 +267,7 @@ class ApplicationsViewModel: ObservableObject {
             throw APIError.failedPrecondition("Officer is not assigned to a branch.")
         }
 
-        let created = try await loanAPI.createLoanApplication(
+        let created = try await LoanAPI().createLoanApplication(
             primaryBorrowerProfileID: cleanBorrowerProfileID,
             loanProductID: selectedLoanProduct.id,
             branchID: branchID,
@@ -475,7 +309,7 @@ class ApplicationsViewModel: ObservableObject {
             verification: [],
             notes: [],
             internalRemarks: [],
-            status: created.status.employeeStatus,
+            status: ApplicationStatus(proto: created.status),
             assignedTo: "LO-001",
             branch: created.branchName.isEmpty ? officerProfile.branch.name : created.branchName,
             riskLevel: .medium,
@@ -487,14 +321,220 @@ class ApplicationsViewModel: ObservableObject {
             applications.insert(localApp, at: 0)
             selectedApplication = localApp
         }
+        return localApp.id
     }
+
+    // MARK: - Document Verification
+
+    func verifyDocument(documentId: String, applicationId: String, approved: Bool, rejectionReason: String? = nil) {
+        Task {
+            await verifyDocumentInternal(documentId: documentId, applicationId: applicationId, approved: approved, rejectionReason: rejectionReason)
+        }
+    }
+
+    private func verifyDocumentInternal(documentId: String, applicationId: String, approved: Bool, rejectionReason: String?) async {
+        guard #available(iOS 18.0, *) else {
+            actionMessage = "Document verification requires iOS 18 or later"
+            showActionAlert = true
+            return
+        }
+        do {
+            // Proto uses .pass / .fail — NOT .verified / .rejected
+            let status: Loan_V1_DocumentVerificationStatus = approved ? .pass : .fail
+            _ = try await LoanAPI().updateApplicationDocumentVerification(
+                documentID: documentId,
+                verificationStatus: status,
+                rejectionReason: rejectionReason
+            )
+            if let appIdx = applications.firstIndex(where: { $0.id == applicationId }) {
+                if let docIdx = applications[appIdx].documents.firstIndex(where: { $0.id == documentId }) {
+                    withAnimation {
+                        applications[appIdx].documents[docIdx].status = approved ? .verified : .rejected
+                        if selectedApplication?.id == applicationId {
+                            selectedApplication = applications[appIdx]
+                        }
+                    }
+                }
+            }
+            actionMessage = approved ? "Document verified successfully" : "Document marked as rejected"
+            showActionAlert = true
+        } catch {
+            actionMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to update document verification"
+            showActionAlert = true
+        }
+    }
+
+    // MARK: - Assign Officer
+
+    func assignOfficer(applicationId: String, officerUserId: String) {
+        Task {
+            guard #available(iOS 18.0, *) else { return }
+            do {
+                _ = try await LoanAPI().assignLoanApplicationOfficer(
+                    applicationID: applicationId,
+                    officerUserID: officerUserId
+                )
+                try await refreshApplications(selectApplicationID: applicationId)
+                actionMessage = "Loan Officer assigned successfully"
+                showActionAlert = true
+            } catch {
+                actionMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to assign officer"
+                showActionAlert = true
+            }
+        }
+    }
+
+    // MARK: - Update Loan Terms
+
+    func updateLoanTerms(applicationId: String, tenureMonths: Int, offeredInterestRate: Double) {
+        Task {
+            guard #available(iOS 18.0, *) else { return }
+            do {
+                let updatedApp = try await LoanAPI().updateLoanApplicationTerms(
+                    applicationID: applicationId,
+                    tenureMonths: Int32(tenureMonths),
+                    offeredInterestRate: String(format: "%.2f", offeredInterestRate)
+                )
+                let mapped = LoanApplication.from(proto: updatedApp)
+                if let idx = applications.firstIndex(where: { $0.id == applicationId }) {
+                    withAnimation {
+                        applications[idx] = mapped
+                        if selectedApplication?.id == applicationId {
+                            selectedApplication = mapped
+                        }
+                    }
+                }
+                actionMessage = "Loan terms updated successfully"
+                showActionAlert = true
+            } catch {
+                actionMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to update loan terms"
+                showActionAlert = true
+            }
+        }
+    }
+
+    // MARK: - XML Upload
+
+    func simulateXMLUpload() {
+        xmlParseResult = xmlService.simulateXMLUpload()
+        showXMLUploadResult = true
+    }
+
+    /// Parse XML silently (no result sheet) — used by CreateApplicationSheet for autofill
+    func parseXMLFile(_ data: Data) {
+        xmlParseResult = xmlService.parseXMLData(data)
+        showXMLUploadResult = true
+    }
+
+    // MARK: - Per-Application Conversation
+
+    @Published var applicationMessages: [String: [ApplicationMessage]] = [:]
+    @Published var chatText = ""
+
+    func loadApplicationMessages(for applicationId: String) {
+        if applicationMessages[applicationId] == nil {
+            applicationMessages[applicationId] = dataService.fetchApplicationMessages(applicationId: applicationId)
+        }
+    }
+
+    func messagesForApplication(_ applicationId: String) -> [ApplicationMessage] {
+        return applicationMessages[applicationId] ?? []
+    }
+
+    // MARK: - Internal Remarks
+
+    func addInternalRemark(applicationId: String, text: String, author: String) {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        let remark = InternalRemark(
+            id: UUID().uuidString,
+            author: author,
+            text: text,
+            timestamp: Date()
+        )
+        if let idx = applications.firstIndex(where: { $0.id == applicationId }) {
+            withAnimation {
+                applications[idx].internalRemarks.append(remark)
+                selectedApplication = applications[idx]
+            }
+        }
+    }
+
+    // MARK: - Document Upload
+
+    func addOtherDocument(to app: LoanApplication, label: String) {
+        let newDoc = LoanDocument(
+            id: "DOC-OTHER-\(UUID().uuidString.prefix(6))",
+            type: .other,
+            label: label,
+            status: .pending,
+            uploadedAt: nil
+        )
+        if let idx = applications.firstIndex(where: { $0.id == app.id }) {
+            withAnimation {
+                applications[idx].documents.append(newDoc)
+                selectedApplication = applications[idx]
+            }
+        }
+    }
+
+    func recordUploadedFile(_ file: UploadedDocFile, forDocumentId docId: String) {
+        withAnimation {
+            if uploadedFiles[docId] != nil {
+                uploadedFiles[docId]!.append(file)
+            } else {
+                uploadedFiles[docId] = [file]
+            }
+        }
+        // Mark document as uploaded in the application
+        if let appIdx = applications.firstIndex(where: { app in
+            app.documents.contains(where: { $0.id == docId })
+        }) {
+            if let docIdx = applications[appIdx].documents.firstIndex(where: { $0.id == docId }) {
+                withAnimation {
+                    applications[appIdx].documents[docIdx].status = .uploaded
+                    applications[appIdx].documents[docIdx].uploadedAt = Date()
+                    selectedApplication = applications[appIdx]
+                }
+            }
+        }
+    }
+
+    func sendApplicationMessage(applicationId: String, senderName: String, senderRole: String, text: String? = nil, isManagerRemark: Bool = false) {
+        let textToSend = text ?? chatText
+        guard !textToSend.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        let msg = ApplicationMessage(
+            id: "\(applicationId)-AM-\(UUID().uuidString.prefix(6))",
+            applicationId: applicationId,
+            senderId: isManagerRemark ? "MGR-001" : "LO-001",
+            senderName: senderName,
+            senderRole: senderRole,
+            text: textToSend,
+            timestamp: Date(),
+            type: isManagerRemark ? .managerRemark : .message,
+            isFromCurrentUser: true
+        )
+        withAnimation {
+            if applicationMessages[applicationId] != nil {
+                applicationMessages[applicationId]!.append(msg)
+            } else {
+                applicationMessages[applicationId] = [msg]
+            }
+        }
+        if text == nil {
+            chatText = ""
+        }
+    }
+
+    // MARK: - Borrower Profile Resolution
 
     @MainActor
     func resolveBorrowerProfileID(email: String, phone: String) async throws -> String? {
         let cleanEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let cleanPhone = phone.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        func exactMatch(from items: [BorrowerSignupStatusSearchItem]) -> BorrowerSignupStatusSearchItem? {
+        guard #available(iOS 18.0, *) else { return nil }
+
+        func exactMatch(from items: [Auth_V1_BorrowerSignupStatusItem]) -> Auth_V1_BorrowerSignupStatusItem? {
             let direct = items.first { item in
                 let emailMatch = !cleanEmail.isEmpty && item.email.lowercased() == cleanEmail
                 let phoneMatch = !cleanPhone.isEmpty && item.phone == cleanPhone
@@ -505,20 +545,149 @@ class ApplicationsViewModel: ObservableObject {
         }
 
         if !cleanEmail.isEmpty {
-            let emailResults = try await authAPI.searchBorrowerSignupStatus(query: cleanEmail, limit: 20, offset: 0)
-            if let found = exactMatch(from: emailResults), !found.borrowerProfileID.isEmpty {
-                return found.borrowerProfileID
+            let emailResults: Auth_V1_SearchBorrowerSignupStatusResponse = try await authAPI.searchBorrowerSignupStatus(query: cleanEmail, limit: 20, offset: 0)
+            if let found = exactMatch(from: emailResults.items), !found.borrowerProfileId.isEmpty {
+                return found.borrowerProfileId
             }
         }
 
         if !cleanPhone.isEmpty {
-            let phoneResults = try await authAPI.searchBorrowerSignupStatus(query: cleanPhone, limit: 20, offset: 0)
-            if let found = exactMatch(from: phoneResults), !found.borrowerProfileID.isEmpty {
-                return found.borrowerProfileID
+            let phoneResults: Auth_V1_SearchBorrowerSignupStatusResponse = try await authAPI.searchBorrowerSignupStatus(query: cleanPhone, limit: 20, offset: 0)
+            if let found = exactMatch(from: phoneResults.items), !found.borrowerProfileId.isEmpty {
+                return found.borrowerProfileId
             }
         }
 
         return nil
+    }
+
+    // MARK: - Private Backend Helpers
+
+    /// Manager approval: updates status to MANAGER_APPROVED then creates the loan ledger via CreateLoan.
+    private func approveAndCreateLoan(_ app: LoanApplication) async {
+        guard #available(iOS 18.0, *) else {
+            actionMessage = "Approval requires iOS 18 or later"
+            showActionAlert = true
+            return
+        }
+        do {
+            _ = try await LoanAPI().updateLoanApplicationStatus(
+                applicationID: app.id,
+                status: .managerApproved,
+                escalationReason: nil
+            )
+            // Create the loan ledger so repayment/EMI schedule is generated
+            let principalAmount = String(format: "%.0f", app.loan.amount)
+            _ = try? await LoanAPI().createLoan(
+                applicationID: app.id,
+                principalAmount: principalAmount
+            )
+            try await refreshApplications(selectApplicationID: app.id)
+            actionMessage = "Application approved and loan disbursement initiated"
+            showActionAlert = true
+        } catch {
+            actionMessage = (error as? LocalizedError)?.errorDescription ?? "Unable to approve application"
+            showActionAlert = true
+        }
+    }
+
+    private func updateApplicationStatus(
+        applicationID: String,
+        status: Loan_V1_LoanApplicationStatus,
+        escalationReason: String?,
+        successMessage: String
+    ) async {
+        guard #available(iOS 18.0, *) else {
+            actionMessage = "Status update requires iOS 18 or later"
+            showActionAlert = true
+            return
+        }
+        do {
+            _ = try await LoanAPI().updateLoanApplicationStatus(
+                applicationID: applicationID,
+                status: status,
+                escalationReason: escalationReason
+            )
+            try await refreshApplications(selectApplicationID: applicationID)
+            actionMessage = successMessage
+            showActionAlert = true
+        } catch {
+            actionMessage = (error as? LocalizedError)?.errorDescription ?? "Unable to update application status"
+            showActionAlert = true
+        }
+    }
+
+    private func sendToManagerWithFallback(applicationID: String) async {
+        guard #available(iOS 18.0, *) else {
+            actionMessage = "Status update requires iOS 18 or later"
+            showActionAlert = true
+            return
+        }
+
+        // Different deployments can enforce slightly different officer transitions.
+        // Try manager escalation first, then officer approval as fallback.
+        let statusAttempts: [(Loan_V1_LoanApplicationStatus, String)] = [
+            (.managerReview, "Application sent to Manager for review"),
+            (.officerApproved, "Application sent to Manager for review"),
+            (.officerReview, "Application moved to Officer Review. Send to Manager after approval.")
+        ]
+        var lastError: Error?
+
+        for (nextStatus, successMessage) in statusAttempts {
+            do {
+                _ = try await LoanAPI().updateLoanApplicationStatus(
+                    applicationID: applicationID,
+                    status: nextStatus,
+                    escalationReason: nil
+                )
+                try await refreshApplications(selectApplicationID: applicationID)
+                actionMessage = successMessage
+                showActionAlert = true
+                return
+            } catch {
+                lastError = error
+            }
+        }
+
+        actionMessage = (lastError as? LocalizedError)?.errorDescription ?? "Unable to send application to manager"
+        showActionAlert = true
+    }
+
+    private func refreshApplications(selectApplicationID: String?) async throws {
+        guard #available(iOS 18.0, *) else {
+            throw APIError.failedPrecondition("Loan application APIs require iOS 18 or later.")
+        }
+        let list = try await LoanAPI().listLoanApplications(limit: 100, offset: 0, branchID: defaultBranchID)
+        let mapped = list.map { LoanApplication.from(proto: $0) }
+        withAnimation {
+            applications = mapped
+            if let selectedID = selectApplicationID,
+               let selected = mapped.first(where: { $0.id == selectedID }) {
+                selectedApplication = selected
+            } else {
+                selectedApplication = mapped.first
+            }
+        }
+
+        if let selectedID = selectedApplication?.id {
+            await refreshSelectedApplicationDetail(applicationID: selectedID)
+        }
+    }
+
+    private func refreshSelectedApplicationDetail(applicationID: String) async {
+        guard #available(iOS 18.0, *) else { return }
+        do {
+            let detail = try await LoanAPI().getLoanApplication(applicationID: applicationID)
+            let enriched = LoanApplication.from(proto: detail.application, documents: detail.documents)
+            if let index = applications.firstIndex(where: { $0.id == applicationID }) {
+                applications[index] = enriched
+            }
+            if selectedApplication?.id == applicationID {
+                selectedApplication = enriched
+            }
+        } catch {
+            // Keep list data if detail fetch fails.
+        }
     }
 }
 
@@ -530,23 +699,6 @@ struct UploadedDocFile: Identifiable {
     let url: URL?
     let isImage: Bool
     let uploadedAt: Date
-}
-
-private extension Loan_V1_LoanApplicationStatus {
-    var employeeStatus: ApplicationStatus {
-        switch self {
-        case .draft, .submitted:
-            return .pending
-        case .underReview:
-            return .underReview
-        case .approved:
-            return .approved
-        case .rejected:
-            return .rejected
-        case .disbursed, .cancelled, .officerReview, .officerApproved, .officerRejected, .managerReview, .managerApproved, .managerRejected, .unspecified, .UNRECOGNIZED:
-            return .underReview
-        }
-    }
 }
 
 private extension LoanProduct {

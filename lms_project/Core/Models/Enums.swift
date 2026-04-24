@@ -35,39 +35,69 @@ enum UserRole: String, CaseIterable, Identifiable, Codable {
 }
 
 // MARK: - Application Status
-// STRICT: Only these four statuses are allowed across the entire app.
+// Maps all Loan_V1_LoanApplicationStatus proto states.
 
 enum ApplicationStatus: String, CaseIterable, Identifiable, Codable {
-    case pending     = "pending"       // New / not yet reviewed
-    case underReview = "under_review"  // Sent to manager
-    case approved    = "approved"
-    case rejected    = "rejected"
+    case pending         = "pending"        // DRAFT / SUBMITTED (not yet reviewed)
+    case officerReview   = "officer_review" // Assigned to LO for review
+    case officerApproved = "officer_approved" // LO forwarded
+    case officerRejected = "officer_rejected" // LO rejected
+    case managerReview   = "manager_review" // Manager reviewing
+    case managerApproved = "manager_approved" // Manager approved (loan created)
+    case managerRejected = "manager_rejected" // Manager rejected
+    case underReview     = "under_review"   // Generic in-progress (legacy)
+    case approved        = "approved"       // Final approved / disbursed
+    case rejected        = "rejected"       // Final rejected / cancelled
 
     var id: String { rawValue }
 
     var displayName: String {
         switch self {
-        case .pending:     return "Pending"
-        case .underReview: return "Under Review"
-        case .approved:    return "Approved"
-        case .rejected:    return "Rejected"
+        case .pending:         return "Pending"
+        case .officerReview:  return "Officer Review"
+        case .officerApproved: return "Officer Approved"
+        case .officerRejected: return "Officer Rejected"
+        case .managerReview:  return "Manager Review"
+        case .managerApproved: return "Manager Approved"
+        case .managerRejected: return "Manager Rejected"
+        case .underReview:    return "Under Review"
+        case .approved:       return "Approved"
+        case .rejected:       return "Rejected"
         }
     }
 
     var color: Color {
         switch self {
-        case .pending, .underReview: return Theme.Colors.primary
-        case .approved:              return Theme.Colors.secondary
-        case .rejected:              return Theme.Colors.critical
+        case .pending:                        return Theme.Colors.neutral
+        case .officerReview, .underReview:   return Theme.Colors.primary
+        case .officerApproved:               return Theme.Colors.primary
+        case .managerReview:                 return Theme.Colors.warning
+        case .managerApproved, .approved:    return Theme.Colors.secondary
+        case .officerRejected,
+             .managerRejected, .rejected:    return Theme.Colors.critical
         }
     }
 
     var backgroundColor: Color {
         switch self {
-        case .pending, .underReview: return Theme.Colors.primaryLight
-        case .approved:              return Theme.Colors.primaryLight
-        case .rejected:              return Theme.Colors.critical.opacity(0.12)
+        case .pending:                        return Theme.Colors.neutral.opacity(0.12)
+        case .officerReview, .underReview:   return Theme.Colors.primaryLight
+        case .officerApproved:               return Theme.Colors.primaryLight
+        case .managerReview:                 return Theme.Colors.warning.opacity(0.12)
+        case .managerApproved, .approved:    return Theme.Colors.primaryLight
+        case .officerRejected,
+             .managerRejected, .rejected:    return Theme.Colors.critical.opacity(0.12)
         }
+    }
+
+    /// Whether this application belongs in the Loan Officer's work queue
+    var isLoanOfficerQueue: Bool {
+        self == .pending || self == .officerReview
+    }
+
+    /// Whether this application belongs in the Manager's work queue
+    var isManagerQueue: Bool {
+        self == .officerApproved || self == .managerReview || self == .underReview
     }
 }
 

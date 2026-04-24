@@ -133,23 +133,26 @@ struct LOApplicationsView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 16)
 
-            // Filter chips — only key statuses
+            // Filter chips — all relevant LO statuses
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     AppFilterChip(label: "All", isSelected: applicationsVM.filterStatus == nil) {
                         withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = nil }
                     }
-                    AppFilterChip(label: "Pending", isSelected: applicationsVM.filterStatus == .pending) {
+                    AppFilterChip(label: "New", isSelected: applicationsVM.filterStatus == .pending) {
                         withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .pending }
                     }
-                    AppFilterChip(label: "In Review", isSelected: applicationsVM.filterStatus == .underReview) {
-                        withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .underReview }
+                    AppFilterChip(label: "My Review", isSelected: applicationsVM.filterStatus == .officerReview) {
+                        withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .officerReview }
+                    }
+                    AppFilterChip(label: "Forwarded", isSelected: applicationsVM.filterStatus == .officerApproved) {
+                        withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .officerApproved }
                     }
                     AppFilterChip(label: "Approved", isSelected: applicationsVM.filterStatus == .approved) {
                         withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .approved }
                     }
-                    AppFilterChip(label: "Rejected", isSelected: applicationsVM.filterStatus == .rejected) {
-                        withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .rejected }
+                    AppFilterChip(label: "Rejected", isSelected: applicationsVM.filterStatus == .officerRejected) {
+                        withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .officerRejected }
                     }
                 }
                 .padding(.horizontal, 16)
@@ -401,6 +404,14 @@ struct LOApplicationsView: View {
                     uploadedFiles: applicationsVM.uploadedFiles[doc.id] ?? [],
                     onUpload: { file in
                         applicationsVM.recordUploadedFile(file, forDocumentId: doc.id)
+                    },
+                    onVerify: { approved, reason in
+                        applicationsVM.verifyDocument(
+                            documentId: doc.id,
+                            applicationId: app.id,
+                            approved: approved,
+                            rejectionReason: reason
+                        )
                     }
                 )
             }
@@ -666,6 +677,8 @@ struct DocumentUploadRow: View {
     let doc: LoanDocument
     let uploadedFiles: [UploadedDocFile]
     let onUpload: (UploadedDocFile) -> Void
+    /// Callback wired to ApplicationsViewModel.verifyDocument(documentId:status:reason:)
+    var onVerify: ((Bool, String?) -> Void)? = nil
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var showPicker     = false
@@ -673,6 +686,8 @@ struct DocumentUploadRow: View {
     @State private var showOptions    = false
     @State private var selectedPhotos : [PhotosPickerItem] = []
     @State private var previewFile    : UploadedDocFile?   = nil
+    @State private var showRejectDialog = false
+    @State private var rejectReason     = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -693,6 +708,49 @@ struct DocumentUploadRow: View {
                 }
 
                 Spacer()
+
+                // Verify / Reject actions (shown once files are uploaded)
+                if !uploadedFiles.isEmpty && doc.status != .verified {
+                    HStack(spacing: 6) {
+                        if doc.status != .verified {
+                            Button {
+                                onVerify?(true, nil)
+                            } label: {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "checkmark.circle")
+                                        .font(.system(size: 12))
+                                    Text("Verify")
+                                        .font(.system(size: 11, weight: .semibold))
+                                }
+                                .foregroundStyle(Theme.Colors.success)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 5)
+                                .background(Theme.Colors.success.opacity(0.1))
+                                .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        if doc.status != .rejected {
+                            Button {
+                                rejectReason = ""
+                                showRejectDialog = true
+                            } label: {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "xmark.circle")
+                                        .font(.system(size: 12))
+                                    Text("Reject")
+                                        .font(.system(size: 11, weight: .semibold))
+                                }
+                                .foregroundStyle(Theme.Colors.critical)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 5)
+                                .background(Theme.Colors.critical.opacity(0.1))
+                                .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
 
                 // Upload button
                 Button {
@@ -777,6 +835,15 @@ struct DocumentUploadRow: View {
         // Document preview sheet
         .sheet(item: $previewFile) { file in
             DocumentPreviewSheet(file: file)
+        }
+        .alert("Reject Document", isPresented: $showRejectDialog) {
+            TextField("Rejection reason", text: $rejectReason)
+            Button("Cancel", role: .cancel) { }
+            Button("Reject", role: .destructive) {
+                onVerify?(false, rejectReason.isEmpty ? "Rejected by Loan Officer" : rejectReason)
+            }
+        } message: {
+            Text("Provide a reason for rejecting \(doc.label).")
         }
     }
 
@@ -952,189 +1019,82 @@ struct AppFilterChip: View {
 /// Backwards-compatible alias so ManagerApprovalsView keeps compiling unchanged.
 typealias FilterChip = AppFilterChip
 
+
 // ────────────────────────────────────────────────────────────────────
 // MARK: - Create Application Sheet
 // ────────────────────────────────────────────────────────────────────
 
+@available(iOS 18.0, *)
 struct CreateApplicationSheet: View {
     @ObservedObject var applicationsVM: ApplicationsViewModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
 
-    @State private var borrowerName    = ""
-    @State private var borrowerPhone   = ""
-    @State private var borrowerEmail   = ""
-    @State private var borrowerProfileID = ""
-    @State private var borrowerAddress = ""
+    // Borrower Info
+    @State private var borrowerName        = ""
+    @State private var borrowerPhone       = ""
+    @State private var borrowerEmail       = ""
+    @State private var borrowerProfileID   = ""
+    @State private var borrowerAddress     = ""
+
+    // Borrower lookup (client-side from loaded apps)
+    @State private var borrowerLookupHint  = ""
+    @State private var borrowerLookupOK    = false
+
+    // Loan
     @State private var selectedLoanProductID = ""
-    @State private var loanAmountText  = ""
-    @State private var tenureText      = ""
-    @State private var monthlyIncomeText = ""
-    @State private var existingEMIText   = ""
-    @State private var xmlParsed         = false
-    @State private var isSubmitting      = false
-    @State private var submitError       = ""
-    @State private var showSubmitError   = false
-    @State private var isResolvingBorrower = false
-    @State private var borrowerLookupHint = ""
-    @State private var lookupTask: Task<Void, Never>? = nil
-    
-    // Dynamic documents
-    struct NewDocument: Identifiable {
+    @State private var loanAmountText        = ""
+    @State private var tenureText            = ""
+    @State private var monthlyIncomeText     = ""
+    @State private var existingEMIText       = ""
+    @State private var xmlParsed             = false
+
+    // Submission state
+    @State private var isSubmitting    = false
+    @State private var submitError     = ""
+    @State private var showSubmitError = false
+
+    // Documents: driven by selected loan product
+    struct DocEntry: Identifiable {
         let id = UUID()
-        var type: DocumentType
-        var label: String
-        var isUploaded: Bool
+        var requiredDocID: String       // product required_doc id (empty if manually added)
+        var label: String               // display name
+        var isMandatory: Bool
+        var fileData: Data?
+        var fileName: String?
+        var contentType: String?
+        var isUploading: Bool = false
+        var uploadError: String?
     }
-    @State private var newDocuments: [NewDocument] = [
-        NewDocument(type: .panCard, label: "PAN Card", isUploaded: false),
-        NewDocument(type: .aadhaar, label: "Aadhaar Card", isUploaded: false),
-        NewDocument(type: .bankStatement, label: "Bank Statement", isUploaded: false)
-    ]
+    @State private var docEntries: [DocEntry] = []
+    @State private var showFilePicker      = false
+    @State private var activeDocEntryID: UUID? = nil
+
+    // MARK: Computed
+
+    private var selectedProduct: LoanProduct? {
+        applicationsVM.availableLoanProducts.first { $0.id == selectedLoanProductID }
+    }
+
+    private var canSubmit: Bool {
+        !borrowerName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !loanAmountText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !borrowerProfileID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !selectedLoanProductID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    // MARK: Body
 
     var body: some View {
         NavigationStack {
             ZStack {
                 Theme.Colors.adaptiveBackground(colorScheme).ignoresSafeArea()
-                
                 ScrollView {
                     VStack(spacing: 24) {
-                        // Section 1: Borrower Information
-                        formSection(title: "Borrower Information", icon: "person.fill") {
-                            VStack(spacing: 16) {
-                                customTextField("Full Name", text: $borrowerName, icon: "person")
-                                HStack(spacing: 16) {
-                                    customTextField("Phone", text: $borrowerPhone, icon: "phone").keyboardType(.phonePad)
-                                    customTextField("Email", text: $borrowerEmail, icon: "envelope").keyboardType(.emailAddress).autocapitalization(.none)
-                                }
-                                customTextField("Borrower Profile ID", text: $borrowerProfileID, icon: "person.text.rectangle")
-                                if isResolvingBorrower || !borrowerLookupHint.isEmpty {
-                                    HStack(spacing: 6) {
-                                        if isResolvingBorrower {
-                                            ProgressView().controlSize(.small)
-                                        } else {
-                                            Image(systemName: borrowerProfileID.isEmpty ? "exclamationmark.circle" : "checkmark.circle")
-                                                .foregroundStyle(borrowerProfileID.isEmpty ? Theme.Colors.warning : Theme.Colors.success)
-                                        }
-                                        Text(isResolvingBorrower ? "Resolving borrower profile..." : borrowerLookupHint)
-                                            .font(.system(size: 12))
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                customTextField("Residential Address", text: $borrowerAddress, icon: "mappin.and.ellipse", isMultiline: true)
-                            }
-                        }
-                        
-                        // Section 2: Loan Details
-                        formSection(title: "Loan Parameters", icon: "indianrupeesign.circle.fill") {
-                            VStack(spacing: 16) {
-                                HStack(spacing: 16) {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text("Loan Type").font(Theme.Typography.caption2).foregroundStyle(.secondary)
-                                        Picker("Loan Type", selection: $selectedLoanProductID) {
-                                            if applicationsVM.availableLoanProducts.isEmpty {
-                                                Text("No products available").tag("")
-                                            } else {
-                                                ForEach(applicationsVM.availableLoanProducts) { product in
-                                                    Text(product.name).tag(product.id)
-                                                }
-                                            }
-                                        }
-                                        .pickerStyle(.menu)
-                                        .padding(.horizontal, 12)
-                                        .frame(maxWidth: .infinity, minHeight: 44)
-                                        .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    }
-                                    
-                                    customTextField("Tenure (months)", text: $tenureText, icon: "calendar").keyboardType(.numberPad)
-                                }
-                                
-                                customTextField("Requested Loan Amount (₹)", text: $loanAmountText, icon: "banknote").keyboardType(.numberPad)
-                            }
-                        }
-                        
-                        // Section 3: Financials & XML
-                        formSection(title: "Financial Profile", icon: "chart.bar.doc.horizontal.fill") {
-                            VStack(spacing: 16) {
-                                HStack(spacing: 16) {
-                                    customTextField("Monthly Income (₹)", text: $monthlyIncomeText, icon: "arrow.up.right.circle").keyboardType(.numberPad)
-                                    customTextField("Existing EMI (₹)", text: $existingEMIText, icon: "arrow.down.left.circle").keyboardType(.numberPad)
-                                }
-                                
-                                Button {
-                                    withAnimation {
-                                        applicationsVM.simulateXMLUpload()
-                                        xmlParsed = true
-                                        if let r = applicationsVM.xmlParseResult {
-                                            monthlyIncomeText = String(Int(r.monthlyIncome))
-                                        }
-                                    }
-                                } label: {
-                                    HStack {
-                                        Image(systemName: xmlParsed ? "checkmark.seal.fill" : "doc.viewfinder.fill")
-                                        Text(xmlParsed ? "Bank Statement Parsed Successfully" : "Auto-fill via Bank Statement (XML)")
-                                            .fontWeight(.semibold)
-                                    }
-                                    .font(Theme.Typography.subheadline)
-                                    .foregroundStyle(xmlParsed ? .white : Theme.Colors.primary)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 12)
-                                    .background(xmlParsed ? Theme.Colors.success : Theme.Colors.primary.opacity(0.1))
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                }
-                            }
-                        }
-                        
-                        // Section 4: Documents
-                        formSection(title: "Required Documents", icon: "doc.on.doc.fill") {
-                            VStack(spacing: 12) {
-                                ForEach($newDocuments) { $doc in
-                                    HStack {
-                                        Image(systemName: doc.type.icon)
-                                            .foregroundStyle(Theme.Colors.primary)
-                                            .frame(width: 24)
-                                        Text(doc.label)
-                                            .font(Theme.Typography.subheadline)
-                                        Spacer()
-                                        Button {
-                                            withAnimation(.spring(response: 0.3)) { doc.isUploaded.toggle() }
-                                        } label: {
-                                            HStack(spacing: 4) {
-                                                Image(systemName: doc.isUploaded ? "checkmark.circle.fill" : "arrow.up.circle")
-                                                Text(doc.isUploaded ? "Attached" : "Attach")
-                                            }
-                                            .font(.system(size: 12, weight: .bold))
-                                            .foregroundStyle(doc.isUploaded ? Theme.Colors.success : Theme.Colors.primary)
-                                            .padding(.horizontal, 10)
-                                            .padding(.vertical, 6)
-                                            .background(doc.isUploaded ? Theme.Colors.success.opacity(0.1) : Theme.Colors.primary.opacity(0.1))
-                                            .clipShape(Capsule())
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                    .padding(12)
-                                    .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                }
-                                
-                                Menu {
-                                    ForEach(DocumentType.allCases) { type in
-                                        Button(type.displayName) {
-                                            withAnimation {
-                                                newDocuments.append(NewDocument(type: type, label: type.displayName, isUploaded: false))
-                                            }
-                                        }
-                                    }
-                                } label: {
-                                    Label("Add Other Document", systemImage: "plus.circle.fill")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundStyle(Theme.Colors.primary)
-                                        .padding(.top, 8)
-                                }
-                            }
-                        }
+                        borrowerSection
+                        loanSection
+                        financialSection
+                        documentsSection
                     }
                     .padding(24)
                 }
@@ -1142,28 +1102,21 @@ struct CreateApplicationSheet: View {
             .navigationTitle("New Loan Application")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction)  {
-                    Button("Cancel") { dismiss() }
-                        .foregroundStyle(.secondary)
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }.foregroundStyle(.secondary)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button {
-                        submit()
-                    } label: {
+                    Button(action: submit) {
                         Group {
                             if isSubmitting {
-                                ProgressView()
-                                    .controlSize(.small)
-                                    .tint(.white)
+                                ProgressView().controlSize(.small).tint(.white)
                             } else {
-                                Text("Create Application")
-                                    .fontWeight(.bold)
+                                Text("Create").fontWeight(.bold)
                             }
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12).padding(.vertical, 6)
                         .background(canSubmit ? Theme.Colors.primary : Theme.Colors.neutral.opacity(0.2))
-                        .foregroundStyle(canSubmit ? Color.white : Color.secondary)
+                        .foregroundStyle(canSubmit ? .white : .secondary)
                         .clipShape(Capsule())
                     }
                     .disabled(!canSubmit || isSubmitting)
@@ -1183,71 +1136,237 @@ struct CreateApplicationSheet: View {
                 selectedLoanProductID = applicationsVM.availableLoanProducts.first?.id ?? ""
             }
         }
-        .onChange(of: applicationsVM.availableLoanProducts) { _, updatedProducts in
+        .onChange(of: applicationsVM.availableLoanProducts) { _, products in
             if selectedLoanProductID.isEmpty {
-                selectedLoanProductID = updatedProducts.first?.id ?? ""
+                selectedLoanProductID = products.first?.id ?? ""
             }
         }
-        .onChange(of: borrowerEmail) { _, _ in
-            scheduleBorrowerLookup()
+        .onChange(of: selectedLoanProductID) { _, _ in
+            refreshDocEntries()
         }
-        .onChange(of: borrowerPhone) { _, _ in
-            scheduleBorrowerLookup()
-        }
-    }
-
-    // MARK: - Components
-
-    private func formSection<Content: View>(title: String, icon: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 14))
-                    .foregroundStyle(Theme.Colors.primary)
-                Text(title)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(.secondary)
-            }
-            
-            content()
-                .padding(16)
-                .background(Theme.Colors.adaptiveSurface(colorScheme))
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-        }
-    }
-
-    private func customTextField(_ label: String, text: Binding<String>, icon: String, isMultiline: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label)
-                .font(Theme.Typography.caption2)
-                .foregroundStyle(.secondary)
-            
-            HStack(spacing: 10) {
-                Image(systemName: icon)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Theme.Colors.primary.opacity(0.7))
-                    .frame(width: 16)
-                
-                if isMultiline {
-                    TextField(label, text: text, axis: .vertical)
-                        .lineLimit(2...4)
-                } else {
-                    TextField(label, text: text)
+        .onChange(of: borrowerEmail) { _, _ in runBorrowerLookup() }
+        .onChange(of: borrowerPhone) { _, _ in runBorrowerLookup() }
+        .sheet(isPresented: $showFilePicker) {
+            if let docID = activeDocEntryID {
+                DocumentFilePicker { data, name, ct in
+                    attachFile(data: data, fileName: name, contentType: ct, toEntryID: docID)
+                    showFilePicker = false
+                } onCancel: {
+                    showFilePicker = false
                 }
             }
-            .font(Theme.Typography.subheadline)
-            .padding(12)
-            .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var canSubmit: Bool {
-        !borrowerName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        !loanAmountText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        !borrowerProfileID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        !selectedLoanProductID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    // MARK: - Section Views
+
+    private var borrowerSection: some View {
+        formSection(title: "Borrower Information", icon: "person.fill") {
+            VStack(spacing: 16) {
+                customTextField("Full Name", text: $borrowerName, icon: "person")
+                HStack(spacing: 16) {
+                    customTextField("Phone", text: $borrowerPhone, icon: "phone").keyboardType(.phonePad)
+                    customTextField("Email", text: $borrowerEmail, icon: "envelope").keyboardType(.emailAddress).autocapitalization(.none)
+                }
+                if !borrowerLookupHint.isEmpty {
+                    HStack(spacing: 6) {
+                        Image(systemName: borrowerLookupOK ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                            .foregroundStyle(borrowerLookupOK ? Theme.Colors.success : Theme.Colors.warning)
+                        Text(borrowerLookupHint)
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.leading)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .animation(.easeInOut, value: borrowerLookupHint)
+                }
+                customTextField("Borrower Profile ID", text: $borrowerProfileID, icon: "person.text.rectangle")
+                customTextField("Residential Address", text: $borrowerAddress, icon: "mappin.and.ellipse", isMultiline: true)
+            }
+        }
+    }
+
+    private var loanSection: some View {
+        formSection(title: "Loan Parameters", icon: "indianrupeesign.circle.fill") {
+            VStack(spacing: 16) {
+                HStack(spacing: 16) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Loan Product").font(Theme.Typography.caption2).foregroundStyle(.secondary)
+                        Picker("Loan Product", selection: $selectedLoanProductID) {
+                            if applicationsVM.availableLoanProducts.isEmpty {
+                                Text("Loading...").tag("")
+                            } else {
+                                ForEach(applicationsVM.availableLoanProducts) { p in
+                                    Text(p.name).tag(p.id)
+                                }
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .padding(.horizontal, 12)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    customTextField("Tenure (months)", text: $tenureText, icon: "calendar").keyboardType(.numberPad)
+                }
+                customTextField("Requested Amount (₹)", text: $loanAmountText, icon: "banknote").keyboardType(.numberPad)
+                if let product = selectedProduct {
+                    HStack(spacing: 4) {
+                        Image(systemName: "info.circle").font(.system(size: 11)).foregroundStyle(.secondary)
+                        Text("Range: \(product.amountRangeDisplay)  •  Rate: \(product.rateDisplay)")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+    }
+
+    private var financialSection: some View {
+        formSection(title: "Financial Profile", icon: "chart.bar.doc.horizontal.fill") {
+            VStack(spacing: 16) {
+                HStack(spacing: 16) {
+                    customTextField("Monthly Income (₹)", text: $monthlyIncomeText, icon: "arrow.up.right.circle").keyboardType(.numberPad)
+                    customTextField("Existing EMI (₹)", text: $existingEMIText, icon: "arrow.down.left.circle").keyboardType(.numberPad)
+                }
+                Button {
+                    withAnimation {
+                        applicationsVM.simulateXMLUpload()
+                        xmlParsed = true
+                        if let r = applicationsVM.xmlParseResult {
+                            monthlyIncomeText = String(Int(r.monthlyIncome))
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: xmlParsed ? "checkmark.seal.fill" : "doc.viewfinder.fill")
+                        Text(xmlParsed ? "Bank Statement Parsed" : "Auto-fill via Bank Statement (XML)")
+                            .fontWeight(.semibold)
+                    }
+                    .font(Theme.Typography.subheadline)
+                    .foregroundStyle(xmlParsed ? .white : Theme.Colors.primary)
+                    .frame(maxWidth: .infinity).padding(.vertical, 12)
+                    .background(xmlParsed ? Theme.Colors.success : Theme.Colors.primary.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+        }
+    }
+
+    private var documentsSection: some View {
+        formSection(title: "Required Documents", icon: "doc.on.doc.fill") {
+            VStack(spacing: 12) {
+                if docEntries.isEmpty {
+                    Text("Select a loan product to see required documents")
+                        .font(.system(size: 13)).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.vertical, 8)
+                } else {
+                    ForEach(docEntries) { entry in
+                        docRow(entry: entry)
+                    }
+                }
+            }
+        }
+    }
+
+    private func docRow(entry: DocEntry) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 4) {
+                    Text(entry.label).font(Theme.Typography.subheadline)
+                    if entry.isMandatory {
+                        Text("*").foregroundStyle(Theme.Colors.critical).font(.system(size: 12, weight: .bold))
+                    }
+                }
+                if let err = entry.uploadError {
+                    Text(err).font(.system(size: 10)).foregroundStyle(Theme.Colors.critical)
+                } else if let name = entry.fileName {
+                    Text(name).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
+                }
+            }
+            Spacer()
+            if entry.isUploading {
+                ProgressView().controlSize(.small)
+            } else {
+                Button {
+                    activeDocEntryID = entry.id
+                    showFilePicker = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: entry.fileData != nil ? "checkmark.circle.fill" : "arrow.up.circle")
+                        Text(entry.fileData != nil ? "Attached" : "Attach")
+                    }
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(entry.fileData != nil ? Theme.Colors.success : Theme.Colors.primary)
+                    .padding(.horizontal, 10).padding(.vertical, 6)
+                    .background((entry.fileData != nil ? Theme.Colors.success : Theme.Colors.primary).opacity(0.1))
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(12)
+        .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    // MARK: - Helpers
+
+    private func refreshDocEntries() {
+        guard let product = selectedProduct else { docEntries = []; return }
+        withAnimation {
+            docEntries = product.requiredDocuments.map { req in
+                DocEntry(requiredDocID: req.id, label: req.label, isMandatory: req.isMandatory)
+            }
+            if docEntries.isEmpty {
+                docEntries = [
+                    DocEntry(requiredDocID: "", label: "Identity Document", isMandatory: true),
+                    DocEntry(requiredDocID: "", label: "Address Proof",     isMandatory: true),
+                    DocEntry(requiredDocID: "", label: "Income Proof",      isMandatory: false)
+                ]
+            }
+        }
+    }
+
+    private func attachFile(data: Data, fileName: String, contentType: String, toEntryID: UUID) {
+        guard let idx = docEntries.firstIndex(where: { $0.id == toEntryID }) else { return }
+        docEntries[idx].fileData = data
+        docEntries[idx].fileName = fileName
+        docEntries[idx].contentType = contentType
+        docEntries[idx].uploadError = nil
+    }
+
+    private func runBorrowerLookup() {
+        let email = borrowerEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let phone = borrowerPhone.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !email.isEmpty || !phone.isEmpty else {
+            borrowerLookupHint = ""; borrowerLookupOK = false; return
+        }
+        
+        borrowerLookupHint = "Searching..."
+        Task {
+            do {
+                if let profileID = try await applicationsVM.resolveBorrowerProfileID(email: email, phone: phone) {
+                    await MainActor.run {
+                        borrowerLookupOK = true
+                        borrowerLookupHint = "Borrower found! Profile ID: \(profileID)"
+                        self.borrowerProfileID = profileID
+                    }
+                } else {
+                    await MainActor.run {
+                        borrowerLookupOK = false
+                        borrowerLookupHint = "No matching borrower found in the system. Please ensure they have signed up."
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    borrowerLookupOK = false
+                    borrowerLookupHint = "Error searching for borrower: \(error.localizedDescription)"
+                }
+            }
+        }
     }
 
     private func submit() {
@@ -1255,23 +1374,13 @@ struct CreateApplicationSheet: View {
         let tenure = Int(tenureText) ?? 12
         let income = Double(monthlyIncomeText) ?? 0
         let emi    = Double(existingEMIText) ?? 0
-        let docs = newDocuments.map { doc in
-            LoanDocument(
-                id: UUID().uuidString,
-                type: doc.type,
-                label: doc.label,
-                status: doc.isUploaded ? .uploaded : .pending,
-                uploadedAt: doc.isUploaded ? Date() : nil
-            )
+        guard let selectedProduct else {
+            submitError = "Please select a valid loan product."; showSubmitError = true; return
         }
-
         isSubmitting = true
         Task {
             do {
-                guard let selectedProduct = applicationsVM.availableLoanProducts.first(where: { $0.id == selectedLoanProductID }) else {
-                    throw APIError.invalidArgument("Please select a valid loan product.")
-                }
-                try await applicationsVM.createBackendApplication(
+                let appID = try await applicationsVM.createBackendApplication(
                     borrowerProfileID: borrowerProfileID,
                     borrowerName: borrowerName,
                     borrowerPhone: borrowerPhone,
@@ -1282,12 +1391,10 @@ struct CreateApplicationSheet: View {
                     tenureMonths: tenure,
                     monthlyIncome: income,
                     existingEMI: emi,
-                    documents: docs
+                    documents: []
                 )
-                await MainActor.run {
-                    isSubmitting = false
-                    dismiss()
-                }
+                await uploadDocuments(applicationID: appID)
+                await MainActor.run { isSubmitting = false; dismiss() }
             } catch {
                 await MainActor.run {
                     isSubmitting = false
@@ -1298,46 +1405,103 @@ struct CreateApplicationSheet: View {
         }
     }
 
-    private func scheduleBorrowerLookup() {
-        lookupTask?.cancel()
-
-        let email = borrowerEmail.trimmingCharacters(in: .whitespacesAndNewlines)
-        let phone = borrowerPhone.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        guard !email.isEmpty || !phone.isEmpty else {
-            isResolvingBorrower = false
-            borrowerLookupHint = ""
-            return
-        }
-
-        lookupTask = Task {
-            try? await Task.sleep(nanoseconds: 600_000_000)
-            if Task.isCancelled { return }
-
-            await MainActor.run {
-                isResolvingBorrower = true
-                borrowerLookupHint = ""
-            }
-
+    @MainActor
+    private func uploadDocuments(applicationID: String) async {
+        guard #available(iOS 18.0, *) else { return }
+        for i in docEntries.indices {
+            guard let data = docEntries[i].fileData,
+                  let fileName = docEntries[i].fileName,
+                  let contentType = docEntries[i].contentType else { continue }
+            docEntries[i].isUploading = true
             do {
-                let resolved = try await applicationsVM.resolveBorrowerProfileID(email: email, phone: phone)
-                if Task.isCancelled { return }
-                await MainActor.run {
-                    isResolvingBorrower = false
-                    if let resolved, !resolved.isEmpty {
-                        borrowerProfileID = resolved
-                        borrowerLookupHint = "Borrower profile ID auto-filled."
-                    } else {
-                        borrowerLookupHint = "No borrower found for this email/phone."
-                    }
-                }
+                let mediaID = try await MediaAPI().uploadFile(data: data, fileName: fileName, contentType: contentType)
+                _ = try await LoanAPI().addApplicationDocument(
+                    applicationID: applicationID,
+                    borrowerProfileID: borrowerProfileID,
+                    requiredDocID: docEntries[i].requiredDocID,
+                    mediaFileID: mediaID
+                )
+                docEntries[i].isUploading = false
             } catch {
-                if Task.isCancelled { return }
-                await MainActor.run {
-                    isResolvingBorrower = false
-                    borrowerLookupHint = "Could not auto-fetch borrower profile ID."
-                }
+                docEntries[i].isUploading = false
+                docEntries[i].uploadError = "Upload failed"
             }
         }
+    }
+
+    // MARK: - Form Components
+
+    private func formSection<Content: View>(title: String, icon: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: icon).font(.system(size: 14)).foregroundStyle(Theme.Colors.primary)
+                Text(title).font(.system(size: 14, weight: .bold)).foregroundStyle(.secondary)
+            }
+            content()
+                .padding(16)
+                .background(Theme.Colors.adaptiveSurface(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+        }
+    }
+
+    private func customTextField(_ label: String, text: Binding<String>, icon: String, isMultiline: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label).font(Theme.Typography.caption2).foregroundStyle(.secondary)
+            HStack(spacing: 10) {
+                Image(systemName: icon).font(.system(size: 12))
+                    .foregroundStyle(Theme.Colors.primary.opacity(0.7)).frame(width: 16)
+                if isMultiline {
+                    TextField(label, text: text, axis: .vertical).lineLimit(2...4)
+                } else {
+                    TextField(label, text: text)
+                }
+            }
+            .font(Theme.Typography.subheadline).padding(12)
+            .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - Document File Picker (UIDocumentPickerViewController wrapper)
+
+struct DocumentFilePicker: UIViewControllerRepresentable {
+    var onPick: (Data, String, String) -> Void
+    var onCancel: () -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(onPick: onPick, onCancel: onCancel) }
+
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let types: [UTType] = [.jpeg, .png, .pdf]
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: types)
+        picker.allowsMultipleSelection = false
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ vc: UIDocumentPickerViewController, context: Context) {}
+
+    class Coordinator: NSObject, UIDocumentPickerDelegate {
+        let onPick: (Data, String, String) -> Void
+        let onCancel: () -> Void
+        init(onPick: @escaping (Data, String, String) -> Void, onCancel: @escaping () -> Void) {
+            self.onPick = onPick; self.onCancel = onCancel
+        }
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            guard let url = urls.first else { onCancel(); return }
+            guard url.startAccessingSecurityScopedResource() else { onCancel(); return }
+            defer { url.stopAccessingSecurityScopedResource() }
+            guard let data = try? Data(contentsOf: url) else { onCancel(); return }
+            let ext = url.pathExtension.lowercased()
+            let contentType: String
+            switch ext {
+            case "pdf": contentType = "application/pdf"
+            case "jpg", "jpeg": contentType = "image/jpeg"
+            default: contentType = "image/png"
+            }
+            onPick(data, url.lastPathComponent, contentType)
+        }
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) { onCancel() }
     }
 }

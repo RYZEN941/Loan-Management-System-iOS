@@ -45,7 +45,7 @@ struct HomeDashboardView: View {
                                 .padding(.top, 18)
                             }
 
-                            if viewModel.activeLoans.isEmpty && !viewModel.hasAnyLoanRecord {
+                            if viewModel.activeLoans.isEmpty {
                                 DashboardInfoCard(
                                     title: "No active loans yet",
                                     message: "Once a loan is disbursed, your live balance, EMI schedule, and repayment details will appear here."

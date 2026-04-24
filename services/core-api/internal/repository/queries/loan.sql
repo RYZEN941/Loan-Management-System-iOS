@@ -227,6 +227,18 @@ WHERE la.assigned_officer_user_id = $1
 ORDER BY la.created_at DESC
 LIMIT $2 OFFSET $3;
 
+-- name: ListLoanApplicationsByCreatedByUserID :many
+SELECT
+    la.*,
+    lp.name AS product_name,
+    bb.name AS branch_name
+FROM loan_applications la
+JOIN loan_products lp ON lp.id = la.loan_product_id
+JOIN bank_branches bb ON bb.id = la.branch_id
+WHERE la.created_by_user_id = $1
+ORDER BY la.created_at DESC
+LIMIT $2 OFFSET $3;
+
 -- name: UpdateLoanApplicationStatus :exec
 UPDATE loan_applications
 SET status = $2,

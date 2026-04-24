@@ -447,7 +447,19 @@ func (s *service) ListLoanApplications(ctx context.Context, req *loanv1.ListLoan
 		for _, row := range rows {
 			items = append(items, mapLoanApplicationRowForOfficer(row))
 		}
-	case "dst", "manager":
+	case "dst":
+		rows, err := s.queries.ListLoanApplicationsByCreatedByUserID(ctx, generated.ListLoanApplicationsByCreatedByUserIDParams{
+			CreatedByUserID: uuidToPg(callerUserID),
+			Limit:           limit,
+			Offset:          offset,
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed to list loan applications")
+		}
+		for _, row := range rows {
+			items = append(items, mapLoanApplicationRowForDst(row))
+		}
+	case "manager":
 		branchID, err := s.branchForUserRole(ctx, callerUserID, role)
 		if err != nil {
 			return nil, err
@@ -1695,6 +1707,30 @@ func mapLoanApplicationRowForAdmin(row generated.ListAllLoanApplicationsRow) *lo
 }
 
 func mapLoanApplicationRowForOfficer(row generated.ListLoanApplicationsByAssignedOfficerRow) *loanv1.LoanApplication {
+	return &loanv1.LoanApplication{
+		Id:                       row.ID.String(),
+		ReferenceNumber:          row.ReferenceNumber,
+		PrimaryBorrowerProfileId: row.PrimaryBorrowerProfileID.String(),
+		LoanProductId:            row.LoanProductID.String(),
+		LoanProductName:          row.ProductName,
+		BranchId:                 row.BranchID.String(),
+		BranchName:               row.BranchName,
+		RequestedAmount:          numericToString(row.RequestedAmount),
+		TenureMonths:             row.TenureMonths,
+		Status:                   toProtoApplicationStatus(row.Status),
+		AssignedOfficerUserId:    row.AssignedOfficerUserID.String(),
+		EscalationReason:         textToString(row.EscalationReason),
+		CreatedByUserId:          row.CreatedByUserID.String(),
+		CreatedByRole:            string(row.CreatedByRole),
+		CreatedByChannel:         toProtoCreatedByChannel(row.CreatedByChannel),
+		CreatedAt:                timeToString(row.CreatedAt),
+		UpdatedAt:                timeToString(row.UpdatedAt),
+		ProductSnapshotJson:      string(row.ProductSnapshotJson),
+		OfferedInterestRate:      numericToString(row.OfferedInterestRate),
+	}
+}
+
+func mapLoanApplicationRowForDst(row generated.ListLoanApplicationsByCreatedByUserIDRow) *loanv1.LoanApplication {
 	return &loanv1.LoanApplication{
 		Id:                       row.ID.String(),
 		ReferenceNumber:          row.ReferenceNumber,

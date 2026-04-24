@@ -99,6 +99,7 @@ type Querier interface {
 	ListEmployeeAccounts(ctx context.Context, arg ListEmployeeAccountsParams) ([]ListEmployeeAccountsRow, error)
 	ListLoanApplicationsByAssignedOfficer(ctx context.Context, arg ListLoanApplicationsByAssignedOfficerParams) ([]ListLoanApplicationsByAssignedOfficerRow, error)
 	ListLoanApplicationsByBranchID(ctx context.Context, arg ListLoanApplicationsByBranchIDParams) ([]ListLoanApplicationsByBranchIDRow, error)
+	ListLoanApplicationsByCreatedByUserID(ctx context.Context, arg ListLoanApplicationsByCreatedByUserIDParams) ([]ListLoanApplicationsByCreatedByUserIDRow, error)
 	ListLoanApplicationsForBorrowerProfile(ctx context.Context, arg ListLoanApplicationsForBorrowerProfileParams) ([]ListLoanApplicationsForBorrowerProfileRow, error)
 	ListLoanProducts(ctx context.Context, arg ListLoanProductsParams) ([]LoanProduct, error)
 	ListLoansForAssignedOfficer(ctx context.Context, arg ListLoansForAssignedOfficerParams) ([]Loan, error)

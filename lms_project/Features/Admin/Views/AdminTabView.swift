@@ -10,6 +10,7 @@ import SwiftUI
 
 struct AdminTabView: View {
 
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var authVM: AuthViewModel
     @EnvironmentObject private var adminVM: AdminViewModel
     @EnvironmentObject private var dashboardVM: DashboardViewModel
@@ -72,11 +73,10 @@ struct AdminTabView: View {
                 }
                 .tag(4)
         }
-        .tint(Theme.Colors.primary)
+        .tint(Theme.Colors.adaptivePrimary(colorScheme))
         .sheet(isPresented: $showProfile) {
-            AdminProfileSettingsView()
+            LOProfileView(isModal: true)
                 .environmentObject(authVM)
-                .environmentObject(adminVM)
         }
     }
 }

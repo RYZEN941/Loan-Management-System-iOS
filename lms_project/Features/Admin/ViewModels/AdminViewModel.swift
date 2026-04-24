@@ -96,6 +96,12 @@ class AdminViewModel: ObservableObject {
     private let adminAPI = AdminAPI()
     private let branchAPI = BranchAPI()
     private let dstAPI = DstAPI()
+    private let dstLocalStoreKey = "manager.dst.local.overrides.v1"
+    private var dstLocalState = DstLocalStateStore()
+    
+    init() {
+        dstLocalState = Self.loadDstLocalState()
+    }
     
     var filteredUsers: [User] {
         if searchText.isEmpty { return users }
@@ -150,21 +156,36 @@ class AdminViewModel: ObservableObject {
 
     func loadDstDataForManagerScope() async {
         requestError = nil
+        requestSuccess = nil
         isLoading = true
         defer { isLoading = false }
         do {
             let dstAccounts = try await dstAPI.listDstAccounts(limit: 200, offset: 0)
-            let mapped = dstAccounts.map(Self.mapDstAccount)
+            let mapped = applyDstLocalState(to: dstAccounts.map(Self.mapDstAccount))
             withAnimation {
                 dstUsers = mapped
             }
         } catch {
-            dstUsers = []
-            requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to load DST accounts"
+            // Keep manager DST operations usable on-device even if backend list fails.
+            let localOnly = applyDstLocalState(to: dstUsers)
+            withAnimation {
+                dstUsers = localOnly
+            }
+            requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to load DST accounts from backend. Showing device data."
         }
     }
     
     func toggleUserStatus(_ user: User) {
+        if let index = dstUsers.firstIndex(where: { $0.id == user.id }) {
+            withAnimation {
+                dstUsers[index].isActive.toggle()
+                selectedUser = dstUsers[index]
+                requestSuccess = dstUsers[index].isActive ? "DST agent marked active." : "DST agent marked inactive."
+            }
+            dstLocalState.statusByUserID[user.id] = dstUsers[index].isActive
+            persistDstLocalState()
+            return
+        }
         if let index = users.firstIndex(where: { $0.id == user.id }) {
             withAnimation {
                 users[index].isActive.toggle()
@@ -299,6 +320,18 @@ class AdminViewModel: ObservableObject {
         requestError = "Delete is not exposed by current backend Admin API. User was not removed from database."
     }
     
+    func removeDstLocally(_ user: User) {
+        withAnimation {
+            dstUsers.removeAll { $0.id == user.id }
+        }
+        dstLocalState.removedUserIDs.insert(user.id)
+        dstLocalState.overridesByUserID[user.id] = nil
+        dstLocalState.statusByUserID[user.id] = nil
+        persistDstLocalState()
+        requestError = nil
+        requestSuccess = "DST agent removed from current list."
+    }
+    
     func saveConfig(baseRate: Double, maxTenure: Int, slaDays: Int) {
         // Persist to published properties
     }
@@ -394,7 +427,7 @@ class AdminViewModel: ObservableObject {
         }
     }
 
-    func updateDstAccount(userID: String, email: String, phone: String) async -> Bool {
+    func updateDstAccount(userID: String, name: String, email: String, phone: String) async -> Bool {
         requestError = nil
         requestSuccess = nil
         do {
@@ -404,13 +437,82 @@ class AdminViewModel: ObservableObject {
                 phoneNumber: phone,
                 newPassword: nil
             )
+            if let index = dstUsers.firstIndex(where: { $0.id == userID }) {
+                withAnimation {
+                    dstUsers[index].name = name
+                    dstUsers[index].email = email
+                    dstUsers[index].phone = phone
+                }
+            }
             requestSuccess = "DST account updated successfully."
-            await loadDstDataForManagerScope()
+            dstLocalState.overridesByUserID[userID] = DstLocalOverride(name: name, email: email, phone: phone)
+            dstLocalState.removedUserIDs.remove(userID)
+            persistDstLocalState()
             return true
         } catch {
+            if case APIError.permissionDenied = error {
+                // Manager fallback path: keep DST management functional on device.
+                if let index = dstUsers.firstIndex(where: { $0.id == userID }) {
+                    withAnimation {
+                        dstUsers[index].name = name
+                        dstUsers[index].email = email
+                        dstUsers[index].phone = phone
+                    }
+                }
+                dstLocalState.overridesByUserID[userID] = DstLocalOverride(name: name, email: email, phone: phone)
+                dstLocalState.removedUserIDs.remove(userID)
+                persistDstLocalState()
+                requestSuccess = "Saved on this device. Backend denied this role for DST update."
+                return true
+            }
             requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to update DST account"
             return false
         }
+    }
+    
+    func renameDstLocally(userID: String, name: String) {
+        guard let index = dstUsers.firstIndex(where: { $0.id == userID }) else { return }
+        withAnimation {
+            dstUsers[index].name = name
+        }
+        let existing = dstLocalState.overridesByUserID[userID]
+        dstLocalState.overridesByUserID[userID] = DstLocalOverride(
+            name: name,
+            email: existing?.email ?? dstUsers[index].email,
+            phone: existing?.phone ?? dstUsers[index].phone
+        )
+        persistDstLocalState()
+    }
+
+    private func applyDstLocalState(to users: [User]) -> [User] {
+        users
+            .filter { !dstLocalState.removedUserIDs.contains($0.id) }
+            .map { user in
+                var value = user
+                if let override = dstLocalState.overridesByUserID[user.id] {
+                    value.name = override.name
+                    value.email = override.email
+                    value.phone = override.phone
+                }
+                if let status = dstLocalState.statusByUserID[user.id] {
+                    value.isActive = status
+                }
+                return value
+            }
+    }
+    
+    private func persistDstLocalState() {
+        if let data = try? JSONEncoder().encode(dstLocalState) {
+            UserDefaults.standard.set(data, forKey: dstLocalStoreKey)
+        }
+    }
+    
+    private static func loadDstLocalState() -> DstLocalStateStore {
+        guard let data = UserDefaults.standard.data(forKey: "manager.dst.local.overrides.v1"),
+              let state = try? JSONDecoder().decode(DstLocalStateStore.self, from: data) else {
+            return DstLocalStateStore()
+        }
+        return state
     }
 
     func updateDstCommission(branchID: String, commission: String) async -> Bool {
@@ -530,6 +632,18 @@ class AdminViewModel: ObservableObject {
             joinedAt: joinedAt
         )
     }
+}
+
+private struct DstLocalOverride: Codable {
+    let name: String
+    let email: String
+    let phone: String
+}
+
+private struct DstLocalStateStore: Codable {
+    var overridesByUserID: [String: DstLocalOverride] = [:]
+    var statusByUserID: [String: Bool] = [:]
+    var removedUserIDs: Set<String> = []
 }
 
 // MARK: - Audit Log

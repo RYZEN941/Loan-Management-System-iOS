@@ -78,7 +78,7 @@ struct AdminLoansView: View {
                         } label: {
                             Image(systemName: "plus")
                                 .font(.system(size: 20, weight: .light))
-                                .foregroundStyle(Theme.Colors.primary)
+                                .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
                                 .frame(width: 44, height: 44)
                         }
                         .buttonStyle(.plain)
@@ -165,18 +165,18 @@ struct LoanProductCard: View {
                 // Symbol
                 ZStack {
                     RoundedRectangle(cornerRadius: Theme.Radius.md)
-                        .fill(Theme.Colors.primary.opacity(0.08))
+                        .fill(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.10))
                         .frame(width: 44, height: 44)
                     Image(systemName: product.icon)
                         .font(.system(size: 18))
-                        .foregroundStyle(Theme.Colors.primary)
+                        .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(product.name)
                         .font(.system(size: 16, weight: .semibold))
                     HStack(spacing: 6) {
-                        pill(product.categoryLabel, color: Theme.Colors.primary)
+                        pill(product.categoryLabel, color: Theme.Colors.adaptivePrimary(colorScheme))
                         if !product.isActive { pill("Inactive", color: .secondary) }
                     }
                 }
@@ -187,14 +187,14 @@ struct LoanProductCard: View {
                     Button { loansVM.editingLoan = product } label: {
                         Image(systemName: "pencil")
                             .font(.system(size: 14))
-                            .foregroundStyle(.secondary.opacity(0.6))
+                            .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
 
                     Button { loansVM.deleteLoanProduct(product) } label: {
                         Image(systemName: "trash")
                             .font(.system(size: 14))
-                            .foregroundStyle(.red.opacity(0.4))
+                            .foregroundStyle(Theme.Colors.critical)
                     }
                     .buttonStyle(.plain)
                 }

@@ -12,6 +12,13 @@ struct AdminUsersView: View {
     
     @State private var showCreateUser = false
     @State private var isEditing = false
+
+    private enum UserScope: String, CaseIterable, Identifiable {
+        case staff = "Staff"
+        case dst = "DST"
+        var id: String { rawValue }
+    }
+    @State private var scope: UserScope = .staff
     
     var body: some View {
         NavigationStack {
@@ -38,10 +45,13 @@ struct AdminUsersView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
-                        showCreateUser = true
+                        if scope == .staff {
+                            showCreateUser = true
+                        }
                     } label: {
                         Image(systemName: "plus")
                     }
+                    .disabled(scope != .staff)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     ProfileNavButton(showProfile: $showProfile)
@@ -49,6 +59,7 @@ struct AdminUsersView: View {
             }
             .onAppear {
                 adminVM.loadData()
+                Task { await adminVM.loadDstDataForManagerScope() }
             }
             .sheet(isPresented: $showCreateUser) {
                 CreateUserSheet(adminVM: adminVM)
@@ -81,6 +92,21 @@ struct AdminUsersView: View {
     
     private var userListPanel: some View {
         VStack(spacing: 0) {
+            Picker("Scope", selection: $scope) {
+                ForEach(UserScope.allCases) { item in
+                    Text(item.rawValue).tag(item)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.top, Theme.Spacing.md)
+            .onChange(of: scope) { _, _ in
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    adminVM.selectedUser = nil
+                    isEditing = false
+                }
+            }
+
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
@@ -94,11 +120,11 @@ struct AdminUsersView: View {
             .padding(.top, Theme.Spacing.sm)
             
             HStack {
-                Text("\(adminVM.activeUsersCount) active")
+                Text("\(activeCount) active")
                     .font(Theme.Typography.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("\(adminVM.users.count) total")
+                Text("\(totalCount) total")
                     .font(Theme.Typography.caption)
                     .foregroundStyle(.tertiary)
             }
@@ -109,7 +135,7 @@ struct AdminUsersView: View {
             
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    ForEach(adminVM.filteredUsers) { user in
+                    ForEach(filteredList) { user in
                         UserRow(user: user, isSelected: adminVM.selectedUser?.id == user.id)
                             .onTapGesture {
                                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -131,7 +157,11 @@ struct AdminUsersView: View {
         Group {
             if let user = adminVM.selectedUser {
                 if isEditing {
-                    InlineEditUserView(adminVM: adminVM, user: user, isEditing: $isEditing)
+                    if scope == .dst {
+                        InlineEditDstUserView(adminVM: adminVM, user: user, isEditing: $isEditing)
+                    } else {
+                        InlineEditUserView(adminVM: adminVM, user: user, isEditing: $isEditing)
+                    }
                 } else {
                     ScrollView {
                         VStack(spacing: Theme.Spacing.xl) {
@@ -205,12 +235,37 @@ struct AdminUsersView: View {
                     Image(systemName: "person.circle")
                         .font(.system(size: 40))
                         .foregroundStyle(.tertiary)
-                    Text("Select a user to view details")
+                    Text(scope == .dst ? "Select a DST agent to view details" : "Select a user to view details")
                         .font(Theme.Typography.subheadline)
                         .foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+        }
+    }
+
+    private var filteredList: [User] {
+        switch scope {
+        case .staff:
+            return adminVM.filteredUsers
+        case .dst:
+            if adminVM.searchText.isEmpty { return adminVM.dstUsers }
+            return adminVM.dstUsers.filter {
+                $0.name.localizedCaseInsensitiveContains(adminVM.searchText) ||
+                $0.email.localizedCaseInsensitiveContains(adminVM.searchText) ||
+                $0.id.localizedCaseInsensitiveContains(adminVM.searchText)
+            }
+        }
+    }
+
+    private var activeCount: Int {
+        filteredList.filter { $0.isActive }.count
+    }
+
+    private var totalCount: Int {
+        switch scope {
+        case .staff: return adminVM.users.count
+        case .dst: return adminVM.dstUsers.count
         }
     }
     
@@ -276,6 +331,94 @@ struct UserRow: View {
         .padding(.vertical, 10)
         .background(isSelected ? Theme.Colors.primaryLight.opacity(colorScheme == .dark ? 0.2 : 1) : Color.clear)
         .contentShape(Rectangle())
+    }
+}
+
+// MARK: - Inline Edit DST User View
+
+struct InlineEditDstUserView: View {
+    @ObservedObject var adminVM: AdminViewModel
+    let user: User
+    @Binding var isEditing: Bool
+    @Environment(\.colorScheme) private var colorScheme
+
+    @State private var name: String
+    @State private var email: String
+    @State private var phone: String
+    @State private var isSaving = false
+
+    init(adminVM: AdminViewModel, user: User, isEditing: Binding<Bool>) {
+        self.adminVM = adminVM
+        self.user = user
+        self._isEditing = isEditing
+        _name = State(initialValue: user.name)
+        _email = State(initialValue: user.email)
+        _phone = State(initialValue: user.phone)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button("Cancel") {
+                    withAnimation { isEditing = false }
+                }
+                .font(Theme.Typography.subheadline)
+                .foregroundStyle(Theme.Colors.critical)
+
+                Spacer()
+                Text("Edit DST")
+                    .font(Theme.Typography.headline)
+                Spacer()
+
+                Button("Save") {
+                    isSaving = true
+                    Task {
+                        let success = await adminVM.updateDstAccount(
+                            userID: user.id,
+                            name: name,
+                            email: email,
+                            phone: phone
+                        )
+                        await MainActor.run {
+                            isSaving = false
+                            if success {
+                                withAnimation { isEditing = false }
+                            }
+                        }
+                    }
+                }
+                .font(Theme.Typography.subheadline.weight(.semibold))
+                .foregroundStyle(Theme.Colors.primary)
+                .disabled(isSaving)
+            }
+            .padding()
+            .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+
+            Form {
+                Section("Edit Information") {
+                    TextField("Full Name", text: $name)
+                    TextField("Email Address", text: $email)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                    TextField("Phone Number", text: $phone)
+                        .keyboardType(.phonePad)
+                }
+
+                Section("Account (Read-only)") {
+                    HStack {
+                        Text("User ID").foregroundStyle(.secondary)
+                        Spacer()
+                        Text(user.id).foregroundStyle(.primary)
+                    }
+                    HStack {
+                        Text("Branch").foregroundStyle(.secondary)
+                        Spacer()
+                        Text(user.branch).foregroundStyle(.primary)
+                    }
+                }
+            }
+        }
+        .background(Theme.Colors.adaptiveBackground(colorScheme))
     }
 }
 

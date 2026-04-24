@@ -53,13 +53,17 @@ struct ManagerDstView: View {
                 set: { if !$0 { agentToDelete = nil } }
             )) {
                 Button("Cancel", role: .cancel) {}
-                Button("Delete", role: .destructive) {
+                Button("Remove", role: .destructive) {
                     if let agent = agentToDelete {
-                        adminVM.deleteUser(agent)
+                        adminVM.removeDstLocally(agent)
                     }
                 }
             } message: {
-                Text("Are you sure you want to remove \(agentToDelete?.name ?? "this agent")? This action cannot be undone.")
+                Text("Remove \(agentToDelete?.name ?? "this agent") from this list? This is a frontend-only action.")
+            }
+            .overlay(alignment: .top) {
+                feedbackBanner
+                    .padding(.top, 8)
             }
             .onAppear {
                 adminVM.loadData()
@@ -177,6 +181,31 @@ struct ManagerDstView: View {
                 }
             }
         }
+    }
+    
+    private var feedbackBanner: some View {
+        Group {
+            if let error = adminVM.requestError, !error.isEmpty {
+                banner(text: error, color: Theme.Colors.adaptiveCritical(colorScheme))
+            } else if let success = adminVM.requestSuccess, !success.isEmpty {
+                banner(text: success, color: Theme.Colors.adaptiveSuccess(colorScheme))
+            }
+        }
+    }
+    
+    private func banner(text: String, color: Color) -> some View {
+        Text(text)
+            .font(Theme.Typography.caption)
+            .foregroundStyle(.primary)
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.vertical, 10)
+            .background(ManagerTheme.Colors.surface(colorScheme))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.md)
+                    .stroke(color.opacity(0.45), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
+            .padding(.horizontal, Theme.Spacing.lg)
     }
 }
 
@@ -333,7 +362,6 @@ private struct AddDstSheet: View {
     @State private var email = ""
     @State private var phone = ""
     @State private var password = ""
-    @State private var selectedBranchID = ""
     @State private var isSaving = false
     
     var body: some View {
@@ -357,19 +385,6 @@ private struct AddDstSheet: View {
                 } footer: {
                     Text("Agents will use their email and this password to sign in.")
                 }
-                
-                Section {
-                    Picker("Assigned Branch", selection: $selectedBranchID) {
-                        ForEach(adminVM.branches) { branch in
-                            Text(branch.name).tag(branch.id)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                } header: {
-                    Text("Workplace")
-                } footer: {
-                    Text("Agents are assigned to your manager scope in backend; this selector uses existing branch records.")
-                }
             }
             .navigationTitle("New DST Account")
             .navigationBarTitleDisplayMode(.inline)
@@ -383,11 +398,6 @@ private struct AddDstSheet: View {
                     }
                     .disabled(name.isEmpty || email.isEmpty || password.isEmpty || isSaving)
                     .fontWeight(.bold)
-                }
-            }
-            .onAppear {
-                if selectedBranchID.isEmpty {
-                    selectedBranchID = adminVM.branches.first?.id ?? ""
                 }
             }
         }
@@ -487,6 +497,7 @@ private struct EditDstSheet: View {
         Task {
             let success = await adminVM.updateDstAccount(
                 userID: agent.id,
+                name: name,
                 email: email,
                 phone: phone
             )

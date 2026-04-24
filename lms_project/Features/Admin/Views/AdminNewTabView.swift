@@ -6,11 +6,13 @@
 import SwiftUI
 
 struct AdminNewTabView: View {
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var selectedTab = 0
     @State private var showProfile = false
 
     // EnvironmentObjects for globally provided modules
+    @EnvironmentObject var authVM: AuthViewModel
     @EnvironmentObject var dashboardVM: DashboardViewModel
     @EnvironmentObject var adminVM: AdminViewModel
     
@@ -46,10 +48,10 @@ struct AdminNewTabView: View {
                 .tabItem { Label("Reports", systemImage: "chart.pie.fill") }
                 .tag(4)
         }
-        .tint(Theme.Colors.primary)
+        .tint(Theme.Colors.adaptivePrimary(colorScheme))
         .sheet(isPresented: $showProfile) {
-            // Using the new enhanced settings view for Admin profile
-            AdminProfileSettingsView()
+            LOProfileView(isModal: true)
+                .environmentObject(authVM)
         }
     }
 }

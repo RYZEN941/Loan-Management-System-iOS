@@ -109,7 +109,7 @@ struct AdminSystemControlView: View {
                     } label: {
                         Image(systemName: "sidebar.left")
                             .font(.system(size: 16))
-                            .foregroundStyle(Theme.Colors.primary)
+                            .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) { ProfileNavButton(showProfile: $showProfile) }
@@ -136,7 +136,7 @@ struct AdminSystemControlView: View {
                         HStack(spacing: Theme.Spacing.sm) {
                             Image(systemName: section.icon)
                                 .font(.system(size: 15))
-                                .foregroundStyle(isSelected ? Theme.Colors.primary : Color.secondary)
+                                .foregroundStyle(isSelected ? Theme.Colors.adaptivePrimary(colorScheme) : Color.secondary)
                                 .frame(width: 22)
                             Text(section.rawValue)
                                 .font(Theme.Typography.caption)
@@ -147,7 +147,7 @@ struct AdminSystemControlView: View {
                         }
                         .padding(.horizontal, Theme.Spacing.md)
                         .padding(.vertical, 14)
-                        .background(isSelected ? Theme.Colors.primaryLight.opacity(colorScheme == .dark ? 0.15 : 0.8) : Color.clear)
+                        .background(isSelected ? Theme.Colors.adaptivePrimary(colorScheme).opacity(colorScheme == .dark ? 0.22 : 0.10) : Color.clear)
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)

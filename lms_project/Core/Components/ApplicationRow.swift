@@ -95,7 +95,7 @@ struct ApplicationRow: View {
         .padding(.vertical, 14)
         .background(
             isSelected
-            ? Theme.Colors.lightBlue
+            ? (colorScheme == .dark ? Theme.Colors.adaptiveSurfaceSecondary(colorScheme) : Theme.Colors.lightBlue)
             : Color.clear
         )
         .overlay(

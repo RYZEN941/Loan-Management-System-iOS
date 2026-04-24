@@ -38,7 +38,7 @@ struct LoginView: View {
 
     private var loginBackground: some View {
         ZStack {
-            (colorScheme == .dark ? Color(hex: "0F0F13") : Color(hex: "F5F5F7"))
+            Theme.Colors.adaptiveBackground(colorScheme)
                 .ignoresSafeArea()
 
             Circle()
@@ -101,7 +101,19 @@ private struct LoginBrandPanel: View {
 
     var body: some View {
         ZStack {
-            (colorScheme == .dark ? Color(hex: "1A1A2E") : Color(hex: "0052CC"))
+            (colorScheme == .dark ? Theme.Colors.adaptiveBackground(colorScheme) : Color(hex: "0052CC"))
+                .overlay {
+                    if colorScheme == .dark {
+                        LinearGradient(
+                            colors: [
+                                Theme.Colors.adaptivePrimary(colorScheme).opacity(0.35),
+                                Color.clear
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    }
+                }
                 .ignoresSafeArea()
 
             // Dot grid
@@ -230,7 +242,7 @@ struct CredentialsStep: View {
 
                     Text("Karz.")
                         .font(.system(size: 32, weight: .bold))
-                        .foregroundStyle(colorScheme == .dark ? .white : Color(hex: "1A1A2E"))
+                        .foregroundStyle(colorScheme == .dark ? .white : .primary)
                         .opacity(appeared ? 1 : 0)
 
                     Text("Sign in to your account")
@@ -264,8 +276,11 @@ struct CredentialsStep: View {
                 }
                 .background(
                     RoundedRectangle(cornerRadius: 14)
-                        .fill(colorScheme == .dark ? Color(hex: "2C2C2E") : Color.white)
-                        .shadow(color: .black.opacity(colorScheme == .dark ? 0.3 : 0.07), radius: 14, x: 0, y: 4)
+                        .fill(Theme.Colors.adaptiveSurface(colorScheme))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
                 )
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 16)
@@ -298,7 +313,7 @@ struct CredentialsStep: View {
                         .foregroundStyle(.white)
                         .frame(width: 280, height: 50)
                         .background(LinearGradient(
-                            colors: [Theme.Colors.primary, Color(hex: "0047BB")],
+                            colors: [Theme.Colors.primary, Theme.Colors.adaptivePrimary(colorScheme)],
                             startPoint: .topLeading, endPoint: .bottomTrailing
                         ))
                         .clipShape(RoundedRectangle(cornerRadius: 14))
@@ -371,7 +386,7 @@ struct MFASelectionStep: View {
 
                     Text("Two-Factor Verification")
                         .font(.system(size: 26, weight: .bold))
-                        .foregroundStyle(colorScheme == .dark ? .white : Color(hex: "1A1A2E"))
+                        .foregroundStyle(colorScheme == .dark ? .white : .primary)
                         .multilineTextAlignment(.center)
                         .opacity(appeared ? 1 : 0)
 
@@ -403,7 +418,7 @@ struct MFASelectionStep: View {
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(width: 280, height: 50)
-                        .background(LinearGradient(colors: [Theme.Colors.primary, Color(hex: "0047BB")], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .background(LinearGradient(colors: [Theme.Colors.primary, Theme.Colors.adaptivePrimary(colorScheme)], startPoint: .topLeading, endPoint: .bottomTrailing))
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 .buttonStyle(.plain)
@@ -436,7 +451,7 @@ private struct MFAMethodCard: View {
                     Circle()
                         .fill(isSelected
                               ? Theme.Colors.primary.opacity(0.12)
-                              : (colorScheme == .dark ? Color(hex: "3A3A3C") : Color(hex: "F1F3F5"))
+                              : Theme.Colors.adaptiveSurfaceSecondary(colorScheme)
                         )
                         .frame(width: 44, height: 44)
                     Image(systemName: method.icon)
@@ -467,12 +482,14 @@ private struct MFAMethodCard: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 14)
-                    .fill(colorScheme == .dark ? Color(hex: "2C2C2E") : Color.white)
-                    .shadow(color: .black.opacity(colorScheme == .dark ? 0.28 : 0.05), radius: 8, x: 0, y: 2)
+                    .fill(Theme.Colors.adaptiveSurface(colorScheme))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
-                    .strokeBorder(isSelected ? Theme.Colors.primary.opacity(0.55) : Color.clear, lineWidth: 1.5)
+                    .strokeBorder(
+                        isSelected ? Theme.Colors.primary.opacity(0.55) : Theme.Colors.adaptiveBorder(colorScheme),
+                        lineWidth: isSelected ? 1.5 : 1
+                    )
             )
         }
         .buttonStyle(.plain)
@@ -528,7 +545,7 @@ struct MFAVerificationStep: View {
 
                     Text("Enter Verification Code")
                         .font(.system(size: 26, weight: .bold))
-                        .foregroundStyle(colorScheme == .dark ? .white : Color(hex: "1A1A2E"))
+                        .foregroundStyle(colorScheme == .dark ? .white : .primary)
                         .opacity(appeared ? 1 : 0)
 
                     // Show the masked/target contact returned by backend
@@ -574,7 +591,7 @@ struct MFAVerificationStep: View {
                         .foregroundStyle(.white)
                         .frame(width: 280, height: 50)
                         .background(otp.count >= 6
-                            ? LinearGradient(colors: [Theme.Colors.primary, Color(hex: "0047BB")], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            ? LinearGradient(colors: [Theme.Colors.primary, Theme.Colors.adaptivePrimary(colorScheme)], startPoint: .topLeading, endPoint: .bottomTrailing)
                             : LinearGradient(colors: [Color.secondary.opacity(0.35), Color.secondary.opacity(0.35)], startPoint: .topLeading, endPoint: .bottomTrailing)
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 14))
@@ -648,7 +665,7 @@ struct ForcePasswordChangeStep: View {
 
                     Text("Password Update Required")
                         .font(.system(size: 26, weight: .bold))
-                        .foregroundStyle(colorScheme == .dark ? .white : Color(hex: "1A1A2E"))
+                        .foregroundStyle(colorScheme == .dark ? .white : .primary)
                         .multilineTextAlignment(.center)
                         .opacity(appeared ? 1 : 0)
 
@@ -725,8 +742,11 @@ struct ForcePasswordChangeStep: View {
                 }
                 .background(
                     RoundedRectangle(cornerRadius: 14)
-                        .fill(colorScheme == .dark ? Color(hex: "2C2C2E") : Color.white)
-                        .shadow(color: .black.opacity(colorScheme == .dark ? 0.3 : 0.07), radius: 14, x: 0, y: 4)
+                        .fill(Theme.Colors.adaptiveSurface(colorScheme))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
                 )
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 16)
@@ -757,7 +777,7 @@ struct ForcePasswordChangeStep: View {
                     .foregroundStyle(.white)
                     .frame(width: 280, height: 50)
                     .background(LinearGradient(
-                        colors: [Theme.Colors.primary, Color(hex: "0047BB")],
+                        colors: [Theme.Colors.primary, Theme.Colors.adaptivePrimary(colorScheme)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ))
@@ -813,8 +833,7 @@ private struct OTPBoxesView: View {
 
                     ZStack {
                         RoundedRectangle(cornerRadius: 11)
-                            .fill(colorScheme == .dark ? Color(hex: "2C2C2E") : Color.white)
-                            .shadow(color: .black.opacity(0.07), radius: 5, x: 0, y: 2)
+                            .fill(Theme.Colors.adaptiveSurface(colorScheme))
                         RoundedRectangle(cornerRadius: 11)
                             .strokeBorder(
                                 isActive

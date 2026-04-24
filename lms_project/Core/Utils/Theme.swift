@@ -41,15 +41,15 @@ enum Theme {
         static let surfaceSecondary  = Color.white
         static let border            = Color.black.opacity(0.06)
 
-        // Surfaces (dark mode) - Updated
-        static let backgroundDark       = Color(hex: "#0F172A")
-        static let surfaceDark          = Color(hex: "#111827")
-        static let surfaceSecondaryDark = Color(hex: "#1F2937")
-        static let borderDark           = Color(hex: "#374151")
+        // Surfaces (dark mode) - Aligned with Manager palette
+        static let backgroundDark       = Color(hex: "#111622")
+        static let surfaceDark          = Color(hex: "#1A2130")
+        static let surfaceSecondaryDark = Color(hex: "#232C3E")
+        static let borderDark           = Color(hex: "#313C52")
         
-        // Brand Blues (Dark)
-        static let primaryDark          = Color(hex: "#5B7CFF")
-        static let secondaryDark        = Color(hex: "#7C95FF")
+        // Brand Blues (Dark) - Aligned with Manager palette
+        static let primaryDark          = Color(hex: "#7C92E8")
+        static let secondaryDark        = Color(hex: "#9EAFEF")
         static let lightBlueDark        = Color(hex: "#1E3A8A")
 
         // Header Gradient (Adaptive)

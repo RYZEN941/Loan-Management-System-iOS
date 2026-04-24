@@ -20,52 +20,52 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
   typealias Version = _2
 }
 
-struct Branch_V1_BankBranch: Sendable {
+public struct Branch_V1_BankBranch: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var id: String = String()
+  public var id: String = String()
 
-  var name: String = String()
+  public var name: String = String()
 
-  var region: String = String()
+  public var region: String = String()
 
-  var city: String = String()
+  public var city: String = String()
 
-  var dstCommission: String = String()
+  public var dstCommission: String = String()
 
-  var createdAt: String = String()
+  public var createdAt: String = String()
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct Branch_V1_ListBranchesRequest: Sendable {
+public struct Branch_V1_ListBranchesRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var limit: Int32 = 0
+  public var limit: Int32 = 0
 
-  var offset: Int32 = 0
+  public var offset: Int32 = 0
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct Branch_V1_ListBranchesResponse: Sendable {
+public struct Branch_V1_ListBranchesResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var branches: [Branch_V1_BankBranch] = []
+  public var branches: [Branch_V1_BankBranch] = []
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -73,10 +73,10 @@ struct Branch_V1_ListBranchesResponse: Sendable {
 fileprivate let _protobuf_package = "branch.v1"
 
 extension Branch_V1_BankBranch: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".BankBranch"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}name\0\u{1}region\0\u{1}city\0\u{3}dst_commission\0\u{3}created_at\0")
+  public static let protoMessageName: String = _protobuf_package + ".BankBranch"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}name\0\u{1}region\0\u{1}city\0\u{3}dst_commission\0\u{3}created_at\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -93,7 +93,7 @@ extension Branch_V1_BankBranch: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.id.isEmpty {
       try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
     }
@@ -115,7 +115,7 @@ extension Branch_V1_BankBranch: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Branch_V1_BankBranch, rhs: Branch_V1_BankBranch) -> Bool {
+  public static func ==(lhs: Branch_V1_BankBranch, rhs: Branch_V1_BankBranch) -> Bool {
     if lhs.id != rhs.id {return false}
     if lhs.name != rhs.name {return false}
     if lhs.region != rhs.region {return false}
@@ -128,10 +128,10 @@ extension Branch_V1_BankBranch: SwiftProtobuf.Message, SwiftProtobuf._MessageImp
 }
 
 extension Branch_V1_ListBranchesRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".ListBranchesRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}limit\0\u{1}offset\0")
+  public static let protoMessageName: String = _protobuf_package + ".ListBranchesRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}limit\0\u{1}offset\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -144,7 +144,7 @@ extension Branch_V1_ListBranchesRequest: SwiftProtobuf.Message, SwiftProtobuf._M
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if self.limit != 0 {
       try visitor.visitSingularInt32Field(value: self.limit, fieldNumber: 1)
     }
@@ -154,7 +154,7 @@ extension Branch_V1_ListBranchesRequest: SwiftProtobuf.Message, SwiftProtobuf._M
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Branch_V1_ListBranchesRequest, rhs: Branch_V1_ListBranchesRequest) -> Bool {
+  public static func ==(lhs: Branch_V1_ListBranchesRequest, rhs: Branch_V1_ListBranchesRequest) -> Bool {
     if lhs.limit != rhs.limit {return false}
     if lhs.offset != rhs.offset {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -163,10 +163,10 @@ extension Branch_V1_ListBranchesRequest: SwiftProtobuf.Message, SwiftProtobuf._M
 }
 
 extension Branch_V1_ListBranchesResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".ListBranchesResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}branches\0")
+  public static let protoMessageName: String = _protobuf_package + ".ListBranchesResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}branches\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -178,14 +178,14 @@ extension Branch_V1_ListBranchesResponse: SwiftProtobuf.Message, SwiftProtobuf._
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.branches.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.branches, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Branch_V1_ListBranchesResponse, rhs: Branch_V1_ListBranchesResponse) -> Bool {
+  public static func ==(lhs: Branch_V1_ListBranchesResponse, rhs: Branch_V1_ListBranchesResponse) -> Bool {
     if lhs.branches != rhs.branches {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

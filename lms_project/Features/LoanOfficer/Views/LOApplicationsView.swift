@@ -133,23 +133,26 @@ struct LOApplicationsView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 16)
 
-            // Filter chips — only key statuses
+            // Filter chips — all relevant LO statuses
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     AppFilterChip(label: "All", isSelected: applicationsVM.filterStatus == nil) {
                         withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = nil }
                     }
-                    AppFilterChip(label: "Pending", isSelected: applicationsVM.filterStatus == .pending) {
+                    AppFilterChip(label: "New", isSelected: applicationsVM.filterStatus == .pending) {
                         withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .pending }
                     }
-                    AppFilterChip(label: "In Review", isSelected: applicationsVM.filterStatus == .underReview) {
-                        withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .underReview }
+                    AppFilterChip(label: "My Review", isSelected: applicationsVM.filterStatus == .officerReview) {
+                        withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .officerReview }
+                    }
+                    AppFilterChip(label: "Forwarded", isSelected: applicationsVM.filterStatus == .officerApproved) {
+                        withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .officerApproved }
                     }
                     AppFilterChip(label: "Approved", isSelected: applicationsVM.filterStatus == .approved) {
                         withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .approved }
                     }
-                    AppFilterChip(label: "Rejected", isSelected: applicationsVM.filterStatus == .rejected) {
-                        withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .rejected }
+                    AppFilterChip(label: "Rejected", isSelected: applicationsVM.filterStatus == .officerRejected) {
+                        withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .officerRejected }
                     }
                 }
                 .padding(.horizontal, 16)
@@ -401,6 +404,14 @@ struct LOApplicationsView: View {
                     uploadedFiles: applicationsVM.uploadedFiles[doc.id] ?? [],
                     onUpload: { file in
                         applicationsVM.recordUploadedFile(file, forDocumentId: doc.id)
+                    },
+                    onVerify: { approved, reason in
+                        applicationsVM.verifyDocument(
+                            documentId: doc.id,
+                            applicationId: app.id,
+                            approved: approved,
+                            rejectionReason: reason
+                        )
                     }
                 )
             }
@@ -666,6 +677,8 @@ struct DocumentUploadRow: View {
     let doc: LoanDocument
     let uploadedFiles: [UploadedDocFile]
     let onUpload: (UploadedDocFile) -> Void
+    /// Callback wired to ApplicationsViewModel.verifyDocument(documentId:status:reason:)
+    var onVerify: ((Bool, String?) -> Void)? = nil
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var showPicker     = false
@@ -673,6 +686,8 @@ struct DocumentUploadRow: View {
     @State private var showOptions    = false
     @State private var selectedPhotos : [PhotosPickerItem] = []
     @State private var previewFile    : UploadedDocFile?   = nil
+    @State private var showRejectDialog = false
+    @State private var rejectReason     = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -693,6 +708,49 @@ struct DocumentUploadRow: View {
                 }
 
                 Spacer()
+
+                // Verify / Reject actions (shown once files are uploaded)
+                if !uploadedFiles.isEmpty && doc.status != .verified {
+                    HStack(spacing: 6) {
+                        if doc.status != .verified {
+                            Button {
+                                onVerify?(true, nil)
+                            } label: {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "checkmark.circle")
+                                        .font(.system(size: 12))
+                                    Text("Verify")
+                                        .font(.system(size: 11, weight: .semibold))
+                                }
+                                .foregroundStyle(Theme.Colors.success)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 5)
+                                .background(Theme.Colors.success.opacity(0.1))
+                                .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        if doc.status != .rejected {
+                            Button {
+                                rejectReason = ""
+                                showRejectDialog = true
+                            } label: {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "xmark.circle")
+                                        .font(.system(size: 12))
+                                    Text("Reject")
+                                        .font(.system(size: 11, weight: .semibold))
+                                }
+                                .foregroundStyle(Theme.Colors.critical)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 5)
+                                .background(Theme.Colors.critical.opacity(0.1))
+                                .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
 
                 // Upload button
                 Button {
@@ -777,6 +835,15 @@ struct DocumentUploadRow: View {
         // Document preview sheet
         .sheet(item: $previewFile) { file in
             DocumentPreviewSheet(file: file)
+        }
+        .alert("Reject Document", isPresented: $showRejectDialog) {
+            TextField("Rejection reason", text: $rejectReason)
+            Button("Cancel", role: .cancel) { }
+            Button("Reject", role: .destructive) {
+                onVerify?(false, rejectReason.isEmpty ? "Rejected by Loan Officer" : rejectReason)
+            }
+        } message: {
+            Text("Provide a reason for rejecting \(doc.label).")
         }
     }
 
@@ -1186,57 +1253,21 @@ struct CreateApplicationSheet: View {
     private func submit(draft: Bool) {
         let amount = Double(loanAmountText) ?? 0
         let tenure = Int(tenureText) ?? 12
-        let income = Double(monthlyIncomeText) ?? 0
-        let emi    = Double(existingEMIText) ?? 0
-
-        let newApp = LoanApplication(
-            id: "APP-\(Int(Date().timeIntervalSince1970))",
-            borrower: Borrower(
-                name: borrowerName,
-                dob: Calendar.current.date(byAdding: .year, value: -30, to: Date())!,
-                address: borrowerAddress.isEmpty ? "Address TBD" : borrowerAddress,
-                employer: "To be verified",
-                employmentType: "Salaried",
-                phone: borrowerPhone,
-                email: borrowerEmail
-            ),
-            loan: LoanDetails(
-                amount: amount,
-                type: selectedLoanType,
-                tenure: tenure,
-                interestRate: selectedLoanType == .homeLoan ? 8.5 : 12.0,
-                emi: amount * 0.008
-            ),
-            financials: Financials(
-                monthlyIncome: income,
-                annualIncome: income * 12,
-                existingEMI: emi,
-                dtiRatio: income > 0 ? (emi / income) : 0,
-                cibilScore: 0,
-                bankBalance: 0
-            ),
-            documents: newDocuments.map { doc in
-                LoanDocument(
-                    id: UUID().uuidString,
-                    type: doc.type,
-                    label: doc.label,
-                    status: doc.isUploaded ? .uploaded : .pending,
-                    uploadedAt: doc.isUploaded ? Date() : nil
+        Task {
+            do {
+                _ = try await applicationsVM.createApplication(
+                    borrowerName: borrowerName,
+                    loanType: selectedLoanType,
+                    amount: amount,
+                    tenureMonths: tenure
                 )
-            },
-            verification: [],
-            notes: [],
-            internalRemarks: [],
-            status: draft ? .pending : .underReview,
-            assignedTo: "LO-001",
-            branch: "Mumbai Central",
-            riskLevel: .medium,
-            createdAt: Date(),
-            slaDeadline: Calendar.current.date(byAdding: .day, value: 7, to: Date())!
-        )
-
-        applicationsVM.applications.insert(newApp, at: 0)
-        applicationsVM.selectedApplication = newApp
-        dismiss()
+                await MainActor.run { dismiss() }
+            } catch {
+                await MainActor.run {
+                    applicationsVM.actionMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to create application"
+                    applicationsVM.showActionAlert = true
+                }
+            }
+        }
     }
 }

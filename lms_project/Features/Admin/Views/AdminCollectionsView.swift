@@ -279,6 +279,7 @@ private struct AgentAssignmentSheet: View {
     let collectionCase: CollectionCase
     @Environment(\.dismiss) private var dismiss
     @State private var selectedAgent = 0
+    @State private var showNotImplementedAlert = false
     private let agents = ["Ravi Kumar", "Priya Sharma", "Suresh Nair", "Vikram Seth", "Ananya Bose"]
 
     var body: some View {
@@ -297,10 +298,10 @@ private struct AgentAssignmentSheet: View {
                         }
                     }
                 }
-                Section("Settlement Note") {
-                    Text("A Promise-to-Pay (PTP) notification will be sent to the borrower.")
+                Section {
+                    Label("Collection agent assignment is not yet implemented in the backend. No gRPC endpoint exists for this action in the current loan.proto service definition.", systemImage: "exclamationmark.triangle.fill")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.Colors.warning)
                 }
             }
             .navigationTitle("Assign Agent")
@@ -310,9 +311,16 @@ private struct AgentAssignmentSheet: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Assign") { dismiss() }
-                        .fontWeight(.semibold)
+                    Button("Assign") {
+                        showNotImplementedAlert = true
+                    }
+                    .fontWeight(.semibold)
                 }
+            }
+            .alert("Not Implemented", isPresented: $showNotImplementedAlert) {
+                Button("OK", role: .cancel) { dismiss() }
+            } message: {
+                Text("Collection agent assignment requires a backend endpoint that is not yet available. This will be connected once the backend implements AssignCollectionAgent in the loan service.")
             }
         }
     }

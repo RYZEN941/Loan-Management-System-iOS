@@ -137,7 +137,7 @@ struct ManagerPortfolioView: View {
             SectionHeader(title: "Portfolio Summary", icon: "chart.pie.fill")
                 .description("Key metrics of total loan volume and average disbursement value.")
             
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 280))], spacing: Theme.Spacing.md) {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.md) {
                 let highRiskCount = dashboardVM.filteredPortfolioApplications.filter { $0.riskLevel == .high }.count
                 let totalCount = max(1, dashboardVM.filteredPortfolioApplications.count)
                 let highRiskPct = (Double(highRiskCount) / Double(totalCount)) * 100
@@ -148,9 +148,6 @@ struct ManagerPortfolioView: View {
                     applicationsVM.filterLoanType = dashboardVM.portfolioLoanType
                     selectedTab = 1
                 }
-                
-                KPICard(title: "NPA Rate", value: "1.2%",
-                        icon: "exclamationmark.shield.fill", color: Theme.Colors.adaptiveCritical(colorScheme))
                 
                 KPICard(title: "Avg. Loan Size", value: avgLoanSize.compactFormatted,
                         icon: "chart.bar.fill", color: Theme.Colors.adaptiveWarning(colorScheme),
@@ -220,32 +217,47 @@ struct ManagerPortfolioView: View {
             VStack(spacing: Theme.Spacing.md) {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.md) {
                     let total = max(1, Double(dashboardVM.filteredPortfolioApplications.count))
-                    let lowCount = Double(dashboardVM.filteredPortfolioApplications.filter { $0.riskLevel == .low }.count)
-                    let medCount = Double(dashboardVM.filteredPortfolioApplications.filter { $0.riskLevel == .medium }.count)
-                    let highCount = Double(dashboardVM.filteredPortfolioApplications.filter { $0.riskLevel == .high }.count)
                     
-                    riskDistCard(label: "Low %", value: String(format: "%.0f%%", (lowCount/total)*100), color: Theme.Colors.adaptiveSuccess(colorScheme)) {
-                        applicationsVM.filterRisk = .low
-                        applicationsVM.filterLoanType = dashboardVM.portfolioLoanType
-                        selectedTab = 1
+                    // Column 1: Low Risk
+                    VStack(spacing: Theme.Spacing.md) {
+                        let lowCount = dashboardVM.filteredPortfolioApplications.filter { $0.riskLevel == .low }.count
+                        riskDistCard(label: "Low %", value: String(format: "%.0f%%", (Double(lowCount)/total)*100), color: Theme.Colors.adaptiveSuccess(colorScheme)) {
+                            applicationsVM.filterRisk = .low
+                            applicationsVM.filterLoanType = dashboardVM.portfolioLoanType
+                            selectedTab = 1
+                        }
+                        riskCard(level: .low, count: lowCount) {
+                            applicationsVM.filterRisk = .low
+                            applicationsVM.filterLoanType = dashboardVM.portfolioLoanType
+                            selectedTab = 1
+                        }
                     }
-                    riskDistCard(label: "Med %", value: String(format: "%.0f%%", (medCount/total)*100), color: ManagerTheme.Colors.primary(colorScheme)) {
-                        applicationsVM.filterRisk = .medium
-                        applicationsVM.filterLoanType = dashboardVM.portfolioLoanType
-                        selectedTab = 1
+                    
+                    // Column 2: Medium Risk
+                    VStack(spacing: Theme.Spacing.md) {
+                        let medCount = dashboardVM.filteredPortfolioApplications.filter { $0.riskLevel == .medium }.count
+                        riskDistCard(label: "Med %", value: String(format: "%.0f%%", (Double(medCount)/total)*100), color: ManagerTheme.Colors.primary(colorScheme)) {
+                            applicationsVM.filterRisk = .medium
+                            applicationsVM.filterLoanType = dashboardVM.portfolioLoanType
+                            selectedTab = 1
+                        }
+                        riskCard(level: .medium, count: medCount) {
+                            applicationsVM.filterRisk = .medium
+                            applicationsVM.filterLoanType = dashboardVM.portfolioLoanType
+                            selectedTab = 1
+                        }
                     }
-                    riskDistCard(label: "High %", value: String(format: "%.0f%%", (highCount/total)*100), color: Theme.Colors.adaptiveCritical(colorScheme)) {
-                        applicationsVM.filterRisk = .high
-                        applicationsVM.filterLoanType = dashboardVM.portfolioLoanType
-                        selectedTab = 1
-                    }
-                }
-                
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 180))], spacing: Theme.Spacing.md) {
-                    ForEach(RiskLevel.allCases) { risk in
-                        let count = dashboardVM.filteredPortfolioApplications.filter { $0.riskLevel == risk }.count
-                        riskCard(level: risk, count: count) {
-                            applicationsVM.filterRisk = risk
+                    
+                    // Column 3: High Risk
+                    VStack(spacing: Theme.Spacing.md) {
+                        let highCount = dashboardVM.filteredPortfolioApplications.filter { $0.riskLevel == .high }.count
+                        riskDistCard(label: "High %", value: String(format: "%.0f%%", (Double(highCount)/total)*100), color: Theme.Colors.adaptiveCritical(colorScheme)) {
+                            applicationsVM.filterRisk = .high
+                            applicationsVM.filterLoanType = dashboardVM.portfolioLoanType
+                            selectedTab = 1
+                        }
+                        riskCard(level: .high, count: highCount) {
+                            applicationsVM.filterRisk = .high
                             applicationsVM.filterLoanType = dashboardVM.portfolioLoanType
                             selectedTab = 1
                         }

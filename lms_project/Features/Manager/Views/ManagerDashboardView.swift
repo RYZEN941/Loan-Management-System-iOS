@@ -184,29 +184,9 @@ struct ManagerDashboardView: View {
                 }
                 
                 let approvedHighRiskCount = dashboardVM.applications.filter { $0.riskLevel == .high && $0.status == .approved }.count
-                if approvedHighRiskCount > 0 {
-                    KPIDataCard(title: "High Risk Approved", value: "\(approvedHighRiskCount)",
-                            icon: "shield.checkmark.fill", color: Theme.Colors.adaptiveSuccess(colorScheme)) {
-                        navigateToApprovals(status: .approved, risk: .high)
-                    }
-                } else {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            ZStack {
-                                Circle().fill(Theme.Colors.adaptiveSuccess(colorScheme).opacity(0.12)).frame(width: 34, height: 34)
-                                Image(systemName: "shield.checkmark.fill").font(.system(size: 14, weight: .bold)).foregroundStyle(Theme.Colors.adaptiveSuccess(colorScheme))
-                            }
-                            Spacer()
-                        }
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("No high-risk approved applications").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(18)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(ManagerTheme.Colors.surface(colorScheme))
-                    .cornerRadius(Theme.Radius.lg)
-                    .overlay(RoundedRectangle(cornerRadius: Theme.Radius.lg).stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 0.5))
+                KPIDataCard(title: "High Risk Approved", value: "\(approvedHighRiskCount)",
+                        icon: "shield.checkmark.fill", color: Theme.Colors.adaptiveSuccess(colorScheme)) {
+                    navigateToApprovals(status: .approved, risk: .high)
                 }
             }
         }
@@ -217,28 +197,12 @@ struct ManagerDashboardView: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             SectionHeader(title: "Portfolio Health", icon: "heart.text.square.fill")
             
-            HStack(spacing: Theme.Spacing.md) {
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text("NPA %").font(Theme.Typography.caption).foregroundStyle(.secondary)
-                        Text("1.2%").font(Theme.Typography.headline).foregroundStyle(Theme.Colors.adaptiveSuccess(colorScheme))
-                    }
-                    Spacer()
-                }
-                .padding()
-                .background(ManagerTheme.Colors.surface(colorScheme))
-                .cornerRadius(Theme.Radius.md)
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.md) {
+                KPIDataCard(title: "NPA %", value: "1.2%",
+                        icon: "percent", color: Theme.Colors.adaptiveSuccess(colorScheme))
                 
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text("Portfolio Size").font(Theme.Typography.caption).foregroundStyle(.secondary)
-                        Text("₹4.2Cr").font(Theme.Typography.headline)
-                    }
-                    Spacer()
-                }
-                .padding()
-                .background(ManagerTheme.Colors.surface(colorScheme))
-                .cornerRadius(Theme.Radius.md)
+                KPIDataCard(title: "Portfolio Size", value: "₹4.2Cr",
+                        icon: "briefcase.fill", color: ManagerTheme.Colors.primary(colorScheme))
             }
         }
     }
@@ -258,47 +222,55 @@ struct KPIDataCard: View {
     @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
-        Button {
-            action?()
-        } label: {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    ZStack {
-                        Circle()
-                            .fill(color.opacity(0.12))
-                            .frame(width: 34, height: 34)
-                        Image(systemName: icon)
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(color)
-                    }
-                    Spacer()
+        Group {
+            if let action = action {
+                Button(action: action) {
+                    cardContent
                 }
+                .buttonStyle(.plain)
+            } else {
+                cardContent
+            }
+        }
+    }
+    
+    private var cardContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                ZStack {
+                    Circle()
+                        .fill(color.opacity(0.12))
+                        .frame(width: 34, height: 34)
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(color)
+                }
+                Spacer()
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(value)
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(value)
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundStyle(.primary)
-                    Text(title)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
-                    
-                    if showCTA {
-                        Text("Review Now →")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
-                            .padding(.top, 4)
-                    }
+                if showCTA {
+                    Text("Review Now →")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
+                        .padding(.top, 4)
                 }
             }
-            .padding(18)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(ManagerTheme.Colors.surface(colorScheme))
-            .cornerRadius(Theme.Radius.lg)
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                    .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 0.5)
-            )
         }
-        .buttonStyle(.plain)
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(ManagerTheme.Colors.surface(colorScheme))
+        .cornerRadius(Theme.Radius.lg)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 0.5)
+        )
     }
 }

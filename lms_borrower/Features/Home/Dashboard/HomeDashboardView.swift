@@ -82,7 +82,7 @@ struct HomeDashboardView: View {
                         }
 
                         // ── 4. QUICK ACTIONS ───────────────────────────
-                        QuickActionsGridView(actions: viewModel.quickActions)
+                        QuickActionsGridView(actions: viewModel.quickActions, viewModel: viewModel)
                             .padding(.horizontal, 20)
                             .padding(.top, 24)
 
@@ -388,7 +388,11 @@ struct NextEMIBannerView: View {
             .padding(.trailing, 8)
 
             Button {
-                router.push(.paymentCheckout(amount: emi.amount))
+                router.push(.paymentCheckout(
+                    loanId: emi.loanId,
+                    emiScheduleId: emi.emiScheduleId,
+                    amount: emi.amount
+                ))
             } label: {
                 Text("Pay Now").font(.caption).bold().foregroundColor(.white).padding(.horizontal, 12).padding(.vertical, 8).background(DS.primary).clipShape(RoundedRectangle(cornerRadius: 10))
             }
@@ -405,13 +409,14 @@ struct NextEMIBannerView: View {
 // MARK: - 4. Quick Actions Grid
 struct QuickActionsGridView: View {
     let actions: [QuickAction]
+    let viewModel: HomeDashboardViewModel
     let columns = Array(repeating: GridItem(.flexible(), spacing: 16), count: 4)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Quick Actions").font(.title3).bold().foregroundColor(.primary)
             LazyVGrid(columns: columns, spacing: 20) {
-                ForEach(actions) { action in QuickActionItemView(action: action) }
+                ForEach(actions) { action in QuickActionItemView(action: action, viewModel: viewModel) }
             }
         }
         .padding(20)
@@ -423,13 +428,25 @@ struct QuickActionsGridView: View {
 
 struct QuickActionItemView: View {
     let action: QuickAction
+    let viewModel: HomeDashboardViewModel
     @EnvironmentObject var router: AppRouter
 
     var body: some View {
         Button {
             if action.label == String(localized: "AutoPay") { router.push(.autoPaySetup) }
-            else if action.label == String(localized: "Pay EMI") { router.push(.repaymentDashboard) }
-            else if action.label == String(localized: "History") { router.push(.repaymentsList(initialTab: 1)) }
+            // repaymentDashboard & repaymentsList require a loanId/applicationId;
+            // these are provided via the loan context from the dashboard ViewModel
+            // and accessed through the @EnvironmentObject viewModel injected in the parent.
+            // For safety: these buttons rely on HomeDashboardView's viewModel.
+            // If no active loan, the destination view will show a "no loan" empty state.
+            else if action.label == String(localized: "Pay EMI") {
+                let appId = viewModel.activeLoans.first?.application.id ?? ""
+                router.push(.repaymentDashboard(applicationId: appId))
+            }
+            else if action.label == String(localized: "History") {
+                let loanId = viewModel.activeLoans.first?.id ?? ""
+                router.push(.repaymentsList(loanId: loanId, initialTab: 1))
+            }
             else if action.label == String(localized: "Support") { router.push(.chatList) }
             else if action.label == String(localized: "Schedule") { router.push(.amortisationSchedule) }
             else if action.label == String(localized: "Foreclose") { router.push(.outstandingBalance) }
@@ -558,6 +575,10 @@ struct NextEMIInfo {
     let dueDate: String
     let daysLeft: String
     let isUrgent: Bool
+    // Context for real payment flow
+    let loanId: String
+    let emiScheduleId: String
+    let applicationId: String
 }
 struct QuickAction: Identifiable { let id = UUID(); let icon: String; let label: String }
 
@@ -670,7 +691,8 @@ final class HomeDashboardViewModel: ObservableObject {
         .sorted { parseDate($0.1.dueDate) < parseDate($1.1.dueDate) }
         .first
 
-        guard let (_, schedule) = nextSchedule else { return nil }
+        guard let (loan, schedule) = nextSchedule else { return nil }
+        let application = applicationsById[loan.applicationId]
 
         let amount = Double(schedule.emiAmount) ?? 0
         let dueDate = parseDate(schedule.dueDate)
@@ -678,7 +700,10 @@ final class HomeDashboardViewModel: ObservableObject {
             amount: amount,
             dueDate: formatDate(dueDate),
             daysLeft: dueDateLabel(for: dueDate),
-            isUrgent: schedule.status == .overdue || Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()), to: Calendar.current.startOfDay(for: dueDate)).day ?? 0 <= 3
+            isUrgent: schedule.status == .overdue || Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()), to: Calendar.current.startOfDay(for: dueDate)).day ?? 0 <= 3,
+            loanId: loan.id,
+            emiScheduleId: schedule.id,
+            applicationId: application?.id ?? ""
         )
     }
 

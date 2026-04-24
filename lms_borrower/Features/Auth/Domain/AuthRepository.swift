@@ -85,6 +85,7 @@ public final class AuthRepository: Sendable {
         public let email: String?
         public let phone: String?
         public let hasBorrowerProfile: Bool
+        public let borrowerProfileId: String?
     }
 
     /// Step 1 of Login. Submits identifier/password and returns allowed MFA factors.
@@ -261,6 +262,7 @@ public final class AuthRepository: Sendable {
 
         let hasBorrowerProfile: Bool
         var fullName: String? = nil
+        var borrowerProfileId: String? = nil
         if case .borrowerProfile(let profile) = response.profile {
             hasBorrowerProfile = true
             let composedName = [profile.firstName, profile.lastName]
@@ -268,6 +270,8 @@ public final class AuthRepository: Sendable {
                 .filter { !$0.isEmpty }
                 .joined(separator: " ")
             fullName = composedName.isEmpty ? nil : composedName
+            let pid = profile.profileID.trimmingCharacters(in: .whitespacesAndNewlines)
+            borrowerProfileId = pid.isEmpty ? nil : pid
         } else {
             hasBorrowerProfile = false
         }
@@ -278,7 +282,8 @@ public final class AuthRepository: Sendable {
             fullName: fullName,
             email: email.isEmpty ? nil : email,
             phone: phone.isEmpty ? nil : phone,
-            hasBorrowerProfile: hasBorrowerProfile
+            hasBorrowerProfile: hasBorrowerProfile,
+            borrowerProfileId: borrowerProfileId
         )
     }
 

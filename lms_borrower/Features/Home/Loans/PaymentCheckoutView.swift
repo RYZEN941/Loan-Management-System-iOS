@@ -1,15 +1,59 @@
 import SwiftUI
+import Combine
 
+// MARK: - Payment ViewModel
+
+@MainActor
+@available(iOS 18.0, *)
+final class PaymentViewModel: ObservableObject {
+    @Published var isProcessing: Bool = false
+    @Published var errorMessage: String? = nil
+    @Published var completedPayment: LoanPayment? = nil
+
+    private let service: LoanServiceProtocol
+
+    init(service: LoanServiceProtocol = ServiceContainer.loanService) {
+        self.service = service
+    }
+
+    func recordPayment(loanId: String, emiScheduleId: String, amount: Double) async -> LoanPayment? {
+        isProcessing = true
+        errorMessage = nil
+        let externalTxnId = "TXN-\(UUID().uuidString.prefix(8).uppercased())"
+        do {
+            let payment = try await service.recordPayment(
+                loanId: loanId,
+                emiScheduleId: emiScheduleId,
+                amount: String(format: "%.0f", amount),
+                externalTransactionId: externalTxnId
+            )
+            completedPayment = payment
+            isProcessing = false
+            return payment
+        } catch {
+            errorMessage = (error as? LocalizedError)?.errorDescription ?? "Payment failed. Please try again."
+            isProcessing = false
+            return nil
+        }
+    }
+}
+
+// MARK: - Payment Checkout View
+
+@available(iOS 18.0, *)
 struct PaymentCheckoutView: View {
+    let loanId: String
+    let emiScheduleId: String
     let amount: Double
     @EnvironmentObject var router: AppRouter
+    @StateObject private var viewModel = PaymentViewModel()
     @State private var selectedMethod: String = "Google Pay"
-    
+
     var body: some View {
         ZStack(alignment: .bottom) {
             ScrollView {
                 VStack(spacing: 24) {
-                    
+
                     // Amount Header
                     VStack(spacing: 8) {
                         Text("Amount to Pay")
@@ -20,13 +64,13 @@ struct PaymentCheckoutView: View {
                             .foregroundColor(.primary)
                     }
                     .padding(.top, 30)
-                    
-                    // Payment Methods
+
+                    // Payment Method Selection
                     VStack(alignment: .leading, spacing: 16) {
                         Text("UPI")
                             .font(.headline)
                             .padding(.horizontal, 20)
-                        
+
                         VStack(spacing: 0) {
                             PaymentMethodRow(title: "Google Pay", icon: "g.circle.fill", isSelected: selectedMethod == "Google Pay") { selectedMethod = "Google Pay" }
                             Divider().padding(.leading, 60)
@@ -37,12 +81,12 @@ struct PaymentCheckoutView: View {
                         .background(Color.white)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                         .padding(.horizontal, 20)
-                        
+
                         Text("Net Banking & Cards")
                             .font(.headline)
                             .padding(.horizontal, 20)
                             .padding(.top, 10)
-                        
+
                         VStack(spacing: 0) {
                             PaymentMethodRow(title: "Debit Card", icon: "creditcard.fill", isSelected: selectedMethod == "Debit Card") { selectedMethod = "Debit Card" }
                             Divider().padding(.leading, 60)
@@ -52,26 +96,48 @@ struct PaymentCheckoutView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                         .padding(.horizontal, 20)
                     }
-                    
+
                     Spacer().frame(height: 100)
                 }
             }
-            
+
             // Sticky Bottom Button
             VStack {
                 Divider()
-                Button {
-                    let randomTXN = "TXN\(Int.random(in: 100000...999999))"
-                    router.push(.paymentSuccess(transactionID: randomTXN))
-                } label: {
-                    Text("Proceed to Pay")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(DS.primary)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                if let error = viewModel.errorMessage {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundColor(.alertRed)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
                 }
+                Button {
+                    Task {
+                        if let payment = await viewModel.recordPayment(
+                            loanId: loanId,
+                            emiScheduleId: emiScheduleId,
+                            amount: amount
+                        ) {
+                            router.push(.paymentSuccess(transactionID: payment.externalTransactionId))
+                        }
+                    }
+                } label: {
+                    HStack {
+                        if viewModel.isProcessing {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .padding(.trailing, 8)
+                        }
+                        Text(viewModel.isProcessing ? "Processing…" : "Proceed to Pay")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(viewModel.isProcessing ? Color.secondary : DS.primary)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .disabled(viewModel.isProcessing)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 10)
                 .background(Color(UIColor.systemGroupedBackground))
@@ -83,12 +149,14 @@ struct PaymentCheckoutView: View {
     }
 }
 
+// MARK: - Payment Method Row
+
 struct PaymentMethodRow: View {
     let title: String
     let icon: String
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 16) {
@@ -96,13 +164,10 @@ struct PaymentMethodRow: View {
                     .font(.title)
                     .foregroundColor(.mainBlue)
                     .frame(width: 32)
-                
                 Text(title)
                     .font(.subheadline)
                     .foregroundColor(.primary)
-                
                 Spacer()
-                
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.mainBlue)

@@ -55,6 +55,24 @@ final class ActiveLoanViewModel: ObservableObject {
         }
     }
 
+    /// Used when navigating directly from a loanId (e.g. RepaymentsListView, OverdueDetailsView)
+    func fetchAllByLoanId(loanId: String) {
+        Task {
+            isLoading = true
+            errorMessage = nil
+            do {
+                let loan = try await service.getLoan(loanId: loanId, applicationId: nil)
+                activeLoan = loan
+                async let emi = service.listEmiSchedule(loanId: loan.id)
+                async let pay = service.listPayments(loanId: loan.id)
+                (emiSchedule, payments) = try await (emi, pay)
+            } catch {
+                errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to load loan"
+            }
+            isLoading = false
+        }
+    }
+
     private func formatCurrency(_ raw: String) -> String {
         guard let num = Double(raw) else { return raw }
         let formatter = NumberFormatter()

@@ -29,12 +29,12 @@ enum AppRoute: Hashable {
     case outstandingBalance
     
     // Feature 8: Repayment Module
-    case repaymentDashboard
-    case repaymentsList(initialTab: Int)
-    case overdueDetails
-    case paymentCheckout(amount: Double)
+    case repaymentDashboard(applicationId: String)
+    case repaymentsList(loanId: String, initialTab: Int)
+    case overdueDetails(loanId: String)
+    case paymentCheckout(loanId: String, emiScheduleId: String, amount: Double)
     case paymentSuccess(transactionID: String)
-    case autoPaySetup // NEW: AutoPay Route
+    case autoPaySetup // No backend API – shows fallback alert
     
     // Feature 9: Smart Financial Tools
     case prepaymentCalculator

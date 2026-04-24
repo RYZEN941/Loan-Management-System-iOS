@@ -76,10 +76,10 @@ struct StatementDownloadView: View {
         }
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
-        .alert("Download Complete", isPresented: $showDownloadAlert) {
+        .alert("Not Available", isPresented: $showDownloadAlert) {
             Button("OK", role: .cancel) { }
         } message: {
-            Text("The statement has been saved to your device.")
+            Text("Statement download is not implemented in the backend yet. Please contact your branch or bank for a physical statement.")
         }
     }
 }

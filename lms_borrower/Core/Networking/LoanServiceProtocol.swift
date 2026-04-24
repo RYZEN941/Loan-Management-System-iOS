@@ -57,4 +57,13 @@ protocol LoanServiceProtocol {
     // MARK: - Payments
     // Backend: LoanService.ListPayments (loan.proto line 37)
     func listPayments(loanId: String) async throws -> [LoanPayment]
+
+    // Backend: LoanService.RecordPayment (loan.proto line 36)
+    // externalTransactionId: a UUID generated client-side to represent the payment gateway TXN
+    func recordPayment(
+        loanId: String,
+        emiScheduleId: String,
+        amount: String,
+        externalTransactionId: String
+    ) async throws -> LoanPayment
 }

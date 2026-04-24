@@ -1,13 +1,15 @@
 import SwiftUI
 
+@available(iOS 18.0, *)
 struct RepaymentsListView: View {
+    let loanId: String
     @State var selectedTab: Int // 0 = Upcoming, 1 = History
     @EnvironmentObject var router: AppRouter
-    
+    @StateObject private var viewModel = ActiveLoanViewModel()
+
     var body: some View {
         VStack(spacing: 0) {
-            
-            // Header (Added to match AutoPay)
+
             VStack(alignment: .leading, spacing: 8) {
                 Text("Repayments")
                     .font(.largeTitle).bold()
@@ -19,7 +21,7 @@ struct RepaymentsListView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 20)
             .padding(.top, 10)
-            
+
             // Custom Segmented Picker
             HStack(spacing: 0) {
                 SegmentButton(title: "Upcoming", isSelected: selectedTab == 0) { selectedTab = 0 }
@@ -30,55 +32,64 @@ struct RepaymentsListView: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
-            
-            ScrollView {
-                VStack(spacing: 12) {
-                    if selectedTab == 0 {
-                        // Upcoming List
-                        EMIListItem(month: "May", date: "20 May 2026", amount: 14200, status: .upcoming)
-                        EMIListItem(month: "Jun", date: "20 Jun 2026", amount: 14200, status: .upcoming)
-                        EMIListItem(month: "Jul", date: "20 Jul 2026", amount: 14200, status: .upcoming)
-                        EMIListItem(month: "Aug", date: "20 Aug 2026", amount: 14200, status: .upcoming)
-                    } else {
-                        // History List
-                        EMIListItem(month: "Apr", date: "20 Apr 2026", amount: 14200, status: .paid)
-                        EMIListItem(month: "Mar", date: "20 Mar 2026", amount: 14200, status: .paid)
-                        EMIListItem(month: "Feb", date: "20 Feb 2026", amount: 14200, status: .paid)
-                        EMIListItem(month: "Jan", date: "20 Jan 2026", amount: 14200, status: .paid)
+
+            if viewModel.isLoading {
+                Spacer()
+                ProgressView("Loading…")
+                Spacer()
+            } else {
+                ScrollView {
+                    VStack(spacing: 12) {
+                        if selectedTab == 0 {
+                            let upcoming = viewModel.upcomingEMIs
+                            if upcoming.isEmpty {
+                                emptyState(message: "No upcoming EMIs")
+                            } else {
+                                ForEach(upcoming) { item in
+                                    emiRow(item: item, isPaid: false)
+                                }
+                            }
+                        } else {
+                            let paid = viewModel.payments
+                            if paid.isEmpty {
+                                emptyState(message: "No payment history yet")
+                            } else {
+                                ForEach(paid) { payment in
+                                    paymentRow(payment: payment)
+                                }
+                            }
+                        }
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 40)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 40)
             }
         }
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            // Load EMI schedule and payments via the shared VM
+            // We pass a placeholder applicationId — the loanId path is used directly
+            guard let loan = viewModel.activeLoan else {
+                viewModel.fetchAllByLoanId(loanId: loanId)
+                return
+            }
+            _ = loan // already loaded
+        }
     }
-}
 
-enum EMIStatus {
-    case paid, upcoming
-}
-
-struct EMIListItem: View {
-    let month: String
-    let date: String
-    let amount: Double
-    let status: EMIStatus
-    
-    var body: some View {
+    @ViewBuilder
+    private func emiRow(item: EmiScheduleItem, isPaid: Bool) -> some View {
+        let (month, day) = splitDueDate(item.dueDate)
         HStack(spacing: 16) {
-            
-            // Calendar Icon
             VStack(spacing: 2) {
                 Text(month)
                     .font(.caption2).bold()
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 4)
-                    .background(status == .paid ? Color(hex: "#00C48C") : DS.primary)
-                
-                Text(date.components(separatedBy: " ").first ?? "")
+                    .background(isPaid ? Color(hex: "#00C48C") : DS.primary)
+                Text(day)
                     .font(.title3).bold()
                     .foregroundColor(.primary)
                     .padding(.vertical, 6)
@@ -86,26 +97,23 @@ struct EMIListItem: View {
             .frame(width: 50)
             .background(DS.primaryLight.opacity(0.3))
             .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(status == .paid ? Color(hex: "#00C48C").opacity(0.3) : DS.primary.opacity(0.3), lineWidth: 1)
-            )
-            
+            .overlay(RoundedRectangle(cornerRadius: 10)
+                .stroke((isPaid ? Color(hex: "#00C48C") : DS.primary).opacity(0.3), lineWidth: 1))
+
             VStack(alignment: .leading, spacing: 4) {
-                Text("Personal Loan")
+                Text("Installment #\(item.installmentNumber)")
                     .font(.headline)
-                Text(date)
+                Text(item.dueDate)
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-            
+
             Spacer()
-            
+
             VStack(alignment: .trailing, spacing: 4) {
-                Text("₹\(amount.formatted(.number.grouping(.automatic)))")
+                Text(formatAmount(item.emiAmount))
                     .font(.subheadline).bold()
-                
-                if status == .paid {
+                if isPaid {
                     Text("Paid")
                         .font(.caption2).bold()
                         .foregroundColor(Color(hex: "#00C48C"))
@@ -119,6 +127,92 @@ struct EMIListItem: View {
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
+    }
+
+    @ViewBuilder
+    private func paymentRow(payment: LoanPayment) -> some View {
+        let (month, day) = splitDueDate(payment.createdAt)
+        HStack(spacing: 16) {
+            VStack(spacing: 2) {
+                Text(month)
+                    .font(.caption2).bold()
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
+                    .background(Color(hex: "#00C48C"))
+                Text(day)
+                    .font(.title3).bold()
+                    .foregroundColor(.primary)
+                    .padding(.vertical, 6)
+            }
+            .frame(width: 50)
+            .background(DS.primaryLight.opacity(0.3))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10)
+                .stroke(Color(hex: "#00C48C").opacity(0.3), lineWidth: 1))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Payment")
+                    .font(.headline)
+                Text("Ref: \(payment.externalTransactionId.prefix(12))…")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(formatAmount(payment.amount))
+                    .font(.subheadline).bold()
+                statusBadge(payment.status)
+            }
+        }
+        .padding(16)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: .black.opacity(0.04), radius: 6, x: 0, y: 2)
+    }
+
+    @ViewBuilder
+    private func statusBadge(_ status: PaymentStatus) -> some View {
+        let (label, color): (String, Color) = {
+            switch status {
+            case .success: return ("Paid", Color(hex: "#00C48C"))
+            case .failed: return ("Failed", .alertRed)
+            default: return ("Pending", .secondary)
+            }
+        }()
+        Text(label)
+            .font(.caption2).bold()
+            .foregroundColor(color)
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .background(color.opacity(0.1))
+            .clipShape(Capsule())
+    }
+
+    @ViewBuilder
+    private func emptyState(message: String) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: "tray")
+                .font(.largeTitle)
+                .foregroundColor(.secondary)
+            Text(message)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 60)
+    }
+
+    private func splitDueDate(_ raw: String) -> (String, String) {
+        let parts = raw.components(separatedBy: "-")
+        guard parts.count >= 3 else { return ("—", "—") }
+        let monthNum = Int(parts[1]) ?? 1
+        let months = ["", "Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+        return (months[min(monthNum, 12)], parts[2].prefix(2).description)
+    }
+
+    private func formatAmount(_ raw: String) -> String {
+        guard let num = Double(raw) else { return "₹\(raw)" }
+        return "₹\(num.formatted(.number.grouping(.automatic)))"
     }
 }
 

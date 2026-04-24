@@ -6,6 +6,7 @@ struct LoanApplicationView: View {
 
     @StateObject private var viewModel = LoanApplicationViewModel(service: ServiceContainer.loanService)
     @EnvironmentObject private var router: AppRouter
+    @EnvironmentObject private var sessionStore: SessionStore
 
     private var minAmount: Double { max(Double(loan.minAmount) ?? 10_000, 1) }
     private var maxAmount: Double { max(Double(loan.maxAmount) ?? minAmount, minAmount) }
@@ -68,6 +69,10 @@ struct LoanApplicationView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             viewModel.selectedProductId = loan.id
+            // Inject the borrower profile ID from the authenticated session
+            if viewModel.borrowerProfileId.isEmpty {
+                viewModel.borrowerProfileId = sessionStore.borrowerProfileId
+            }
             if viewModel.requestedAmount.isEmpty {
                 viewModel.requestedAmount = String(Int(minAmount.rounded()))
             }

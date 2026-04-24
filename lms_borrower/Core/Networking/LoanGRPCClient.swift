@@ -265,4 +265,29 @@ final class LoanGRPCClient: LoanServiceProtocol {
             throw LoanError.from(error)
         }
     }
+
+    func recordPayment(
+        loanId: String,
+        emiScheduleId: String,
+        amount: String,
+        externalTransactionId: String
+    ) async throws -> LoanPayment {
+        var request = Loan_V1_RecordPaymentRequest()
+        request.loanID = loanId
+        request.emiScheduleID = emiScheduleId
+        request.amount = amount
+        request.externalTransactionID = externalTransactionId
+        request.status = .success
+
+        do {
+            let (options, metadata) = try authContext()
+            let response = try await client.recordPayment(
+                request: .init(message: request, metadata: metadata),
+                options: options
+            )
+            return LoanPayment.from(proto: response.payment)
+        } catch {
+            throw LoanError.from(error)
+        }
+    }
 }

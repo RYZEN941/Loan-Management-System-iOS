@@ -141,10 +141,10 @@ struct AutoPaySetupView: View {
         }
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
-        .alert("AutoPay Activated", isPresented: $showSuccessAlert) {
-            Button("Done", role: .cancel) { router.pop() }
+        .alert("Not Available", isPresented: $showSuccessAlert) {
+            Button("OK", role: .cancel) { }
         } message: {
-            Text("Your mandate has been successfully registered. Your EMIs will now be deducted automatically.")
+            Text("AutoPay setup is not implemented in the backend yet. Please contact your branch to set up a standing instruction.")
         }
     }
 }

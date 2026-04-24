@@ -23,6 +23,8 @@ final class SessionStore: ObservableObject {
     @Published var showSessionExpiredAlert: Bool = false
     @Published var pendingKYCRoute: KYCRoute? = nil
     @Published var logoutBannerMessage: String? = nil
+    /// The borrower profile UUID returned by GetMyProfile — used when creating loan applications.
+    @Published var borrowerProfileId: String
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -34,6 +36,7 @@ final class SessionStore: ObservableObject {
         userName   = UserDefaults.standard.string(forKey: "loanOS_userName") ?? ""
         userEmail  = UserDefaults.standard.string(forKey: "loanOS_userEmail") ?? ""
         userPhone  = UserDefaults.standard.string(forKey: "loanOS_userPhone") ?? ""
+        borrowerProfileId = UserDefaults.standard.string(forKey: "loanOS_borrowerProfileId") ?? ""
         isOnboardingComplete = false
         refreshOnboardingCompletionStatus()
         // Real implementation would read cached KYC status or fetch it globally
@@ -101,6 +104,11 @@ final class SessionStore: ObservableObject {
                     contactIdentifier: contactIdentifier
                 )
                 setOnboardingComplete(profile.hasBorrowerProfile)
+                // Cache the borrower profile ID for loan application flows
+                if let pid = profile.borrowerProfileId, !pid.isEmpty {
+                    borrowerProfileId = pid
+                    UserDefaults.standard.set(pid, forKey: "loanOS_borrowerProfileId")
+                }
                 do {
                     let kycSnapshot = try await KYCRepository().getBorrowerKycStatus()
                     if kycSnapshot.isAadhaarVerified && kycSnapshot.isPanVerified {
@@ -177,6 +185,8 @@ final class SessionStore: ObservableObject {
         self.justLoggedIn = false
         self.isOnboardingComplete = false
         self.kycStatus = .notStarted
+        self.borrowerProfileId = ""
+        UserDefaults.standard.removeObject(forKey: "loanOS_borrowerProfileId")
 
         // Then do backend cleanup in background (best effort)
         Task {

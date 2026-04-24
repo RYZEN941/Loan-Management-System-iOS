@@ -141,6 +141,8 @@ struct ApplicationStatusListView: View {
                             Text(application.status.displayName)
                                 .font(.caption).bold()
                                 .foregroundColor(accent)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 4)
                                 .background(accent.opacity(0.12))

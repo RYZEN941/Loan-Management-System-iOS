@@ -309,12 +309,17 @@ struct LoanSummaryCardView: View {
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Outstanding Balance").font(.subheadline).foregroundColor(.secondary)
-                    Text("₹\(loan.outstandingBalance, specifier: "%.0f")").font(.system(size: 34, weight: .bold)).foregroundColor(.mainBlue)
+                    Text("₹\(loan.outstandingBalance, specifier: "%.0f")")
+                        .font(.system(size: 34, weight: .bold))
+                        .foregroundColor(.mainBlue)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("Total Loan").font(.subheadline).foregroundColor(.secondary)
-                    Text("₹\(loan.totalAmount, specifier: "%.0f")").font(.title3).bold().foregroundColor(.primary)
+                    Text("₹\(loan.totalAmount, specifier: "%.0f")").font(.system(size: 20, weight: .bold)).foregroundColor(.primary)
                 }
             }
             .padding(.bottom, 18)

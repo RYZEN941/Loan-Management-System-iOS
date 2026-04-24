@@ -11,6 +11,11 @@ class DashboardViewModel: ObservableObject {
     @Published var selectedApplication: LoanApplication? = nil
     @Published var isLoading = false
     
+    // Portfolio Filters
+    @Published var portfolioLoanType: LoanType? = nil
+    @Published var portfolioRisk: RiskLevel? = nil
+    @Published var portfolioStatus: ApplicationStatus? = nil
+    
     private let dataService = MockDataService.shared
     
     // MARK: - KPIs
@@ -48,6 +53,26 @@ class DashboardViewModel: ObservableObject {
     
     var activeApplications: [LoanApplication] {
         applications.filter { $0.status == .pending || $0.status == .underReview }
+    }
+    
+    // MARK: - Portfolio Filtered Applications
+    
+    var filteredPortfolioApplications: [LoanApplication] {
+        var result = applications
+        
+        if let type = portfolioLoanType {
+            result = result.filter { $0.loan.type == type }
+        }
+        
+        if let risk = portfolioRisk {
+            result = result.filter { $0.riskLevel == risk }
+        }
+        
+        if let status = portfolioStatus {
+            result = result.filter { $0.status == status }
+        }
+        
+        return result
     }
     
     // MARK: - Load Data

@@ -27,7 +27,7 @@ struct ManagerTabView: View {
                 }
                 .tag(1)
             
-            ManagerPortfolioView(showProfile: $showProfile)
+            ManagerPortfolioView(selectedTab: $selectedTab, showProfile: $showProfile)
                 .tabItem {
                     Label("Portfolio", systemImage: "chart.pie.fill")
                 }

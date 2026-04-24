@@ -97,6 +97,9 @@ struct Financials: Codable, Hashable {
     var dtiRatio: Double
     var cibilScore: Int
     var bankBalance: Double
+    var foir: Double           // percentage
+    var ltvRatio: Double       // percentage
+    var proposedEMI: Double    // amount
 }
 
 // MARK: - Loan Document

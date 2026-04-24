@@ -19,6 +19,12 @@ class ApplicationsViewModel: ObservableObject {
     // Uploaded file URLs per document id (in-memory for session)
     @Published var uploadedFiles: [String: [UploadedDocFile]] = [:]
     
+    // New Filters for Manager Navigation
+    @Published var filterRisk: RiskLevel? = nil
+    @Published var filterSLA: SLAStatus? = nil
+    @Published var filterHighValue: Bool = false
+    @Published var filterLoanType: LoanType? = nil
+    
     // Manager rejection remarks sheet
     @Published var showRejectionRemarksSheet = false
     @Published var pendingRejectionApp: LoanApplication? = nil
@@ -43,6 +49,23 @@ class ApplicationsViewModel: ObservableObject {
         
         if let status = filterStatus {
             result = result.filter { $0.status == status }
+        }
+        
+        if let risk = filterRisk {
+            result = result.filter { $0.riskLevel == risk }
+        }
+        
+        if let sla = filterSLA {
+            result = result.filter { $0.slaStatus == sla }
+        }
+        
+        if filterHighValue {
+            // Define High Value as > 50 Lakhs (5,000,000)
+            result = result.filter { $0.loan.amount >= 5000000 }
+        }
+        
+        if let type = filterLoanType {
+            result = result.filter { $0.loan.type == type }
         }
         
         if !searchText.isEmpty {
@@ -443,7 +466,10 @@ class ApplicationsViewModel: ObservableObject {
                 existingEMI: existingEMI,
                 dtiRatio: monthlyIncome > 0 ? (existingEMI / monthlyIncome) : 0,
                 cibilScore: 0,
-                bankBalance: 0
+                bankBalance: 0,
+                foir: 0,
+                ltvRatio: 0,
+                proposedEMI: 0
             ),
             documents: documents,
             verification: [],

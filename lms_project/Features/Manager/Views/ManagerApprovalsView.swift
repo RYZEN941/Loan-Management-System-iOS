@@ -132,8 +132,13 @@ struct ManagerApprovalsView: View {
             // Filter chips
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
-                    AppFilterChip(label: "All", isSelected: applicationsVM.filterStatus == nil) {
-                        withAnimation { applicationsVM.filterStatus = nil }
+                    AppFilterChip(label: "All", isSelected: applicationsVM.filterStatus == nil && applicationsVM.filterRisk == nil && applicationsVM.filterSLA == nil && !applicationsVM.filterHighValue) {
+                        withAnimation {
+                            applicationsVM.filterStatus = nil
+                            applicationsVM.filterRisk = nil
+                            applicationsVM.filterSLA = nil
+                            applicationsVM.filterHighValue = false
+                        }
                     }
                     AppFilterChip(label: "Pending", isSelected: applicationsVM.filterStatus == .underReview) {
                         withAnimation { applicationsVM.filterStatus = .underReview }
@@ -357,6 +362,9 @@ struct ManagerApprovalsView: View {
                 finCard("Annual Income",   app.financials.annualIncome.currencyFormatted, "calendar.badge.clock", ManagerTheme.Colors.primary(colorScheme))
                 finCard("Bank Balance",    app.financials.bankBalance.currencyFormatted, "building.columns.fill", ManagerTheme.Colors.primary(colorScheme))
                 finCard("Risk Assessment", app.riskLevel.displayName, "shield.lefthalf.filled", app.riskLevel.adaptiveColor(colorScheme))
+                finCard("FOIR (%)",        String(format: "%.1f%%", app.financials.foir), "percent", ManagerTheme.Colors.primary(colorScheme))
+                finCard("LTV Ratio (%)",   String(format: "%.1f%%", app.financials.ltvRatio), "house.fill", ManagerTheme.Colors.primary(colorScheme))
+                finCard("Proposed EMI",    app.financials.proposedEMI.currencyFormatted, "indianrupeesign.circle.fill", ManagerTheme.Colors.primary(colorScheme))
             }
         }
         .padding(18)

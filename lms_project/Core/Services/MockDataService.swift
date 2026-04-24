@@ -345,7 +345,10 @@ class MockDataService: LMSDataService {
                 existingEMI: income * dti * 0.5,
                 dtiRatio: dti,
                 cibilScore: cibil,
-                bankBalance: income * 3.5
+                bankBalance: income * 3.5,
+                foir: 42.5 + Double(id.hashValue % 10),
+                ltvRatio: 75.0 - Double(id.hashValue % 15),
+                proposedEMI: emi
             ),
             documents: [
                 LoanDocument(id: "\(id)-DOC-1", type: .panCard, label: "PAN Card",

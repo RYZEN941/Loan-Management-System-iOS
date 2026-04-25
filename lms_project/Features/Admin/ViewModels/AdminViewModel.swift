@@ -105,7 +105,6 @@ class AdminViewModel: ObservableObject {
     private let adminAPI = AdminAPI()
     private let branchAPI = BranchAPI()
     private let dstAPI = DstAPI()
-    private let mockDataService = MockDataService.shared
     private let dstLocalStoreKey = "manager.dst.local.overrides.v1"
     private let policyConfigStoreKey = "admin.policy.configurations.v1"
     private var dstLocalState = DstLocalStateStore()
@@ -120,7 +119,9 @@ class AdminViewModel: ObservableObject {
         return users.filter {
             $0.name.localizedCaseInsensitiveContains(searchText) ||
             $0.email.localizedCaseInsensitiveContains(searchText) ||
-            $0.role.displayName.localizedCaseInsensitiveContains(searchText)
+            $0.role.displayName.localizedCaseInsensitiveContains(searchText) ||
+            $0.branch.localizedCaseInsensitiveContains(searchText) ||
+            $0.id.localizedCaseInsensitiveContains(searchText)
         }
     }
     
@@ -138,23 +139,27 @@ class AdminViewModel: ObservableObject {
         requestSuccess = nil
         isLoading = true
         Task {
-            var fallbackNotice: String?
             do {
                 async let employeesTask = adminAPI.listEmployeeAccounts(limit: 200, offset: 0)
                 async let branchesTask = branchAPI.listBranches(limit: 200, offset: 0)
 
                 let employees = try await employeesTask
                 let backendBranches = try await branchesTask
-                var mappedUsers = employees.compactMap(Self.mapEmployeeAccount)
-                if !mappedUsers.contains(where: { Self.isManageableEmployeeRole($0.role) }) {
-                    mappedUsers = fallbackEmployeeUsers()
-                    fallbackNotice = "Employee directory unavailable from backend. Showing fallback employee data."
+
+                // Map ALL employee accounts from backend — admin, manager, officer.
+                // Never substitute mock data. If backend is empty, show empty list.
+                let mappedUsers = employees.compactMap(Self.mapEmployeeAccount)
+
+                // Use backend branches; build a minimal set from user data only if
+                // branches endpoint returned nothing (not as a user fallback).
+                let mappedBranches: [BranchModel]
+                let rawBranches = backendBranches.map(Self.mapBranch).sorted(by: { $0.name < $1.name })
+                if rawBranches.isEmpty && !mappedUsers.isEmpty {
+                    mappedBranches = Self.deriveBranches(from: mappedUsers)
+                } else {
+                    mappedBranches = rawBranches
                 }
 
-                var mappedBranches = backendBranches.map(Self.mapBranch).sorted(by: { $0.name < $1.name })
-                if mappedBranches.isEmpty {
-                    mappedBranches = fallbackBranches(for: mappedUsers)
-                }
                 withAnimation {
                     users = mappedUsers
                     branches = mappedBranches
@@ -164,20 +169,15 @@ class AdminViewModel: ObservableObject {
                 }
                 auditLogs = Self.mockAuditLogs()
                 slaBreachTrendLabels = Self.generateDayLabels()
-                if let fallbackNotice {
-                    requestError = fallbackNotice
-                }
             } catch {
-                let fallbackUsers = fallbackEmployeeUsers()
-                let fallbackBranchModels = fallbackBranches(for: fallbackUsers)
+                // On hard failure, leave lists empty and surface the error.
+                // Do NOT substitute mock data — admin needs to see real state.
                 withAnimation {
-                    users = fallbackUsers
-                    branches = fallbackBranchModels
-                    if let selectedID = selectedUser?.id {
-                        selectedUser = fallbackUsers.first(where: { $0.id == selectedID })
-                    }
+                    users = []
+                    branches = []
+                    selectedUser = nil
                 }
-                requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to load users. Showing fallback employee data."
+                requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to load users from backend."
                 auditLogs = Self.mockAuditLogs()
                 slaBreachTrendLabels = Self.generateDayLabels()
             }
@@ -193,21 +193,17 @@ class AdminViewModel: ObservableObject {
         do {
             let dstAccounts = try await dstAPI.listDstAccounts(limit: 200, offset: 0)
             let backendMapped = dstAccounts.map(Self.mapDstAccount)
-            let mapped = applyDstLocalState(to: backendMapped.isEmpty ? fallbackDstUsers() : backendMapped)
+            // Apply any admin local-state overrides (edits/toggles) on top of
+            // the real backend list. Never fall back to mock data.
+            let mapped = applyDstLocalState(to: backendMapped)
             withAnimation {
                 dstUsers = mapped
             }
-            if backendMapped.isEmpty {
-                requestError = "DST directory unavailable from backend. Showing fallback DST data."
-            }
+            // No error banner needed — empty list is valid backend state.
         } catch {
-            // Keep manager DST operations usable on-device even if backend list fails.
-            let fallbackSeed = dstUsers.isEmpty ? fallbackDstUsers() : dstUsers
-            let localOnly = applyDstLocalState(to: fallbackSeed)
-            withAnimation {
-                dstUsers = localOnly
-            }
-            requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to load DST accounts from backend. Showing fallback DST data."
+            // On failure keep whatever was already loaded (e.g., from a previous
+            // successful fetch) but surface the error. Don't inject mocks.
+            requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to load DST accounts from backend."
         }
     }
     
@@ -642,8 +638,9 @@ class AdminViewModel: ObservableObject {
     }
 
     private static func mapEmployeeAccount(_ account: Admin_V1_EmployeeAccount) -> User? {
+        // Map ALL known staff roles so admin sees the complete employee directory.
         guard let role = mapStaffRole(account.role) else {
-            return nil
+            return nil // Skip unspecified/unknown proto roles only
         }
 
         let joinedAt: Date = {
@@ -654,18 +651,22 @@ class AdminViewModel: ObservableObject {
 
         let resolvedName = account.name.trimmingCharacters(in: .whitespacesAndNewlines)
         let name = resolvedName.isEmpty
-            ? account.email.components(separatedBy: "@").first?.replacingOccurrences(of: ".", with: " ").capitalized ?? "Unknown"
+            ? account.email.components(separatedBy: "@").first?.replacingOccurrences(of: ".", with: " ").capitalized ?? "N/A"
             : resolvedName
 
-        let branchName = account.branchName.isEmpty ? "Unassigned" : account.branchName
+        // Show "N/A" for any field the backend did not populate.
+        let branchName = account.branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "N/A" : account.branchName
+        let phone = account.phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "N/A" : account.phoneNumber
 
         return User(
             id: account.userID,
             name: name,
-            email: account.email,
+            email: account.email.isEmpty ? "N/A" : account.email,
             role: role,
             branch: branchName,
-            phone: account.phoneNumber,
+            phone: phone,
             isActive: account.isActive,
             joinedAt: joinedAt
         )
@@ -680,76 +681,31 @@ class AdminViewModel: ObservableObject {
         case .officer:
             return .loanOfficer
         default:
-            return nil
+            return nil // .unspecified and unknown raw values are silently dropped
         }
     }
 
-    private static func isManageableEmployeeRole(_ role: UserRole) -> Bool {
-        role == .manager || role == .loanOfficer
-    }
-
-    private func fallbackEmployeeUsers() -> [User] {
-        mockDataService.fetchUsers()
-            .filter { Self.isManageableEmployeeRole($0.role) }
-            .sorted {
-                if $0.role == $1.role {
-                    return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
-                }
-                return $0.role.displayName.localizedCaseInsensitiveCompare($1.role.displayName) == .orderedAscending
-            }
-    }
-
-    private func fallbackDstUsers() -> [User] {
-        [
-            User(
-                id: "DST-001",
-                name: "Rahul Malhotra",
-                email: "rahul.malhotra@dst.bank.com",
-                role: .dst,
-                branch: "Mumbai Central",
-                phone: "+91-9820012345",
-                isActive: true,
-                joinedAt: Calendar.current.date(byAdding: .month, value: -18, to: Date()) ?? Date()
-            ),
-            User(
-                id: "DST-002",
-                name: "Nisha Bansal",
-                email: "nisha.bansal@dst.bank.com",
-                role: .dst,
-                branch: "Delhi North",
-                phone: "+91-9810012346",
-                isActive: true,
-                joinedAt: Calendar.current.date(byAdding: .month, value: -11, to: Date()) ?? Date()
-            ),
-            User(
-                id: "DST-003",
-                name: "Arvind Kumar",
-                email: "arvind.kumar@dst.bank.com",
-                role: .dst,
-                branch: "Bangalore South",
-                phone: "+91-9845012347",
-                isActive: false,
-                joinedAt: Calendar.current.date(byAdding: .month, value: -7, to: Date()) ?? Date()
-            )
-        ]
-    }
-
-    private func fallbackBranches(for users: [User]) -> [BranchModel] {
-        let derivedBranches = Set(
+    /// Derives a minimal branch list from mapped user data when the branches
+    /// endpoint returns nothing. This is NOT a mock — it is derived from live data.
+    private static func deriveBranches(from users: [User]) -> [BranchModel] {
+        Set(
             users
                 .map(\.branch)
                 .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
+                .filter { !$0.isEmpty && $0 != "N/A" }
         )
-
-        return derivedBranches
-            .sorted()
-            .map { branchName in
-                BranchModel(id: branchName.lowercased().replacingOccurrences(of: " ", with: "-"),
-                            name: branchName,
-                            location: branchName)
-            }
+        .sorted()
+        .map { branchName in
+            BranchModel(
+                id: branchName.lowercased().replacingOccurrences(of: " ", with: "-"),
+                name: branchName,
+                location: branchName
+            )
+        }
     }
+
+    // Note: fallbackDstUsers() and fallbackEmployeeUsers() have been removed.
+    // Admin always sees live backend data. Empty lists are the correct empty state.
 
     private static func generateDayLabels() -> [String] {
         let formatter = DateFormatter()
@@ -782,15 +738,21 @@ class AdminViewModel: ObservableObject {
         let resolvedName = account.name.trimmingCharacters(in: .whitespacesAndNewlines)
         let fallbackName = account.email.components(separatedBy: "@").first?
             .replacingOccurrences(of: ".", with: " ")
-            .capitalized ?? "DST Agent"
+            .capitalized ?? "N/A"
+
+        // Show "N/A" for any field not populated by the backend.
+        let branch = account.branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "N/A" : account.branchName
+        let phone = account.phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "N/A" : account.phoneNumber
 
         return User(
             id: account.userID,
             name: resolvedName.isEmpty ? fallbackName : resolvedName,
-            email: account.email,
+            email: account.email.isEmpty ? "N/A" : account.email,
             role: .dst,
-            branch: account.branchName.isEmpty ? "Unassigned" : account.branchName,
-            phone: account.phoneNumber,
+            branch: branch,
+            phone: phone,
             isActive: account.isActive,
             joinedAt: joinedAt
         )

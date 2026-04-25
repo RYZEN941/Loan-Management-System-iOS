@@ -17,6 +17,7 @@ struct AdminSystemControlView: View {
 
     private enum EmployeeRoleFilter: String, CaseIterable, Identifiable {
         case all = "All Roles"
+        case admin = "Admin"
         case manager = "Manager"
         case loanOfficer = "Loan Officer"
 
@@ -25,7 +26,9 @@ struct AdminSystemControlView: View {
         func matches(_ role: UserRole) -> Bool {
             switch self {
             case .all:
-                return role == .manager || role == .loanOfficer
+                return true // show all roles the backend returned
+            case .admin:
+                return role == .admin
             case .manager:
                 return role == .manager
             case .loanOfficer:
@@ -350,10 +353,12 @@ struct AdminSystemControlView: View {
                         Image(systemName: userManagementSegment == .employees ? "person.2.slash" : "person.badge.key")
                             .font(.system(size: 32))
                             .foregroundStyle(.tertiary)
-                        Text(userManagementSegment == .employees ? "No employees match the current filters." : "No DST accounts found.")
+                        Text(userManagementSegment == .employees
+                            ? "No employees found in backend."
+                            : "No DST accounts found in backend.")
                             .font(Theme.Typography.subheadline)
                             .foregroundStyle(.secondary)
-                        Text("Live data loads first. Fallback records stay visible whenever backend data is unavailable.")
+                        Text("All data is loaded live from the server. If the list is empty, there are currently no records on the backend.")
                             .font(Theme.Typography.caption)
                             .foregroundStyle(.tertiary)
                             .multilineTextAlignment(.center)
@@ -375,7 +380,9 @@ struct AdminSystemControlView: View {
     }
 
     private var manageableEmployeeUsers: [User] {
-        adminVM.users.filter { $0.role == .manager || $0.role == .loanOfficer }
+        // Show ALL employee roles from backend (admin, manager, officer).
+        // The role filter picker lets the admin narrow down to a specific role.
+        adminVM.users
     }
 
     private var employeeBranchOptions: [String] {

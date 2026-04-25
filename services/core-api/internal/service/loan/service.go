@@ -544,6 +544,11 @@ func (s *service) UpdateLoanApplicationStatus(ctx context.Context, req *loanv1.U
 			return nil, status.Error(codes.PermissionDenied, "officer can only update assigned applications")
 		}
 	}
+	if role == "dst" {
+		if appRow.CreatedByUserID.Bytes != callerUserID {
+			return nil, status.Error(codes.PermissionDenied, "dst can only update applications they created")
+		}
+	}
 	if err := validateApplicationStatusTransition(appRow.Status, statusValue, role); err != nil {
 		return nil, err
 	}
@@ -1443,6 +1448,14 @@ func validateApplicationStatusTransition(from, to generated.LoanApplicationStatu
 			}
 		}
 		return status.Error(codes.FailedPrecondition, "invalid manager status transition")
+	case "dst":
+		switch from {
+		case generated.LoanApplicationStatusDRAFT, generated.LoanApplicationStatusSUBMITTED:
+			if to == generated.LoanApplicationStatusCANCELLED {
+				return nil
+			}
+		}
+		return status.Error(codes.FailedPrecondition, "invalid dst status transition")
 	default:
 		return status.Error(codes.PermissionDenied, "role cannot update status")
 	}

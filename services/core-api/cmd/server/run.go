@@ -134,7 +134,7 @@ func Run() error {
 		"/loan.v1.LoanService/CreateLoanApplication":                  {"borrower", "officer", "dst"},
 		"/loan.v1.LoanService/GetLoanApplication":                     {"borrower", "officer", "manager", "admin", "dst"},
 		"/loan.v1.LoanService/ListLoanApplications":                   {"borrower", "officer", "manager", "admin", "dst"},
-		"/loan.v1.LoanService/UpdateLoanApplicationStatus":            {"officer", "manager", "admin"},
+		"/loan.v1.LoanService/UpdateLoanApplicationStatus":            {"officer", "manager", "admin", "dst"},
 		"/loan.v1.LoanService/UpdateLoanApplicationTerms":             {"officer", "manager", "admin"},
 		"/loan.v1.LoanService/AssignLoanApplicationOfficer":           {"manager", "admin"},
 		"/loan.v1.LoanService/AddApplicationCoapplicant":              {"borrower", "officer", "manager", "admin", "dst"},

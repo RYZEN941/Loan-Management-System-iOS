@@ -8,6 +8,7 @@
 
 import Foundation
 import GRPCCore
+import SwiftProtobuf
 
 @available(iOS 18.0, *)
 @MainActor
@@ -86,6 +87,7 @@ public final class AuthRepository: Sendable {
         public let phone: String?
         public let hasBorrowerProfile: Bool
         public let borrowerProfileId: String?
+        public let cibilScore: Int?
     }
 
     /// Step 1 of Login. Submits identifier/password and returns allowed MFA factors.
@@ -263,6 +265,7 @@ public final class AuthRepository: Sendable {
         let hasBorrowerProfile: Bool
         var fullName: String? = nil
         var borrowerProfileId: String? = nil
+        var cibilScore: Int? = nil
         if case .borrowerProfile(let profile) = response.profile {
             hasBorrowerProfile = true
             let composedName = [profile.firstName, profile.lastName]
@@ -272,6 +275,9 @@ public final class AuthRepository: Sendable {
             fullName = composedName.isEmpty ? nil : composedName
             let pid = profile.profileID.trimmingCharacters(in: .whitespacesAndNewlines)
             borrowerProfileId = pid.isEmpty ? nil : pid
+            // Borrower app proto may lag backend schema; parse cibil_score (field 18)
+            // from unknown fields so we can still surface it on the dashboard.
+            cibilScore = Self.decodeInt32Field(from: profile, fieldNumber: 18)
         } else {
             hasBorrowerProfile = false
         }
@@ -283,8 +289,63 @@ public final class AuthRepository: Sendable {
             email: email.isEmpty ? nil : email,
             phone: phone.isEmpty ? nil : phone,
             hasBorrowerProfile: hasBorrowerProfile,
-            borrowerProfileId: borrowerProfileId
+            borrowerProfileId: borrowerProfileId,
+            cibilScore: cibilScore
         )
+    }
+
+    private static func decodeInt32Field<T: SwiftProtobuf.Message>(
+        from message: T,
+        fieldNumber: UInt64
+    ) -> Int? {
+        guard let data = try? message.serializedData() else { return nil }
+        let key = (fieldNumber << 3)
+        var index = 0
+
+        while index < data.count {
+            guard let (rawKey, keyLength) = decodeVarint(in: data, from: index) else { return nil }
+            index += keyLength
+            let wireType = rawKey & 0x7
+
+            switch wireType {
+            case 0:
+                guard let (value, valueLength) = decodeVarint(in: data, from: index) else { return nil }
+                if rawKey == key {
+                    return Int(value)
+                }
+                index += valueLength
+            case 1:
+                index += 8
+            case 2:
+                guard let (length, lengthBytes) = decodeVarint(in: data, from: index) else { return nil }
+                index += lengthBytes + Int(length)
+            case 5:
+                index += 4
+            default:
+                return nil
+            }
+        }
+
+        return nil
+    }
+
+    private static func decodeVarint(in data: Data, from start: Int) -> (UInt64, Int)? {
+        var value: UInt64 = 0
+        var shift: UInt64 = 0
+        var index = start
+
+        while index < data.count && shift <= 63 {
+            let byte = data[index]
+            value |= UInt64(byte & 0x7F) << shift
+            index += 1
+
+            if (byte & 0x80) == 0 {
+                return (value, index - start)
+            }
+            shift += 7
+        }
+
+        return nil
     }
 
     // MARK: - Session Management

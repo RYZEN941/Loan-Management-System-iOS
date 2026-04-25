@@ -15,25 +15,26 @@ import GRPCProtobuf
 
 /// Namespace containing generated types for the "branch.v1.BranchService" service.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-internal enum Branch_V1_BranchService: Sendable {
+public enum Branch_V1_BranchService: Sendable {
     /// Service descriptor for the "branch.v1.BranchService" service.
-    internal static let descriptor = GRPCCore.ServiceDescriptor(fullyQualifiedService: "branch.v1.BranchService")
+    public static let descriptor = GRPCCore.ServiceDescriptor(fullyQualifiedService: "branch.v1.BranchService")
     /// Namespace for method metadata.
-    internal enum Method: Sendable {
+    public enum Method: Sendable {
         /// Namespace for "ListBranches" metadata.
-        internal enum ListBranches: Sendable {
+        public enum ListBranches: Sendable {
             /// Request type for "ListBranches".
-            internal typealias Input = Branch_V1_ListBranchesRequest
+            public typealias Input = Branch_V1_ListBranchesRequest
             /// Response type for "ListBranches".
-            internal typealias Output = Branch_V1_ListBranchesResponse
+            public typealias Output = Branch_V1_ListBranchesResponse
             /// Descriptor for "ListBranches".
-            internal static let descriptor = GRPCCore.MethodDescriptor(
+            public static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "branch.v1.BranchService"),
-                method: "ListBranches"
+                method: "ListBranches",
+                type: .unary
             )
         }
         /// Descriptors for all methods in the "branch.v1.BranchService" service.
-        internal static let descriptors: [GRPCCore.MethodDescriptor] = [
+        public static let descriptors: [GRPCCore.MethodDescriptor] = [
             ListBranches.descriptor
         ]
     }
@@ -42,7 +43,7 @@ internal enum Branch_V1_BranchService: Sendable {
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 extension GRPCCore.ServiceDescriptor {
     /// Service descriptor for the "branch.v1.BranchService" service.
-    internal static let branch_v1_BranchService = GRPCCore.ServiceDescriptor(fullyQualifiedService: "branch.v1.BranchService")
+    public static let branch_v1_BranchService = GRPCCore.ServiceDescriptor(fullyQualifiedService: "branch.v1.BranchService")
 }
 
 // MARK: branch.v1.BranchService (server)
@@ -59,7 +60,7 @@ extension Branch_V1_BranchService {
     ///
     /// Where possible, prefer using the stricter, less-verbose ``ServiceProtocol``
     /// or ``SimpleServiceProtocol`` instead.
-    internal protocol StreamingServiceProtocol: GRPCCore.RegistrableRPCService {
+    public protocol StreamingServiceProtocol: GRPCCore.RegistrableRPCService {
         /// Handle the "ListBranches" method.
         ///
         /// - Parameters:
@@ -82,7 +83,7 @@ extension Branch_V1_BranchService {
     /// trailing response metadata. If you don't need these then consider using
     /// the ``SimpleServiceProtocol``. If you need fine grained control over your RPCs then
     /// use ``StreamingServiceProtocol``.
-    internal protocol ServiceProtocol: Branch_V1_BranchService.StreamingServiceProtocol {
+    public protocol ServiceProtocol: Branch_V1_BranchService.StreamingServiceProtocol {
         /// Handle the "ListBranches" method.
         ///
         /// - Parameters:
@@ -103,7 +104,7 @@ extension Branch_V1_BranchService {
     /// This is the highest level protocol for the service. The API is the easiest to use but
     /// doesn't provide access to request or response metadata. If you need access to these
     /// then use ``ServiceProtocol`` instead.
-    internal protocol SimpleServiceProtocol: Branch_V1_BranchService.ServiceProtocol {
+    public protocol SimpleServiceProtocol: Branch_V1_BranchService.ServiceProtocol {
         /// Handle the "ListBranches" method.
         ///
         /// - Parameters:
@@ -123,7 +124,7 @@ extension Branch_V1_BranchService {
 // Default implementation of 'registerMethods(with:)'.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 extension Branch_V1_BranchService.StreamingServiceProtocol {
-    internal func registerMethods<Transport>(with router: inout GRPCCore.RPCRouter<Transport>) where Transport: GRPCCore.ServerTransport {
+    public func registerMethods<Transport>(with router: inout GRPCCore.RPCRouter<Transport>) where Transport: GRPCCore.ServerTransport {
         router.registerHandler(
             forMethod: Branch_V1_BranchService.Method.ListBranches.descriptor,
             deserializer: GRPCProtobuf.ProtobufDeserializer<Branch_V1_ListBranchesRequest>(),
@@ -141,7 +142,7 @@ extension Branch_V1_BranchService.StreamingServiceProtocol {
 // Default implementation of streaming methods from 'StreamingServiceProtocol'.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 extension Branch_V1_BranchService.ServiceProtocol {
-    internal func listBranches(
+    public func listBranches(
         request: GRPCCore.StreamingServerRequest<Branch_V1_ListBranchesRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Branch_V1_ListBranchesResponse> {
@@ -156,7 +157,7 @@ extension Branch_V1_BranchService.ServiceProtocol {
 // Default implementation of methods from 'ServiceProtocol'.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 extension Branch_V1_BranchService.SimpleServiceProtocol {
-    internal func listBranches(
+    public func listBranches(
         request: GRPCCore.ServerRequest<Branch_V1_ListBranchesRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Branch_V1_ListBranchesResponse> {
@@ -178,7 +179,7 @@ extension Branch_V1_BranchService {
     ///
     /// You don't need to implement this protocol directly, use the generated
     /// implementation, ``Client``.
-    internal protocol ClientProtocol: Sendable {
+    public protocol ClientProtocol: Sendable {
         /// Call the "ListBranches" method.
         ///
         /// - Parameters:
@@ -204,14 +205,14 @@ extension Branch_V1_BranchService {
     /// The ``Client`` provides an implementation of ``ClientProtocol`` which wraps
     /// a `GRPCCore.GRPCCClient`. The underlying `GRPCClient` provides the long-lived
     /// means of communication with the remote peer.
-    internal struct Client<Transport>: ClientProtocol where Transport: GRPCCore.ClientTransport {
+    public struct Client<Transport>: ClientProtocol where Transport: GRPCCore.ClientTransport {
         private let client: GRPCCore.GRPCClient<Transport>
 
         /// Creates a new client wrapping the provided `GRPCCore.GRPCClient`.
         ///
         /// - Parameters:
         ///   - client: A `GRPCCore.GRPCClient` providing a communication channel to the service.
-        internal init(wrapping client: GRPCCore.GRPCClient<Transport>) {
+        public init(wrapping client: GRPCCore.GRPCClient<Transport>) {
             self.client = client
         }
 
@@ -226,7 +227,7 @@ extension Branch_V1_BranchService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        internal func listBranches<Result>(
+        public func listBranches<Result>(
             request: GRPCCore.ClientRequest<Branch_V1_ListBranchesRequest>,
             serializer: some GRPCCore.MessageSerializer<Branch_V1_ListBranchesRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Branch_V1_ListBranchesResponse>,
@@ -259,7 +260,7 @@ extension Branch_V1_BranchService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    internal func listBranches<Result>(
+    public func listBranches<Result>(
         request: GRPCCore.ClientRequest<Branch_V1_ListBranchesRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Branch_V1_ListBranchesResponse>) async throws -> Result = { response in
@@ -289,7 +290,7 @@ extension Branch_V1_BranchService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    internal func listBranches<Result>(
+    public func listBranches<Result>(
         _ message: Branch_V1_ListBranchesRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,

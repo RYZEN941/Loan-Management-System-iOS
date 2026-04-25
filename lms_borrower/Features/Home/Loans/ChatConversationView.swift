@@ -1,46 +1,140 @@
 import SwiftUI
 import Combine
 
-struct ChatMessage: Identifiable {
-    let id = UUID()
-    let text: String
-    let isCurrentUser: Bool
-    let time: String
-}
-
-class ChatViewModel: ObservableObject {
-    @Published var messages: [ChatMessage] = [
-        ChatMessage(text: "Hi there! I noticed my PAN card was rejected during the upload. What went wrong?", isCurrentUser: true, time: "10:30 AM"),
-        ChatMessage(text: "Hello! Let me check that for you.", isCurrentUser: false, time: "10:32 AM"),
-        ChatMessage(text: "It looks like the image was a bit blurry and the system couldn't read the ID number. Could you please re-upload a clearer picture?", isCurrentUser: false, time: "10:33 AM"),
-        ChatMessage(text: "Sure, let me do that right now.", isCurrentUser: true, time: "10:35 AM"),
-        ChatMessage(text: "Yes, the new PAN card upload is confirmed. We will proceed with the verification.", isCurrentUser: false, time: "10:42 AM")
-    ]
+@MainActor
+@available(iOS 18.0, *)
+class ChatConversationViewModel: ObservableObject {
+    @Published var messages: [ChatMessage] = []
     @Published var inputText: String = ""
+    @Published var isLoading: Bool = true
+    @Published var errorMessage: String? = nil
+    @Published var participantName: String = "User"
+
+    private let chatService: ChatServiceProtocol
+    private let roomID: String
+    private var currentUserID: String = ""
+    private var messageStreamTask: Task<Void, Never>?
+
+    init(roomID: String, chatService: ChatServiceProtocol = ServiceContainer.chatService) {
+        self.roomID = roomID
+        self.chatService = chatService
+        self.currentUserID = getCurrentUserID()
+        loadMessages()
+        startStreaming()
+    }
+
+    private func getCurrentUserID() -> String {
+        guard let accessToken = try? TokenStore.shared.accessToken(),
+              let userID = JWTClaimsDecoder.subject(from: accessToken) else {
+            return ""
+        }
+        return userID
+    }
+
+    deinit {
+        messageStreamTask?.cancel()
+    }
+
+    // MARK: - Data Loading
+
+    func loadMessages() {
+        isLoading = true
+        errorMessage = nil
+
+        Task {
+            do {
+                let loadedMessages = try await chatService.listRoomMessages(
+                    roomID: roomID,
+                    limit: 100,
+                    offset: 0
+                )
+                await MainActor.run {
+                    self.messages = loadedMessages.reversed() // Show newest at bottom
+                    self.isLoading = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.errorMessage = error.localizedDescription
+                    self.isLoading = false
+                }
+            }
+        }
+    }
+
+    // MARK: - Streaming
+
+    private func startStreaming() {
+        messageStreamTask = Task {
+            let stream = chatService.subscribeToRoomMessages(roomID: roomID, afterMessageID: nil)
+
+            do {
+                for try await event in stream {
+                    if Task.isCancelled { break }
+
+                    if !event.isHeartbeat, let newMessage = event.message {
+                        await MainActor.run {
+                            // Add new message if not already present
+                            if !self.messages.contains(where: { $0.id == newMessage.id }) {
+                                self.messages.append(newMessage)
+                            }
+                        }
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self.errorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    // MARK: - Sending Messages
 
     func sendMessage() {
         guard !inputText.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-        let newMsg = ChatMessage(text: inputText, isCurrentUser: true, time: "Just now")
-        messages.append(newMsg)
+
+        let text = inputText.trimmingCharacters(in: .whitespaces)
         inputText = ""
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            let reply = ChatMessage(
-                text: "Thanks! I've received your message. Is there anything else I can help with?",
-                isCurrentUser: false,
-                time: "Just now"
-            )
-            self.messages.append(reply)
+        Task {
+            do {
+                let sentMessage = try await chatService.sendMessage(
+                    roomID: roomID,
+                    body: text,
+                    messageType: .text,
+                    metadataJSON: nil
+                )
+                await MainActor.run {
+                    // Optimistically add message (stream will also deliver it)
+                    if !self.messages.contains(where: { $0.id == sentMessage.id }) {
+                        self.messages.append(sentMessage)
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self.errorMessage = error.localizedDescription
+                    self.inputText = text // Restore text on error
+                }
+            }
         }
+    }
+
+    func refresh() {
+        loadMessages()
     }
 }
 
 struct ChatConversationView: View {
-    let agentName: String
+    let roomID: String
 
-    @StateObject private var viewModel = ChatViewModel()
+    @StateObject private var viewModel: ChatConversationViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var scrollOffset: CGFloat = 0
+
+    init(roomID: String) {
+        self.roomID = roomID
+        _viewModel = StateObject(wrappedValue: ChatConversationViewModel(roomID: roomID))
+    }
 
     var body: some View {
         GeometryReader { proxy in
@@ -49,44 +143,52 @@ struct ChatConversationView: View {
             ZStack(alignment: .top) {
                 Color(UIColor.systemGroupedBackground).ignoresSafeArea()
 
-                ScrollViewReader { scrollProxy in
-                    ScrollView(.vertical, showsIndicators: false) {
-                        VStack(spacing: 0) {
-                            ChatScrollOffsetReader()
-                                .frame(height: 0)
-                            LazyVStack(spacing: 2) {
-                                ForEach(viewModel.messages) { message in
-                                    ChatBubble(message: message, agentName: agentName)
-                                        .id(message.id)
+                if viewModel.isLoading {
+                    ProgressView("Loading messages...")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollViewReader { scrollProxy in
+                        ScrollView(.vertical, showsIndicators: false) {
+                            VStack(spacing: 0) {
+                                ChatScrollOffsetReader()
+                                    .frame(height: 0)
+                                LazyVStack(spacing: 2) {
+                                    ForEach(viewModel.messages) { message in
+                                        ChatBubble(message: message, participantName: viewModel.participantName)
+                                            .id(message.id)
+                                    }
+                                }
+                                .padding(.top, topInset + 62)
+                                .padding(.bottom, 24)
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                        .coordinateSpace(name: "ChatConversationScroll")
+                        .onPreferenceChange(ChatScrollOffsetKey.self) { value in
+                            scrollOffset = value
+                        }
+                        .onAppear {
+                            if let last = viewModel.messages.last {
+                                DispatchQueue.main.async {
+                                    scrollProxy.scrollTo(last.id, anchor: .bottom)
                                 }
                             }
-                            .padding(.top, topInset + 62)
-                            .padding(.bottom, 24)
                         }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .coordinateSpace(name: "ChatConversationScroll")
-                    .onPreferenceChange(ChatScrollOffsetKey.self) { value in
-                        scrollOffset = value
-                    }
-                    .onAppear {
-                        if let last = viewModel.messages.last {
-                            DispatchQueue.main.async {
-                                scrollProxy.scrollTo(last.id, anchor: .bottom)
+                        .onChange(of: viewModel.messages.count) { _ in
+                            if let last = viewModel.messages.last {
+                                withAnimation(.easeOut(duration: 0.22)) {
+                                    scrollProxy.scrollTo(last.id, anchor: .bottom)
+                                }
                             }
                         }
-                    }
-                    .onChange(of: viewModel.messages.count) { _ in
-                        if let last = viewModel.messages.last {
-                            withAnimation(.easeOut(duration: 0.22)) {
-                                scrollProxy.scrollTo(last.id, anchor: .bottom)
-                            }
+                        .refreshable {
+                            viewModel.refresh()
                         }
                     }
                 }
 
                 MessagesNavigationBar(
-                    agentName: agentName,
+                    participantName: viewModel.participantName,
                     dismiss: dismiss,
                     scrollOffset: scrollOffset,
                     topInset: topInset
@@ -101,11 +203,20 @@ struct ChatConversationView: View {
         .toolbar(.hidden, for: .tabBar)
         .navigationBarBackButtonHidden(true)
         .navigationBarHidden(true)
+        .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
+            Button("OK") {
+                viewModel.errorMessage = nil
+            }
+        } message: {
+            if let error = viewModel.errorMessage {
+                Text(error)
+            }
+        }
     }
 }
 
 struct MessagesNavigationBar: View {
-    let agentName: String
+    let participantName: String
     let dismiss: DismissAction
     let scrollOffset: CGFloat
     let topInset: CGFloat
@@ -148,14 +259,14 @@ struct MessagesNavigationBar: View {
                         .fill(DS.primaryLight)
                         .frame(width: 30, height: 30)
                         .overlay(
-                            Text(String(agentName.prefix(1)))
+                            Text(String(participantName.prefix(1)))
                                 .font(.system(size: 13, weight: .bold))
                                 .foregroundColor(.mainBlue)
                         )
                         .scaleEffect(0.84 + (0.16 * collapseProgress))
 
                     VStack(spacing: 1) {
-                        Text(agentName)
+                        Text(participantName)
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.primary)
                             .lineLimit(1)
@@ -195,40 +306,53 @@ struct MessagesNavigationBar: View {
 
 struct ChatBubble: View {
     let message: ChatMessage
-    let agentName: String
+    let participantName: String
+    @EnvironmentObject var sessionStore: SessionStore
+
+    private var currentUserID: String {
+        guard let accessToken = try? TokenStore.shared.accessToken(),
+              let userID = JWTClaimsDecoder.subject(from: accessToken) else {
+            return ""
+        }
+        return userID
+    }
+
+    var isCurrentUser: Bool {
+        message.isFromCurrentUser(currentUserID: currentUserID)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             HStack(alignment: .bottom, spacing: 6) {
-                if message.isCurrentUser {
+                if isCurrentUser {
                     Spacer(minLength: 60)
                 } else {
                     Circle()
                         .fill(DS.primaryLight)
                         .frame(width: 28, height: 28)
                         .overlay(
-                            Text(String(agentName.prefix(1)))
+                            Text(String(participantName.prefix(1)))
                                 .font(.system(size: 11, weight: .bold))
                                 .foregroundColor(.mainBlue)
                         )
                 }
 
-                Text(message.text)
+                Text(message.body)
                     .font(.body)
                     .multilineTextAlignment(.leading)
                     .lineSpacing(1.5)
-                    .foregroundColor(message.isCurrentUser ? .white : .primary)
+                    .foregroundColor(isCurrentUser ? .white : .primary)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
-                    .frame(maxWidth: 255, alignment: message.isCurrentUser ? .trailing : .leading)
+                    .frame(maxWidth: 255, alignment: isCurrentUser ? .trailing : .leading)
                     .background(
-                        message.isCurrentUser
+                        isCurrentUser
                             ? DS.primary
                             : Color(UIColor.secondarySystemGroupedBackground)
                     )
-                    .clipShape(BubbleShape(isCurrentUser: message.isCurrentUser))
+                    .clipShape(BubbleShape(isCurrentUser: isCurrentUser))
 
-                if !message.isCurrentUser {
+                if !isCurrentUser {
                     Spacer(minLength: 60)
                 }
             }
@@ -236,16 +360,16 @@ struct ChatBubble: View {
             .padding(.vertical, 2)
 
             HStack {
-                if message.isCurrentUser {
+                if isCurrentUser {
                     Spacer()
                 }
 
-                Text(message.time)
+                Text(message.formattedTime)
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
-                    .padding(.horizontal, message.isCurrentUser ? 18 : 50)
+                    .padding(.horizontal, isCurrentUser ? 18 : 50)
 
-                if !message.isCurrentUser {
+                if !isCurrentUser {
                     Spacer()
                 }
             }
@@ -288,7 +412,7 @@ struct BubbleShape: Shape {
 }
 
 struct InputBarView: View {
-    @ObservedObject var viewModel: ChatViewModel
+    @ObservedObject var viewModel: ChatConversationViewModel
 
     var body: some View {
         VStack(spacing: 0) {

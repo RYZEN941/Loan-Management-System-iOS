@@ -39,27 +39,14 @@ struct PremiumLineChart: View {
                             }
                     )
                 
-                // Background Gradient Area
+                // Background Area
                 let baselineY = geo.size.height - 25 // Tighter baseline for compact layout
                 PremiumLineShape(points: points, closed: true, height: baselineY)
-                    .fill(
-                        LinearGradient(
-                            colors: [accentColor.opacity(0.15), accentColor.opacity(0.01)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
+                    .fill(accentColor.opacity(0.12))
                 
                 // The Main Premium Line
                 PremiumLineShape(points: points, closed: false)
-                    .stroke(
-                        LinearGradient(
-                            colors: [accentColor, accentColor.opacity(0.7)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        ),
-                        style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round)
-                    )
+                    .stroke(accentColor, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
                 
                 // Markers - Small filled circle for every point
                 if showPoints {

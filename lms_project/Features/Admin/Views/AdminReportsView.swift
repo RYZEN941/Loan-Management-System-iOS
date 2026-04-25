@@ -33,7 +33,7 @@ struct AdminReportsView: View {
     private let reports: [ReportItem] = [
         ReportItem(id:"RPT-PERF",title:"Portfolio Performance",description:"Total portfolio, disbursements, NPA summary",icon:"chart.bar.fill",color:Theme.Colors.primary,lastGenerated:"Apr 15, 2025",size:"2.4 MB"),
         ReportItem(id:"RPT-DISB",title:"Disbursement Report",description:"Loans disbursed by branch, type, and officer",icon:"arrow.up.right.circle.fill",color:Theme.Colors.success,lastGenerated:"Apr 14, 2025",size:"1.8 MB"),
-        ReportItem(id:"RPT-COLL",title:"Collection Report",description:"EMI recovery, DPD buckets, outstanding analysis",icon:"indianrupeesign.circle.fill",color:Color(hex:"6F42C1"),lastGenerated:"Apr 13, 2025",size:"3.1 MB"),
+        ReportItem(id:"RPT-COLL",title:"Collection Report",description:"EMI recovery, DPD buckets, outstanding analysis",icon:"indianrupeesign.circle.fill",color:Theme.Colors.primary,lastGenerated:"Apr 13, 2025",size:"3.1 MB"),
         ReportItem(id:"RPT-NPA",title:"NPA Report",description:"Non-performing assets, aging, provisioning",icon:"exclamationmark.triangle.fill",color:Theme.Colors.critical,lastGenerated:"Apr 12, 2025",size:"1.2 MB"),
         ReportItem(id:"RPT-RISK",title:"Risk & Credit Report",description:"CIBIL distribution, FOIR analysis, fraud flags",icon:"shield.lefthalf.filled",color:Theme.Colors.warning,lastGenerated:"Apr 10, 2025",size:"2.8 MB"),
     ]
@@ -147,16 +147,10 @@ struct AdminReportsView: View {
             }
             .padding(24)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                LinearGradient(
-                    colors: [Theme.Colors.adaptivePrimary(colorScheme), Theme.Colors.adaptivePrimary(colorScheme).opacity(0.85)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+            .background(Theme.Colors.adaptivePrimary(colorScheme))
         }
         .clipShape(RoundedRectangle(cornerRadius: 24))
-        .shadow(color: Theme.Colors.adaptivePrimary(colorScheme).opacity(0.3), radius: 12, x: 0, y: 6)
+        .shadow(color: Theme.Colors.adaptivePrimary(colorScheme).opacity(0.08), radius: 4, x: 0, y: 2)
     }
 
     // MARK: - All Reports List
@@ -522,7 +516,7 @@ private struct ReportPreviewSheet: View {
                         HStack(spacing: 16) {
                             exportButton("PDF", icon: "doc.text.fill", format: .pdf, color: .red)
                             exportButton("Excel", icon: "tablecells.fill", format: .excel, color: .green)
-                            exportButton("CSV", icon: "list.bullet.rectangle.fill", format: .csv, color: .blue)
+                            exportButton("CSV", icon: "list.bullet.rectangle.fill", format: .csv, color: Theme.Colors.adaptivePrimary(colorScheme))
                         }
                     }
                 }

@@ -42,15 +42,19 @@ struct LoginView: View {
                 .ignoresSafeArea()
 
             Circle()
-                .fill(RadialGradient(
-                    gradient: Gradient(colors: [
-                        Theme.Colors.primary.opacity(colorScheme == .dark ? 0.15 : 0.08),
-                        Color.clear
-                    ]),
-                    center: .center,
-                    startRadius: 0,
-                    endRadius: 360
-                ))
+                .fill(
+                    colorScheme == .dark
+                    ? AnyShapeStyle(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.10))
+                    : AnyShapeStyle(RadialGradient(
+                        gradient: Gradient(colors: [
+                            Theme.Colors.primary.opacity(0.08),
+                            Color.clear
+                        ]),
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: 360
+                    ))
+                )
                 .frame(width: 600, height: 600)
                 .offset(x: -180, y: -180)
                 .blur(radius: 40)
@@ -104,14 +108,7 @@ private struct LoginBrandPanel: View {
             (colorScheme == .dark ? Theme.Colors.adaptiveBackground(colorScheme) : Color(hex: "0052CC"))
                 .overlay {
                     if colorScheme == .dark {
-                        LinearGradient(
-                            colors: [
-                                Theme.Colors.adaptivePrimary(colorScheme).opacity(0.35),
-                                Color.clear
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+                        Theme.Colors.adaptivePrimary(colorScheme).opacity(0.28)
                     }
                 }
                 .ignoresSafeArea()
@@ -312,10 +309,7 @@ struct CredentialsStep: View {
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(width: 280, height: 50)
-                        .background(LinearGradient(
-                            colors: [Theme.Colors.primary, Theme.Colors.adaptivePrimary(colorScheme)],
-                            startPoint: .topLeading, endPoint: .bottomTrailing
-                        ))
+                        .background(colorScheme == .dark ? Theme.Colors.adaptivePrimary(colorScheme) : Theme.Colors.primary)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 .buttonStyle(.plain)
@@ -418,7 +412,7 @@ struct MFASelectionStep: View {
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(width: 280, height: 50)
-                        .background(LinearGradient(colors: [Theme.Colors.primary, Theme.Colors.adaptivePrimary(colorScheme)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .background(colorScheme == .dark ? Theme.Colors.adaptivePrimary(colorScheme) : Theme.Colors.primary)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 .buttonStyle(.plain)
@@ -591,8 +585,8 @@ struct MFAVerificationStep: View {
                         .foregroundStyle(.white)
                         .frame(width: 280, height: 50)
                         .background(otp.count >= 6
-                            ? LinearGradient(colors: [Theme.Colors.primary, Theme.Colors.adaptivePrimary(colorScheme)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                            : LinearGradient(colors: [Color.secondary.opacity(0.35), Color.secondary.opacity(0.35)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                            ? (colorScheme == .dark ? Theme.Colors.adaptivePrimary(colorScheme) : Theme.Colors.primary)
+                            : Color.secondary.opacity(0.35)
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
@@ -776,11 +770,7 @@ struct ForcePasswordChangeStep: View {
                     }
                     .foregroundStyle(.white)
                     .frame(width: 280, height: 50)
-                    .background(LinearGradient(
-                        colors: [Theme.Colors.primary, Theme.Colors.adaptivePrimary(colorScheme)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ))
+                    .background(colorScheme == .dark ? Theme.Colors.adaptivePrimary(colorScheme) : Theme.Colors.primary)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 .buttonStyle(.plain)

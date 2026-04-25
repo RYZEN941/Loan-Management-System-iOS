@@ -32,6 +32,15 @@ enum ActionRequiredFilter: String, CaseIterable, Identifiable {
 
 @MainActor
 class AdminViewModel: ObservableObject {
+    private struct PolicyConfigurationsCache: Codable {
+        let maxLoanAmount: Double
+        let minCIBILScore: Int
+        let maxDTIRatio: Double
+        let requireDocVerification: Bool
+        let autoAssignEnabled: Bool
+        let updatedAt: Date
+    }
+
     @Published var users: [User] = []
     @Published var dstUsers: [User] = []
     @Published var selectedUser: User? = nil
@@ -85,7 +94,7 @@ class AdminViewModel: ObservableObject {
     // Notifications for Profile
     @Published var notifications: [AdminNotification] = [
         AdminNotification(title: "System Maintenance", message: "Scheduled for Sunday 2 AM", time: "2h ago", icon: "wrench.and.screwdriver", color: .orange),
-        AdminNotification(title: "New Policy Update", message: "CIBIL threshold updated to 600", time: "5h ago", icon: "shield", color: .blue),
+        AdminNotification(title: "New Policy Update", message: "CIBIL threshold updated to 600", time: "5h ago", icon: "shield", color: Theme.Colors.primary),
         AdminNotification(title: "Critical Alert", message: "SLA breach spike detected in Mumbai", time: "1d ago", icon: "exclamationmark.triangle", color: .red)
     ]
     
@@ -96,11 +105,14 @@ class AdminViewModel: ObservableObject {
     private let adminAPI = AdminAPI()
     private let branchAPI = BranchAPI()
     private let dstAPI = DstAPI()
+    private let mockDataService = MockDataService.shared
     private let dstLocalStoreKey = "manager.dst.local.overrides.v1"
+    private let policyConfigStoreKey = "admin.policy.configurations.v1"
     private var dstLocalState = DstLocalStateStore()
     
     init() {
         dstLocalState = Self.loadDstLocalState()
+        restorePolicyConfigurationsFallback()
     }
     
     var filteredUsers: [User] {
@@ -126,14 +138,23 @@ class AdminViewModel: ObservableObject {
         requestSuccess = nil
         isLoading = true
         Task {
+            var fallbackNotice: String?
             do {
                 async let employeesTask = adminAPI.listEmployeeAccounts(limit: 200, offset: 0)
                 async let branchesTask = branchAPI.listBranches(limit: 200, offset: 0)
 
                 let employees = try await employeesTask
                 let backendBranches = try await branchesTask
-                let mappedUsers = employees.compactMap(Self.mapEmployeeAccount)
-                let mappedBranches = backendBranches.map(Self.mapBranch).sorted(by: { $0.name < $1.name })
+                var mappedUsers = employees.compactMap(Self.mapEmployeeAccount)
+                if !mappedUsers.contains(where: { Self.isManageableEmployeeRole($0.role) }) {
+                    mappedUsers = fallbackEmployeeUsers()
+                    fallbackNotice = "Employee directory unavailable from backend. Showing fallback employee data."
+                }
+
+                var mappedBranches = backendBranches.map(Self.mapBranch).sorted(by: { $0.name < $1.name })
+                if mappedBranches.isEmpty {
+                    mappedBranches = fallbackBranches(for: mappedUsers)
+                }
                 withAnimation {
                     users = mappedUsers
                     branches = mappedBranches
@@ -143,10 +164,20 @@ class AdminViewModel: ObservableObject {
                 }
                 auditLogs = Self.mockAuditLogs()
                 slaBreachTrendLabels = Self.generateDayLabels()
+                if let fallbackNotice {
+                    requestError = fallbackNotice
+                }
             } catch {
-                users = []
-                branches = []
-                requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to load users"
+                let fallbackUsers = fallbackEmployeeUsers()
+                let fallbackBranchModels = fallbackBranches(for: fallbackUsers)
+                withAnimation {
+                    users = fallbackUsers
+                    branches = fallbackBranchModels
+                    if let selectedID = selectedUser?.id {
+                        selectedUser = fallbackUsers.first(where: { $0.id == selectedID })
+                    }
+                }
+                requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to load users. Showing fallback employee data."
                 auditLogs = Self.mockAuditLogs()
                 slaBreachTrendLabels = Self.generateDayLabels()
             }
@@ -161,17 +192,22 @@ class AdminViewModel: ObservableObject {
         defer { isLoading = false }
         do {
             let dstAccounts = try await dstAPI.listDstAccounts(limit: 200, offset: 0)
-            let mapped = applyDstLocalState(to: dstAccounts.map(Self.mapDstAccount))
+            let backendMapped = dstAccounts.map(Self.mapDstAccount)
+            let mapped = applyDstLocalState(to: backendMapped.isEmpty ? fallbackDstUsers() : backendMapped)
             withAnimation {
                 dstUsers = mapped
             }
+            if backendMapped.isEmpty {
+                requestError = "DST directory unavailable from backend. Showing fallback DST data."
+            }
         } catch {
             // Keep manager DST operations usable on-device even if backend list fails.
-            let localOnly = applyDstLocalState(to: dstUsers)
+            let fallbackSeed = dstUsers.isEmpty ? fallbackDstUsers() : dstUsers
+            let localOnly = applyDstLocalState(to: fallbackSeed)
             withAnimation {
                 dstUsers = localOnly
             }
-            requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to load DST accounts from backend. Showing device data."
+            requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to load DST accounts from backend. Showing fallback DST data."
         }
     }
     
@@ -332,8 +368,30 @@ class AdminViewModel: ObservableObject {
         requestSuccess = "DST agent removed from current list."
     }
     
-    func saveConfig(baseRate: Double, maxTenure: Int, slaDays: Int) {
-        // Persist to published properties
+    func savePolicyConfigurations(
+        maxLoanAmount: Double,
+        minCIBILScore: Int,
+        maxDTIRatio: Double,
+        requireDocVerification: Bool,
+        autoAssignEnabled: Bool
+    ) async -> Bool {
+        requestError = nil
+        requestSuccess = nil
+        isLoading = true
+        defer { isLoading = false }
+
+        // Persist immediately in-memory so UI reflects latest settings.
+        self.maxLoanAmount = maxLoanAmount
+        self.minCIBILScore = minCIBILScore
+        self.maxDTIRatio = maxDTIRatio
+        self.requireDocVerification = requireDocVerification
+        self.autoAssignEnabled = autoAssignEnabled
+
+        // No dedicated backend API exists yet for policy configuration writes.
+        // Keep a resilient fallback store until backend endpoint becomes available.
+        persistPolicyConfigurationsFallback()
+        requestSuccess = "Policy configurations saved. Using local fallback until backend sync endpoint is available."
+        return true
     }
     
     func createBranch(_ branchName: String, location: String = "") async -> String? {
@@ -465,6 +523,18 @@ class AdminViewModel: ObservableObject {
                 requestSuccess = "Saved on this device. Backend denied this role for DST update."
                 return true
             }
+            if let index = dstUsers.firstIndex(where: { $0.id == userID }) {
+                withAnimation {
+                    dstUsers[index].name = name
+                    dstUsers[index].email = email
+                    dstUsers[index].phone = phone
+                }
+                dstLocalState.overridesByUserID[userID] = DstLocalOverride(name: name, email: email, phone: phone)
+                dstLocalState.removedUserIDs.remove(userID)
+                persistDstLocalState()
+                requestSuccess = "Saved on this device. Backend update is currently unavailable."
+                return true
+            }
             requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to update DST account"
             return false
         }
@@ -505,6 +575,32 @@ class AdminViewModel: ObservableObject {
         if let data = try? JSONEncoder().encode(dstLocalState) {
             UserDefaults.standard.set(data, forKey: dstLocalStoreKey)
         }
+    }
+
+    private func persistPolicyConfigurationsFallback() {
+        let payload = PolicyConfigurationsCache(
+            maxLoanAmount: maxLoanAmount,
+            minCIBILScore: minCIBILScore,
+            maxDTIRatio: maxDTIRatio,
+            requireDocVerification: requireDocVerification,
+            autoAssignEnabled: autoAssignEnabled,
+            updatedAt: Date()
+        )
+        if let data = try? JSONEncoder().encode(payload) {
+            UserDefaults.standard.set(data, forKey: policyConfigStoreKey)
+        }
+    }
+
+    private func restorePolicyConfigurationsFallback() {
+        guard let data = UserDefaults.standard.data(forKey: policyConfigStoreKey),
+              let payload = try? JSONDecoder().decode(PolicyConfigurationsCache.self, from: data) else {
+            return
+        }
+        maxLoanAmount = payload.maxLoanAmount
+        minCIBILScore = payload.minCIBILScore
+        maxDTIRatio = payload.maxDTIRatio
+        requireDocVerification = payload.requireDocVerification
+        autoAssignEnabled = payload.autoAssignEnabled
     }
     
     private static func loadDstLocalState() -> DstLocalStateStore {
@@ -586,6 +682,73 @@ class AdminViewModel: ObservableObject {
         default:
             return nil
         }
+    }
+
+    private static func isManageableEmployeeRole(_ role: UserRole) -> Bool {
+        role == .manager || role == .loanOfficer
+    }
+
+    private func fallbackEmployeeUsers() -> [User] {
+        mockDataService.fetchUsers()
+            .filter { Self.isManageableEmployeeRole($0.role) }
+            .sorted {
+                if $0.role == $1.role {
+                    return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+                }
+                return $0.role.displayName.localizedCaseInsensitiveCompare($1.role.displayName) == .orderedAscending
+            }
+    }
+
+    private func fallbackDstUsers() -> [User] {
+        [
+            User(
+                id: "DST-001",
+                name: "Rahul Malhotra",
+                email: "rahul.malhotra@dst.bank.com",
+                role: .dst,
+                branch: "Mumbai Central",
+                phone: "+91-9820012345",
+                isActive: true,
+                joinedAt: Calendar.current.date(byAdding: .month, value: -18, to: Date()) ?? Date()
+            ),
+            User(
+                id: "DST-002",
+                name: "Nisha Bansal",
+                email: "nisha.bansal@dst.bank.com",
+                role: .dst,
+                branch: "Delhi North",
+                phone: "+91-9810012346",
+                isActive: true,
+                joinedAt: Calendar.current.date(byAdding: .month, value: -11, to: Date()) ?? Date()
+            ),
+            User(
+                id: "DST-003",
+                name: "Arvind Kumar",
+                email: "arvind.kumar@dst.bank.com",
+                role: .dst,
+                branch: "Bangalore South",
+                phone: "+91-9845012347",
+                isActive: false,
+                joinedAt: Calendar.current.date(byAdding: .month, value: -7, to: Date()) ?? Date()
+            )
+        ]
+    }
+
+    private func fallbackBranches(for users: [User]) -> [BranchModel] {
+        let derivedBranches = Set(
+            users
+                .map(\.branch)
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+        )
+
+        return derivedBranches
+            .sorted()
+            .map { branchName in
+                BranchModel(id: branchName.lowercased().replacingOccurrences(of: " ", with: "-"),
+                            name: branchName,
+                            location: branchName)
+            }
     }
 
     private static func generateDayLabels() -> [String] {

@@ -84,6 +84,8 @@ extension LoanApplication {
             internalRemarks: [],
             status: ApplicationStatus(proto: value.status),
             assignedTo: value.assignedOfficerUserID,
+            primaryBorrowerProfileID: value.primaryBorrowerProfileID,
+            createdByUserID: value.createdByUserID,
             branch: value.branchName.isEmpty ? value.branchID : value.branchName,
             riskLevel: .medium,
             createdAt: createdAt,

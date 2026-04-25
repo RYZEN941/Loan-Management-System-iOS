@@ -6,11 +6,17 @@
 import SwiftUI
 import Combine
 
+struct OfficerDirectoryItem: Identifiable, Hashable {
+    let id: String
+    let name: String
+    let branchName: String
+}
+
 @MainActor
 class ApplicationsViewModel: ObservableObject {
     @Published var applications: [LoanApplication] = []
     @Published var selectedApplication: LoanApplication? = nil
-    @Published var filterStatus: ApplicationStatus? = .underReview   // default: Under Review
+    @Published var filterStatus: ApplicationStatus? = nil
     @Published var searchText = ""
     @Published var isLoading = false
     @Published var showXMLUploadResult = false
@@ -32,9 +38,12 @@ class ApplicationsViewModel: ObservableObject {
     @Published var rejectionRemarksText = ""
 
     @Published var availableLoanProducts: [LoanProduct] = []
+    @Published var availableBranchOfficers: [OfficerDirectoryItem] = []
+    @Published var officerDirectoryUnavailableMessage: String? = nil
 
     // Auth API for fetching profile
     private let authAPI = AuthAPI()
+    private let adminAPI = AdminAPI()
 
     // Manager send back sheet
     @Published var showSendBackSheet = false
@@ -82,6 +91,14 @@ class ApplicationsViewModel: ObservableObject {
         }
 
         return result
+    }
+
+    func resetFiltersToAll() {
+        filterStatus = nil
+        filterRisk = nil
+        filterSLA = nil
+        filterHighValue = false
+        filterLoanType = nil
     }
 
     // MARK: - Load Data
@@ -313,7 +330,9 @@ class ApplicationsViewModel: ObservableObject {
             notes: [],
             internalRemarks: [],
             status: ApplicationStatus(proto: created.status),
-            assignedTo: "LO-001",
+            assignedTo: created.assignedOfficerUserID.isEmpty ? created.createdByUserID : created.assignedOfficerUserID,
+            primaryBorrowerProfileID: cleanBorrowerProfileID,
+            createdByUserID: created.createdByUserID,
             branch: created.branchName.isEmpty ? officerProfile.branch.name : created.branchName,
             riskLevel: .medium,
             createdAt: Date(),
@@ -385,6 +404,43 @@ class ApplicationsViewModel: ObservableObject {
                 showActionAlert = true
             }
         }
+    }
+
+    func loadBranchOfficers(branchName: String) {
+        Task {
+            do {
+                let employees = try await adminAPI.listEmployeeAccounts(limit: 500, offset: 0)
+                let normalizedBranch = branchName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                let mapped = employees.compactMap { account -> OfficerDirectoryItem? in
+                    guard account.role == .officer, account.isActive else { return nil }
+                    let candidateBranch = account.branchName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !normalizedBranch.isEmpty && candidateBranch.lowercased() != normalizedBranch {
+                        return nil
+                    }
+                    let resolvedName = account.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return OfficerDirectoryItem(
+                        id: account.userID,
+                        name: resolvedName.isEmpty ? account.email : resolvedName,
+                        branchName: candidateBranch
+                    )
+                }
+                availableBranchOfficers = mapped.sorted(by: { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending })
+                officerDirectoryUnavailableMessage = mapped.isEmpty
+                    ? "Officer directory is currently unavailable for this branch. Reassignment will be enabled once branch officer data is available."
+                    : nil
+            } catch {
+                availableBranchOfficers = []
+                officerDirectoryUnavailableMessage = "Officer directory is currently unavailable. Manager can view Reassign, but reassignment options are temporarily unavailable."
+            }
+        }
+    }
+
+    func officerDisplayName(for userID: String) -> String {
+        guard !userID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return "Unassigned" }
+        if let match = availableBranchOfficers.first(where: { $0.id == userID }) {
+            return match.name
+        }
+        return userID
     }
 
     // MARK: - Update Loan Terms
@@ -498,6 +554,39 @@ class ApplicationsViewModel: ObservableObject {
                     applications[appIdx].documents[docIdx].uploadedAt = Date()
                     selectedApplication = applications[appIdx]
                 }
+            }
+        }
+    }
+
+    func uploadSanctionLetter(application: LoanApplication, data: Data, fileName: String, contentType: String) {
+        Task {
+            guard #available(iOS 18.0, *) else {
+                actionMessage = "Sanction letter upload requires iOS 18 or later."
+                showActionAlert = true
+                return
+            }
+
+            let borrowerProfileID = application.primaryBorrowerProfileID.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !borrowerProfileID.isEmpty else {
+                actionMessage = "Borrower profile details are unavailable for this application. Please refresh and try again."
+                showActionAlert = true
+                return
+            }
+
+            do {
+                let mediaID = try await MediaAPI().uploadFile(data: data, fileName: fileName, contentType: contentType)
+                _ = try await LoanAPI().addApplicationDocument(
+                    applicationID: application.id,
+                    borrowerProfileID: borrowerProfileID,
+                    requiredDocID: "sanction_letter_manual",
+                    mediaFileID: mediaID
+                )
+                try await refreshApplications(selectApplicationID: application.id, autoSelectFirst: true)
+                actionMessage = "Sanction letter uploaded successfully."
+                showActionAlert = true
+            } catch {
+                actionMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to upload sanction letter."
+                showActionAlert = true
             }
         }
     }

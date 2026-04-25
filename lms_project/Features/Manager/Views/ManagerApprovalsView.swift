@@ -6,6 +6,14 @@
 import SwiftUI
 
 struct ManagerApprovalsView: View {
+    private enum ManagerChip: String, CaseIterable {
+        case all = "All"
+        case pendingReview = "Pending Review"
+        case approved = "Approved"
+        case rejected = "Rejected"
+        case highRisk = "High Risk"
+    }
+
     @EnvironmentObject var applicationsVM: ApplicationsViewModel
     @Environment(\.colorScheme) private var colorScheme
     @Binding var selectedTab: Int
@@ -20,7 +28,7 @@ struct ManagerApprovalsView: View {
     @State private var showRevokeConfirmation = false
     @State private var previewLetter: SanctionLetterVersion? = nil
     @State private var selectedVersionIndex = 0
-    @State private var highRiskOnly = false
+    @State private var selectedManagerChip: ManagerChip = .all
 
     // Edit Terms State
     @State private var showEditTerms = false
@@ -28,7 +36,8 @@ struct ManagerApprovalsView: View {
     @State private var editInterestRateText = ""
 
     // Assign Officer State
-    @State private var showAssignOfficerAlert = false
+    @State private var showAssignOfficerSheet = false
+    @State private var selectedOfficerID: String = ""
 
     var body: some View {
         NavigationStack {
@@ -63,7 +72,14 @@ struct ManagerApprovalsView: View {
                     ProfileNavButton(showProfile: $showProfile)
                 }
             }
-            .onAppear { applicationsVM.loadData() }
+            .onAppear {
+                applicationsVM.resetFiltersToAll()
+                applicationsVM.loadData(autoSelectFirst: true)
+                selectedManagerChip = .all
+                if let app = applicationsVM.selectedApplication {
+                    applicationsVM.loadBranchOfficers(branchName: app.branch)
+                }
+            }
             .alert("Action", isPresented: $applicationsVM.showActionAlert) {
                 Button("OK") {}
             } message: { Text(applicationsVM.actionMessage ?? "") }
@@ -99,17 +115,32 @@ struct ManagerApprovalsView: View {
                     }
                 }
             } message: { Text("Sanction letter revocation is not implemented in the backend yet.") }
-            .alert("Assign Officer", isPresented: $showAssignOfficerAlert) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text("Officer assignment requires a staff directory endpoint that is not yet implemented in the backend. Please assign the officer manually in the admin panel.")
-            }
+            .sheet(isPresented: $showAssignOfficerSheet) { assignOfficerSheet }
         }
     }
 
     // MARK: - Sidebar
     private var applicationListPanel: some View {
         VStack(spacing: 0) {
+            // List Header
+            HStack(alignment: .bottom) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Applications")
+                        .font(.system(size: 20, weight: .bold))
+                }
+                Spacer()
+                Text("\(displayedApplications.count)")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(ManagerTheme.Colors.primary(colorScheme).opacity(0.1))
+                    .clipShape(Capsule())
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
+
             // Search
             HStack(spacing: 12) {
                 Image(systemName: "magnifyingglass").foregroundStyle(ManagerTheme.Colors.primary(colorScheme)).font(.system(size: 14, weight: .bold))
@@ -124,54 +155,14 @@ struct ManagerApprovalsView: View {
                     .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
             )
             .padding(.horizontal, 16)
-            .padding(.top, 16)
 
-            // List Header
-            HStack(alignment: .bottom) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Approval Queue")
-                        .font(.system(size: 17, weight: .bold))
-                    Text("Review applications pending your final decision.")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
-                }
-                Spacer()
-                Text("\(applicationsVM.filteredApplications.count)")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(ManagerTheme.Colors.primary(colorScheme).opacity(0.1))
-                    .clipShape(Capsule())
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 16)
-
-            // Filter chips — all manager-relevant statuses
+            // Filter chips
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
-                    AppFilterChip(label: "All", isSelected: applicationsVM.filterStatus == nil && applicationsVM.filterRisk == nil && applicationsVM.filterSLA == nil && !applicationsVM.filterHighValue) {
-                        withAnimation {
-                            applicationsVM.filterStatus = nil
-                            applicationsVM.filterRisk = nil
-                            applicationsVM.filterSLA = nil
-                            applicationsVM.filterHighValue = false
+                    ForEach(ManagerChip.allCases, id: \.self) { chip in
+                        AppFilterChip(label: chip.rawValue, isSelected: selectedManagerChip == chip) {
+                            withAnimation { selectedManagerChip = chip }
                         }
-                    }
-                    AppFilterChip(label: "Forwarded", isSelected: applicationsVM.filterStatus == .officerApproved) {
-                        withAnimation { applicationsVM.filterStatus = .officerApproved }
-                    }
-                    AppFilterChip(label: "In Review", isSelected: applicationsVM.filterStatus == .underReview) {
-                        withAnimation { applicationsVM.filterStatus = .underReview }
-                    }
-                    AppFilterChip(label: "Approved", isSelected: applicationsVM.filterStatus == .approved) {
-                        withAnimation { applicationsVM.filterStatus = .approved }
-                    }
-                    AppFilterChip(label: "Rejected", isSelected: applicationsVM.filterStatus == .rejected) {
-                        withAnimation { applicationsVM.filterStatus = .rejected }
-                    }
-                    AppFilterChip(label: "High Risk", isSelected: highRiskOnly) {
-                        withAnimation { highRiskOnly.toggle() }
                     }
                 }
                 .padding(.horizontal, 16)
@@ -223,6 +214,7 @@ struct ManagerApprovalsView: View {
                         documentsSummarySection(app)
                         sanctionLetterSection(app)
                         verificationSection(app)
+                        internalRemarksSection(app)
                         conversationSection(app)
                     }
                     .padding(20)
@@ -240,7 +232,11 @@ struct ManagerApprovalsView: View {
                                 editInterestRateText = String(format: "%.2f", app.loan.interestRate)
                                 showEditTerms = true
                             },
-                            onAssignOfficer: { showAssignOfficerAlert = true }
+                            onAssignOfficer: {
+                                selectedOfficerID = app.assignedTo
+                                applicationsVM.loadBranchOfficers(branchName: app.branch)
+                                showAssignOfficerSheet = true
+                            }
                         )
                         .background(ManagerTheme.Colors.surface(colorScheme))
                         .shadow(color: Color.black.opacity(0.05), radius: 10, y: -5)
@@ -248,6 +244,12 @@ struct ManagerApprovalsView: View {
                 }
                 .onChange(of: applicationsVM.selectedApplication) { _ in
                     selectedVersionIndex = 0
+                    if let app = applicationsVM.selectedApplication {
+                        selectedOfficerID = app.assignedTo
+                        applicationsVM.loadBranchOfficers(branchName: app.branch)
+                    } else {
+                        selectedOfficerID = ""
+                    }
                 }
             } else {
                 VStack(spacing: 16) {
@@ -260,8 +262,27 @@ struct ManagerApprovalsView: View {
     }
 
     private var displayedApplications: [LoanApplication] {
-        let base = applicationsVM.filteredApplications
-        return highRiskOnly ? base.filter { $0.riskLevel == .high } : base
+        let base: [LoanApplication]
+        switch selectedManagerChip {
+        case .all:
+            base = applicationsVM.applications
+        case .pendingReview:
+            base = applicationsVM.applications.filter { $0.status == .managerReview || $0.status == .officerApproved || $0.status == .underReview }
+        case .approved:
+            base = applicationsVM.applications.filter { $0.status == .approved || $0.status == .managerApproved }
+        case .rejected:
+            base = applicationsVM.applications.filter { $0.status == .rejected || $0.status == .officerRejected || $0.status == .managerRejected }
+        case .highRisk:
+            base = applicationsVM.applications.filter { $0.riskLevel == .high }
+        }
+
+        let query = applicationsVM.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return base }
+        return base.filter {
+            $0.borrower.name.localizedCaseInsensitiveContains(query) ||
+            $0.id.localizedCaseInsensitiveContains(query) ||
+            $0.borrower.employer.localizedCaseInsensitiveContains(query)
+        }
     }
 
     private func selectedApplicationHint(_ app: LoanApplication) -> some View {
@@ -313,7 +334,25 @@ struct ManagerApprovalsView: View {
             .font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
 
             HStack {
-                Label("Loan Officer Assessed", systemImage: "person.badge.shield.checkered.fill")
+                Label("Assigned", systemImage: "person.badge.shield.checkered.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
+                Spacer()
+                Text(applicationsVM.officerDisplayName(for: app.assignedTo))
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Label("Created By", systemImage: "person.crop.circle.badge.plus")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
+                Spacer()
+                Text(applicationsVM.officerDisplayName(for: app.createdByUserID))
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+            HStack {
+                Label("SLA", systemImage: "clock.badge.checkmark")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
                 Spacer()
@@ -692,6 +731,17 @@ struct ManagerApprovalsView: View {
         .onAppear { applicationsVM.loadApplicationMessages(for: app.id) }
     }
 
+    // MARK: - Internal Remarks
+    private func internalRemarksSection(_ app: LoanApplication) -> some View {
+        InternalRemarksView(app: app, applicationsVM: applicationsVM, authorName: "Deepak Mehta")
+            .padding(18)
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(ManagerTheme.Colors.surface(colorScheme)))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                    .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
+            )
+    }
+
     private func messageBubble(_ msg: ApplicationMessage) -> some View {
         HStack(alignment: .bottom, spacing: 8) {
             if msg.isFromCurrentUser || msg.type == .managerRemark { Spacer(minLength: 80) }
@@ -907,6 +957,50 @@ struct ManagerApprovalsView: View {
                     Button { applicationsVM.showSendBackSheet = false } label: {
                         Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
                     }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
+    private var assignOfficerSheet: some View {
+        NavigationStack {
+            Form {
+                if let app = applicationsVM.selectedApplication {
+                    Section("Application") {
+                        LabeledContent("Application ID", value: app.id)
+                        LabeledContent("Branch", value: app.branch)
+                    }
+
+                    Section("Assign to Loan Officer") {
+                        if applicationsVM.availableBranchOfficers.isEmpty {
+                            Text(applicationsVM.officerDirectoryUnavailableMessage ?? "Loan officer options are currently unavailable.")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Picker("Loan Officer", selection: $selectedOfficerID) {
+                                ForEach(applicationsVM.availableBranchOfficers) { officer in
+                                    Text(officer.name).tag(officer.id)
+                                }
+                            }
+                        }
+                    }
+
+                    Section {
+                        Button("Reassign") {
+                            let targetOfficerID = selectedOfficerID.trimmingCharacters(in: .whitespacesAndNewlines)
+                            guard !targetOfficerID.isEmpty else { return }
+                            applicationsVM.assignOfficer(applicationId: app.id, officerUserId: targetOfficerID)
+                            showAssignOfficerSheet = false
+                        }
+                        .disabled(selectedOfficerID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || applicationsVM.availableBranchOfficers.isEmpty)
+                    }
+                }
+            }
+            .navigationTitle("Reassign Officer")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Close") { showAssignOfficerSheet = false }
                 }
             }
         }

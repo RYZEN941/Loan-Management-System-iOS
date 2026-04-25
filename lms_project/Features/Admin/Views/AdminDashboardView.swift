@@ -27,8 +27,8 @@ struct AdminDashboardView: View {
                 Theme.Colors.adaptiveBackground(colorScheme)
                     .ignoresSafeArea()
                 
-                // Executive Layer
-                LinearGradient(colors: [Theme.Colors.adaptivePrimary(colorScheme).opacity(0.04), .clear], startPoint: .topLeading, endPoint: .bottomTrailing)
+                // Executive Layer (solid in dark mode)
+                Theme.Colors.adaptivePrimary(colorScheme).opacity(colorScheme == .dark ? 0.04 : 0.0)
                     .ignoresSafeArea()
                 
                 ScrollView {
@@ -135,10 +135,10 @@ struct AdminDashboardView: View {
             MinimalHeader(title: "SYSTEM HEALTH")
             
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: Theme.Spacing.md)], spacing: Theme.Spacing.md) {
-                statusCard(title: "Processing Time", value: "4.2h", color: .blue, icon: "clock.fill", trend: "↓ 8%", trendPositive: true, subtext: "Limit: 12h")
+                statusCard(title: "Processing Time", value: "4.2h", color: Theme.Colors.adaptivePrimary(colorScheme), icon: "clock.fill", trend: "↓ 8%", trendPositive: true, subtext: "Limit: 12h")
                 statusCard(title: "Applications Today", value: "\(applicationsTodayCount)", color: .purple, icon: "doc.text.fill", subtext: "From backend feed")
                 statusCard(title: "Active Users", value: "\(adminVM.activeUsersCount)", color: .green, icon: "person.2.fill", subtext: "From admin directory")
-                statusCard(title: "SLA Compliance", value: "\(slaCompliancePercent)%", color: .blue, icon: "checkmark.shield.fill", subtext: "Target: 95%")
+                statusCard(title: "SLA Compliance", value: "\(slaCompliancePercent)%", color: Theme.Colors.adaptivePrimary(colorScheme), icon: "checkmark.shield.fill", subtext: "Target: 95%")
             }
         }
         .opacity(isAnimating ? 1 : 0)
@@ -295,7 +295,7 @@ struct AdminDashboardView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 24)
-                    .stroke(LinearGradient(colors: [.white.opacity(0.2), .clear], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+                    .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
             )
         }
         .opacity(isAnimating ? 1 : 0)
@@ -523,7 +523,7 @@ struct AdminDashboardView: View {
             
             VStack(spacing: 0) {
                 activityItem(title: "APP-2024-006 approved", actor: "Deepak Mehta", time: "12m ago", color: .green)
-                activityItem(title: "Policy Update: Min CIBIL Score matched", actor: "System Rule", time: "1h ago", color: .blue)
+                activityItem(title: "Policy Update: Min CIBIL Score matched", actor: "System Rule", time: "1h ago", color: Theme.Colors.adaptivePrimary(colorScheme))
                 activityItem(title: "APP-2024-009 escalated to Admin", actor: "Sunita Patel", time: "2h ago", color: .orange)
                 activityItem(title: "Suspicious Application detected", actor: "Fraud Engine", time: "3h ago", color: .red, isLast: true)
             }

@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct LODashboardView: View {
-    @EnvironmentObject var dashboardVM: DashboardViewModel
+    @EnvironmentObject var applicationsVM: ApplicationsViewModel
     @EnvironmentObject var authVM: AuthViewModel
     @Environment(\.colorScheme) private var colorScheme
     @Binding var selectedTab: Int
@@ -48,7 +48,7 @@ struct LODashboardView: View {
                 }
             }
             .onAppear {
-                dashboardVM.loadData()
+                applicationsVM.loadData(autoSelectFirst: false)
             }
         }
     }
@@ -89,11 +89,11 @@ struct LODashboardView: View {
                 .info { /* Info Action */ }
             
             KPIStripView(cards: [
-                KPIData(title: "Active Cases", value: "\(dashboardVM.assignedCount)",
+                KPIData(title: "Active Cases", value: "\(assignedCount)",
                         icon: "doc.on.doc.fill", color: Theme.Colors.primary),
-                KPIData(title: "Pending Review", value: "\(dashboardVM.pendingReviewCount)",
+                KPIData(title: "Pending Review", value: "\(pendingReviewCount)",
                         icon: "timer", color: Theme.Colors.warning),
-                KPIData(title: "High Risk", value: "\(dashboardVM.highRiskCount)",
+                KPIData(title: "High Risk", value: "\(highRiskCount)",
                         icon: "shield.righthalf.filled", color: Theme.Colors.critical)
             ])
         }
@@ -109,9 +109,9 @@ struct LODashboardView: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.md) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("34 Loans Approved")
+                        Text("\(approvedCount) Loans Approved")
                             .font(Theme.Typography.headline)
-                        Text("This Month")
+                        Text("Live from Applications")
                             .font(Theme.Typography.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -119,7 +119,7 @@ struct LODashboardView: View {
                     
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.up.right")
-                        Text("12%")
+                        Text("\(approvalRateText)")
                     }
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(Theme.Colors.success)
@@ -130,8 +130,8 @@ struct LODashboardView: View {
                 }
                 
                 PremiumLineChart(
-                    data: [12, 18, 15, 22, 19, 28, 34],
-                    labels: ["W1", "W2", "W3", "W4", "W5", "W6", "W7"],
+                    data: weeklySeries,
+                    labels: ["D-6", "D-5", "D-4", "D-3", "D-2", "D-1", "Today"],
                     accentColor: Theme.Colors.primary,
                     showPoints: true,
                     unit: "loans"
@@ -160,7 +160,7 @@ struct LODashboardView: View {
                         .foregroundStyle(.tertiary)
                 }
                 Spacer()
-                if dashboardVM.selectedApplication != nil {
+                if applicationsVM.selectedApplication != nil {
                     Button {
                         openSelectedApplication()
                     } label: {
@@ -207,7 +207,7 @@ struct LODashboardView: View {
                 Text("Applications")
                     .font(Theme.Typography.headline)
                 Spacer()
-                Text("\(dashboardVM.activeApplications.count)")
+                Text("\(activeApplications.count)")
                     .font(Theme.Typography.caption2)
                     .foregroundStyle(Theme.Colors.primary)
                     .padding(.horizontal, 10)
@@ -220,15 +220,15 @@ struct LODashboardView: View {
             
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    ForEach(dashboardVM.activeApplications) { app in
+                    ForEach(activeApplications) { app in
                         ApplicationRow(
                             application: app,
-                            isSelected: dashboardVM.selectedApplication?.id == app.id,
+                            isSelected: applicationsVM.selectedApplication?.id == app.id,
                             useMinimalStyle: true
                         )
                         .onTapGesture {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                dashboardVM.selectApplication(app)
+                                applicationsVM.selectApplication(app)
                             }
                         }
                         
@@ -242,7 +242,7 @@ struct LODashboardView: View {
     // MARK: - Preview Panel
     private var previewPanel: some View {
         Group {
-            if let app = dashboardVM.selectedApplication {
+            if let app = applicationsVM.selectedApplication {
                 ScrollView {
                     VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                         HStack(alignment: .top) {
@@ -305,6 +305,45 @@ struct LODashboardView: View {
     private func openSelectedApplication() {
         withAnimation {
             selectedTab = 1
+        }
+    }
+}
+
+private extension LODashboardView {
+    var liveApplications: [LoanApplication] { applicationsVM.applications }
+
+    var activeApplications: [LoanApplication] {
+        liveApplications.filter {
+            $0.status == .pending || $0.status == .underReview || $0.status == .officerReview
+        }
+    }
+
+    var assignedCount: Int { activeApplications.count }
+
+    var pendingReviewCount: Int {
+        activeApplications.filter { $0.status == .underReview || $0.status == .officerReview }.count
+    }
+
+    var highRiskCount: Int {
+        activeApplications.filter { $0.riskLevel == .high }.count
+    }
+
+    var approvedCount: Int {
+        liveApplications.filter { $0.status == .approved || $0.status == .officerApproved || $0.status == .managerApproved }.count
+    }
+
+    var approvalRateText: String {
+        guard !liveApplications.isEmpty else { return "0%" }
+        let rate = (Double(approvedCount) / Double(liveApplications.count)) * 100
+        return "\(Int(rate.rounded()))%"
+    }
+
+    var weeklySeries: [Double] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        return (0..<7).map { offset in
+            let day = calendar.date(byAdding: .day, value: -(6 - offset), to: today) ?? today
+            return Double(liveApplications.filter { calendar.isDate($0.createdAt, inSameDayAs: day) }.count)
         }
     }
 }

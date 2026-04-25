@@ -73,7 +73,7 @@ struct LOApplicationsView: View {
                     ProfileNavButton(showProfile: $showProfile)
                 }
             }
-            .onAppear { applicationsVM.loadData() }
+            .onAppear { applicationsVM.loadData(autoSelectFirst: false) }
             .alert("Action", isPresented: $applicationsVM.showActionAlert) {
                 Button("OK") {}
             } message: {

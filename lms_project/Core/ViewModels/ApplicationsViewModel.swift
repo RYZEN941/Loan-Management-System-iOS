@@ -97,11 +97,14 @@ class ApplicationsViewModel: ObservableObject {
         }
     }
 
-    func loadData() {
+    func loadData(autoSelectFirst: Bool = true) {
         isLoading = true
         Task {
             do {
-                try await refreshApplications(selectApplicationID: selectedApplication?.id)
+                try await refreshApplications(
+                    selectApplicationID: selectedApplication?.id,
+                    autoSelectFirst: autoSelectFirst
+                )
             } catch {
                 actionMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to load applications from server"
                 showActionAlert = true
@@ -374,7 +377,7 @@ class ApplicationsViewModel: ObservableObject {
                     applicationID: applicationId,
                     officerUserID: officerUserId
                 )
-                try await refreshApplications(selectApplicationID: applicationId)
+                try await refreshApplications(selectApplicationID: applicationId, autoSelectFirst: true)
                 actionMessage = "Loan Officer assigned successfully"
                 showActionAlert = true
             } catch {
@@ -582,7 +585,7 @@ class ApplicationsViewModel: ObservableObject {
                 applicationID: app.id,
                 principalAmount: principalAmount
             )
-            try await refreshApplications(selectApplicationID: app.id)
+            try await refreshApplications(selectApplicationID: app.id, autoSelectFirst: true)
             actionMessage = "Application approved and loan disbursement initiated"
             showActionAlert = true
         } catch {
@@ -608,7 +611,7 @@ class ApplicationsViewModel: ObservableObject {
                 status: status,
                 escalationReason: escalationReason
             )
-            try await refreshApplications(selectApplicationID: applicationID)
+            try await refreshApplications(selectApplicationID: applicationID, autoSelectFirst: true)
             actionMessage = successMessage
             showActionAlert = true
         } catch {
@@ -640,7 +643,7 @@ class ApplicationsViewModel: ObservableObject {
                     status: nextStatus,
                     escalationReason: nil
                 )
-                try await refreshApplications(selectApplicationID: applicationID)
+                try await refreshApplications(selectApplicationID: applicationID, autoSelectFirst: true)
                 actionMessage = successMessage
                 showActionAlert = true
                 return
@@ -653,7 +656,7 @@ class ApplicationsViewModel: ObservableObject {
         showActionAlert = true
     }
 
-    private func refreshApplications(selectApplicationID: String?) async throws {
+    private func refreshApplications(selectApplicationID: String?, autoSelectFirst: Bool) async throws {
         guard #available(iOS 18.0, *) else {
             throw APIError.failedPrecondition("Loan application APIs require iOS 18 or later.")
         }
@@ -664,8 +667,10 @@ class ApplicationsViewModel: ObservableObject {
             if let selectedID = selectApplicationID,
                let selected = mapped.first(where: { $0.id == selectedID }) {
                 selectedApplication = selected
-            } else {
+            } else if autoSelectFirst {
                 selectedApplication = mapped.first
+            } else {
+                selectedApplication = nil
             }
         }
 

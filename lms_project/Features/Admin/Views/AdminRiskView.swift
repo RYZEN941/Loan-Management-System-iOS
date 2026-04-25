@@ -47,27 +47,12 @@ struct AdminRiskView: View {
         var signals: [String]? = nil
     }
     
-    // Mutable mock data for reassignment simulation
-    @State private var slaBreaches = [
-        ActionItem(id: "1", loanId: "APP-2024-001", issue: "SLA Breach", severity: "High", time: "24m ago", officer: "Ravi Kumar"),
-        ActionItem(id: "2", loanId: "APP-2024-005", issue: "SLA Breach", severity: "Medium", time: "1h ago", officer: "Priya Sharma"),
-        ActionItem(id: "3", loanId: "APP-2024-012", issue: "SLA Breach", severity: "High", time: "2h ago", officer: "Deepak Mehta")
-    ]
-    
-    @State private var fraudAlerts = [
-        ActionItem(id: "4", loanId: "APP-2024-009", issue: "Fraud Flag", severity: "High", time: "3h ago", officer: "System", details: "Multiple applications from same IP", signals: ["IP Conflict", "Phone Match", "Device ID Link"]),
-        ActionItem(id: "5", loanId: "APP-2024-021", issue: "Doc Mismatch", severity: "Medium", time: "5h ago", officer: "System", details: "PAN OCR mismatch with manual input", signals: ["OCR Verification Failed", "Name Mismatch", "DOB Inconsistency"])
-    ]
-    
-    @State private var policyViolations = [
-        ActionItem(id: "6", loanId: "APP-2024-015", issue: "LTV Exceeded", severity: "Medium", time: "1d ago", officer: "Sunita Patel", details: "LTV is 84% (Max allowed: 80%)"),
-        ActionItem(id: "7", loanId: "APP-2024-033", issue: "FOIR High", severity: "Low", time: "2d ago", officer: "Deepak Mehta", details: "FOIR is 58% (Limit: 50%)")
-    ]
-    
-    @State private var stuckApps = [
-        ActionItem(id: "8", loanId: "APP-2024-044", issue: "Stuck in Verification", severity: "Low", time: "3d ago", officer: "Ravi Kumar"),
-        ActionItem(id: "9", loanId: "APP-2024-055", issue: "Manual Review Req.", severity: "Medium", time: "4d ago", officer: "Priya Sharma")
-    ]
+    // Backend-backed action lists (derived from applications until backend exposes explicit risk events)
+    @State private var slaBreaches: [ActionItem] = []
+    @State private var fraudAlerts: [ActionItem] = []
+    @State private var policyViolations: [ActionItem] = []
+    @State private var stuckApps: [ActionItem] = []
+    @State private var officerOverrides: [String: String] = [:]
 
     var body: some View {
         NavigationStack {
@@ -152,6 +137,16 @@ struct AdminRiskView: View {
                         .transition(AnyTransition.move(edge: .bottom).combined(with: .opacity))
                         .padding(.bottom, 40)
                 }
+            }
+            .onAppear {
+                riskVM.loadData()
+                syncFromBackend()
+            }
+            .onChange(of: riskVM.applications) { _, _ in
+                syncFromBackend()
+            }
+            .onChange(of: riskVM.fraudFlags) { _, _ in
+                syncFromBackend()
             }
         }
     }
@@ -258,7 +253,7 @@ struct AdminRiskView: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.md) {
                 SectionHeader(title: "CIBIL Score Distribution", icon: "chart.bar.xaxis")
                 HStack(spacing: Theme.Spacing.md) {
-                    ForEach(cibilData, id:\.label) { item in
+                    ForEach(liveCibilData, id:\.label) { item in
                         VStack(spacing: Theme.Spacing.sm) {
                             Text("\(item.count)").font(.system(size:28,weight:.bold,design:.rounded)).foregroundStyle(item.color)
                             Text(item.label).font(Theme.Typography.caption).foregroundStyle(.secondary)
@@ -517,10 +512,94 @@ struct AdminRiskView: View {
     }
     
     private func updateOfficer(for item: ActionItem, to newOfficer: String) {
-        if let index = slaBreaches.firstIndex(where: { $0.id == item.id }) { slaBreaches[index].officer = newOfficer }
-        if let index = fraudAlerts.firstIndex(where: { $0.id == item.id }) { fraudAlerts[index].officer = newOfficer }
-        if let index = policyViolations.firstIndex(where: { $0.id == item.id }) { policyViolations[index].officer = newOfficer }
-        if let index = stuckApps.firstIndex(where: { $0.id == item.id }) { stuckApps[index].officer = newOfficer }
+        officerOverrides[item.id] = newOfficer
+        syncFromBackend()
+    }
+
+    private func syncFromBackend() {
+        let apps = riskVM.applications
+        let now = Date()
+        let relative = RelativeDateTimeFormatter()
+
+        func officer(for id: String, fallback: String) -> String {
+            officerOverrides[id] ?? fallback
+        }
+
+        slaBreaches = apps
+            .filter { $0.slaStatus == .overdue }
+            .prefix(50)
+            .map { app in
+                let id = "SLA-\(app.id)"
+                return ActionItem(
+                    id: id,
+                    loanId: app.id,
+                    issue: "SLA Breach",
+                    severity: "High",
+                    time: relative.localizedString(for: app.createdAt, relativeTo: now),
+                    officer: officer(for: id, fallback: "Unassigned")
+                )
+            }
+
+        fraudAlerts = riskVM.fraudFlags
+            .prefix(50)
+            .map { flag in
+                let id = "FRAUD-\(flag.applicationId)"
+                return ActionItem(
+                    id: id,
+                    loanId: flag.applicationId,
+                    issue: "Risk Signal",
+                    severity: flag.severity == .high ? "High" : "Medium",
+                    time: relative.localizedString(for: flag.flaggedAt, relativeTo: now),
+                    officer: officer(for: id, fallback: "System"),
+                    details: flag.reason,
+                    signals: flag.reason.components(separatedBy: " · ")
+                )
+            }
+
+        policyViolations = apps
+            .filter {
+                let foirRatio = $0.financials.foir > 0 ? (Double($0.financials.foir) / 100.0) : $0.financials.dtiRatio
+                return foirRatio > 0.50 || $0.financials.ltvRatio > 0.80
+            }
+            .prefix(50)
+            .map { app in
+                let id = "POL-\(app.id)"
+                let foirRatio = app.financials.foir > 0 ? (Double(app.financials.foir) / 100.0) : app.financials.dtiRatio
+                let issue: String
+                let detail: String
+                if app.financials.ltvRatio > 0.80 {
+                    issue = "LTV Exceeded"
+                    detail = "LTV is \(Int((app.financials.ltvRatio * 100).rounded()))% (Max allowed: 80%)"
+                } else {
+                    issue = "FOIR High"
+                    detail = "FOIR is \(Int((foirRatio * 100).rounded()))% (Limit: 50%)"
+                }
+                return ActionItem(
+                    id: id,
+                    loanId: app.id,
+                    issue: issue,
+                    severity: "Medium",
+                    time: relative.localizedString(for: app.createdAt, relativeTo: now),
+                    officer: officer(for: id, fallback: "Unassigned"),
+                    details: detail
+                )
+            }
+
+        let stuckThreshold = Date().addingTimeInterval(-3 * 24 * 60 * 60)
+        stuckApps = apps
+            .filter { $0.status == .underReview && $0.createdAt < stuckThreshold }
+            .prefix(50)
+            .map { app in
+                let id = "STUCK-\(app.id)"
+                return ActionItem(
+                    id: id,
+                    loanId: app.id,
+                    issue: "Stuck in Verification",
+                    severity: "Medium",
+                    time: relative.localizedString(for: app.createdAt, relativeTo: now),
+                    officer: officer(for: id, fallback: "Unassigned")
+                )
+            }
     }
     
     private func severityBadge(text: String) -> some View {
@@ -635,9 +714,45 @@ struct AdminRiskView: View {
 
     // MARK: - Helpers & Data
     
-    private let foirData: [(label:String,value:Double)] = [("Home Loan",0.38),("Personal Loan",0.52),("Business Loan",0.44),("Vehicle Loan",0.31),("Education Loan",0.28)]
-    private let cibilData: [(label:String,count:Int,color:Color)] = [("750+",42,Theme.Colors.success),("650–749",28,Theme.Colors.warning),("<650",8,Theme.Colors.critical)]
-    private let ltvData: [(label:String,value:Double)] = [("Home Loan",0.72),("Vehicle Loan",0.65),("Business Loan",0.55),("Education Loan",0.40)]
+    private var foirData: [(label: String, value: Double)] {
+        let apps = riskVM.applications
+        guard !apps.isEmpty else { return [] }
+        let grouped = Dictionary(grouping: apps, by: { $0.loan.type.displayName })
+        return grouped.map { (key, values) in
+            let ratios = values.map { app in
+                let raw = app.financials.foir
+                if raw > 0 { return Double(raw) / 100.0 }
+                return app.financials.dtiRatio
+            }
+            let avg = ratios.reduce(0, +) / Double(max(ratios.count, 1))
+            return (label: key, value: avg)
+        }
+        .sorted { $0.label < $1.label }
+        .prefix(6)
+        .map { $0 }
+    }
+    
+    private var liveCibilData: [(label: String, count: Int, color: Color)] {
+        let buckets = riskVM.cibilBuckets
+        guard !buckets.isEmpty else {
+            return [("750+", 0, Theme.Colors.success), ("650–749", 0, Theme.Colors.warning), ("<650", 0, Theme.Colors.critical)]
+        }
+        return buckets.map { ($0.label, $0.count, $0.color) }
+    }
+    
+    private var ltvData: [(label: String, value: Double)] {
+        let apps = riskVM.applications
+        guard !apps.isEmpty else { return [] }
+        let grouped = Dictionary(grouping: apps, by: { $0.loan.type.displayName })
+        return grouped.map { (key, values) in
+            let ratios = values.map { $0.financials.ltvRatio }.filter { $0 > 0 }
+            let avg = ratios.isEmpty ? 0 : ratios.reduce(0, +) / Double(ratios.count)
+            return (label: key, value: avg)
+        }
+        .sorted { $0.label < $1.label }
+        .prefix(6)
+        .map { $0 }
+    }
 
     private let flaggedApps: [FlaggedApplication] = [
         FlaggedApplication(id:"APP-031",borrower:"Ramesh Gupta",loanType:"Personal",amount:"₹5.5L",riskScore:88,risk:.high,flag:"CIBIL 542, DTI 61%"),

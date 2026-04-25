@@ -46,6 +46,10 @@ class AdminReportsViewModel: ObservableObject {
     @Published var exportFormat = "PDF"
     @Published var isLoading = false
 
+    @Published private(set) var applications: [LoanApplication] = []
+
+    private let loanAPI = LoanAPI()
+
     let reportTypes: [ReportType] = [
         ReportType(id: "RPT-01", name: "Portfolio Overview",    icon: "chart.pie.fill",          description: "Total portfolio, disbursements, NPA summary"),
         ReportType(id: "RPT-02", name: "Collection Report",     icon: "indianrupeesign.circle",   description: "EMI recovery, DPD buckets, outstanding"),
@@ -62,18 +66,32 @@ class AdminReportsViewModel: ObservableObject {
 
     func loadData() {
         isLoading = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-            guard let self else { return }
-            self.scheduledReports = Self.mockScheduledReports()
-            self.selectedReportType = self.reportTypes.first
-            self.refreshReportData()
-            self.isLoading = false
+        Task {
+            defer { Task { @MainActor in self.isLoading = false } }
+            guard #available(iOS 18.0, *) else { return }
+            do {
+                let list = try await loanAPI.listLoanApplications(limit: 500, offset: 0, branchID: nil, authorized: true)
+                let mapped = list.map { LoanApplication.from(proto: $0) }
+                await MainActor.run {
+                    self.applications = mapped
+                    self.scheduledReports = Self.mockScheduledReports()
+                    self.selectedReportType = self.reportTypes.first
+                    self.refreshReportData()
+                }
+            } catch {
+                await MainActor.run {
+                    self.applications = []
+                    self.scheduledReports = Self.mockScheduledReports()
+                    self.selectedReportType = self.reportTypes.first
+                    self.refreshReportData()
+                }
+            }
         }
     }
 
     func refreshReportData() {
         guard let type = selectedReportType else { return }
-        reportRows = Self.mockReportRows(for: type.id)
+        reportRows = Self.liveReportRows(for: type.id, from: applications)
     }
 
     // MARK: - Actions
@@ -87,6 +105,116 @@ class AdminReportsViewModel: ObservableObject {
         if let idx = scheduledReports.firstIndex(where: { $0.id == report.id }) {
             scheduledReports[idx].isActive.toggle()
         }
+    }
+
+    // MARK: - Live (Backend-backed) report rows
+
+    func normalizedReportID(_ uiReportID: String) -> String {
+        // Admin UI uses legacy IDs (e.g., RPT-PERF). Map them to the report type IDs.
+        switch uiReportID {
+        case "RPT-PERF": return "RPT-01" // Portfolio Overview
+        case "RPT-COLL": return "RPT-02" // Collection Report
+        case "RPT-DISB": return "RPT-03" // Disbursement (proxy via approvals)
+        case "RPT-RISK": return "RPT-04" // Risk & CIBIL
+        case "RPT-NPA":  return "RPT-02" // Closest available aggregation until NPA backend exists
+        default:
+            return uiReportID
+        }
+    }
+
+    static func liveReportRows(for reportId: String, from apps: [LoanApplication]) -> [ReportRow] {
+        let total = apps.count
+        let approved = apps.filter { $0.status == .approved || $0.status == .managerApproved }.count
+        let pending = apps.filter { $0.status == .pending || $0.status == .underReview }.count
+        let rejected = apps.filter { $0.status == .rejected || $0.status == .managerRejected || $0.status == .officerRejected }.count
+
+        let avgCibil: Int = {
+            let scores = apps.map { $0.financials.cibilScore }.filter { $0 > 0 }
+            guard !scores.isEmpty else { return 0 }
+            return scores.reduce(0, +) / scores.count
+        }()
+        let avgFoirPct: Int = {
+            let values: [Double] = apps.map { app in
+                let raw = app.financials.foir
+                if raw > 0 { return raw }
+                return app.financials.dtiRatio * 100.0
+            }
+            guard !values.isEmpty else { return 0 }
+            let sum = values.reduce(0, +)
+            return Int((sum / Double(values.count)).rounded())
+        }()
+        let highRisk = apps.filter { ($0.financials.cibilScore > 0 && $0.financials.cibilScore < 650) || $0.financials.dtiRatio > 0.45 }.count
+        let slaOverdue = apps.filter { $0.slaStatus == .overdue }.count
+        let slaOnTimePct = total == 0 ? 0 : Int(((Double(total - slaOverdue) / Double(total)) * 100.0).rounded())
+
+        switch reportId {
+        case "RPT-01":
+            return [
+                ReportRow(id: "r1", label: "Total Applications", value: "\(total)", change: "—", isPositive: true),
+                ReportRow(id: "r2", label: "Approved", value: "\(approved)", change: "—", isPositive: true),
+                ReportRow(id: "r3", label: "Pending Review", value: "\(pending)", change: "—", isPositive: pending == 0),
+                ReportRow(id: "r4", label: "Rejected", value: "\(rejected)", change: "—", isPositive: rejected == 0)
+            ]
+        case "RPT-02":
+            let overdue = apps.filter { $0.slaStatus == .overdue }.count
+            return [
+                ReportRow(id: "r1", label: "Overdue (SLA)", value: "\(overdue)", change: "—", isPositive: overdue == 0),
+                ReportRow(id: "r2", label: "On-time SLA", value: "\(slaOnTimePct)%", change: "—", isPositive: slaOnTimePct >= 95),
+                ReportRow(id: "r3", label: "Under Review", value: "\(apps.filter { $0.status == .underReview }.count)", change: "—", isPositive: true),
+                ReportRow(id: "r4", label: "Total", value: "\(total)", change: "—", isPositive: true)
+            ]
+        case "RPT-03":
+            // Disbursement not exposed on applications yet; proxy via approvals.
+            return [
+                ReportRow(id: "r1", label: "Approved (Proxy)", value: "\(approved)", change: "—", isPositive: true),
+                ReportRow(id: "r2", label: "Pending", value: "\(pending)", change: "—", isPositive: pending == 0),
+                ReportRow(id: "r3", label: "Rejected", value: "\(rejected)", change: "—", isPositive: rejected == 0),
+                ReportRow(id: "r4", label: "Total", value: "\(total)", change: "—", isPositive: true)
+            ]
+        case "RPT-04":
+            return [
+                ReportRow(id: "r1", label: "Avg CIBIL Score", value: "\(avgCibil)", change: "—", isPositive: avgCibil >= 700),
+                ReportRow(id: "r2", label: "High Risk Apps", value: "\(highRisk)", change: "—", isPositive: highRisk == 0),
+                ReportRow(id: "r3", label: "CIBIL < 650", value: "\(apps.filter { $0.financials.cibilScore > 0 && $0.financials.cibilScore < 650 }.count)", change: "—", isPositive: true),
+                ReportRow(id: "r4", label: "Avg FOIR", value: "\(avgFoirPct)%", change: "—", isPositive: avgFoirPct <= 50)
+            ]
+        case "RPT-05":
+            return [
+                ReportRow(id: "r1", label: "On-Time SLA", value: "\(slaOnTimePct)%", change: "—", isPositive: slaOnTimePct >= 95),
+                ReportRow(id: "r2", label: "SLA Breaches", value: "\(slaOverdue)", change: "—", isPositive: slaOverdue == 0),
+                ReportRow(id: "r3", label: "Pending", value: "\(pending)", change: "—", isPositive: pending == 0),
+                ReportRow(id: "r4", label: "Total", value: "\(total)", change: "—", isPositive: true)
+            ]
+        default:
+            return []
+        }
+    }
+
+    // MARK: - Preview + Export payloads
+
+    func previewTable(for reportId: String) -> (columns: [String], rows: [[String]]) {
+        _ = normalizedReportID(reportId)
+        let columns = ["Application ID", "Borrower", "Amount", "Status", "Risk"]
+        let rows: [[String]] = applications.prefix(25).map { app in
+            let amount = app.loan.amount > 0 ? app.loan.amount.currencyFormatted : "—"
+            let status = app.status.displayName
+            let risk: String = {
+                let cibil = app.financials.cibilScore
+                let dti = app.financials.dtiRatio
+                if (cibil > 0 && cibil < 650) || dti > 0.45 { return "High" }
+                if (cibil > 0 && cibil < 700) || dti > 0.35 { return "Medium" }
+                return "Low"
+            }()
+            return [app.id, app.borrower.name, amount, status, risk]
+        }
+        return (columns, rows)
+    }
+
+    func exportContent(for reportId: String, format: String) -> String {
+        let rows = Self.liveReportRows(for: normalizedReportID(reportId), from: applications)
+        let header = ["Label", "Value", "Change", "Positive"].joined(separator: ",")
+        let body = rows.map { "\($0.label),\($0.value),\($0.change),\($0.isPositive)" }.joined(separator: "\n")
+        return "\(header)\n\(body)\n"
     }
 
     // MARK: - Mock Data

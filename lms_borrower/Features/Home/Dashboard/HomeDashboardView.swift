@@ -98,7 +98,7 @@ struct HomeDashboardView: View {
                         Group {
                             if let credibilityScore = viewModel.credibilityScore {
                                 Button {
-                                    router.push(.credibilityOverview)
+                                    router.push(.credibilityOverview(score: credibilityScore))
                                 } label: {
                                     CredibilityScoreCardView(score: credibilityScore)
                                 }
@@ -664,9 +664,14 @@ final class HomeDashboardViewModel: ObservableObject {
     ]
 
     private let service: LoanServiceProtocol
+    private let authRepository: AuthRepository
 
-    init(service: LoanServiceProtocol = ServiceContainer.loanService) {
+    init(
+        service: LoanServiceProtocol = ServiceContainer.loanService,
+        authRepository: AuthRepository = AuthRepository()
+    ) {
         self.service = service
+        self.authRepository = authRepository
     }
 
     func fetchDashboardData() {
@@ -683,12 +688,14 @@ final class HomeDashboardViewModel: ObservableObject {
         do {
             async let applicationsTask = service.listLoanApplications(limit: 100, offset: 0)
             async let loansTask = service.listLoans(limit: 100, offset: 0)
+            async let profileTask = authRepository.getMyProfile()
 
-            let (applications, loans) = try await (applicationsTask, loansTask)
+            let (applications, loans, profile) = try await (applicationsTask, loansTask, profileTask)
             let applicationsById = Dictionary(uniqueKeysWithValues: applications.map { ($0.id, $0) })
             let schedules = try await loadSchedules(for: loans)
             let activeApplicationIDs = Set(loans.map(\.applicationId))
             hasAnyLoanRecord = !loans.isEmpty
+            credibilityScore = profile.cibilScore
 
             inProgressApplications = applications
                 .filter { !activeApplicationIDs.contains($0.id) && $0.status.isInProgressForDashboard }
@@ -723,6 +730,7 @@ final class HomeDashboardViewModel: ObservableObject {
             inProgressApplications = []
             hasAnyLoanRecord = false
             nextEMI = nil
+            credibilityScore = nil
         }
     }
 

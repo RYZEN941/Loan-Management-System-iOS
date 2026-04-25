@@ -42,10 +42,10 @@ enum AppRoute: Hashable {
     case savingsInsight
     
     // Feature 10: Credibility Score
-    case credibilityOverview
+    case credibilityOverview(score: Int)
     case scoreBreakdown
     case scoreHistory
-    case benefitsUnlocked
+    case benefitsUnlocked(score: Int)
     
     // Feature 11: Messaging
     case chatList

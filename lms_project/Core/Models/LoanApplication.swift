@@ -18,6 +18,8 @@ struct LoanApplication: Identifiable, Codable, Hashable {
     var internalRemarks: [InternalRemark]
     var status: ApplicationStatus
     var assignedTo: String
+    var primaryBorrowerProfileID: String = ""
+    var createdByUserID: String = ""
     var branch: String
     var riskLevel: RiskLevel
     var createdAt: Date

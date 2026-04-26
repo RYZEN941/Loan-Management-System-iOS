@@ -33,7 +33,7 @@ struct AdminReportsView: View {
     private let reports: [ReportItem] = [
         ReportItem(id:"RPT-PERF",title:"Portfolio Performance",description:"Total portfolio, disbursements, NPA summary",icon:"chart.bar.fill",color:Theme.Colors.primary,lastGenerated:"Apr 15, 2025",size:"2.4 MB"),
         ReportItem(id:"RPT-DISB",title:"Disbursement Report",description:"Loans disbursed by branch, type, and officer",icon:"arrow.up.right.circle.fill",color:Theme.Colors.success,lastGenerated:"Apr 14, 2025",size:"1.8 MB"),
-        ReportItem(id:"RPT-COLL",title:"Collection Report",description:"EMI recovery, DPD buckets, outstanding analysis",icon:"indianrupeesign.circle.fill",color:Color(hex:"6F42C1"),lastGenerated:"Apr 13, 2025",size:"3.1 MB"),
+        ReportItem(id:"RPT-COLL",title:"Collection Report",description:"EMI recovery, DPD buckets, outstanding analysis",icon:"indianrupeesign.circle.fill",color:Theme.Colors.primary,lastGenerated:"Apr 13, 2025",size:"3.1 MB"),
         ReportItem(id:"RPT-NPA",title:"NPA Report",description:"Non-performing assets, aging, provisioning",icon:"exclamationmark.triangle.fill",color:Theme.Colors.critical,lastGenerated:"Apr 12, 2025",size:"1.2 MB"),
         ReportItem(id:"RPT-RISK",title:"Risk & Credit Report",description:"CIBIL distribution, FOIR analysis, fraud flags",icon:"shield.lefthalf.filled",color:Theme.Colors.warning,lastGenerated:"Apr 10, 2025",size:"2.8 MB"),
     ]
@@ -72,11 +72,15 @@ struct AdminReportsView: View {
             .toolbar { 
                 ToolbarItem(placement: .topBarTrailing) { ProfileNavButton(showProfile: $showProfile) }
             }
+            .onAppear {
+                reportsVM.loadData()
+            }
             .sheet(item:$showExportSheet) { report in
                 ExportOptionsSheet(report:report,onExport:{format in triggerExport(report:report,format:format)})
             }
             .sheet(item:$previewingReport) { report in
                 ReportPreviewSheet(report:report,onExport:{format in triggerExport(report:report,format:format)})
+                    .environmentObject(reportsVM)
             }
             .sheet(item: $shareItem) { item in
                 ShareSheet(activityItems: [item.url])
@@ -143,16 +147,10 @@ struct AdminReportsView: View {
             }
             .padding(24)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                LinearGradient(
-                    colors: [Theme.Colors.adaptivePrimary(colorScheme), Theme.Colors.adaptivePrimary(colorScheme).opacity(0.85)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+            .background(Theme.Colors.adaptivePrimary(colorScheme))
         }
         .clipShape(RoundedRectangle(cornerRadius: 24))
-        .shadow(color: Theme.Colors.adaptivePrimary(colorScheme).opacity(0.3), radius: 12, x: 0, y: 6)
+        .shadow(color: Theme.Colors.adaptivePrimary(colorScheme).opacity(0.08), radius: 4, x: 0, y: 2)
     }
 
     // MARK: - All Reports List
@@ -199,8 +197,9 @@ struct AdminReportsView: View {
             
             let fileName = "\(report.title.replacingOccurrences(of: " ", with: "_")).\(format.rawValue)"
             let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
-            
-            try? "Mock report data for \(report.title)".write(to: tempURL, atomically: true, encoding: .utf8)
+
+            let content = reportsVM.exportContent(for: report.id, format: format.rawValue)
+            try? content.write(to: tempURL, atomically: true, encoding: .utf8)
             
             self.shareItem = ShareItem(url: tempURL)
         }
@@ -429,16 +428,18 @@ private struct ReportPreviewSheet: View {
     let onExport: (ExportFormat) -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject private var reportsVM: AdminReportsViewModel
 
-    private let sampleColumns = ["Loan ID", "Borrower", "Amount", "Status", "Risk"]
-    private let sampleRows: [[String]] = [
-        ["APP-2024-001", "Rajesh Kumar", "₹25L", "Approved", "Low"],
-        ["APP-2024-002", "Priya Sharma", "₹42L", "Under Review", "Medium"],
-        ["APP-2024-003", "Amit Singh", "₹18L", "Approved", "Low"],
-        ["APP-2024-004", "Kavitha Nair", "₹8.5L", "Pending", "High"],
-        ["APP-2024-005", "Suresh Pillai", "₹55L", "Rejected", "High"],
-        ["APP-2024-006", "Deepa Menon", "₹12L", "Approved", "Low"],
-    ]
+    private var table: (columns: [String], rows: [[String]]) {
+        reportsVM.previewTable(for: report.id)
+    }
+    
+    private var statsRows: [ReportRow] {
+        AdminReportsViewModel.liveReportRows(
+            for: reportsVM.normalizedReportID(report.id),
+            from: reportsVM.applications
+        )
+    }
 
     var body: some View {
         NavigationStack {
@@ -471,7 +472,7 @@ private struct ReportPreviewSheet: View {
                     VStack(spacing: 0) {
                         // Table header
                         HStack(spacing: 0) {
-                            ForEach(sampleColumns, id: \.self) { col in
+                            ForEach(table.columns, id: \.self) { col in
                                 Text(col)
                                     .font(Theme.Typography.caption2)
                                     .foregroundStyle(.secondary)
@@ -483,17 +484,17 @@ private struct ReportPreviewSheet: View {
                         .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
 
                         // Table rows
-                        ForEach(sampleRows.indices, id: \.self) { rowIdx in
+                        ForEach(table.rows.indices, id: \.self) { rowIdx in
                             HStack(spacing: 0) {
-                                ForEach(sampleRows[rowIdx].indices, id: \.self) { colIdx in
-                                    Text(sampleRows[rowIdx][colIdx])
+                                ForEach(table.rows[rowIdx].indices, id: \.self) { colIdx in
+                                    Text(table.rows[rowIdx][colIdx])
                                         .font(Theme.Typography.caption)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 10)
                                 }
                             }
-                            if rowIdx < sampleRows.count - 1 {
+                            if rowIdx < table.rows.count - 1 {
                                 Divider()
                             }
                         }
@@ -502,10 +503,10 @@ private struct ReportPreviewSheet: View {
 
                     // Summary stats
                     HStack(spacing: Theme.Spacing.md) {
-                        previewStat(label: "Total Records", value: "248", color: Theme.Colors.primary)
-                        previewStat(label: "Approved", value: "142", color: Theme.Colors.success)
-                        previewStat(label: "Pending", value: "68", color: Theme.Colors.warning)
-                        previewStat(label: "Rejected", value: "38", color: Theme.Colors.critical)
+                        previewStat(label: statsRows.first?.label ?? "Total", value: statsRows.first?.value ?? "—", color: Theme.Colors.primary)
+                        previewStat(label: statsRows.dropFirst().first?.label ?? "Approved", value: statsRows.dropFirst().first?.value ?? "—", color: Theme.Colors.success)
+                        previewStat(label: statsRows.dropFirst(2).first?.label ?? "Pending", value: statsRows.dropFirst(2).first?.value ?? "—", color: Theme.Colors.warning)
+                        previewStat(label: statsRows.dropFirst(3).first?.label ?? "Rejected", value: statsRows.dropFirst(3).first?.value ?? "—", color: Theme.Colors.critical)
                     }
 
                     // Export actions
@@ -515,7 +516,7 @@ private struct ReportPreviewSheet: View {
                         HStack(spacing: 16) {
                             exportButton("PDF", icon: "doc.text.fill", format: .pdf, color: .red)
                             exportButton("Excel", icon: "tablecells.fill", format: .excel, color: .green)
-                            exportButton("CSV", icon: "list.bullet.rectangle.fill", format: .csv, color: .blue)
+                            exportButton("CSV", icon: "list.bullet.rectangle.fill", format: .csv, color: Theme.Colors.adaptivePrimary(colorScheme))
                         }
                     }
                 }

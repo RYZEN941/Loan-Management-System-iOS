@@ -55,7 +55,7 @@ struct LOActionPanel: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: Theme.Layout.buttonHeight)
-                        .background(Theme.Colors.primary)
+                        .background(Theme.Colors.adaptivePrimary(colorScheme))
                         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
                 }
                 .buttonStyle(.plain)
@@ -127,31 +127,21 @@ struct ManagerActionPanel: View {
                 }
                 .buttonStyle(.plain)
 
-                // Assign Officer (fallback alert — backend list not available)
+                // Reassign Officer
                 Button { onAssignOfficer?() } label: {
-                    Label("Assign Officer", systemImage: "person.badge.plus")
+                    Label("Reassign", systemImage: "person.badge.plus")
                         .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
                         .frame(maxWidth: .infinity)
                         .frame(height: 36)
-                        .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme).opacity(0.6))
+                        .background(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
                         .overlay(
                             RoundedRectangle(cornerRadius: Theme.Radius.sm)
-                                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                                .stroke(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.25), lineWidth: 1)
                         )
                 }
                 .buttonStyle(.plain)
-                .overlay(alignment: .topTrailing) {
-                    Text("N/A")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 2)
-                        .background(Color.orange)
-                        .clipShape(Capsule())
-                        .offset(x: 4, y: -6)
-                }
 
                 // Approve
                 Button(action: onApprove) {

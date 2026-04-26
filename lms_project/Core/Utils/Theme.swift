@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 // MARK: - Theme
 
@@ -24,10 +25,11 @@ enum Theme {
         static let homeBackground   = Color(hex: "#EEF3FB")
 
         // Primary palette (mapped)
-        static let primary      = mainBlue
-        static let secondary    = secondaryBlue
+        // Keep light mode as-is, but force subtle-blue tokens in dark mode globally.
+        static let primary      = dynamicAdaptiveColor(lightHex: "#002FDC", darkHex: "#7C92E8")
+        static let secondary    = dynamicAdaptiveColor(lightHex: "#264BE3", darkHex: "#9EAFEF")
         static let primaryLight = lightBlue
-        static let accent       = secondaryBlue
+        static let accent       = dynamicAdaptiveColor(lightHex: "#264BE3", darkHex: "#9EAFEF")
 
         // Semantic
         static let critical = alertRed
@@ -50,13 +52,13 @@ enum Theme {
         // Brand Blues (Dark) - Aligned with Manager palette
         static let primaryDark          = Color(hex: "#7C92E8")
         static let secondaryDark        = Color(hex: "#9EAFEF")
-        static let lightBlueDark        = Color(hex: "#1E3A8A")
+        static let lightBlueDark        = Color(hex: "#9EAFEF")
 
-        // Header Gradient (Adaptive)
+        // Header style (Adaptive) - keep light gradient, use solid subtle-blue in dark mode
         static func headerGradient(_ colorScheme: ColorScheme) -> LinearGradient {
             if colorScheme == .dark {
                 return LinearGradient(
-                    colors: [Color(hex: "#1E2A78"), Color(hex: "#2536A3"), Color(hex: "#3B5BDB")],
+                    colors: [primaryDark, primaryDark],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
@@ -104,6 +106,12 @@ enum Theme {
         
         static func adaptiveWarning(_ colorScheme: ColorScheme) -> Color {
             colorScheme == .dark ? Color(hex: "#FACC15") : warning
+        }
+
+        private static func dynamicAdaptiveColor(lightHex: String, darkHex: String) -> Color {
+            Color(uiColor: UIColor { trait in
+                UIColor(hex: trait.userInterfaceStyle == .dark ? darkHex : lightHex)
+            })
         }
     }
     
@@ -192,6 +200,32 @@ extension Color {
             green: Double(g) / 255,
             blue: Double(b) / 255,
             opacity: Double(a) / 255
+        )
+    }
+}
+
+private extension UIColor {
+    convenience init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+        let a, r, g, b: UInt64
+        switch hex.count {
+        case 3:
+            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+        case 6:
+            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+        case 8:
+            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+        default:
+            (a, r, g, b) = (255, 0, 0, 0)
+        }
+
+        self.init(
+            red: CGFloat(r) / 255.0,
+            green: CGFloat(g) / 255.0,
+            blue: CGFloat(b) / 255.0,
+            alpha: CGFloat(a) / 255.0
         )
     }
 }

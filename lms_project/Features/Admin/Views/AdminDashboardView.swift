@@ -12,6 +12,8 @@ struct AdminDashboardView: View {
     @EnvironmentObject var dashboardVM: DashboardViewModel
     @EnvironmentObject var adminVM: AdminViewModel
     @EnvironmentObject var authVM: AuthViewModel
+    @EnvironmentObject var applicationsVM: ApplicationsViewModel
+    @EnvironmentObject var riskVM: AdminRiskViewModel
     @Environment(\.colorScheme) private var colorScheme
     @Binding var showProfile: Bool
     @Binding var selectedTab: Int
@@ -25,8 +27,8 @@ struct AdminDashboardView: View {
                 Theme.Colors.adaptiveBackground(colorScheme)
                     .ignoresSafeArea()
                 
-                // Executive Layer
-                LinearGradient(colors: [Theme.Colors.adaptivePrimary(colorScheme).opacity(0.04), .clear], startPoint: .topLeading, endPoint: .bottomTrailing)
+                // Executive Layer (solid in dark mode)
+                Theme.Colors.adaptivePrimary(colorScheme).opacity(colorScheme == .dark ? 0.04 : 0.0)
                     .ignoresSafeArea()
                 
                 ScrollView {
@@ -71,6 +73,8 @@ struct AdminDashboardView: View {
             .onAppear {
                 dashboardVM.loadData()
                 adminVM.loadData()
+                applicationsVM.loadData(autoSelectFirst: false)
+                riskVM.loadData()
                 withAnimation(.easeOut(duration: 0.6)) {
                     isAnimating = true
                 }
@@ -114,10 +118,10 @@ struct AdminDashboardView: View {
             MinimalHeader(title: "ACTION REQUIRED")
             
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: Theme.Spacing.md)], spacing: Theme.Spacing.md) {
-                statusCard(title: "SLA Breaches", count: 5, color: .red, icon: "timer", trend: "↑ 20%", trendPositive: false, subtext: "Avg delay: 24m")
-                statusCard(title: "Fraud Alerts", count: 3, color: .orange, icon: "shield.righthalf.filled", subtext: "2 Critical level")
-                statusCard(title: "Policy Overrides", count: 2, color: .orange, icon: "doc.on.doc.fill", trend: "↓ 10%", trendPositive: true, subtext: "Auto-processed")
-                statusCard(title: "Stuck Applications", count: 6, color: .yellow, icon: "hourglass.badge.plus", trend: "↑ 5%", trendPositive: false, subtext: "Manual review req.")
+                statusCard(title: "SLA Breaches", count: slaBreachesCount, color: .red, icon: "timer", subtext: slaBreachesCount == 0 ? "No overdue SLA" : "Requires attention")
+                statusCard(title: "Fraud Alerts", count: riskVM.fraudFlagCount, color: .orange, icon: "shield.righthalf.filled", subtext: riskVM.fraudFlagCount == 0 ? "No derived flags" : "Review signals")
+                statusCard(title: "Policy Violations", count: policyViolationCount, color: .orange, icon: "doc.on.doc.fill", subtext: policyViolationCount == 0 ? "Within policy thresholds" : "FOIR/LTV threshold breach")
+                statusCard(title: "Stuck Applications", count: stuckApplicationsCount, color: .yellow, icon: "hourglass.badge.plus", subtext: stuckApplicationsCount == 0 ? "No stuck apps" : "Under review > 3 days")
             }
         }
         .opacity(isAnimating ? 1 : 0)
@@ -131,10 +135,10 @@ struct AdminDashboardView: View {
             MinimalHeader(title: "SYSTEM HEALTH")
             
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: Theme.Spacing.md)], spacing: Theme.Spacing.md) {
-                statusCard(title: "Processing Time", value: "4.2h", color: .blue, icon: "clock.fill", trend: "↓ 8%", trendPositive: true, subtext: "Limit: 12h")
-                statusCard(title: "Applications Today", value: "48", color: .purple, icon: "doc.text.fill", trend: "↑ 15%", trendPositive: true, subtext: "Forecast: 60")
-                statusCard(title: "Active Users", value: "12", color: .green, icon: "person.2.fill", subtext: "Peak: 24 (10 AM)")
-                statusCard(title: "SLA Compliance", value: "92%", color: .blue, icon: "checkmark.shield.fill", trend: "↓ 2%", trendPositive: false, subtext: "Target: 95%")
+                statusCard(title: "Processing Time", value: "4.2h", color: Theme.Colors.adaptivePrimary(colorScheme), icon: "clock.fill", trend: "↓ 8%", trendPositive: true, subtext: "Limit: 12h")
+                statusCard(title: "Applications Today", value: "\(applicationsTodayCount)", color: .purple, icon: "doc.text.fill", subtext: "From backend feed")
+                statusCard(title: "Active Users", value: "\(adminVM.activeUsersCount)", color: .green, icon: "person.2.fill", subtext: "From admin directory")
+                statusCard(title: "SLA Compliance", value: "\(slaCompliancePercent)%", color: Theme.Colors.adaptivePrimary(colorScheme), icon: "checkmark.shield.fill", subtext: "Target: 95%")
             }
         }
         .opacity(isAnimating ? 1 : 0)
@@ -291,7 +295,7 @@ struct AdminDashboardView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 24)
-                    .stroke(LinearGradient(colors: [.white.opacity(0.2), .clear], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+                    .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
             )
         }
         .opacity(isAnimating ? 1 : 0)
@@ -519,7 +523,7 @@ struct AdminDashboardView: View {
             
             VStack(spacing: 0) {
                 activityItem(title: "APP-2024-006 approved", actor: "Deepak Mehta", time: "12m ago", color: .green)
-                activityItem(title: "Policy Update: Min CIBIL Score matched", actor: "System Rule", time: "1h ago", color: .blue)
+                activityItem(title: "Policy Update: Min CIBIL Score matched", actor: "System Rule", time: "1h ago", color: Theme.Colors.adaptivePrimary(colorScheme))
                 activityItem(title: "APP-2024-009 escalated to Admin", actor: "Sunita Patel", time: "2h ago", color: .orange)
                 activityItem(title: "Suspicious Application detected", actor: "Fraud Engine", time: "3h ago", color: .red, isLast: true)
             }
@@ -561,6 +565,38 @@ struct AdminDashboardView: View {
                 Divider().padding(.leading, 40)
             }
         }
+    }
+
+    // MARK: - Live metrics (Applications)
+
+    private var liveApplications: [LoanApplication] { applicationsVM.applications }
+
+    private var slaBreachesCount: Int {
+        liveApplications.filter { $0.slaStatus == .overdue }.count
+    }
+
+    private var applicationsTodayCount: Int {
+        let cal = Calendar.current
+        return liveApplications.filter { cal.isDateInToday($0.createdAt) }.count
+    }
+
+    private var stuckApplicationsCount: Int {
+        let threshold = Date().addingTimeInterval(-3 * 24 * 60 * 60)
+        return liveApplications.filter { $0.status == .underReview && $0.createdAt < threshold }.count
+    }
+
+    private var policyViolationCount: Int {
+        liveApplications.filter {
+            let foirRatio = $0.financials.foir > 0 ? (Double($0.financials.foir) / 100.0) : $0.financials.dtiRatio
+            return foirRatio > 0.50 || $0.financials.ltvRatio > 0.80
+        }.count
+    }
+
+    private var slaCompliancePercent: Int {
+        let total = liveApplications.count
+        guard total > 0 else { return 0 }
+        let onTime = liveApplications.filter { $0.slaStatus != .overdue }.count
+        return Int(((Double(onTime) / Double(total)) * 100.0).rounded())
     }
 }
 

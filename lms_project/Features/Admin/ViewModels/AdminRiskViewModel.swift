@@ -43,8 +43,7 @@ class AdminRiskViewModel: ObservableObject {
     @Published var decisions: [DecisionRecord] = []
     @Published var stressTestEnabled = false
     @Published var isLoading = false
-
-    private let dataService = MockDataService.shared
+    private let loanAPI = LoanAPI()
 
     // MARK: - KPIs
 
@@ -89,46 +88,83 @@ class AdminRiskViewModel: ObservableObject {
 
     func loadData() {
         isLoading = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-            guard let self else { return }
-            self.applications = self.dataService.fetchApplications()
-            self.fraudFlags = Self.mockFraudFlags()
-            self.decisions   = Self.mockDecisions(from: self.applications)
-            self.isLoading   = false
+        Task {
+            defer { Task { @MainActor in self.isLoading = false } }
+            guard #available(iOS 18.0, *) else { return }
+            do {
+                let list = try await loanAPI.listLoanApplications(limit: 200, offset: 0, branchID: nil, authorized: true)
+                let mapped = list.map { LoanApplication.from(proto: $0) }
+                await MainActor.run {
+                    self.applications = mapped
+                    self.fraudFlags = Self.deriveFraudFlags(from: mapped)
+                    self.decisions = Self.deriveDecisions(from: mapped)
+                }
+            } catch {
+                // Keep view usable even when backend is unavailable.
+                await MainActor.run {
+                    self.applications = []
+                    self.fraudFlags = []
+                    self.decisions = []
+                }
+            }
         }
     }
 
-    // MARK: - Mock Data
+    // MARK: - Derived Risk Signals (Backend-backed)
 
-    static func mockFraudFlags() -> [FraudFlag] {
-        [
-            FraudFlag(id: "FF-001", applicationId: "APP-2024-005",
-                      borrowerName: "Suresh Nair",
-                      reason: "Declared income 15% higher than bank statement",
-                      severity: .high,
-                      flaggedAt: Date().addingTimeInterval(-86400)),
-            FraudFlag(id: "FF-002", applicationId: "APP-2024-010",
-                      borrowerName: "Divya Krishnan",
-                      reason: "PAN name mismatch with Aadhaar",
-                      severity: .high,
-                      flaggedAt: Date().addingTimeInterval(-172800))
-        ]
+    static func deriveFraudFlags(from apps: [LoanApplication]) -> [FraudFlag] {
+        // Backend does not expose fraud flags yet; derive lightweight signals from app fields.
+        // Keep conservative: only flag clear policy risk patterns.
+        let now = Date()
+        return apps.compactMap { app in
+            let cibil = app.financials.cibilScore
+            let dti = app.financials.dtiRatio
+            let foir = app.financials.foir > 0 ? (app.financials.foir / 100.0) : dti
+            let reasons: [String] = [
+                cibil > 0 && cibil < 650 ? "Low CIBIL (\(cibil))" : nil,
+                dti > 0.40 ? "DTI high (\(Int((dti * 100).rounded()))%)" : nil,
+                foir > 0.50 ? "FOIR above policy (\(Int((foir * 100).rounded()))%)" : nil
+            ].compactMap { $0 }
+
+            guard !reasons.isEmpty else { return nil }
+            let severity: RiskLevel = (cibil > 0 && cibil < 600) || dti > 0.55 ? .high : .medium
+            return FraudFlag(
+                id: "FF-\(app.id.prefix(8))",
+                applicationId: app.id,
+                borrowerName: app.borrower.name,
+                reason: reasons.joined(separator: " · "),
+                severity: severity,
+                flaggedAt: now
+            )
+        }
     }
 
-    static func mockDecisions(from apps: [LoanApplication]) -> [DecisionRecord] {
-        [
-            DecisionRecord(id: "DEC-001", applicationId: "APP-2024-006",
-                           borrowerName: "Meera Joshi", decision: "Approved",
-                           reason: "CIBIL 800, DTI 12%, all docs verified",
-                           score: 92, decidedAt: Date().addingTimeInterval(-172800)),
-            DecisionRecord(id: "DEC-002", applicationId: "APP-2024-007",
-                           borrowerName: "Karan Malhotra", decision: "Rejected",
-                           reason: "CIBIL 660, DTI 40% exceeds policy threshold",
-                           score: 41, decidedAt: Date().addingTimeInterval(-259200)),
-            DecisionRecord(id: "DEC-003", applicationId: "APP-2024-010",
-                           borrowerName: "Divya Krishnan", decision: "Rejected",
-                           reason: "CIBIL 580, income insufficient",
-                           score: 28, decidedAt: Date().addingTimeInterval(-432000))
-        ]
+    static func deriveDecisions(from apps: [LoanApplication]) -> [DecisionRecord] {
+        // Derived from status transitions only (until backend exposes a decision/audit feed).
+        let decidedApps = apps.filter { $0.status == .approved || $0.status == .managerApproved || $0.status == .rejected || $0.status == .managerRejected || $0.status == .officerRejected }
+        return decidedApps.map { app in
+            let decision: String = {
+                switch app.status {
+                case .approved, .managerApproved: return "Approved"
+                case .rejected, .managerRejected, .officerRejected: return "Rejected"
+                default: return "Escalated"
+                }
+            }()
+            let cibil = app.financials.cibilScore
+            let dti = app.financials.dtiRatio
+            let cibilPart = (Double(max(0, cibil - 300)) / 600.0) * 70.0
+            let dtiPart = max(0.0, 0.50 - dti) * 60.0
+            let score = max(0, min(100, Int((cibilPart + dtiPart).rounded())))
+            let reason = "CIBIL \(cibil) · DTI \(Int((dti * 100).rounded()))%"
+            return DecisionRecord(
+                id: "DEC-\(app.id.prefix(8))",
+                applicationId: app.id,
+                borrowerName: app.borrower.name,
+                decision: decision,
+                reason: reason,
+                score: score,
+                decidedAt: app.createdAt
+            )
+        }
     }
 }

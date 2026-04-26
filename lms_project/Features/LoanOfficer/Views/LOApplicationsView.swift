@@ -14,6 +14,15 @@ import UniformTypeIdentifiers
 // MARK: - Main View
 
 struct LOApplicationsView: View {
+    private enum LOChip: String, CaseIterable {
+        case all = "All"
+        case new = "New"
+        case myReview = "My Review"
+        case sentToManager = "Sent to Manager"
+        case approved = "Approved"
+        case rejected = "Rejected"
+    }
+
     @EnvironmentObject var applicationsVM: ApplicationsViewModel
     @Environment(\.colorScheme) private var colorScheme
     @Binding var showProfile: Bool
@@ -23,6 +32,9 @@ struct LOApplicationsView: View {
     
     @State private var showAddDocumentAlert = false
     @State private var newDocumentName = ""
+    @State private var showSanctionLetterPicker = false
+    @State private var sanctionLetterAppID: String? = nil
+    @State private var selectedLOChip: LOChip = .all
 
     private let sidebarWidth: CGFloat = 320
 
@@ -73,7 +85,14 @@ struct LOApplicationsView: View {
                     ProfileNavButton(showProfile: $showProfile)
                 }
             }
-            .onAppear { applicationsVM.loadData() }
+            .onAppear {
+                applicationsVM.resetFiltersToAll()
+                applicationsVM.loadData(autoSelectFirst: true)
+                selectedLOChip = .all
+                if let app = applicationsVM.selectedApplication {
+                    applicationsVM.loadBranchOfficers(branchName: app.branch)
+                }
+            }
             .alert("Action", isPresented: $applicationsVM.showActionAlert) {
                 Button("OK") {}
             } message: {
@@ -82,6 +101,24 @@ struct LOApplicationsView: View {
             .sheet(isPresented: $applicationsVM.showXMLUploadResult) { xmlResultSheet }
             .sheet(isPresented: $showNewApplication) {
                 CreateApplicationSheet(applicationsVM: applicationsVM)
+            }
+            .sheet(isPresented: $showSanctionLetterPicker) {
+                DocumentFilePicker { data, name, contentType in
+                    if let appID = sanctionLetterAppID,
+                       let app = applicationsVM.applications.first(where: { $0.id == appID }) {
+                        applicationsVM.uploadSanctionLetter(
+                            application: app,
+                            data: data,
+                            fileName: name,
+                            contentType: contentType
+                        )
+                    }
+                    showSanctionLetterPicker = false
+                    sanctionLetterAppID = nil
+                } onCancel: {
+                    showSanctionLetterPicker = false
+                    sanctionLetterAppID = nil
+                }
             }
         }
         .animation(.easeInOut(duration: 0.28), value: sidebarCollapsed)
@@ -93,6 +130,25 @@ struct LOApplicationsView: View {
 
     private var applicationListPanel: some View {
         VStack(spacing: 0) {
+            // List Header
+            HStack(alignment: .bottom) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Applications")
+                        .font(.system(size: 20, weight: .bold))
+                }
+                Spacer()
+                Text("\(filteredLOApplications.count)")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.1))
+                    .clipShape(Capsule())
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
+
             // Search bar
             HStack(spacing: 12) {
                 Image(systemName: "magnifyingglass")
@@ -110,49 +166,14 @@ struct LOApplicationsView: View {
                     .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
             )
             .padding(.horizontal, 16)
-            .padding(.top, 16)
 
-            // List Header
-            HStack(alignment: .bottom) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Applications")
-                        .font(.system(size: 17, weight: .bold))
-                    Text("Browse and manage your assigned loan cases.")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
-                }
-                Spacer()
-                Text("\(applicationsVM.filteredApplications.count)")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Theme.Colors.primary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Theme.Colors.primary.opacity(0.1))
-                    .clipShape(Capsule())
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 16)
-
-            // Filter chips — all relevant LO statuses
+            // Filter chips
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
-                    AppFilterChip(label: "All", isSelected: applicationsVM.filterStatus == nil) {
-                        withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = nil }
-                    }
-                    AppFilterChip(label: "New", isSelected: applicationsVM.filterStatus == .pending) {
-                        withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .pending }
-                    }
-                    AppFilterChip(label: "My Review", isSelected: applicationsVM.filterStatus == .officerReview) {
-                        withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .officerReview }
-                    }
-                    AppFilterChip(label: "Forwarded", isSelected: applicationsVM.filterStatus == .officerApproved) {
-                        withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .officerApproved }
-                    }
-                    AppFilterChip(label: "Approved", isSelected: applicationsVM.filterStatus == .approved) {
-                        withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .approved }
-                    }
-                    AppFilterChip(label: "Rejected", isSelected: applicationsVM.filterStatus == .officerRejected) {
-                        withAnimation(.spring(response: 0.3)) { applicationsVM.filterStatus = .officerRejected }
+                    ForEach(LOChip.allCases, id: \.self) { chip in
+                        AppFilterChip(label: chip.rawValue, isSelected: selectedLOChip == chip) {
+                            withAnimation(.spring(response: 0.3)) { selectedLOChip = chip }
+                        }
                     }
                 }
                 .padding(.horizontal, 16)
@@ -162,7 +183,7 @@ struct LOApplicationsView: View {
             Divider()
 
             // List
-            if applicationsVM.filteredApplications.isEmpty {
+            if filteredLOApplications.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "doc.text.magnifyingglass")
                         .font(.system(size: 32, weight: .thin))
@@ -175,7 +196,7 @@ struct LOApplicationsView: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        ForEach(applicationsVM.filteredApplications) { app in
+                        ForEach(filteredLOApplications) { app in
                             ApplicationRow(
                                 application: app,
                                 isSelected: applicationsVM.selectedApplication?.id == app.id,
@@ -196,6 +217,32 @@ struct LOApplicationsView: View {
         .background(Theme.Colors.adaptiveSurface(colorScheme))
     }
 
+    private var filteredLOApplications: [LoanApplication] {
+        let base: [LoanApplication]
+        switch selectedLOChip {
+        case .all:
+            base = applicationsVM.applications
+        case .new:
+            base = applicationsVM.applications.filter { $0.status == .pending }
+        case .myReview:
+            base = applicationsVM.applications.filter { $0.status == .officerReview }
+        case .sentToManager:
+            base = applicationsVM.applications.filter { $0.status == .managerReview || $0.status == .officerApproved }
+        case .approved:
+            base = applicationsVM.applications.filter { $0.status == .approved || $0.status == .managerApproved }
+        case .rejected:
+            base = applicationsVM.applications.filter { $0.status == .rejected || $0.status == .officerRejected || $0.status == .managerRejected }
+        }
+
+        let query = applicationsVM.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return base }
+        return base.filter {
+            $0.borrower.name.localizedCaseInsensitiveContains(query) ||
+            $0.id.localizedCaseInsensitiveContains(query) ||
+            $0.borrower.employer.localizedCaseInsensitiveContains(query)
+        }
+    }
+
     // ────────────────────────────────────────────────────────────────
     // MARK: - Detail Panel
     // ────────────────────────────────────────────────────────────────
@@ -214,6 +261,7 @@ struct LOApplicationsView: View {
                                 VStack(alignment: .leading, spacing: 20) {
                                     financialSection(app)
                                     documentsSection(app)
+                                    sanctionLetterSection(app)
                                 }
                                 .frame(maxWidth: .infinity)
 
@@ -228,6 +276,7 @@ struct LOApplicationsView: View {
                             // Normal stacked layout
                             financialSection(app)
                             documentsSection(app)
+                            sanctionLetterSection(app)
                             verificationSection(app)
                             internalRemarksSection(app)
                             conversationSection(app)
@@ -298,6 +347,12 @@ struct LOApplicationsView: View {
                         .font(.system(size: 12, weight: .medium, design: .monospaced))
                         .foregroundStyle(.tertiary)
                         .padding(.top, 2)
+                    Text("Assigned: \(applicationsVM.officerDisplayName(for: app.assignedTo))")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    Text("Created By: \(applicationsVM.officerDisplayName(for: app.createdByUserID))")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -444,6 +499,65 @@ struct LOApplicationsView: View {
         } message: {
             Text("Enter a name for the new document.")
         }
+    }
+
+    // ────────────────────────────────────────────────────────────────
+    // MARK: - Sanction Letter
+    // ────────────────────────────────────────────────────────────────
+
+    private func sanctionLetterSection(_ app: LoanApplication) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            SectionHeader(title: "Sanction Letter", icon: "doc.badge.shield.fill")
+
+            if let letter = app.sanctionLetter, let activeVersion = letter.activeVersion {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Version v\(activeVersion.version)")
+                            .font(Theme.Typography.subheadline)
+                            .foregroundStyle(.primary)
+                        Text("Generated: \(activeVersion.generatedAt.shortFormatted)")
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Text(activeVersion.status.displayName)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Theme.Colors.primary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Theme.Colors.primary.opacity(0.1))
+                        .clipShape(Capsule())
+                }
+            } else {
+                Text("No sanction letter is available yet.")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if canUploadSanctionLetter(app) {
+                Button {
+                    sanctionLetterAppID = app.id
+                    showSanctionLetterPicker = true
+                } label: {
+                    Label("Upload Sanction Letter (PDF/Image)", systemImage: "arrow.up.doc")
+                        .font(Theme.Typography.subheadline)
+                        .foregroundStyle(Theme.Colors.primary)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
+            }
+        }
+        .padding(16)
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg)
+            .fill(Theme.Colors.adaptiveSurface(colorScheme)))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+        )
+    }
+
+    private func canUploadSanctionLetter(_ app: LoanApplication) -> Bool {
+        app.status == .approved || app.status == .managerApproved
     }
 
     // ────────────────────────────────────────────────────────────────
@@ -898,6 +1012,7 @@ struct DocumentPreviewSheet: View {
 struct InternalRemarksView: View {
     let app: LoanApplication
     @ObservedObject var applicationsVM: ApplicationsViewModel
+    var authorName: String = "Amit Singh"
     @Environment(\.colorScheme) private var colorScheme
     @State private var remarkText = ""
     @FocusState private var focused: Bool
@@ -969,7 +1084,7 @@ struct InternalRemarksView: View {
                     applicationsVM.addInternalRemark(
                         applicationId: app.id,
                         text: remarkText,
-                        author: "Amit Singh"
+                        author: authorName
                     )
                     remarkText = ""
                     focused = false
@@ -997,6 +1112,7 @@ struct AppFilterChip: View {
     let label: String
     let isSelected: Bool
     let onTap: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Button(action: onTap) {
@@ -1005,7 +1121,7 @@ struct AppFilterChip: View {
                 .foregroundStyle(isSelected ? Color.white : Color.secondary)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 5)
-                .background(isSelected ? Theme.Colors.primary : Color.clear)
+                .background(isSelected ? Theme.Colors.adaptivePrimary(colorScheme) : Color.clear)
                 .clipShape(Capsule())
                 .overlay(
                     Capsule()

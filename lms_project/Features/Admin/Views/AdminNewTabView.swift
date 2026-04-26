@@ -25,6 +25,7 @@ struct AdminNewTabView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             AdminDashboardView(showProfile: $showProfile, selectedTab: $selectedTab)
+                .environmentObject(riskVM)
                 .tabItem { Label("Dashboard", systemImage: "chart.bar.fill") }
                 .tag(0)
 

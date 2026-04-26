@@ -135,15 +135,32 @@ struct AdminUsersView: View {
             
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    ForEach(filteredList) { user in
-                        UserRow(user: user, isSelected: adminVM.selectedUser?.id == user.id)
-                            .onTapGesture {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    adminVM.selectedUser = user
-                                    isEditing = false
+                    if filteredList.isEmpty {
+                        VStack(spacing: Theme.Spacing.sm) {
+                            Image(systemName: scope == .dst ? "person.badge.key" : "person.2.slash")
+                                .font(.system(size: 36))
+                                .foregroundStyle(.tertiary)
+                            Text(scope == .dst
+                                 ? "No DST accounts found in backend."
+                                 : "No staff accounts found in backend.")
+                                .font(Theme.Typography.subheadline)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Spacing.xl)
+                        .padding(.horizontal, Theme.Spacing.md)
+                    } else {
+                        ForEach(filteredList) { user in
+                            UserRow(user: user, isSelected: adminVM.selectedUser?.id == user.id)
+                                .onTapGesture {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        adminVM.selectedUser = user
+                                        isEditing = false
+                                    }
                                 }
-                            }
-                        Divider().padding(.leading, 64)
+                            Divider().padding(.leading, 64)
+                        }
                     }
                 }
             }
@@ -254,10 +271,12 @@ struct AdminUsersView: View {
             return adminVM.filteredUsers
         case .dst:
             if adminVM.searchText.isEmpty { return adminVM.dstUsers }
+            let q = adminVM.searchText
             return adminVM.dstUsers.filter {
-                $0.name.localizedCaseInsensitiveContains(adminVM.searchText) ||
-                $0.email.localizedCaseInsensitiveContains(adminVM.searchText) ||
-                $0.id.localizedCaseInsensitiveContains(adminVM.searchText)
+                $0.name.localizedCaseInsensitiveContains(q) ||
+                $0.email.localizedCaseInsensitiveContains(q) ||
+                $0.branch.localizedCaseInsensitiveContains(q) ||
+                $0.id.localizedCaseInsensitiveContains(q)
             }
         }
     }

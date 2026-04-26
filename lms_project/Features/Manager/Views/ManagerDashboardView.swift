@@ -45,7 +45,7 @@ struct ManagerDashboardView: View {
                 }
             }
             .onAppear {
-                dashboardVM.loadData()
+                applicationsVM.loadData()
             }
         }
     }
@@ -98,31 +98,31 @@ struct ManagerDashboardView: View {
                 .description("Actionable metrics requiring immediate manager attention.")
             
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.md) {
-                KPIDataCard(title: "Pending", value: "12",
+                KPIDataCard(title: "Pending", value: "\(pendingCount)",
                         icon: "clock.fill", color: Theme.Colors.adaptiveWarning(colorScheme),
                         showCTA: true) {
                     navigateToApprovals(status: .underReview)
                 }
                 
-                KPIDataCard(title: "Overdue", value: "3",
+                KPIDataCard(title: "Overdue", value: "\(overdueCount)",
                         icon: "timer", color: Theme.Colors.adaptiveCritical(colorScheme),
                         showCTA: true) {
                     navigateToApprovals(sla: .overdue)
                 }
                 
-                KPIDataCard(title: "High Risk", value: "5",
+                KPIDataCard(title: "High Risk", value: "\(highRiskCount)",
                         icon: "shield.fill", color: Theme.Colors.adaptiveCritical(colorScheme),
                         showCTA: true) {
                     navigateToApprovals(risk: .high)
                 }
                 
-                KPIDataCard(title: "Near SLA", value: "2",
+                KPIDataCard(title: "Near SLA", value: "\(nearSLACount)",
                         icon: "clock.badge.exclamationmark", color: Theme.Colors.adaptiveWarning(colorScheme),
                         showCTA: true) {
                     navigateToApprovals(sla: .urgent)
                 }
                 
-                KPIDataCard(title: "High Value", value: "4",
+                KPIDataCard(title: "High Value", value: "\(highValueCount)",
                         icon: "indianrupeesign.circle.fill", color: ManagerTheme.Colors.primary(colorScheme),
                         showCTA: true) {
                     navigateToApprovals(highValue: true)
@@ -140,9 +140,9 @@ struct ManagerDashboardView: View {
                     .font(.system(size: 14, weight: .bold))
                 
                 HStack(spacing: 16) {
-                    actionPill("3 high-risk applications")
-                    actionPill("2 nearing SLA breach")
-                    actionPill("Personal loan NPA rising")
+                    actionPill("\(highRiskCount) high-risk applications")
+                    actionPill("\(nearSLACount) nearing SLA breach")
+                    actionPill("\(approvedHighRiskCount) high-risk already approved")
                 }
             }
             .padding(.horizontal, Theme.Spacing.md)
@@ -178,35 +178,14 @@ struct ManagerDashboardView: View {
             SectionHeader(title: "Risk Snapshot", icon: "chart.pie.fill")
             
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.md) {
-                KPIDataCard(title: "High Risk Pending", value: "3",
+                KPIDataCard(title: "High Risk Pending", value: "\(highRiskPendingCount)",
                         icon: "shield.exclamationmark.fill", color: Theme.Colors.adaptiveCritical(colorScheme)) {
                     navigateToApprovals(status: .underReview, risk: .high)
                 }
                 
-                let approvedHighRiskCount = dashboardVM.applications.filter { $0.riskLevel == .high && $0.status == .approved }.count
-                if approvedHighRiskCount > 0 {
-                    KPIDataCard(title: "High Risk Approved", value: "\(approvedHighRiskCount)",
-                            icon: "shield.checkmark.fill", color: Theme.Colors.adaptiveSuccess(colorScheme)) {
-                        navigateToApprovals(status: .approved, risk: .high)
-                    }
-                } else {
-                    VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            ZStack {
-                                Circle().fill(Theme.Colors.adaptiveSuccess(colorScheme).opacity(0.12)).frame(width: 34, height: 34)
-                                Image(systemName: "shield.checkmark.fill").font(.system(size: 14, weight: .bold)).foregroundStyle(Theme.Colors.adaptiveSuccess(colorScheme))
-                            }
-                            Spacer()
-                        }
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("No high-risk approved applications").font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
-                        }
-                    }
-                    .padding(18)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(ManagerTheme.Colors.surface(colorScheme))
-                    .cornerRadius(Theme.Radius.lg)
-                    .overlay(RoundedRectangle(cornerRadius: Theme.Radius.lg).stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 0.5))
+                KPIDataCard(title: "High Risk Approved", value: "\(approvedHighRiskCount)",
+                        icon: "shield.checkmark.fill", color: Theme.Colors.adaptiveSuccess(colorScheme)) {
+                    navigateToApprovals(status: .approved, risk: .high)
                 }
             }
         }
@@ -217,30 +196,65 @@ struct ManagerDashboardView: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             SectionHeader(title: "Portfolio Health", icon: "heart.text.square.fill")
             
-            HStack(spacing: Theme.Spacing.md) {
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text("NPA %").font(Theme.Typography.caption).foregroundStyle(.secondary)
-                        Text("1.2%").font(Theme.Typography.headline).foregroundStyle(Theme.Colors.adaptiveSuccess(colorScheme))
-                    }
-                    Spacer()
-                }
-                .padding()
-                .background(ManagerTheme.Colors.surface(colorScheme))
-                .cornerRadius(Theme.Radius.md)
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.md) {
+                KPIDataCard(title: "NPA %", value: String(format: "%.1f%%", npaPercent),
+                        icon: "percent", color: Theme.Colors.adaptiveSuccess(colorScheme))
                 
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text("Portfolio Size").font(Theme.Typography.caption).foregroundStyle(.secondary)
-                        Text("₹4.2Cr").font(Theme.Typography.headline)
-                    }
-                    Spacer()
-                }
-                .padding()
-                .background(ManagerTheme.Colors.surface(colorScheme))
-                .cornerRadius(Theme.Radius.md)
+                KPIDataCard(title: "Portfolio Size", value: portfolioSizeText,
+                        icon: "briefcase.fill", color: ManagerTheme.Colors.primary(colorScheme))
             }
         }
+    }
+    
+    // MARK: - Live Metrics (Aligned with Applications tab)
+    private var liveApplications: [LoanApplication] { applicationsVM.applications }
+    
+    private var pendingCount: Int {
+        liveApplications.filter { $0.status == .underReview || $0.status == .managerReview || $0.status == .officerApproved }.count
+    }
+    
+    private var overdueCount: Int {
+        liveApplications.filter { $0.slaStatus == .overdue }.count
+    }
+    
+    private var nearSLACount: Int {
+        liveApplications.filter { $0.slaStatus == .urgent }.count
+    }
+    
+    private var highRiskCount: Int {
+        liveApplications.filter { $0.riskLevel == .high && $0.status != .rejected && $0.status != .managerRejected }.count
+    }
+    
+    private var highValueCount: Int {
+        liveApplications.filter { $0.loan.amount >= 5_000_000 }.count
+    }
+    
+    private var highRiskPendingCount: Int {
+        liveApplications.filter {
+            $0.riskLevel == .high &&
+            ($0.status == .underReview || $0.status == .managerReview || $0.status == .officerApproved)
+        }.count
+    }
+    
+    private var approvedHighRiskCount: Int {
+        liveApplications.filter {
+            $0.riskLevel == .high &&
+            ($0.status == .approved || $0.status == .managerApproved)
+        }.count
+    }
+    
+    private var npaPercent: Double {
+        let relevant = liveApplications.filter { $0.status != .pending && $0.status != .underReview && $0.status != .officerReview && $0.status != .managerReview && $0.status != .officerApproved }
+        guard !relevant.isEmpty else { return 0 }
+        let nonPerforming = relevant.filter { $0.riskLevel == .high && ($0.status == .rejected || $0.status == .managerRejected) }.count
+        return (Double(nonPerforming) / Double(relevant.count)) * 100
+    }
+    
+    private var portfolioSizeText: String {
+        let total = liveApplications
+            .filter { $0.status == .approved || $0.status == .managerApproved }
+            .reduce(0.0) { $0 + $1.loan.amount }
+        return total.currencyFormatted
     }
     
 }
@@ -258,47 +272,55 @@ struct KPIDataCard: View {
     @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
-        Button {
-            action?()
-        } label: {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    ZStack {
-                        Circle()
-                            .fill(color.opacity(0.12))
-                            .frame(width: 34, height: 34)
-                        Image(systemName: icon)
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(color)
-                    }
-                    Spacer()
+        Group {
+            if let action = action {
+                Button(action: action) {
+                    cardContent
                 }
+                .buttonStyle(.plain)
+            } else {
+                cardContent
+            }
+        }
+    }
+    
+    private var cardContent: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                ZStack {
+                    Circle()
+                        .fill(color.opacity(0.12))
+                        .frame(width: 34, height: 34)
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(color)
+                }
+                Spacer()
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(value)
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(value)
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundStyle(.primary)
-                    Text(title)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
-                    
-                    if showCTA {
-                        Text("Review Now →")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
-                            .padding(.top, 4)
-                    }
+                if showCTA {
+                    Text("Review Now →")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
+                        .padding(.top, 4)
                 }
             }
-            .padding(18)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(ManagerTheme.Colors.surface(colorScheme))
-            .cornerRadius(Theme.Radius.lg)
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                    .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 0.5)
-            )
         }
-        .buttonStyle(.plain)
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(ManagerTheme.Colors.surface(colorScheme))
+        .cornerRadius(Theme.Radius.lg)
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 0.5)
+        )
     }
 }

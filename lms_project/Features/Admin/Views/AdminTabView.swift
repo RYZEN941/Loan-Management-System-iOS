@@ -33,6 +33,7 @@ struct AdminTabView: View {
                 .environmentObject(dashboardVM)
                 .environmentObject(authVM)
                 .environmentObject(loansVM)
+                .environmentObject(riskVM)
                 .tabItem {
                     Label("Dashboard", systemImage: "chart.bar")
                 }

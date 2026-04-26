@@ -8,22 +8,58 @@
 import SwiftUI
 
 struct AdminSystemControlView: View {
+    private enum UserManagementSegment: String, CaseIterable, Identifiable {
+        case employees = "Employees"
+        case dsts = "DSTs"
+
+        var id: String { rawValue }
+    }
+
+    private enum EmployeeRoleFilter: String, CaseIterable, Identifiable {
+        case all = "All Roles"
+        case admin = "Admin"
+        case manager = "Manager"
+        case loanOfficer = "Loan Officer"
+
+        var id: String { rawValue }
+
+        func matches(_ role: UserRole) -> Bool {
+            switch self {
+            case .all:
+                return true // show all roles the backend returned
+            case .admin:
+                return role == .admin
+            case .manager:
+                return role == .manager
+            case .loanOfficer:
+                return role == .loanOfficer
+            }
+        }
+    }
+
     @EnvironmentObject var adminVM: AdminViewModel
     @EnvironmentObject var messagesVM: MessagesViewModel
     @Environment(\.colorScheme) private var colorScheme
     @Binding var showProfile: Bool
 
     @State private var showCreateUser = false
+    @State private var showCreateDst = false
     @State private var editingUser: User? = nil
+    @State private var editingDstUser: User? = nil
+    @State private var dstUserPendingRemoval: User? = nil
     @State private var configSaved = false
     @State private var sidebarCollapsed = false
+    @State private var userManagementSegment: UserManagementSegment = .employees
+    @State private var userManagementSearchText = ""
+    @State private var selectedEmployeeBranch = "All Banks"
+    @State private var selectedEmployeeRoleFilter: EmployeeRoleFilter = .all
 
     // Branch management state
     @State private var branchSearchText = ""
     @State private var showCreateBranch = false
     @State private var editingBranch: BranchModel? = nil
 
-    // Policy config state
+    // Policy configuration state
     @State private var foirLimit = 50.0
     @State private var cibilThreshold = 600
     @State private var ltvLimit = 80.0
@@ -62,7 +98,7 @@ struct AdminSystemControlView: View {
     enum SystemSection: String, CaseIterable, Identifiable {
         case userManagement = "User Management"
         case branchManagement = "Branch Management"
-        case policyConfig = "Policy Config"
+        case policyConfig = "Policy Configurations"
         case verificationSettings = "Verification"
         case notifications = "Notifications"
         case auditCompliance = "Audit & Compliance"
@@ -100,6 +136,7 @@ struct AdminSystemControlView: View {
                 if adminVM.selectedSystemSection.isEmpty {
                     adminVM.selectedSystemSection = SystemSection.userManagement.rawValue
                 }
+                hydratePolicyConfigurationValues()
             }
             .navigationTitle("System Control").navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -114,12 +151,35 @@ struct AdminSystemControlView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) { ProfileNavButton(showProfile: $showProfile) }
             }
-            .onAppear { adminVM.loadData() }
+            .onAppear {
+                adminVM.loadData()
+                Task {
+                    await adminVM.loadDstDataForManagerScope()
+                }
+                hydratePolicyConfigurationValues()
+            }
             .sheet(isPresented: $showCreateUser) { CreateUserSheet(adminVM: adminVM) }
+            .sheet(isPresented: $showCreateDst) { SystemControlCreateDstSheet(adminVM: adminVM) }
             .sheet(item: $editingUser) { user in EditUserSheet(adminVM: adminVM, user: user) }
+            .sheet(item: $editingDstUser) { user in
+                SystemControlEditDstSheet(adminVM: adminVM, user: user)
+            }
             .sheet(isPresented: $showCreateBranch) { CreateBranchSheet(adminVM: adminVM) }
             .sheet(item: $editingBranch) { branch in
                 EditBranchSheet(adminVM: adminVM, branchModel: branch)
+            }
+            .alert("Remove DST Agent", isPresented: Binding(
+                get: { dstUserPendingRemoval != nil },
+                set: { if !$0 { dstUserPendingRemoval = nil } }
+            )) {
+                Button("Cancel", role: .cancel) {}
+                Button("Remove", role: .destructive) {
+                    if let user = dstUserPendingRemoval {
+                        adminVM.removeDstLocally(user)
+                    }
+                }
+            } message: {
+                Text("This removes the DST account from the current device list when backend delete is unavailable.")
             }
         }
     }
@@ -208,11 +268,17 @@ struct AdminSystemControlView: View {
     private var userManagementContent: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             HStack {
-                Text("\(adminVM.activeUsersCount) active · \(adminVM.users.count) total")
+                Text("\(managedActiveCount) active · \(managedUsers.count) shown")
                     .font(Theme.Typography.caption).foregroundStyle(.secondary)
                 Spacer()
-                Button { showCreateUser = true } label: {
-                    Label("Add User", systemImage: "plus.circle.fill")
+                Button {
+                    if userManagementSegment == .employees {
+                        showCreateUser = true
+                    } else {
+                        showCreateDst = true
+                    }
+                } label: {
+                    Label(userManagementSegment == .employees ? "Add Employee" : "Add DST", systemImage: "plus.circle.fill")
                         .font(Theme.Typography.subheadline).fontWeight(.medium)
                         .foregroundStyle(.white)
                         .padding(.horizontal, 16).padding(.vertical, 8)
@@ -221,51 +287,230 @@ struct AdminSystemControlView: View {
                 }.buttonStyle(.plain)
             }
 
-            // Role summary
-            HStack(spacing: Theme.Spacing.md) {
-                ForEach(UserRole.allCases) { role in
-                    let count = adminVM.usersByRole[role] ?? 0
-                    VStack(spacing: Theme.Spacing.sm) {
-                        Image(systemName: role.icon).font(.system(size: 18)).foregroundStyle(Theme.Colors.primary)
-                        Text("\(count)").font(.system(size: 22, weight: .bold, design: .rounded))
-                        Text(role.displayName).font(Theme.Typography.caption).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                Picker("Manage", selection: $userManagementSegment) {
+                    ForEach(UserManagementSegment.allCases) { segment in
+                        Text(segment.rawValue).tag(segment)
                     }
-                    .frame(maxWidth: .infinity).padding(Theme.Spacing.sm).cardStyle(colorScheme: colorScheme)
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: userManagementSegment) { _, _ in
+                    userManagementSearchText = ""
+                    selectedEmployeeBranch = "All Banks"
+                    selectedEmployeeRoleFilter = .all
+                }
+
+                HStack(spacing: Theme.Spacing.sm) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                    TextField(
+                        userManagementSegment == .employees
+                        ? "Search employees by name, email or branch..."
+                        : "Search DSTs by name, email, branch or ID...",
+                        text: $userManagementSearchText
+                    )
+                    .font(Theme.Typography.subheadline)
+                }
+                .padding(10)
+                .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
+
+                if userManagementSegment == .employees {
+                    HStack(spacing: Theme.Spacing.md) {
+                        Menu {
+                            Button("All Banks") { selectedEmployeeBranch = "All Banks" }
+                            ForEach(employeeBranchOptions, id: \.self) { branch in
+                                Button(branch) { selectedEmployeeBranch = branch }
+                            }
+                        } label: {
+                            userManagementFilterPill(
+                                title: selectedEmployeeBranch,
+                                systemImage: "building.2"
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        Menu {
+                            ForEach(EmployeeRoleFilter.allCases) { role in
+                                Button(role.rawValue) { selectedEmployeeRoleFilter = role }
+                            }
+                        } label: {
+                            userManagementFilterPill(
+                                title: selectedEmployeeRoleFilter.rawValue,
+                                systemImage: "person.2"
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        Spacer()
+                    }
                 }
             }
 
-            // User list
             VStack(spacing: 0) {
-                ForEach(adminVM.filteredUsers) { user in
-                    HStack(spacing: Theme.Spacing.md) {
-                        ZStack {
-                            Circle().fill(user.isActive ? Theme.Colors.primary.opacity(0.12) : Theme.Colors.neutral.opacity(0.12)).frame(width: 36, height: 36)
-                            Text(user.initials).font(Theme.Typography.caption2).foregroundStyle(user.isActive ? Theme.Colors.primary : Theme.Colors.neutral)
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(user.name).font(Theme.Typography.subheadline).fontWeight(.medium)
-                            Text("\(user.role.displayName) · \(user.branch)").font(Theme.Typography.caption).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        // Actions
-                        Button { editingUser = user } label: {
-                            Image(systemName: "pencil").font(.system(size: 16)).foregroundStyle(Theme.Colors.primary)
-                        }.buttonStyle(.plain)
-
-                        Button { adminVM.toggleUserStatus(user) } label: {
-                            Image(systemName: user.isActive ? "person.slash" : "person.badge.plus")
-                                .font(.system(size: 16))
-                                .foregroundStyle(user.isActive ? Theme.Colors.critical : Theme.Colors.success)
-                        }.buttonStyle(.plain)
-
-                        GenericBadge(text: user.isActive ? "Active" : "Inactive", color: user.isActive ? Theme.Colors.success : Theme.Colors.neutral)
+                if managedUsers.isEmpty {
+                    VStack(spacing: Theme.Spacing.sm) {
+                        Image(systemName: userManagementSegment == .employees ? "person.2.slash" : "person.badge.key")
+                            .font(.system(size: 32))
+                            .foregroundStyle(.tertiary)
+                        Text(userManagementSegment == .employees
+                            ? "No employees found in backend."
+                            : "No DST accounts found in backend.")
+                            .font(Theme.Typography.subheadline)
+                            .foregroundStyle(.secondary)
+                        Text("All data is loaded live from the server. If the list is empty, there are currently no records on the backend.")
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(.tertiary)
+                            .multilineTextAlignment(.center)
                     }
-                    .padding(.horizontal, Theme.Spacing.md).padding(.vertical, 10)
-                    if user.id != adminVM.filteredUsers.last?.id { Divider().padding(.leading, 56) }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Theme.Spacing.xl)
+                    .padding(.horizontal, Theme.Spacing.lg)
+                } else {
+                    ForEach(Array(managedUsers.enumerated()), id: \.element.id) { index, user in
+                        userManagementRow(for: user)
+                        if index != managedUsers.count - 1 {
+                            Divider().padding(.leading, 56)
+                        }
+                    }
                 }
             }
             .cardStyle(colorScheme: colorScheme)
         }
+    }
+
+    private var manageableEmployeeUsers: [User] {
+        // Show ALL employee roles from backend (admin, manager, officer).
+        // The role filter picker lets the admin narrow down to a specific role.
+        adminVM.users
+    }
+
+    private var employeeBranchOptions: [String] {
+        Set(
+            manageableEmployeeUsers
+                .map(\.branch)
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty && $0 != "Unassigned" }
+        )
+        .sorted()
+    }
+
+    private var filteredEmployeeUsers: [User] {
+        manageableEmployeeUsers.filter { user in
+            let matchesBranch = selectedEmployeeBranch == "All Banks" || user.branch == selectedEmployeeBranch
+            let matchesRole = selectedEmployeeRoleFilter.matches(user.role)
+            let matchesSearch = userManagementSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                user.name.localizedCaseInsensitiveContains(userManagementSearchText) ||
+                user.email.localizedCaseInsensitiveContains(userManagementSearchText) ||
+                user.branch.localizedCaseInsensitiveContains(userManagementSearchText) ||
+                user.id.localizedCaseInsensitiveContains(userManagementSearchText)
+            return matchesBranch && matchesRole && matchesSearch
+        }
+    }
+
+    private var filteredDstUsers: [User] {
+        adminVM.dstUsers.filter { user in
+            userManagementSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+            user.name.localizedCaseInsensitiveContains(userManagementSearchText) ||
+            user.email.localizedCaseInsensitiveContains(userManagementSearchText) ||
+            user.branch.localizedCaseInsensitiveContains(userManagementSearchText) ||
+            user.id.localizedCaseInsensitiveContains(userManagementSearchText)
+        }
+    }
+
+    private var managedUsers: [User] {
+        switch userManagementSegment {
+        case .employees:
+            return filteredEmployeeUsers
+        case .dsts:
+            return filteredDstUsers
+        }
+    }
+
+    private var managedActiveCount: Int {
+        managedUsers.filter { $0.isActive }.count
+    }
+
+    private func userManagementFilterPill(title: String, systemImage: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+                .font(.system(size: 12, weight: .semibold))
+            Text(title)
+                .font(Theme.Typography.caption)
+                .lineLimit(1)
+            Image(systemName: "chevron.down")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(.secondary)
+        }
+        .foregroundStyle(.primary)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+        .clipShape(Capsule())
+    }
+
+    private func userManagementRow(for user: User) -> some View {
+        HStack(spacing: Theme.Spacing.md) {
+            ZStack {
+                Circle()
+                    .fill(user.isActive ? Theme.Colors.primary.opacity(0.12) : Theme.Colors.neutral.opacity(0.12))
+                    .frame(width: 36, height: 36)
+                Text(user.initials)
+                    .font(Theme.Typography.caption2)
+                    .foregroundStyle(user.isActive ? Theme.Colors.primary : Theme.Colors.neutral)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(user.name)
+                    .font(Theme.Typography.subheadline)
+                    .fontWeight(.medium)
+                Text("\(user.role.displayName) · \(user.branch)")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(.secondary)
+                Text(user.email)
+                    .font(Theme.Typography.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+            Spacer()
+            Button {
+                if userManagementSegment == .employees {
+                    editingUser = user
+                } else {
+                    editingDstUser = user
+                }
+            } label: {
+                Image(systemName: "pencil")
+                    .font(.system(size: 16))
+                    .foregroundStyle(Theme.Colors.primary)
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                adminVM.toggleUserStatus(user)
+            } label: {
+                Image(systemName: user.isActive ? "person.slash" : "person.badge.plus")
+                    .font(.system(size: 16))
+                    .foregroundStyle(user.isActive ? Theme.Colors.critical : Theme.Colors.success)
+            }
+            .buttonStyle(.plain)
+
+            if userManagementSegment == .dsts {
+                Button {
+                    dstUserPendingRemoval = user
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.system(size: 16))
+                        .foregroundStyle(Theme.Colors.critical)
+                }
+                .buttonStyle(.plain)
+            }
+
+            GenericBadge(
+                text: user.isActive ? "Active" : "Inactive",
+                color: user.isActive ? Theme.Colors.success : Theme.Colors.neutral
+            )
+        }
+        .padding(.horizontal, Theme.Spacing.md)
+        .padding(.vertical, 10)
     }
 
     // MARK: - 2. Policy Configuration
@@ -283,9 +528,16 @@ struct AdminSystemControlView: View {
                 editRow("Max Loan Amount") { stepper(value: $maxLoanAmountMil, range: 10...200, step: 10, suffix: "L") }
             }.cardStyle(colorScheme: colorScheme)
 
-            saveButton("Save Policy Config") {
-                adminVM.minCIBILScore = cibilThreshold
-                adminVM.maxDTIRatio = foirLimit / 100.0
+            saveButton("Save Policy Configurations") {
+                Task {
+                    _ = await adminVM.savePolicyConfigurations(
+                        maxLoanAmount: maxLoanAmountMil * 1_000_000,
+                        minCIBILScore: cibilThreshold,
+                        maxDTIRatio: foirLimit / 100.0,
+                        requireDocVerification: panOCR || aadhaarKYC || faceMatch || videoKYC,
+                        autoAssignEnabled: autoApprovalEnabled
+                    )
+                }
             }
 
             // Eligibility rules
@@ -707,6 +959,13 @@ struct AdminSystemControlView: View {
         }.buttonStyle(.plain)
     }
 
+    private func hydratePolicyConfigurationValues() {
+        cibilThreshold = adminVM.minCIBILScore
+        foirLimit = adminVM.maxDTIRatio * 100.0
+        maxLoanAmountMil = max(10.0, adminVM.maxLoanAmount / 1_000_000)
+        autoApprovalEnabled = adminVM.autoAssignEnabled
+    }
+
     private var documentFormModal: some View {
         NavigationStack {
             Form {
@@ -925,6 +1184,145 @@ struct EditUserSheet: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This will deactivate the selected employee account in the backend.")
+        }
+    }
+}
+
+struct SystemControlCreateDstSheet: View {
+    @ObservedObject var adminVM: AdminViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var name = ""
+    @State private var email = ""
+    @State private var phone = ""
+    @State private var password = ""
+    @State private var isSaving = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Personal Details") {
+                    TextField("Full Name", text: $name)
+                    TextField("Email Address", text: $email)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                    TextField("Phone Number", text: $phone)
+                        .keyboardType(.phonePad)
+                }
+
+                Section {
+                    SecureField("Assign Password", text: $password)
+                } header: {
+                    Text("Login Credentials")
+                } footer: {
+                    Text("DST users sign in with this email and password.")
+                }
+            }
+            .navigationTitle("New DST Account")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(isSaving ? "Creating..." : "Create") {
+                        isSaving = true
+                        Task {
+                            let success = await adminVM.createDstAccount(
+                                name: name,
+                                email: email,
+                                phone: phone,
+                                password: password
+                            )
+                            await MainActor.run {
+                                isSaving = false
+                                if success {
+                                    dismiss()
+                                }
+                            }
+                        }
+                    }
+                    .disabled(name.isEmpty || email.isEmpty || password.isEmpty || isSaving)
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+    }
+}
+
+struct SystemControlEditDstSheet: View {
+    @ObservedObject var adminVM: AdminViewModel
+    let user: User
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var name: String
+    @State private var email: String
+    @State private var phone: String
+    @State private var isSaving = false
+
+    init(adminVM: AdminViewModel, user: User) {
+        self.adminVM = adminVM
+        self.user = user
+        _name = State(initialValue: user.name)
+        _email = State(initialValue: user.email)
+        _phone = State(initialValue: user.phone)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Update DST Details") {
+                    TextField("Full Name", text: $name)
+                    TextField("Email Address", text: $email)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                    TextField("Phone Number", text: $phone)
+                        .keyboardType(.phonePad)
+                }
+
+                Section("Account Info") {
+                    HStack {
+                        Text("Branch")
+                        Spacer()
+                        Text(user.branch)
+                            .foregroundStyle(.secondary)
+                    }
+                    HStack {
+                        Text("Account ID")
+                        Spacer()
+                        Text(user.id)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+            .navigationTitle("Edit DST")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(isSaving ? "Saving..." : "Save") {
+                        isSaving = true
+                        Task {
+                            let success = await adminVM.updateDstAccount(
+                                userID: user.id,
+                                name: name,
+                                email: email,
+                                phone: phone
+                            )
+                            await MainActor.run {
+                                isSaving = false
+                                if success {
+                                    dismiss()
+                                }
+                            }
+                        }
+                    }
+                    .disabled(name.isEmpty || email.isEmpty || isSaving)
+                    .fontWeight(.semibold)
+                }
+            }
         }
     }
 }

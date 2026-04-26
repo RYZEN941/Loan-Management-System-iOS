@@ -116,7 +116,7 @@ struct AdminExecutiveDashboardView: View {
                 ExecKPICard(label: "Portfolio Value",   value: portfolioValue,    icon: "building.columns.fill",        color: Theme.Colors.primary,  trend: "+4.2%")
                 ExecKPICard(label: "Disbursed (MTD)",  value: disbursementTotal,  icon: "indianrupeesign.circle.fill",  color: Theme.Colors.success,  trend: "+12.1%")
                 ExecKPICard(label: "NPA Ratio",         value: npaPercent,         icon: "exclamationmark.triangle.fill",color: Theme.Colors.critical, trend: "-0.3%")
-                ExecKPICard(label: "Collection Eff.",  value: collectionEff,      icon: "checkmark.seal.fill",          color: Color(hex: "6F42C1"),  trend: "+1.4%")
+                ExecKPICard(label: "Collection Eff.",  value: collectionEff,      icon: "checkmark.seal.fill",          color: Theme.Colors.adaptivePrimary(colorScheme),  trend: "+1.4%")
             }
         }
     }
@@ -150,7 +150,7 @@ struct AdminExecutiveDashboardView: View {
                 Divider().padding(.leading, Theme.Spacing.md)
                 breakdownRow(label: "Personal Loan",  share: 0.28, amount: "₹686 Cr",   color: Theme.Colors.success)
                 Divider().padding(.leading, Theme.Spacing.md)
-                breakdownRow(label: "Business Loan",  share: 0.18, amount: "₹441 Cr",   color: Color(hex: "6F42C1"))
+                breakdownRow(label: "Business Loan",  share: 0.18, amount: "₹441 Cr",   color: Theme.Colors.adaptivePrimary(colorScheme))
                 Divider().padding(.leading, Theme.Spacing.md)
                 breakdownRow(label: "Vehicle Loan",   share: 0.08, amount: "₹196 Cr",   color: Theme.Colors.warning)
                 Divider().padding(.leading, Theme.Spacing.md)

@@ -32,6 +32,15 @@ enum ActionRequiredFilter: String, CaseIterable, Identifiable {
 
 @MainActor
 class AdminViewModel: ObservableObject {
+    private struct PolicyConfigurationsCache: Codable {
+        let maxLoanAmount: Double
+        let minCIBILScore: Int
+        let maxDTIRatio: Double
+        let requireDocVerification: Bool
+        let autoAssignEnabled: Bool
+        let updatedAt: Date
+    }
+
     @Published var users: [User] = []
     @Published var dstUsers: [User] = []
     @Published var selectedUser: User? = nil
@@ -85,7 +94,7 @@ class AdminViewModel: ObservableObject {
     // Notifications for Profile
     @Published var notifications: [AdminNotification] = [
         AdminNotification(title: "System Maintenance", message: "Scheduled for Sunday 2 AM", time: "2h ago", icon: "wrench.and.screwdriver", color: .orange),
-        AdminNotification(title: "New Policy Update", message: "CIBIL threshold updated to 600", time: "5h ago", icon: "shield", color: .blue),
+        AdminNotification(title: "New Policy Update", message: "CIBIL threshold updated to 600", time: "5h ago", icon: "shield", color: Theme.Colors.primary),
         AdminNotification(title: "Critical Alert", message: "SLA breach spike detected in Mumbai", time: "1d ago", icon: "exclamationmark.triangle", color: .red)
     ]
     
@@ -97,10 +106,12 @@ class AdminViewModel: ObservableObject {
     private let branchAPI = BranchAPI()
     private let dstAPI = DstAPI()
     private let dstLocalStoreKey = "manager.dst.local.overrides.v1"
+    private let policyConfigStoreKey = "admin.policy.configurations.v1"
     private var dstLocalState = DstLocalStateStore()
     
     init() {
         dstLocalState = Self.loadDstLocalState()
+        restorePolicyConfigurationsFallback()
     }
     
     var filteredUsers: [User] {
@@ -108,7 +119,9 @@ class AdminViewModel: ObservableObject {
         return users.filter {
             $0.name.localizedCaseInsensitiveContains(searchText) ||
             $0.email.localizedCaseInsensitiveContains(searchText) ||
-            $0.role.displayName.localizedCaseInsensitiveContains(searchText)
+            $0.role.displayName.localizedCaseInsensitiveContains(searchText) ||
+            $0.branch.localizedCaseInsensitiveContains(searchText) ||
+            $0.id.localizedCaseInsensitiveContains(searchText)
         }
     }
     
@@ -132,8 +145,21 @@ class AdminViewModel: ObservableObject {
 
                 let employees = try await employeesTask
                 let backendBranches = try await branchesTask
+
+                // Map ALL employee accounts from backend — admin, manager, officer.
+                // Never substitute mock data. If backend is empty, show empty list.
                 let mappedUsers = employees.compactMap(Self.mapEmployeeAccount)
-                let mappedBranches = backendBranches.map(Self.mapBranch).sorted(by: { $0.name < $1.name })
+
+                // Use backend branches; build a minimal set from user data only if
+                // branches endpoint returned nothing (not as a user fallback).
+                let mappedBranches: [BranchModel]
+                let rawBranches = backendBranches.map(Self.mapBranch).sorted(by: { $0.name < $1.name })
+                if rawBranches.isEmpty && !mappedUsers.isEmpty {
+                    mappedBranches = Self.deriveBranches(from: mappedUsers)
+                } else {
+                    mappedBranches = rawBranches
+                }
+
                 withAnimation {
                     users = mappedUsers
                     branches = mappedBranches
@@ -144,9 +170,14 @@ class AdminViewModel: ObservableObject {
                 auditLogs = Self.mockAuditLogs()
                 slaBreachTrendLabels = Self.generateDayLabels()
             } catch {
-                users = []
-                branches = []
-                requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to load users"
+                // On hard failure, leave lists empty and surface the error.
+                // Do NOT substitute mock data — admin needs to see real state.
+                withAnimation {
+                    users = []
+                    branches = []
+                    selectedUser = nil
+                }
+                requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to load users from backend."
                 auditLogs = Self.mockAuditLogs()
                 slaBreachTrendLabels = Self.generateDayLabels()
             }
@@ -161,17 +192,18 @@ class AdminViewModel: ObservableObject {
         defer { isLoading = false }
         do {
             let dstAccounts = try await dstAPI.listDstAccounts(limit: 200, offset: 0)
-            let mapped = applyDstLocalState(to: dstAccounts.map(Self.mapDstAccount))
+            let backendMapped = dstAccounts.map(Self.mapDstAccount)
+            // Apply any admin local-state overrides (edits/toggles) on top of
+            // the real backend list. Never fall back to mock data.
+            let mapped = applyDstLocalState(to: backendMapped)
             withAnimation {
                 dstUsers = mapped
             }
+            // No error banner needed — empty list is valid backend state.
         } catch {
-            // Keep manager DST operations usable on-device even if backend list fails.
-            let localOnly = applyDstLocalState(to: dstUsers)
-            withAnimation {
-                dstUsers = localOnly
-            }
-            requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to load DST accounts from backend. Showing device data."
+            // On failure keep whatever was already loaded (e.g., from a previous
+            // successful fetch) but surface the error. Don't inject mocks.
+            requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to load DST accounts from backend."
         }
     }
     
@@ -350,8 +382,30 @@ class AdminViewModel: ObservableObject {
         requestSuccess = "DST agent removed from current list."
     }
     
-    func saveConfig(baseRate: Double, maxTenure: Int, slaDays: Int) {
-        // Persist to published properties
+    func savePolicyConfigurations(
+        maxLoanAmount: Double,
+        minCIBILScore: Int,
+        maxDTIRatio: Double,
+        requireDocVerification: Bool,
+        autoAssignEnabled: Bool
+    ) async -> Bool {
+        requestError = nil
+        requestSuccess = nil
+        isLoading = true
+        defer { isLoading = false }
+
+        // Persist immediately in-memory so UI reflects latest settings.
+        self.maxLoanAmount = maxLoanAmount
+        self.minCIBILScore = minCIBILScore
+        self.maxDTIRatio = maxDTIRatio
+        self.requireDocVerification = requireDocVerification
+        self.autoAssignEnabled = autoAssignEnabled
+
+        // No dedicated backend API exists yet for policy configuration writes.
+        // Keep a resilient fallback store until backend endpoint becomes available.
+        persistPolicyConfigurationsFallback()
+        requestSuccess = "Policy configurations saved. Using local fallback until backend sync endpoint is available."
+        return true
     }
     
     func createBranch(_ branchName: String, region: String, city: String) async -> String? {
@@ -523,6 +577,18 @@ class AdminViewModel: ObservableObject {
                 requestSuccess = "Saved on this device. Backend denied this role for DST update."
                 return true
             }
+            if let index = dstUsers.firstIndex(where: { $0.id == userID }) {
+                withAnimation {
+                    dstUsers[index].name = name
+                    dstUsers[index].email = email
+                    dstUsers[index].phone = phone
+                }
+                dstLocalState.overridesByUserID[userID] = DstLocalOverride(name: name, email: email, phone: phone)
+                dstLocalState.removedUserIDs.remove(userID)
+                persistDstLocalState()
+                requestSuccess = "Saved on this device. Backend update is currently unavailable."
+                return true
+            }
             requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to update DST account"
             return false
         }
@@ -564,6 +630,32 @@ class AdminViewModel: ObservableObject {
             UserDefaults.standard.set(data, forKey: dstLocalStoreKey)
         }
     }
+
+    private func persistPolicyConfigurationsFallback() {
+        let payload = PolicyConfigurationsCache(
+            maxLoanAmount: maxLoanAmount,
+            minCIBILScore: minCIBILScore,
+            maxDTIRatio: maxDTIRatio,
+            requireDocVerification: requireDocVerification,
+            autoAssignEnabled: autoAssignEnabled,
+            updatedAt: Date()
+        )
+        if let data = try? JSONEncoder().encode(payload) {
+            UserDefaults.standard.set(data, forKey: policyConfigStoreKey)
+        }
+    }
+
+    private func restorePolicyConfigurationsFallback() {
+        guard let data = UserDefaults.standard.data(forKey: policyConfigStoreKey),
+              let payload = try? JSONDecoder().decode(PolicyConfigurationsCache.self, from: data) else {
+            return
+        }
+        maxLoanAmount = payload.maxLoanAmount
+        minCIBILScore = payload.minCIBILScore
+        maxDTIRatio = payload.maxDTIRatio
+        requireDocVerification = payload.requireDocVerification
+        autoAssignEnabled = payload.autoAssignEnabled
+    }
     
     private static func loadDstLocalState() -> DstLocalStateStore {
         guard let data = UserDefaults.standard.data(forKey: "manager.dst.local.overrides.v1"),
@@ -604,8 +696,9 @@ class AdminViewModel: ObservableObject {
     }
 
     private static func mapEmployeeAccount(_ account: Admin_V1_EmployeeAccount) -> User? {
+        // Map ALL known staff roles so admin sees the complete employee directory.
         guard let role = mapStaffRole(account.role) else {
-            return nil
+            return nil // Skip unspecified/unknown proto roles only
         }
 
         let joinedAt: Date = {
@@ -616,19 +709,23 @@ class AdminViewModel: ObservableObject {
 
         let resolvedName = account.name.trimmingCharacters(in: .whitespacesAndNewlines)
         let name = resolvedName.isEmpty
-            ? account.email.components(separatedBy: "@").first?.replacingOccurrences(of: ".", with: " ").capitalized ?? "Unknown"
+            ? account.email.components(separatedBy: "@").first?.replacingOccurrences(of: ".", with: " ").capitalized ?? "N/A"
             : resolvedName
 
-        let branchName = account.branchName.isEmpty ? "Unassigned" : account.branchName
+        // Show "N/A" for any field the backend did not populate.
+        let branchName = account.branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "N/A" : account.branchName
+        let phone = account.phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "N/A" : account.phoneNumber
 
         return User(
             id: account.userID,
             name: name,
-            email: account.email,
+            email: account.email.isEmpty ? "N/A" : account.email,
             role: role,
             branchID: account.branchID.isEmpty ? nil : account.branchID,
             branch: branchName,
-            phone: account.phoneNumber,
+            phone: phone,
             isActive: account.isActive,
             joinedAt: joinedAt,
             employeeCode: account.employeeCode.isEmpty ? nil : account.employeeCode
@@ -644,9 +741,31 @@ class AdminViewModel: ObservableObject {
         case .officer:
             return .loanOfficer
         default:
-            return nil
+            return nil // .unspecified and unknown raw values are silently dropped
         }
     }
+
+    /// Derives a minimal branch list from mapped user data when the branches
+    /// endpoint returns nothing. This is NOT a mock — it is derived from live data.
+    private static func deriveBranches(from users: [User]) -> [BranchModel] {
+        Set(
+            users
+                .map(\.branch)
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty && $0 != "N/A" }
+        )
+        .sorted()
+        .map { branchName in
+            BranchModel(
+                id: branchName.lowercased().replacingOccurrences(of: " ", with: "-"),
+                name: branchName,
+                location: branchName
+            )
+        }
+    }
+
+    // Note: fallbackDstUsers() and fallbackEmployeeUsers() have been removed.
+    // Admin always sees live backend data. Empty lists are the correct empty state.
 
     private static func generateDayLabels() -> [String] {
         let formatter = DateFormatter()
@@ -681,12 +800,18 @@ class AdminViewModel: ObservableObject {
         let resolvedName = account.name.trimmingCharacters(in: .whitespacesAndNewlines)
         let fallbackName = account.email.components(separatedBy: "@").first?
             .replacingOccurrences(of: ".", with: " ")
-            .capitalized ?? "DST Agent"
+            .capitalized ?? "N/A"
+
+        // Show "N/A" for any field not populated by the backend.
+        let branch = account.branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "N/A" : account.branchName
+        let phone = account.phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "N/A" : account.phoneNumber
 
         return User(
             id: account.userID,
             name: resolvedName.isEmpty ? fallbackName : resolvedName,
-            email: account.email,
+            email: account.email.isEmpty ? "N/A" : account.email,
             role: .dst,
             branchID: account.branchID.isEmpty ? nil : account.branchID,
             branch: account.branchName.isEmpty ? "Unassigned" : account.branchName,

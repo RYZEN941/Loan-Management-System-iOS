@@ -35,10 +35,12 @@ class MockDataService: LMSDataService {
                 name: "Amit Singh",
                 email: "loan@gmail.com",
                 role: .loanOfficer,
+                branchID: nil,
                 branch: "Mumbai Central",
                 phone: "+91-9876543210",
                 isActive: true,
-                joinedAt: Calendar.current.date(byAdding: .year, value: -2, to: Date())!
+                joinedAt: Calendar.current.date(byAdding: .year, value: -2, to: Date())!,
+                employeeCode: nil
             )
         case .manager:
             return User(
@@ -46,10 +48,12 @@ class MockDataService: LMSDataService {
                 name: "Deepak Mehta",
                 email: "manager@gmail.com",
                 role: .manager,
+                branchID: nil,
                 branch: "Mumbai Central",
                 phone: "+91-9876543211",
                 isActive: true,
-                joinedAt: Calendar.current.date(byAdding: .year, value: -5, to: Date())!
+                joinedAt: Calendar.current.date(byAdding: .year, value: -5, to: Date())!,
+                employeeCode: nil
             )
         case .admin:
             return User(
@@ -57,10 +61,12 @@ class MockDataService: LMSDataService {
                 name: "Sunita Patel",
                 email: "admin@gmail.com",
                 role: .admin,
+                branchID: nil,
                 branch: "Head Office",
                 phone: "+91-9876543212",
                 isActive: true,
-                joinedAt: Calendar.current.date(byAdding: .year, value: -8, to: Date())!
+                joinedAt: Calendar.current.date(byAdding: .year, value: -8, to: Date())!,
+                employeeCode: nil
             )
         case .dst:
             return User(
@@ -68,10 +74,12 @@ class MockDataService: LMSDataService {
                 name: "Dst Patel",
                 email: "admin@gmail.com",
                 role: .dst,
+                branchID: nil,
                 branch: "Head Office",
                 phone: "+91-9876543212",
                 isActive: true,
-                joinedAt: Calendar.current.date(byAdding: .year, value: -8, to: Date())!
+                joinedAt: Calendar.current.date(byAdding: .year, value: -8, to: Date())!,
+                employeeCode: nil
             )
         }
     }
@@ -219,26 +227,26 @@ class MockDataService: LMSDataService {
     func fetchUsers() -> [User] {
         return [
             User(id: "LO-001", name: "Amit Singh", email: "loan@gmail.com", role: .loanOfficer,
-                 branch: "Mumbai Central", phone: "+91-9876543210", isActive: true,
-                 joinedAt: Calendar.current.date(byAdding: .year, value: -2, to: Date())!),
+                 branchID: nil, branch: "Mumbai Central", phone: "+91-9876543210", isActive: true,
+                 joinedAt: Calendar.current.date(byAdding: .year, value: -2, to: Date())!, employeeCode: nil),
             User(id: "LO-002", name: "Neha Kapoor", email: "neha.kapoor@bank.com", role: .loanOfficer,
-                 branch: "Mumbai Central", phone: "+91-9876543213", isActive: true,
-                 joinedAt: Calendar.current.date(byAdding: .year, value: -1, to: Date())!),
+                 branchID: nil, branch: "Mumbai Central", phone: "+91-9876543213", isActive: true,
+                 joinedAt: Calendar.current.date(byAdding: .year, value: -1, to: Date())!, employeeCode: nil),
             User(id: "LO-003", name: "Ravi Shankar", email: "ravi.shankar@bank.com", role: .loanOfficer,
-                 branch: "Delhi North", phone: "+91-9876543214", isActive: true,
-                 joinedAt: Calendar.current.date(byAdding: .month, value: -8, to: Date())!),
+                 branchID: nil, branch: "Delhi North", phone: "+91-9876543214", isActive: true,
+                 joinedAt: Calendar.current.date(byAdding: .month, value: -8, to: Date())!, employeeCode: nil),
             User(id: "MGR-001", name: "Deepak Mehta", email: "manager@gmail.com", role: .manager,
-                 branch: "Mumbai Central", phone: "+91-9876543211", isActive: true,
-                 joinedAt: Calendar.current.date(byAdding: .year, value: -5, to: Date())!),
+                 branchID: nil, branch: "Mumbai Central", phone: "+91-9876543211", isActive: true,
+                 joinedAt: Calendar.current.date(byAdding: .year, value: -5, to: Date())!, employeeCode: nil),
             User(id: "MGR-002", name: "Lakshmi Rao", email: "lakshmi.rao@bank.com", role: .manager,
-                 branch: "Bangalore South", phone: "+91-9876543215", isActive: true,
-                 joinedAt: Calendar.current.date(byAdding: .year, value: -4, to: Date())!),
+                 branchID: nil, branch: "Bangalore South", phone: "+91-9876543215", isActive: true,
+                 joinedAt: Calendar.current.date(byAdding: .year, value: -4, to: Date())!, employeeCode: nil),
             User(id: "ADM-001", name: "Sunita Patel", email: "admin@gmail.com", role: .admin,
-                 branch: "Head Office", phone: "+91-9876543212", isActive: true,
-                 joinedAt: Calendar.current.date(byAdding: .year, value: -8, to: Date())!),
+                 branchID: nil, branch: "Head Office", phone: "+91-9876543212", isActive: true,
+                 joinedAt: Calendar.current.date(byAdding: .year, value: -8, to: Date())!, employeeCode: nil),
             User(id: "LO-004", name: "Prakash Jha", email: "prakash.jha@bank.com", role: .loanOfficer,
-                 branch: "Delhi North", phone: "+91-9876543216", isActive: false,
-                 joinedAt: Calendar.current.date(byAdding: .year, value: -3, to: Date())!)
+                 branchID: nil, branch: "Delhi North", phone: "+91-9876543216", isActive: false,
+                 joinedAt: Calendar.current.date(byAdding: .year, value: -3, to: Date())!, employeeCode: nil)
         ]
     }
     

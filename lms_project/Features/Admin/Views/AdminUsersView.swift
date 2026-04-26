@@ -203,6 +203,10 @@ struct AdminUsersView: View {
                                 Divider().padding(.leading, 48)
                                 detailRow(icon: "building.2", label: "Branch", value: user.branch)
                                 Divider().padding(.leading, 48)
+                                if let employeeCode = user.employeeCode, !employeeCode.isEmpty {
+                                    detailRow(icon: "number", label: "Employee Code", value: employeeCode)
+                                    Divider().padding(.leading, 48)
+                                }
                                 detailRow(icon: "calendar", label: "Joined", value: user.joinedAt.shortFormatted)
                             }
                             .cardStyle(colorScheme: colorScheme)
@@ -397,6 +401,7 @@ struct InlineEditDstUserView: View {
             Form {
                 Section("Edit Information") {
                     TextField("Full Name", text: $name)
+                        .disabled(true)
                     TextField("Email Address", text: $email)
                         .keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never)
@@ -436,13 +441,21 @@ struct CreateUserSheet: View {
     @State private var selectedRole: UserRole = .loanOfficer
     @State private var branchID     = ""
     @State private var newBranchName = ""
+    @State private var newBranchRegion = ""
+    @State private var newBranchCity = ""
     @State private var employeeId   = ""
     @State private var showPassword = false
     @State private var emailError: String? = nil
     @State private var isSubmitting = false
 
     private var isFormValid: Bool {
-        let branchValid = branchID == "+ Create New Branch" ? !newBranchName.trimmingCharacters(in: .whitespaces).isEmpty : !branchID.isEmpty
+        let branchValid: Bool = if branchID == "+ Create New Branch" {
+            !newBranchName.trimmingCharacters(in: .whitespaces).isEmpty &&
+            !newBranchRegion.trimmingCharacters(in: .whitespaces).isEmpty &&
+            !newBranchCity.trimmingCharacters(in: .whitespaces).isEmpty
+        } else {
+            !branchID.isEmpty
+        }
         return !name.isEmpty && !email.isEmpty && !password.isEmpty &&
         branchValid && !employeeId.isEmpty
     }
@@ -462,6 +475,7 @@ struct CreateUserSheet: View {
                         }
                     }
                     Picker("Branch", selection: $branchID) {
+                        Text("Unassigned").tag("__UNASSIGNED__")
                         ForEach(adminVM.branches) { b in
                             Text(b.name).tag(b.id)
                         }
@@ -469,6 +483,8 @@ struct CreateUserSheet: View {
                     }
                     if branchID == "+ Create New Branch" {
                         TextField("New Branch Name", text: $newBranchName)
+                        TextField("Region", text: $newBranchRegion)
+                        TextField("City", text: $newBranchCity)
                     }
                     TextField("Employee ID", text: $employeeId)
                 }
@@ -524,9 +540,17 @@ struct CreateUserSheet: View {
                         Task {
                             var finalBranchID = branchID
                             if branchID == "+ Create New Branch" {
-                                finalBranchID = await adminVM.createBranch(newBranchName) ?? ""
+                                finalBranchID = await adminVM.createBranch(
+                                    newBranchName,
+                                    region: newBranchRegion,
+                                    city: newBranchCity
+                                ) ?? ""
+                            } else if branchID == "__UNASSIGNED__" {
+                                finalBranchID = ""
                             }
-                            let finalBranchName = adminVM.branches.first(where: { $0.id == finalBranchID })?.name ?? newBranchName
+                            let finalBranchName = finalBranchID.isEmpty
+                                ? "Unassigned"
+                                : (adminVM.branches.first(where: { $0.id == finalBranchID })?.name ?? newBranchName)
                             let success = await adminVM.createUser(
                                 name: name,
                                 email: email,
@@ -552,8 +576,8 @@ struct CreateUserSheet: View {
             }
         }
         .onAppear {
-            if branchID.isEmpty, let firstBranch = adminVM.branches.first {
-                branchID = firstBranch.id
+            if branchID.isEmpty {
+                branchID = adminVM.branches.first?.id ?? "__UNASSIGNED__"
             }
         }
     }
@@ -573,7 +597,10 @@ struct InlineEditUserView: View {
     @State private var selectedRole: UserRole
     @State private var branchID: String
     @State private var newBranchName = ""
+    @State private var newBranchRegion = ""
+    @State private var newBranchCity = ""
     @State private var isSaving = false
+    @State private var showDeleteConfirmation = false
     
     private var editableRoles: [UserRole] {
         [.loanOfficer, .manager]
@@ -587,7 +614,7 @@ struct InlineEditUserView: View {
         _email = State(initialValue: user.email)
         _phone = State(initialValue: user.phone)
         _selectedRole = State(initialValue: user.role)
-        _branchID = State(initialValue: adminVM.branches.first(where: { $0.name == user.branch })?.id ?? "")
+        _branchID = State(initialValue: user.branchID ?? "")
     }
     
     var body: some View {
@@ -609,9 +636,17 @@ struct InlineEditUserView: View {
                     Task {
                         var finalBranchID = branchID
                         if branchID == "+ Create New Branch" {
-                            finalBranchID = await adminVM.createBranch(newBranchName) ?? ""
+                            finalBranchID = await adminVM.createBranch(
+                                newBranchName,
+                                region: newBranchRegion,
+                                city: newBranchCity
+                            ) ?? ""
+                        } else if branchID == "__UNASSIGNED__" {
+                            finalBranchID = ""
                         }
-                        let finalBranchName = adminVM.branches.first(where: { $0.id == finalBranchID })?.name ?? user.branch
+                        let finalBranchName = finalBranchID.isEmpty
+                            ? "Unassigned"
+                            : (adminVM.branches.first(where: { $0.id == finalBranchID })?.name ?? user.branch)
                         let success = await adminVM.updateUser(
                             userId: user.id,
                             name: name,
@@ -652,6 +687,7 @@ struct InlineEditUserView: View {
                     }
                     .disabled(true)
                     Picker("Branch", selection: $branchID) {
+                        Text("Unassigned").tag("__UNASSIGNED__")
                         ForEach(adminVM.branches) { b in
                             Text(b.name).tag(b.id)
                         }
@@ -659,7 +695,12 @@ struct InlineEditUserView: View {
                     }
                     if branchID == "+ Create New Branch" {
                         TextField("New Branch Name", text: $newBranchName)
+                        TextField("Region", text: $newBranchRegion)
+                        TextField("City", text: $newBranchCity)
                     }
+                    Text("Name changes are not supported by the current backend employee update API.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
                 
                 Section("Account (Read-only)") {
@@ -668,12 +709,18 @@ struct InlineEditUserView: View {
                         Spacer()
                         Text(user.id).foregroundStyle(.primary)
                     }
+                    if let employeeCode = user.employeeCode, !employeeCode.isEmpty {
+                        HStack {
+                            Text("Employee Code").foregroundStyle(.secondary)
+                            Spacer()
+                            Text(employeeCode).foregroundStyle(.primary)
+                        }
+                    }
                 }
                 
                 Section {
                     Button(role: .destructive) {
-                        adminVM.deleteUser(user)
-                        withAnimation { isEditing = false }
+                        showDeleteConfirmation = true
                     } label: {
                         HStack {
                             Spacer()
@@ -685,5 +732,20 @@ struct InlineEditUserView: View {
             }
         }
         .background(Theme.Colors.adaptiveBackground(colorScheme))
+        .confirmationDialog("Delete User", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                Task {
+                    let success = await adminVM.deleteUser(user)
+                    await MainActor.run {
+                        if success {
+                            withAnimation { isEditing = false }
+                        }
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will deactivate the selected employee account in the backend.")
+        }
     }
 }

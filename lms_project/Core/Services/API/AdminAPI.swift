@@ -102,6 +102,23 @@ struct AdminAPI {
         }
     }
 
+    func deleteBankBranch(branchID: String) async throws -> Admin_V1_DeleteBankBranchResponse {
+        let request: Admin_V1_DeleteBankBranchRequest = {
+            var req = Admin_V1_DeleteBankBranchRequest()
+            req.branchID = branchID
+            return req
+        }()
+
+        do {
+            return try await CoreAPIClient.withClient { client in
+                let admin = Admin_V1_AdminService.Client(wrapping: client)
+                return try await admin.deleteBankBranch(request, metadata: await CoreAPIClient.authorizedMetadata())
+            }
+        } catch {
+            throw APIError.from(error)
+        }
+    }
+
     func updateEmployeeAccount(
         userID: String,
         email: String?,
@@ -132,6 +149,24 @@ struct AdminAPI {
             throw APIError.from(error)
         }
     }
+
+    func deleteEmployeeAccount(userID: String) async throws -> Admin_V1_DeleteEmployeeAccountResponse {
+        let request: Admin_V1_DeleteEmployeeAccountRequest = {
+            var req = Admin_V1_DeleteEmployeeAccountRequest()
+            req.userID = userID
+            return req
+        }()
+
+        do {
+            return try await CoreAPIClient.withClient { client in
+                let admin = Admin_V1_AdminService.Client(wrapping: client)
+                return try await admin.deleteEmployeeAccount(request, metadata: await CoreAPIClient.authorizedMetadata())
+            }
+        } catch {
+            throw APIError.from(error)
+        }
+    }
+
 
     func assignEmployeeBranch(userID: String, branchID: String, clearBranch: Bool = false) async throws -> Admin_V1_AssignEmployeeBranchResponse {
         let request: Admin_V1_AssignEmployeeBranchRequest = {

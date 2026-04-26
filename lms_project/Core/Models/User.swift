@@ -10,10 +10,12 @@ struct User: Identifiable, Codable, Hashable {
     var name: String
     var email: String
     var role: UserRole
+    var branchID: String?
     var branch: String
     var phone: String
     var isActive: Bool
     var joinedAt: Date
+    var employeeCode: String?
     
     var initials: String {
         let parts = name.split(separator: " ")

@@ -298,10 +298,10 @@ class AdminViewModel: ObservableObject {
 
             if let index = users.firstIndex(where: { $0.id == userId }) {
                 withAnimation {
-                    users[index].name = name
                     users[index].email = email
                     users[index].phone = phone
                     users[index].role = role
+                    users[index].branchID = branchID
                     users[index].branch = branchName
                     selectedUser = users[index]
                 }
@@ -315,9 +315,27 @@ class AdminViewModel: ObservableObject {
             return false
         }
     }
-    
-    func deleteUser(_ user: User) {
-        requestError = "Delete is not exposed by current backend Admin API. User was not removed from database."
+
+    func deleteUser(_ user: User) async -> Bool {
+        requestError = nil
+        requestSuccess = nil
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            _ = try await adminAPI.deleteEmployeeAccount(userID: user.id)
+            withAnimation {
+                users.removeAll { $0.id == user.id }
+                if selectedUser?.id == user.id {
+                    selectedUser = nil
+                }
+            }
+            requestSuccess = "User deleted successfully."
+            return true
+        } catch {
+            requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to delete user"
+            return false
+        }
     }
     
     func removeDstLocally(_ user: User) {
@@ -336,10 +354,20 @@ class AdminViewModel: ObservableObject {
         // Persist to published properties
     }
     
-    func createBranch(_ branchName: String, location: String = "") async -> String? {
+    func createBranch(_ branchName: String, region: String, city: String) async -> String? {
         let trimmed = branchName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedLocation = location.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedRegion = region.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedCity = city.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
+            requestError = "Branch name is required."
+            return nil
+        }
+        guard !trimmedRegion.isEmpty else {
+            requestError = "Region is required."
+            return nil
+        }
+        guard !trimmedCity.isEmpty else {
+            requestError = "City is required."
             return nil
         }
 
@@ -348,7 +376,7 @@ class AdminViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         do {
-            let response = try await adminAPI.createBankBranch(name: trimmed, region: trimmedLocation, city: trimmedLocation)
+            let response = try await adminAPI.createBankBranch(name: trimmed, region: trimmedRegion, city: trimmedCity)
             let backendBranches = try await branchAPI.listBranches(limit: 200, offset: 0)
             branches = backendBranches.map(Self.mapBranch).sorted(by: { $0.name < $1.name })
             requestSuccess = "Branch created successfully."
@@ -359,41 +387,69 @@ class AdminViewModel: ObservableObject {
         }
     }
 
-    func updateBranch(branchID: String, newName: String, location: String) {
+    func updateBranch(branchID: String, newName: String, region: String, city: String) async -> Bool {
         let trimmedName = newName.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedLocation = location.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedRegion = region.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedCity = city.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedName.isEmpty else {
             requestError = "Branch name is required."
-            return
+            return false
+        }
+        guard !trimmedRegion.isEmpty else {
+            requestError = "Region is required."
+            return false
+        }
+        guard !trimmedCity.isEmpty else {
+            requestError = "City is required."
+            return false
         }
 
         requestError = nil
         requestSuccess = nil
         isLoading = true
+        defer { isLoading = false }
 
-        Task {
-            do {
-                _ = try await adminAPI.updateBankBranch(
-                    branchID: branchID,
-                    name: trimmedName,
-                    region: trimmedLocation,
-                    city: trimmedLocation
-                )
-                let backendBranches = try await branchAPI.listBranches(limit: 200, offset: 0)
-                branches = backendBranches.map(Self.mapBranch).sorted(by: { $0.name < $1.name })
-                requestSuccess = "Branch updated successfully."
-            } catch {
-                requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to update branch"
-            }
-            isLoading = false
+        do {
+            _ = try await adminAPI.updateBankBranch(
+                branchID: branchID,
+                name: trimmedName,
+                region: trimmedRegion,
+                city: trimmedCity
+            )
+            let backendBranches = try await branchAPI.listBranches(limit: 200, offset: 0)
+            branches = backendBranches.map(Self.mapBranch).sorted(by: { $0.name < $1.name })
+            requestSuccess = "Branch updated successfully."
+            return true
+        } catch {
+            requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to update branch"
+            return false
         }
     }
-    
-    func deleteBranch(name: String) {
-        if let index = branches.firstIndex(where: { $0.name == name }) {
+
+    func deleteBranch(branchID: String) async -> Bool {
+        requestError = nil
+        requestSuccess = nil
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            _ = try await adminAPI.deleteBankBranch(branchID: branchID)
             withAnimation {
-                branches.remove(at: index)
+                branches.removeAll { $0.id == branchID }
+                users = users.map { user in
+                    var value = user
+                    if value.branchID == branchID {
+                        value.branchID = nil
+                        value.branch = "Unassigned"
+                    }
+                    return value
+                }
             }
+            requestSuccess = "Branch deleted successfully."
+            return true
+        } catch {
+            requestError = (error as? LocalizedError)?.errorDescription ?? "Failed to delete branch"
+            return false
         }
     }
 
@@ -417,10 +473,12 @@ class AdminViewModel: ObservableObject {
             name: name,
             email: email,
             role: .dst,
+            branchID: nil,
             branch: branch,
             phone: phone,
             isActive: true,
-            joinedAt: Date()
+            joinedAt: Date(),
+            employeeCode: nil
         )
         withAnimation {
             users.insert(newUser, at: 0)
@@ -568,10 +626,12 @@ class AdminViewModel: ObservableObject {
             name: name,
             email: account.email,
             role: role,
+            branchID: account.branchID.isEmpty ? nil : account.branchID,
             branch: branchName,
             phone: account.phoneNumber,
             isActive: account.isActive,
-            joinedAt: joinedAt
+            joinedAt: joinedAt,
+            employeeCode: account.employeeCode.isEmpty ? nil : account.employeeCode
         )
     }
 
@@ -606,6 +666,8 @@ class AdminViewModel: ObservableObject {
         return BranchModel(
             id: branch.id,
             name: branch.name,
+            region: branch.region,
+            city: branch.city,
             location: location
         )
     }
@@ -626,10 +688,12 @@ class AdminViewModel: ObservableObject {
             name: resolvedName.isEmpty ? fallbackName : resolvedName,
             email: account.email,
             role: .dst,
+            branchID: account.branchID.isEmpty ? nil : account.branchID,
             branch: account.branchName.isEmpty ? "Unassigned" : account.branchName,
             phone: account.phoneNumber,
             isActive: account.isActive,
-            joinedAt: joinedAt
+            joinedAt: joinedAt,
+            employeeCode: nil
         )
     }
 }
@@ -661,6 +725,8 @@ struct AuditLog: Identifiable, Hashable {
 struct BranchModel: Identifiable, Hashable {
     let id: String
     var name: String
+    var region: String
+    var city: String
     var location: String
 }
 

@@ -402,10 +402,21 @@ class AuthViewModel: ObservableObject {
             name: name,
             email: profile.email,
             role: role,
+            branchID: {
+                switch profile.profile {
+                case .managerProfile(let manager):
+                    return manager.branch.branchID.isEmpty ? nil : manager.branch.branchID
+                case .officerProfile(let officer):
+                    return officer.branch.branchID.isEmpty ? nil : officer.branch.branchID
+                default:
+                    return nil
+                }
+            }(),
             branch: branch,
             phone: profile.phone,
             isActive: profile.isActive,
-            joinedAt: parseDate(profile.createdAt)
+            joinedAt: parseDate(profile.createdAt),
+            employeeCode: nil
         )
     }
 

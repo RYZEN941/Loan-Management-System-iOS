@@ -790,6 +790,9 @@ struct EditUserSheet: View {
     @State private var selectedRole: UserRole
     @State private var branchID: String
     @State private var newBranchName = ""
+    @State private var newBranchRegion = ""
+    @State private var newBranchCity = ""
+    @State private var showDeleteConfirmation = false
     
     private var editableRoles: [UserRole] {
         [.loanOfficer, .manager]
@@ -802,7 +805,7 @@ struct EditUserSheet: View {
         _email = State(initialValue: user.email)
         _phone = State(initialValue: user.phone)
         _selectedRole = State(initialValue: user.role)
-        _branchID = State(initialValue: adminVM.branches.first(where: { $0.name == user.branch })?.id ?? "")
+        _branchID = State(initialValue: user.branchID ?? "")
     }
     
     var body: some View {
@@ -810,6 +813,7 @@ struct EditUserSheet: View {
             Form {
                 Section("Edit Information") {
                     TextField("Full Name", text: $name)
+                        .disabled(true)
                     Picker("Role", selection: $selectedRole) {
                         ForEach(editableRoles) { role in
                             Text(role.displayName).tag(role)
@@ -817,6 +821,7 @@ struct EditUserSheet: View {
                     }
                     .disabled(true)
                     Picker("Branch", selection: $branchID) {
+                        Text("Unassigned").tag("__UNASSIGNED__")
                         ForEach(adminVM.branches) { b in
                             Text(b.name).tag(b.id)
                         }
@@ -824,7 +829,12 @@ struct EditUserSheet: View {
                     }
                     if branchID == "+ Create New Branch" {
                         TextField("New Branch Name", text: $newBranchName)
+                        TextField("Region", text: $newBranchRegion)
+                        TextField("City", text: $newBranchCity)
                     }
+                    Text("Name changes are not supported by the current backend employee update API.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
                 
                 Section("Account Details") {
@@ -837,6 +847,25 @@ struct EditUserSheet: View {
                         Text("Employee ID").foregroundStyle(.secondary)
                         Spacer()
                         Text(user.id).foregroundStyle(.primary)
+                    }
+                    if let employeeCode = user.employeeCode, !employeeCode.isEmpty {
+                        HStack {
+                            Text("Employee Code").foregroundStyle(.secondary)
+                            Spacer()
+                            Text(employeeCode).foregroundStyle(.primary)
+                        }
+                    }
+                }
+
+                Section {
+                    Button(role: .destructive) {
+                        showDeleteConfirmation = true
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Text("Delete User")
+                            Spacer()
+                        }
                     }
                 }
             }
@@ -851,9 +880,17 @@ struct EditUserSheet: View {
                         Task {
                             var finalBranchID = branchID
                             if branchID == "+ Create New Branch" {
-                                finalBranchID = await adminVM.createBranch(newBranchName) ?? ""
+                                finalBranchID = await adminVM.createBranch(
+                                    newBranchName,
+                                    region: newBranchRegion,
+                                    city: newBranchCity
+                                ) ?? ""
+                            } else if branchID == "__UNASSIGNED__" {
+                                finalBranchID = ""
                             }
-                            let finalBranchName = adminVM.branches.first(where: { $0.id == finalBranchID })?.name ?? user.branch
+                            let finalBranchName = finalBranchID.isEmpty
+                                ? "Unassigned"
+                                : (adminVM.branches.first(where: { $0.id == finalBranchID })?.name ?? user.branch)
                             let success = await adminVM.updateUser(
                                 userId: user.id,
                                 name: name,
@@ -874,6 +911,21 @@ struct EditUserSheet: View {
                 }
             }
         }
+        .confirmationDialog("Delete User", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                Task {
+                    let success = await adminVM.deleteUser(user)
+                    await MainActor.run {
+                        if success {
+                            dismiss()
+                        }
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will deactivate the selected employee account in the backend.")
+        }
     }
 }
 
@@ -883,14 +935,16 @@ struct CreateBranchSheet: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var name = ""
-    @State private var location = ""
+    @State private var region = ""
+    @State private var city = ""
     
     var body: some View {
         NavigationStack {
             Form {
                 Section("Branch Details") {
                     TextField("Branch Name", text: $name)
-                    TextField("Location (City/Region)", text: $location)
+                    TextField("Region", text: $region)
+                    TextField("City", text: $city)
                 }
             }
             .navigationTitle("Create Branch")
@@ -902,7 +956,7 @@ struct CreateBranchSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         Task {
-                            let success = await adminVM.createBranch(name, location: location) != nil
+                            let success = await adminVM.createBranch(name, region: region, city: city) != nil
                             await MainActor.run {
                                 if success {
                                     dismiss()
@@ -911,7 +965,11 @@ struct CreateBranchSheet: View {
                         }
                     }
                     .fontWeight(.semibold)
-                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(
+                        name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                        region.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                        city.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    )
                 }
             }
         }
@@ -924,13 +982,16 @@ struct EditBranchSheet: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var name: String
-    @State private var location: String
+    @State private var region: String
+    @State private var city: String
+    @State private var showDeleteConfirmation = false
     
     init(adminVM: AdminViewModel, branchModel: BranchModel) {
         self.adminVM = adminVM
         self.branchModel = branchModel
         _name = State(initialValue: branchModel.name)
-        _location = State(initialValue: branchModel.location)
+        _region = State(initialValue: branchModel.region)
+        _city = State(initialValue: branchModel.city)
     }
     
     var body: some View {
@@ -938,11 +999,13 @@ struct EditBranchSheet: View {
             Form {
                 Section("Branch Details") {
                     TextField("Branch Name", text: $name)
-                    TextField("Location (City/Region)", text: $location)
+                    TextField("Region", text: $region)
+                    TextField("City", text: $city)
                 }
                 
                 Section {
                     Button(role: .destructive) {
+                        showDeleteConfirmation = true
                     } label: {
                         HStack {
                             Spacer()
@@ -950,8 +1013,7 @@ struct EditBranchSheet: View {
                             Spacer()
                         }
                     }
-                    .disabled(true)
-                    Text("Delete is disabled: backend delete branch is not supported yet.")
+                    Text("Deleting a branch will remove it from active admin lists.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -964,12 +1026,38 @@ struct EditBranchSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        adminVM.updateBranch(branchID: branchModel.id, newName: name, location: location)
-                        dismiss()
+                        Task {
+                            let success = await adminVM.updateBranch(
+                                branchID: branchModel.id,
+                                newName: name,
+                                region: region,
+                                city: city
+                            )
+                            await MainActor.run {
+                                if success {
+                                    dismiss()
+                                }
+                            }
+                        }
                     }
                     .fontWeight(.semibold)
                 }
             }
+        }
+        .confirmationDialog("Delete Branch", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                Task {
+                    let success = await adminVM.deleteBranch(branchID: branchModel.id)
+                    await MainActor.run {
+                        if success {
+                            dismiss()
+                        }
+                    }
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will soft-delete the branch in the backend.")
         }
     }
 }

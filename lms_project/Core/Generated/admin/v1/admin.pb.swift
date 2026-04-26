@@ -20,18 +20,18 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
   typealias Version = _2
 }
 
-enum Admin_V1_EmployeeType: SwiftProtobuf.Enum, Swift.CaseIterable {
-  typealias RawValue = Int
+public enum Admin_V1_EmployeeType: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
   case unspecified // = 0
   case manager // = 1
   case officer // = 2
   case UNRECOGNIZED(Int)
 
-  init() {
+  public init() {
     self = .unspecified
   }
 
-  init?(rawValue: Int) {
+  public init?(rawValue: Int) {
     switch rawValue {
     case 0: self = .unspecified
     case 1: self = .manager
@@ -40,7 +40,7 @@ enum Admin_V1_EmployeeType: SwiftProtobuf.Enum, Swift.CaseIterable {
     }
   }
 
-  var rawValue: Int {
+  public var rawValue: Int {
     switch self {
     case .unspecified: return 0
     case .manager: return 1
@@ -50,7 +50,7 @@ enum Admin_V1_EmployeeType: SwiftProtobuf.Enum, Swift.CaseIterable {
   }
 
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  static let allCases: [Admin_V1_EmployeeType] = [
+  public static let allCases: [Admin_V1_EmployeeType] = [
     .unspecified,
     .manager,
     .officer,
@@ -58,19 +58,19 @@ enum Admin_V1_EmployeeType: SwiftProtobuf.Enum, Swift.CaseIterable {
 
 }
 
-enum Admin_V1_StaffRole: SwiftProtobuf.Enum, Swift.CaseIterable {
-  typealias RawValue = Int
+public enum Admin_V1_StaffRole: SwiftProtobuf.Enum, Swift.CaseIterable {
+  public typealias RawValue = Int
   case unspecified // = 0
   case admin // = 1
   case manager // = 2
   case officer // = 3
   case UNRECOGNIZED(Int)
 
-  init() {
+  public init() {
     self = .unspecified
   }
 
-  init?(rawValue: Int) {
+  public init?(rawValue: Int) {
     switch rawValue {
     case 0: self = .unspecified
     case 1: self = .admin
@@ -80,7 +80,7 @@ enum Admin_V1_StaffRole: SwiftProtobuf.Enum, Swift.CaseIterable {
     }
   }
 
-  var rawValue: Int {
+  public var rawValue: Int {
     switch self {
     case .unspecified: return 0
     case .admin: return 1
@@ -91,7 +91,7 @@ enum Admin_V1_StaffRole: SwiftProtobuf.Enum, Swift.CaseIterable {
   }
 
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  static let allCases: [Admin_V1_StaffRole] = [
+  public static let allCases: [Admin_V1_StaffRole] = [
     .unspecified,
     .admin,
     .manager,
@@ -100,312 +100,400 @@ enum Admin_V1_StaffRole: SwiftProtobuf.Enum, Swift.CaseIterable {
 
 }
 
-struct Admin_V1_CreateAdminAccountRequest: Sendable {
+public struct Admin_V1_CreateAdminAccountRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var email: String = String()
+  public var email: String = String()
 
-  var phoneNumber: String = String()
+  public var phoneNumber: String = String()
 
-  var password: String = String()
+  public var password: String = String()
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct Admin_V1_CreateAdminAccountResponse: Sendable {
+public struct Admin_V1_CreateAdminAccountResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var success: Bool = false
+  public var success: Bool = false
 
-  var userID: String = String()
+  public var userID: String = String()
 
-  var profileID: String = String()
+  public var profileID: String = String()
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct Admin_V1_CreateEmployeeAccountRequest: Sendable {
+public struct Admin_V1_CreateEmployeeAccountRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var name: String = String()
+  public var name: String = String()
 
-  var email: String = String()
+  public var email: String = String()
 
-  var phoneNumber: String = String()
+  public var phoneNumber: String = String()
 
-  var password: String = String()
+  public var password: String = String()
 
-  var employeeType: Admin_V1_EmployeeType = .unspecified
+  public var employeeType: Admin_V1_EmployeeType = .unspecified
 
-  var branchID: String = String()
+  public var branchID: String = String()
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct Admin_V1_CreateEmployeeAccountResponse: Sendable {
+public struct Admin_V1_CreateEmployeeAccountResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var success: Bool = false
+  public var success: Bool = false
 
-  var userID: String = String()
+  public var userID: String = String()
 
-  var profileID: String = String()
+  public var profileID: String = String()
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var employeeSerial: Int64 = 0
 
-  init() {}
+  public var employeeCode: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
 }
 
-struct Admin_V1_EmployeeAccount: Sendable {
+public struct Admin_V1_EmployeeAccount: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var userID: String = String()
+  public var userID: String = String()
 
-  var name: String = String()
+  public var name: String = String()
 
-  var email: String = String()
+  public var email: String = String()
 
-  var phoneNumber: String = String()
+  public var phoneNumber: String = String()
 
-  var role: Admin_V1_StaffRole = .unspecified
+  public var role: Admin_V1_StaffRole = .unspecified
 
-  var isActive: Bool = false
+  public var isActive: Bool = false
 
-  var isRequiringPasswordChange: Bool = false
+  public var isRequiringPasswordChange: Bool = false
 
-  var branchID: String = String()
+  public var branchID: String = String()
 
-  var branchName: String = String()
+  public var branchName: String = String()
 
-  var branchRegion: String = String()
+  public var branchRegion: String = String()
 
-  var branchCity: String = String()
+  public var branchCity: String = String()
 
-  var createdAt: String = String()
+  public var createdAt: String = String()
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var employeeSerial: Int64 = 0
 
-  init() {}
+  public var employeeCode: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
 }
 
-struct Admin_V1_ListEmployeeAccountsRequest: Sendable {
+public struct Admin_V1_ListEmployeeAccountsRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var limit: Int32 = 0
+  public var limit: Int32 = 0
 
-  var offset: Int32 = 0
+  public var offset: Int32 = 0
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct Admin_V1_ListEmployeeAccountsResponse: Sendable {
+public struct Admin_V1_ListEmployeeAccountsResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var employees: [Admin_V1_EmployeeAccount] = []
+  public var employees: [Admin_V1_EmployeeAccount] = []
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct Admin_V1_CreateDstAccountRequest: Sendable {
+public struct Admin_V1_CreateDstAccountRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var name: String = String()
+  public var name: String = String()
 
-  var email: String = String()
+  public var email: String = String()
 
-  var phoneNumber: String = String()
+  public var phoneNumber: String = String()
 
-  var password: String = String()
+  public var password: String = String()
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct Admin_V1_CreateDstAccountResponse: Sendable {
+public struct Admin_V1_CreateDstAccountResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var success: Bool = false
+  public var success: Bool = false
 
-  var userID: String = String()
+  public var userID: String = String()
 
-  var profileID: String = String()
+  public var profileID: String = String()
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct Admin_V1_CreateBankBranchRequest: Sendable {
+public struct Admin_V1_UpdateDstAccountRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var name: String = String()
+  public var userID: String = String()
 
-  var region: String = String()
+  public var name: String = String()
 
-  var city: String = String()
+  public var email: String = String()
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var phoneNumber: String = String()
 
-  init() {}
+  public var newPassword: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
 }
 
-struct Admin_V1_CreateBankBranchResponse: Sendable {
+public struct Admin_V1_UpdateDstAccountResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var success: Bool = false
+  public var success: Bool = false
 
-  var branchID: String = String()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  init() {}
+  public init() {}
 }
 
-struct Admin_V1_UpdateBankBranchRequest: Sendable {
+public struct Admin_V1_CreateBankBranchRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var branchID: String = String()
+  public var name: String = String()
 
-  var name: String = String()
+  public var region: String = String()
 
-  var region: String = String()
+  public var city: String = String()
 
-  var city: String = String()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  init() {}
+  public init() {}
 }
 
-struct Admin_V1_UpdateBankBranchResponse: Sendable {
+public struct Admin_V1_CreateBankBranchResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var success: Bool = false
+  public var success: Bool = false
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var branchID: String = String()
 
-  init() {}
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
 }
 
-struct Admin_V1_UpdateBranchDstCommissionRequest: Sendable {
+public struct Admin_V1_UpdateBankBranchRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var branchID: String = String()
+  public var branchID: String = String()
 
-  var dstCommission: String = String()
+  public var name: String = String()
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var region: String = String()
 
-  init() {}
+  public var city: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
 }
 
-struct Admin_V1_UpdateBranchDstCommissionResponse: Sendable {
+public struct Admin_V1_UpdateBankBranchResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var success: Bool = false
+  public var success: Bool = false
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct Admin_V1_UpdateEmployeeAccountRequest: Sendable {
+public struct Admin_V1_UpdateBranchDstCommissionRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var userID: String = String()
+  public var branchID: String = String()
 
-  var email: String = String()
+  public var dstCommission: String = String()
 
-  var phoneNumber: String = String()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  var newPassword: String = String()
-
-  var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  init() {}
+  public init() {}
 }
 
-struct Admin_V1_UpdateEmployeeAccountResponse: Sendable {
+public struct Admin_V1_UpdateBranchDstCommissionResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var success: Bool = false
+  public var success: Bool = false
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
 }
 
-struct Admin_V1_AssignEmployeeBranchRequest: Sendable {
+public struct Admin_V1_UpdateEmployeeAccountRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var userID: String = String()
+  public var userID: String = String()
 
-  var branchID: String = String()
+  public var email: String = String()
 
-  var clearBranch_p: Bool = false
+  public var phoneNumber: String = String()
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var newPassword: String = String()
 
-  init() {}
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
 }
 
-struct Admin_V1_AssignEmployeeBranchResponse: Sendable {
+public struct Admin_V1_UpdateEmployeeAccountResponse: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var success: Bool = false
+  public var success: Bool = false
 
-  var unknownFields = SwiftProtobuf.UnknownStorage()
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  init() {}
+  public init() {}
+}
+
+public struct Admin_V1_AssignEmployeeBranchRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var userID: String = String()
+
+  public var branchID: String = String()
+
+  public var clearBranch_p: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Admin_V1_AssignEmployeeBranchResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var success: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Admin_V1_DeleteBankBranchRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var branchID: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Admin_V1_DeleteBankBranchResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var success: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Admin_V1_DeleteEmployeeAccountRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var userID: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public struct Admin_V1_DeleteEmployeeAccountResponse: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var success: Bool = false
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
 }
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -413,18 +501,18 @@ struct Admin_V1_AssignEmployeeBranchResponse: Sendable {
 fileprivate let _protobuf_package = "admin.v1"
 
 extension Admin_V1_EmployeeType: SwiftProtobuf._ProtoNameProviding {
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0EMPLOYEE_TYPE_UNSPECIFIED\0\u{1}EMPLOYEE_TYPE_MANAGER\0\u{1}EMPLOYEE_TYPE_OFFICER\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0EMPLOYEE_TYPE_UNSPECIFIED\0\u{1}EMPLOYEE_TYPE_MANAGER\0\u{1}EMPLOYEE_TYPE_OFFICER\0")
 }
 
 extension Admin_V1_StaffRole: SwiftProtobuf._ProtoNameProviding {
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0STAFF_ROLE_UNSPECIFIED\0\u{1}STAFF_ROLE_ADMIN\0\u{1}STAFF_ROLE_MANAGER\0\u{1}STAFF_ROLE_OFFICER\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0STAFF_ROLE_UNSPECIFIED\0\u{1}STAFF_ROLE_ADMIN\0\u{1}STAFF_ROLE_MANAGER\0\u{1}STAFF_ROLE_OFFICER\0")
 }
 
 extension Admin_V1_CreateAdminAccountRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".CreateAdminAccountRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}email\0\u{3}phone_number\0\u{1}password\0")
+  public static let protoMessageName: String = _protobuf_package + ".CreateAdminAccountRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}email\0\u{3}phone_number\0\u{1}password\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -438,7 +526,7 @@ extension Admin_V1_CreateAdminAccountRequest: SwiftProtobuf.Message, SwiftProtob
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.email.isEmpty {
       try visitor.visitSingularStringField(value: self.email, fieldNumber: 1)
     }
@@ -451,7 +539,7 @@ extension Admin_V1_CreateAdminAccountRequest: SwiftProtobuf.Message, SwiftProtob
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Admin_V1_CreateAdminAccountRequest, rhs: Admin_V1_CreateAdminAccountRequest) -> Bool {
+  public static func ==(lhs: Admin_V1_CreateAdminAccountRequest, rhs: Admin_V1_CreateAdminAccountRequest) -> Bool {
     if lhs.email != rhs.email {return false}
     if lhs.phoneNumber != rhs.phoneNumber {return false}
     if lhs.password != rhs.password {return false}
@@ -461,10 +549,10 @@ extension Admin_V1_CreateAdminAccountRequest: SwiftProtobuf.Message, SwiftProtob
 }
 
 extension Admin_V1_CreateAdminAccountResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".CreateAdminAccountResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}success\0\u{3}user_id\0\u{3}profile_id\0")
+  public static let protoMessageName: String = _protobuf_package + ".CreateAdminAccountResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}success\0\u{3}user_id\0\u{3}profile_id\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -478,7 +566,7 @@ extension Admin_V1_CreateAdminAccountResponse: SwiftProtobuf.Message, SwiftProto
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if self.success != false {
       try visitor.visitSingularBoolField(value: self.success, fieldNumber: 1)
     }
@@ -491,7 +579,7 @@ extension Admin_V1_CreateAdminAccountResponse: SwiftProtobuf.Message, SwiftProto
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Admin_V1_CreateAdminAccountResponse, rhs: Admin_V1_CreateAdminAccountResponse) -> Bool {
+  public static func ==(lhs: Admin_V1_CreateAdminAccountResponse, rhs: Admin_V1_CreateAdminAccountResponse) -> Bool {
     if lhs.success != rhs.success {return false}
     if lhs.userID != rhs.userID {return false}
     if lhs.profileID != rhs.profileID {return false}
@@ -501,10 +589,10 @@ extension Admin_V1_CreateAdminAccountResponse: SwiftProtobuf.Message, SwiftProto
 }
 
 extension Admin_V1_CreateEmployeeAccountRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".CreateEmployeeAccountRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}email\0\u{3}phone_number\0\u{1}password\0\u{3}employee_type\0\u{3}branch_id\0")
+  public static let protoMessageName: String = _protobuf_package + ".CreateEmployeeAccountRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}email\0\u{3}phone_number\0\u{1}password\0\u{3}employee_type\0\u{3}branch_id\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -521,7 +609,7 @@ extension Admin_V1_CreateEmployeeAccountRequest: SwiftProtobuf.Message, SwiftPro
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.name.isEmpty {
       try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
     }
@@ -543,7 +631,7 @@ extension Admin_V1_CreateEmployeeAccountRequest: SwiftProtobuf.Message, SwiftPro
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Admin_V1_CreateEmployeeAccountRequest, rhs: Admin_V1_CreateEmployeeAccountRequest) -> Bool {
+  public static func ==(lhs: Admin_V1_CreateEmployeeAccountRequest, rhs: Admin_V1_CreateEmployeeAccountRequest) -> Bool {
     if lhs.name != rhs.name {return false}
     if lhs.email != rhs.email {return false}
     if lhs.phoneNumber != rhs.phoneNumber {return false}
@@ -556,10 +644,10 @@ extension Admin_V1_CreateEmployeeAccountRequest: SwiftProtobuf.Message, SwiftPro
 }
 
 extension Admin_V1_CreateEmployeeAccountResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".CreateEmployeeAccountResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}success\0\u{3}user_id\0\u{3}profile_id\0")
+  public static let protoMessageName: String = _protobuf_package + ".CreateEmployeeAccountResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}success\0\u{3}user_id\0\u{3}profile_id\0\u{3}employee_serial\0\u{3}employee_code\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -568,12 +656,14 @@ extension Admin_V1_CreateEmployeeAccountResponse: SwiftProtobuf.Message, SwiftPr
       case 1: try { try decoder.decodeSingularBoolField(value: &self.success) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.userID) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.profileID) }()
+      case 4: try { try decoder.decodeSingularInt64Field(value: &self.employeeSerial) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.employeeCode) }()
       default: break
       }
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if self.success != false {
       try visitor.visitSingularBoolField(value: self.success, fieldNumber: 1)
     }
@@ -583,23 +673,31 @@ extension Admin_V1_CreateEmployeeAccountResponse: SwiftProtobuf.Message, SwiftPr
     if !self.profileID.isEmpty {
       try visitor.visitSingularStringField(value: self.profileID, fieldNumber: 3)
     }
+    if self.employeeSerial != 0 {
+      try visitor.visitSingularInt64Field(value: self.employeeSerial, fieldNumber: 4)
+    }
+    if !self.employeeCode.isEmpty {
+      try visitor.visitSingularStringField(value: self.employeeCode, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Admin_V1_CreateEmployeeAccountResponse, rhs: Admin_V1_CreateEmployeeAccountResponse) -> Bool {
+  public static func ==(lhs: Admin_V1_CreateEmployeeAccountResponse, rhs: Admin_V1_CreateEmployeeAccountResponse) -> Bool {
     if lhs.success != rhs.success {return false}
     if lhs.userID != rhs.userID {return false}
     if lhs.profileID != rhs.profileID {return false}
+    if lhs.employeeSerial != rhs.employeeSerial {return false}
+    if lhs.employeeCode != rhs.employeeCode {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
 extension Admin_V1_EmployeeAccount: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".EmployeeAccount"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{1}name\0\u{1}email\0\u{3}phone_number\0\u{1}role\0\u{3}is_active\0\u{3}is_requiring_password_change\0\u{3}branch_id\0\u{3}branch_name\0\u{3}branch_region\0\u{3}branch_city\0\u{3}created_at\0")
+  public static let protoMessageName: String = _protobuf_package + ".EmployeeAccount"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{1}name\0\u{1}email\0\u{3}phone_number\0\u{1}role\0\u{3}is_active\0\u{3}is_requiring_password_change\0\u{3}branch_id\0\u{3}branch_name\0\u{3}branch_region\0\u{3}branch_city\0\u{3}created_at\0\u{3}employee_serial\0\u{3}employee_code\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -617,12 +715,14 @@ extension Admin_V1_EmployeeAccount: SwiftProtobuf.Message, SwiftProtobuf._Messag
       case 10: try { try decoder.decodeSingularStringField(value: &self.branchRegion) }()
       case 11: try { try decoder.decodeSingularStringField(value: &self.branchCity) }()
       case 12: try { try decoder.decodeSingularStringField(value: &self.createdAt) }()
+      case 13: try { try decoder.decodeSingularInt64Field(value: &self.employeeSerial) }()
+      case 14: try { try decoder.decodeSingularStringField(value: &self.employeeCode) }()
       default: break
       }
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.userID.isEmpty {
       try visitor.visitSingularStringField(value: self.userID, fieldNumber: 1)
     }
@@ -659,10 +759,16 @@ extension Admin_V1_EmployeeAccount: SwiftProtobuf.Message, SwiftProtobuf._Messag
     if !self.createdAt.isEmpty {
       try visitor.visitSingularStringField(value: self.createdAt, fieldNumber: 12)
     }
+    if self.employeeSerial != 0 {
+      try visitor.visitSingularInt64Field(value: self.employeeSerial, fieldNumber: 13)
+    }
+    if !self.employeeCode.isEmpty {
+      try visitor.visitSingularStringField(value: self.employeeCode, fieldNumber: 14)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Admin_V1_EmployeeAccount, rhs: Admin_V1_EmployeeAccount) -> Bool {
+  public static func ==(lhs: Admin_V1_EmployeeAccount, rhs: Admin_V1_EmployeeAccount) -> Bool {
     if lhs.userID != rhs.userID {return false}
     if lhs.name != rhs.name {return false}
     if lhs.email != rhs.email {return false}
@@ -675,16 +781,18 @@ extension Admin_V1_EmployeeAccount: SwiftProtobuf.Message, SwiftProtobuf._Messag
     if lhs.branchRegion != rhs.branchRegion {return false}
     if lhs.branchCity != rhs.branchCity {return false}
     if lhs.createdAt != rhs.createdAt {return false}
+    if lhs.employeeSerial != rhs.employeeSerial {return false}
+    if lhs.employeeCode != rhs.employeeCode {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
 extension Admin_V1_ListEmployeeAccountsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".ListEmployeeAccountsRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}limit\0\u{1}offset\0")
+  public static let protoMessageName: String = _protobuf_package + ".ListEmployeeAccountsRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}limit\0\u{1}offset\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -697,7 +805,7 @@ extension Admin_V1_ListEmployeeAccountsRequest: SwiftProtobuf.Message, SwiftProt
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if self.limit != 0 {
       try visitor.visitSingularInt32Field(value: self.limit, fieldNumber: 1)
     }
@@ -707,7 +815,7 @@ extension Admin_V1_ListEmployeeAccountsRequest: SwiftProtobuf.Message, SwiftProt
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Admin_V1_ListEmployeeAccountsRequest, rhs: Admin_V1_ListEmployeeAccountsRequest) -> Bool {
+  public static func ==(lhs: Admin_V1_ListEmployeeAccountsRequest, rhs: Admin_V1_ListEmployeeAccountsRequest) -> Bool {
     if lhs.limit != rhs.limit {return false}
     if lhs.offset != rhs.offset {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -716,10 +824,10 @@ extension Admin_V1_ListEmployeeAccountsRequest: SwiftProtobuf.Message, SwiftProt
 }
 
 extension Admin_V1_ListEmployeeAccountsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".ListEmployeeAccountsResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}employees\0")
+  public static let protoMessageName: String = _protobuf_package + ".ListEmployeeAccountsResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}employees\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -731,14 +839,14 @@ extension Admin_V1_ListEmployeeAccountsResponse: SwiftProtobuf.Message, SwiftPro
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.employees.isEmpty {
       try visitor.visitRepeatedMessageField(value: self.employees, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Admin_V1_ListEmployeeAccountsResponse, rhs: Admin_V1_ListEmployeeAccountsResponse) -> Bool {
+  public static func ==(lhs: Admin_V1_ListEmployeeAccountsResponse, rhs: Admin_V1_ListEmployeeAccountsResponse) -> Bool {
     if lhs.employees != rhs.employees {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -746,10 +854,10 @@ extension Admin_V1_ListEmployeeAccountsResponse: SwiftProtobuf.Message, SwiftPro
 }
 
 extension Admin_V1_CreateDstAccountRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".CreateDstAccountRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}email\0\u{3}phone_number\0\u{1}password\0")
+  public static let protoMessageName: String = _protobuf_package + ".CreateDstAccountRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}email\0\u{3}phone_number\0\u{1}password\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -764,7 +872,7 @@ extension Admin_V1_CreateDstAccountRequest: SwiftProtobuf.Message, SwiftProtobuf
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.name.isEmpty {
       try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
     }
@@ -780,7 +888,7 @@ extension Admin_V1_CreateDstAccountRequest: SwiftProtobuf.Message, SwiftProtobuf
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Admin_V1_CreateDstAccountRequest, rhs: Admin_V1_CreateDstAccountRequest) -> Bool {
+  public static func ==(lhs: Admin_V1_CreateDstAccountRequest, rhs: Admin_V1_CreateDstAccountRequest) -> Bool {
     if lhs.name != rhs.name {return false}
     if lhs.email != rhs.email {return false}
     if lhs.phoneNumber != rhs.phoneNumber {return false}
@@ -791,10 +899,10 @@ extension Admin_V1_CreateDstAccountRequest: SwiftProtobuf.Message, SwiftProtobuf
 }
 
 extension Admin_V1_CreateDstAccountResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".CreateDstAccountResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}success\0\u{3}user_id\0\u{3}profile_id\0")
+  public static let protoMessageName: String = _protobuf_package + ".CreateDstAccountResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}success\0\u{3}user_id\0\u{3}profile_id\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -808,7 +916,7 @@ extension Admin_V1_CreateDstAccountResponse: SwiftProtobuf.Message, SwiftProtobu
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if self.success != false {
       try visitor.visitSingularBoolField(value: self.success, fieldNumber: 1)
     }
@@ -821,7 +929,7 @@ extension Admin_V1_CreateDstAccountResponse: SwiftProtobuf.Message, SwiftProtobu
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Admin_V1_CreateDstAccountResponse, rhs: Admin_V1_CreateDstAccountResponse) -> Bool {
+  public static func ==(lhs: Admin_V1_CreateDstAccountResponse, rhs: Admin_V1_CreateDstAccountResponse) -> Bool {
     if lhs.success != rhs.success {return false}
     if lhs.userID != rhs.userID {return false}
     if lhs.profileID != rhs.profileID {return false}
@@ -830,11 +938,91 @@ extension Admin_V1_CreateDstAccountResponse: SwiftProtobuf.Message, SwiftProtobu
   }
 }
 
-extension Admin_V1_CreateBankBranchRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".CreateBankBranchRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}region\0\u{1}city\0")
+extension Admin_V1_UpdateDstAccountRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".UpdateDstAccountRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{1}name\0\u{1}email\0\u{3}phone_number\0\u{3}new_password\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.userID) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.name) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.email) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.phoneNumber) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.newPassword) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.userID.isEmpty {
+      try visitor.visitSingularStringField(value: self.userID, fieldNumber: 1)
+    }
+    if !self.name.isEmpty {
+      try visitor.visitSingularStringField(value: self.name, fieldNumber: 2)
+    }
+    if !self.email.isEmpty {
+      try visitor.visitSingularStringField(value: self.email, fieldNumber: 3)
+    }
+    if !self.phoneNumber.isEmpty {
+      try visitor.visitSingularStringField(value: self.phoneNumber, fieldNumber: 4)
+    }
+    if !self.newPassword.isEmpty {
+      try visitor.visitSingularStringField(value: self.newPassword, fieldNumber: 5)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Admin_V1_UpdateDstAccountRequest, rhs: Admin_V1_UpdateDstAccountRequest) -> Bool {
+    if lhs.userID != rhs.userID {return false}
+    if lhs.name != rhs.name {return false}
+    if lhs.email != rhs.email {return false}
+    if lhs.phoneNumber != rhs.phoneNumber {return false}
+    if lhs.newPassword != rhs.newPassword {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Admin_V1_UpdateDstAccountResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".UpdateDstAccountResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}success\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.success) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.success != false {
+      try visitor.visitSingularBoolField(value: self.success, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Admin_V1_UpdateDstAccountResponse, rhs: Admin_V1_UpdateDstAccountResponse) -> Bool {
+    if lhs.success != rhs.success {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Admin_V1_CreateBankBranchRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CreateBankBranchRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}name\0\u{1}region\0\u{1}city\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -848,7 +1036,7 @@ extension Admin_V1_CreateBankBranchRequest: SwiftProtobuf.Message, SwiftProtobuf
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.name.isEmpty {
       try visitor.visitSingularStringField(value: self.name, fieldNumber: 1)
     }
@@ -861,7 +1049,7 @@ extension Admin_V1_CreateBankBranchRequest: SwiftProtobuf.Message, SwiftProtobuf
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Admin_V1_CreateBankBranchRequest, rhs: Admin_V1_CreateBankBranchRequest) -> Bool {
+  public static func ==(lhs: Admin_V1_CreateBankBranchRequest, rhs: Admin_V1_CreateBankBranchRequest) -> Bool {
     if lhs.name != rhs.name {return false}
     if lhs.region != rhs.region {return false}
     if lhs.city != rhs.city {return false}
@@ -871,10 +1059,10 @@ extension Admin_V1_CreateBankBranchRequest: SwiftProtobuf.Message, SwiftProtobuf
 }
 
 extension Admin_V1_CreateBankBranchResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".CreateBankBranchResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}success\0\u{3}branch_id\0")
+  public static let protoMessageName: String = _protobuf_package + ".CreateBankBranchResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}success\0\u{3}branch_id\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -887,7 +1075,7 @@ extension Admin_V1_CreateBankBranchResponse: SwiftProtobuf.Message, SwiftProtobu
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if self.success != false {
       try visitor.visitSingularBoolField(value: self.success, fieldNumber: 1)
     }
@@ -897,7 +1085,7 @@ extension Admin_V1_CreateBankBranchResponse: SwiftProtobuf.Message, SwiftProtobu
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Admin_V1_CreateBankBranchResponse, rhs: Admin_V1_CreateBankBranchResponse) -> Bool {
+  public static func ==(lhs: Admin_V1_CreateBankBranchResponse, rhs: Admin_V1_CreateBankBranchResponse) -> Bool {
     if lhs.success != rhs.success {return false}
     if lhs.branchID != rhs.branchID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -906,10 +1094,10 @@ extension Admin_V1_CreateBankBranchResponse: SwiftProtobuf.Message, SwiftProtobu
 }
 
 extension Admin_V1_UpdateBankBranchRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".UpdateBankBranchRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}branch_id\0\u{1}name\0\u{1}region\0\u{1}city\0")
+  public static let protoMessageName: String = _protobuf_package + ".UpdateBankBranchRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}branch_id\0\u{1}name\0\u{1}region\0\u{1}city\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -924,7 +1112,7 @@ extension Admin_V1_UpdateBankBranchRequest: SwiftProtobuf.Message, SwiftProtobuf
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.branchID.isEmpty {
       try visitor.visitSingularStringField(value: self.branchID, fieldNumber: 1)
     }
@@ -940,7 +1128,7 @@ extension Admin_V1_UpdateBankBranchRequest: SwiftProtobuf.Message, SwiftProtobuf
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Admin_V1_UpdateBankBranchRequest, rhs: Admin_V1_UpdateBankBranchRequest) -> Bool {
+  public static func ==(lhs: Admin_V1_UpdateBankBranchRequest, rhs: Admin_V1_UpdateBankBranchRequest) -> Bool {
     if lhs.branchID != rhs.branchID {return false}
     if lhs.name != rhs.name {return false}
     if lhs.region != rhs.region {return false}
@@ -951,10 +1139,10 @@ extension Admin_V1_UpdateBankBranchRequest: SwiftProtobuf.Message, SwiftProtobuf
 }
 
 extension Admin_V1_UpdateBankBranchResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".UpdateBankBranchResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}success\0")
+  public static let protoMessageName: String = _protobuf_package + ".UpdateBankBranchResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}success\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -966,14 +1154,14 @@ extension Admin_V1_UpdateBankBranchResponse: SwiftProtobuf.Message, SwiftProtobu
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if self.success != false {
       try visitor.visitSingularBoolField(value: self.success, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Admin_V1_UpdateBankBranchResponse, rhs: Admin_V1_UpdateBankBranchResponse) -> Bool {
+  public static func ==(lhs: Admin_V1_UpdateBankBranchResponse, rhs: Admin_V1_UpdateBankBranchResponse) -> Bool {
     if lhs.success != rhs.success {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -981,10 +1169,10 @@ extension Admin_V1_UpdateBankBranchResponse: SwiftProtobuf.Message, SwiftProtobu
 }
 
 extension Admin_V1_UpdateBranchDstCommissionRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".UpdateBranchDstCommissionRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}branch_id\0\u{3}dst_commission\0")
+  public static let protoMessageName: String = _protobuf_package + ".UpdateBranchDstCommissionRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}branch_id\0\u{3}dst_commission\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -997,7 +1185,7 @@ extension Admin_V1_UpdateBranchDstCommissionRequest: SwiftProtobuf.Message, Swif
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.branchID.isEmpty {
       try visitor.visitSingularStringField(value: self.branchID, fieldNumber: 1)
     }
@@ -1007,7 +1195,7 @@ extension Admin_V1_UpdateBranchDstCommissionRequest: SwiftProtobuf.Message, Swif
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Admin_V1_UpdateBranchDstCommissionRequest, rhs: Admin_V1_UpdateBranchDstCommissionRequest) -> Bool {
+  public static func ==(lhs: Admin_V1_UpdateBranchDstCommissionRequest, rhs: Admin_V1_UpdateBranchDstCommissionRequest) -> Bool {
     if lhs.branchID != rhs.branchID {return false}
     if lhs.dstCommission != rhs.dstCommission {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -1016,10 +1204,10 @@ extension Admin_V1_UpdateBranchDstCommissionRequest: SwiftProtobuf.Message, Swif
 }
 
 extension Admin_V1_UpdateBranchDstCommissionResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".UpdateBranchDstCommissionResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}success\0")
+  public static let protoMessageName: String = _protobuf_package + ".UpdateBranchDstCommissionResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}success\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1031,14 +1219,14 @@ extension Admin_V1_UpdateBranchDstCommissionResponse: SwiftProtobuf.Message, Swi
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if self.success != false {
       try visitor.visitSingularBoolField(value: self.success, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Admin_V1_UpdateBranchDstCommissionResponse, rhs: Admin_V1_UpdateBranchDstCommissionResponse) -> Bool {
+  public static func ==(lhs: Admin_V1_UpdateBranchDstCommissionResponse, rhs: Admin_V1_UpdateBranchDstCommissionResponse) -> Bool {
     if lhs.success != rhs.success {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -1046,10 +1234,10 @@ extension Admin_V1_UpdateBranchDstCommissionResponse: SwiftProtobuf.Message, Swi
 }
 
 extension Admin_V1_UpdateEmployeeAccountRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".UpdateEmployeeAccountRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{1}email\0\u{3}phone_number\0\u{3}new_password\0")
+  public static let protoMessageName: String = _protobuf_package + ".UpdateEmployeeAccountRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{1}email\0\u{3}phone_number\0\u{3}new_password\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1064,7 +1252,7 @@ extension Admin_V1_UpdateEmployeeAccountRequest: SwiftProtobuf.Message, SwiftPro
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.userID.isEmpty {
       try visitor.visitSingularStringField(value: self.userID, fieldNumber: 1)
     }
@@ -1080,7 +1268,7 @@ extension Admin_V1_UpdateEmployeeAccountRequest: SwiftProtobuf.Message, SwiftPro
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Admin_V1_UpdateEmployeeAccountRequest, rhs: Admin_V1_UpdateEmployeeAccountRequest) -> Bool {
+  public static func ==(lhs: Admin_V1_UpdateEmployeeAccountRequest, rhs: Admin_V1_UpdateEmployeeAccountRequest) -> Bool {
     if lhs.userID != rhs.userID {return false}
     if lhs.email != rhs.email {return false}
     if lhs.phoneNumber != rhs.phoneNumber {return false}
@@ -1091,10 +1279,10 @@ extension Admin_V1_UpdateEmployeeAccountRequest: SwiftProtobuf.Message, SwiftPro
 }
 
 extension Admin_V1_UpdateEmployeeAccountResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".UpdateEmployeeAccountResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}success\0")
+  public static let protoMessageName: String = _protobuf_package + ".UpdateEmployeeAccountResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}success\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1106,14 +1294,14 @@ extension Admin_V1_UpdateEmployeeAccountResponse: SwiftProtobuf.Message, SwiftPr
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if self.success != false {
       try visitor.visitSingularBoolField(value: self.success, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Admin_V1_UpdateEmployeeAccountResponse, rhs: Admin_V1_UpdateEmployeeAccountResponse) -> Bool {
+  public static func ==(lhs: Admin_V1_UpdateEmployeeAccountResponse, rhs: Admin_V1_UpdateEmployeeAccountResponse) -> Bool {
     if lhs.success != rhs.success {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -1121,10 +1309,10 @@ extension Admin_V1_UpdateEmployeeAccountResponse: SwiftProtobuf.Message, SwiftPr
 }
 
 extension Admin_V1_AssignEmployeeBranchRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".AssignEmployeeBranchRequest"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{3}branch_id\0\u{3}clear_branch\0")
+  public static let protoMessageName: String = _protobuf_package + ".AssignEmployeeBranchRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{3}branch_id\0\u{3}clear_branch\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1138,7 +1326,7 @@ extension Admin_V1_AssignEmployeeBranchRequest: SwiftProtobuf.Message, SwiftProt
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if !self.userID.isEmpty {
       try visitor.visitSingularStringField(value: self.userID, fieldNumber: 1)
     }
@@ -1151,7 +1339,7 @@ extension Admin_V1_AssignEmployeeBranchRequest: SwiftProtobuf.Message, SwiftProt
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Admin_V1_AssignEmployeeBranchRequest, rhs: Admin_V1_AssignEmployeeBranchRequest) -> Bool {
+  public static func ==(lhs: Admin_V1_AssignEmployeeBranchRequest, rhs: Admin_V1_AssignEmployeeBranchRequest) -> Bool {
     if lhs.userID != rhs.userID {return false}
     if lhs.branchID != rhs.branchID {return false}
     if lhs.clearBranch_p != rhs.clearBranch_p {return false}
@@ -1161,10 +1349,10 @@ extension Admin_V1_AssignEmployeeBranchRequest: SwiftProtobuf.Message, SwiftProt
 }
 
 extension Admin_V1_AssignEmployeeBranchResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".AssignEmployeeBranchResponse"
-  static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}success\0")
+  public static let protoMessageName: String = _protobuf_package + ".AssignEmployeeBranchResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}success\0")
 
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
       // The use of inline closures is to circumvent an issue where the compiler
       // allocates stack space for every case branch when no optimizations are
@@ -1176,14 +1364,134 @@ extension Admin_V1_AssignEmployeeBranchResponse: SwiftProtobuf.Message, SwiftPro
     }
   }
 
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
     if self.success != false {
       try visitor.visitSingularBoolField(value: self.success, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Admin_V1_AssignEmployeeBranchResponse, rhs: Admin_V1_AssignEmployeeBranchResponse) -> Bool {
+  public static func ==(lhs: Admin_V1_AssignEmployeeBranchResponse, rhs: Admin_V1_AssignEmployeeBranchResponse) -> Bool {
+    if lhs.success != rhs.success {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Admin_V1_DeleteBankBranchRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".DeleteBankBranchRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}branch_id\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.branchID) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.branchID.isEmpty {
+      try visitor.visitSingularStringField(value: self.branchID, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Admin_V1_DeleteBankBranchRequest, rhs: Admin_V1_DeleteBankBranchRequest) -> Bool {
+    if lhs.branchID != rhs.branchID {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Admin_V1_DeleteBankBranchResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".DeleteBankBranchResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}success\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.success) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.success != false {
+      try visitor.visitSingularBoolField(value: self.success, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Admin_V1_DeleteBankBranchResponse, rhs: Admin_V1_DeleteBankBranchResponse) -> Bool {
+    if lhs.success != rhs.success {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Admin_V1_DeleteEmployeeAccountRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".DeleteEmployeeAccountRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.userID) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.userID.isEmpty {
+      try visitor.visitSingularStringField(value: self.userID, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Admin_V1_DeleteEmployeeAccountRequest, rhs: Admin_V1_DeleteEmployeeAccountRequest) -> Bool {
+    if lhs.userID != rhs.userID {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Admin_V1_DeleteEmployeeAccountResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".DeleteEmployeeAccountResponse"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}success\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.success) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.success != false {
+      try visitor.visitSingularBoolField(value: self.success, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Admin_V1_DeleteEmployeeAccountResponse, rhs: Admin_V1_DeleteEmployeeAccountResponse) -> Bool {
     if lhs.success != rhs.success {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

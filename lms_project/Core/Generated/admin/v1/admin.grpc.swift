@@ -15,129 +15,168 @@ import GRPCProtobuf
 
 /// Namespace containing generated types for the "admin.v1.AdminService" service.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-internal enum Admin_V1_AdminService {
+public enum Admin_V1_AdminService: Sendable {
     /// Service descriptor for the "admin.v1.AdminService" service.
-    internal static let descriptor = GRPCCore.ServiceDescriptor(fullyQualifiedService: "admin.v1.AdminService")
+    public static let descriptor = GRPCCore.ServiceDescriptor(fullyQualifiedService: "admin.v1.AdminService")
     /// Namespace for method metadata.
-    internal enum Method {
+    public enum Method: Sendable {
         /// Namespace for "CreateAdminAccount" metadata.
-        internal enum CreateAdminAccount {
+        public enum CreateAdminAccount: Sendable {
             /// Request type for "CreateAdminAccount".
-            internal typealias Input = Admin_V1_CreateAdminAccountRequest
+            public typealias Input = Admin_V1_CreateAdminAccountRequest
             /// Response type for "CreateAdminAccount".
-            internal typealias Output = Admin_V1_CreateAdminAccountResponse
+            public typealias Output = Admin_V1_CreateAdminAccountResponse
             /// Descriptor for "CreateAdminAccount".
-            internal static let descriptor = GRPCCore.MethodDescriptor(
+            public static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "admin.v1.AdminService"),
                 method: "CreateAdminAccount"
             )
         }
         /// Namespace for "CreateEmployeeAccount" metadata.
-        internal enum CreateEmployeeAccount {
+        public enum CreateEmployeeAccount: Sendable {
             /// Request type for "CreateEmployeeAccount".
-            internal typealias Input = Admin_V1_CreateEmployeeAccountRequest
+            public typealias Input = Admin_V1_CreateEmployeeAccountRequest
             /// Response type for "CreateEmployeeAccount".
-            internal typealias Output = Admin_V1_CreateEmployeeAccountResponse
+            public typealias Output = Admin_V1_CreateEmployeeAccountResponse
             /// Descriptor for "CreateEmployeeAccount".
-            internal static let descriptor = GRPCCore.MethodDescriptor(
+            public static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "admin.v1.AdminService"),
                 method: "CreateEmployeeAccount"
             )
         }
         /// Namespace for "ListEmployeeAccounts" metadata.
-        internal enum ListEmployeeAccounts {
+        public enum ListEmployeeAccounts: Sendable {
             /// Request type for "ListEmployeeAccounts".
-            internal typealias Input = Admin_V1_ListEmployeeAccountsRequest
+            public typealias Input = Admin_V1_ListEmployeeAccountsRequest
             /// Response type for "ListEmployeeAccounts".
-            internal typealias Output = Admin_V1_ListEmployeeAccountsResponse
+            public typealias Output = Admin_V1_ListEmployeeAccountsResponse
             /// Descriptor for "ListEmployeeAccounts".
-            internal static let descriptor = GRPCCore.MethodDescriptor(
+            public static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "admin.v1.AdminService"),
                 method: "ListEmployeeAccounts"
             )
         }
         /// Namespace for "CreateDstAccount" metadata.
-        internal enum CreateDstAccount {
+        public enum CreateDstAccount: Sendable {
             /// Request type for "CreateDstAccount".
-            internal typealias Input = Admin_V1_CreateDstAccountRequest
+            public typealias Input = Admin_V1_CreateDstAccountRequest
             /// Response type for "CreateDstAccount".
-            internal typealias Output = Admin_V1_CreateDstAccountResponse
+            public typealias Output = Admin_V1_CreateDstAccountResponse
             /// Descriptor for "CreateDstAccount".
-            internal static let descriptor = GRPCCore.MethodDescriptor(
+            public static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "admin.v1.AdminService"),
                 method: "CreateDstAccount"
             )
         }
+        /// Namespace for "UpdateDstAccount" metadata.
+        public enum UpdateDstAccount: Sendable {
+            /// Request type for "UpdateDstAccount".
+            public typealias Input = Admin_V1_UpdateDstAccountRequest
+            /// Response type for "UpdateDstAccount".
+            public typealias Output = Admin_V1_UpdateDstAccountResponse
+            /// Descriptor for "UpdateDstAccount".
+            public static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "admin.v1.AdminService"),
+                method: "UpdateDstAccount"
+            )
+        }
         /// Namespace for "CreateBankBranch" metadata.
-        internal enum CreateBankBranch {
+        public enum CreateBankBranch: Sendable {
             /// Request type for "CreateBankBranch".
-            internal typealias Input = Admin_V1_CreateBankBranchRequest
+            public typealias Input = Admin_V1_CreateBankBranchRequest
             /// Response type for "CreateBankBranch".
-            internal typealias Output = Admin_V1_CreateBankBranchResponse
+            public typealias Output = Admin_V1_CreateBankBranchResponse
             /// Descriptor for "CreateBankBranch".
-            internal static let descriptor = GRPCCore.MethodDescriptor(
+            public static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "admin.v1.AdminService"),
                 method: "CreateBankBranch"
             )
         }
         /// Namespace for "UpdateBankBranch" metadata.
-        internal enum UpdateBankBranch {
+        public enum UpdateBankBranch: Sendable {
             /// Request type for "UpdateBankBranch".
-            internal typealias Input = Admin_V1_UpdateBankBranchRequest
+            public typealias Input = Admin_V1_UpdateBankBranchRequest
             /// Response type for "UpdateBankBranch".
-            internal typealias Output = Admin_V1_UpdateBankBranchResponse
+            public typealias Output = Admin_V1_UpdateBankBranchResponse
             /// Descriptor for "UpdateBankBranch".
-            internal static let descriptor = GRPCCore.MethodDescriptor(
+            public static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "admin.v1.AdminService"),
                 method: "UpdateBankBranch"
             )
         }
+        /// Namespace for "DeleteBankBranch" metadata.
+        public enum DeleteBankBranch: Sendable {
+            /// Request type for "DeleteBankBranch".
+            public typealias Input = Admin_V1_DeleteBankBranchRequest
+            /// Response type for "DeleteBankBranch".
+            public typealias Output = Admin_V1_DeleteBankBranchResponse
+            /// Descriptor for "DeleteBankBranch".
+            public static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "admin.v1.AdminService"),
+                method: "DeleteBankBranch"
+            )
+        }
         /// Namespace for "UpdateBranchDstCommission" metadata.
-        internal enum UpdateBranchDstCommission {
+        public enum UpdateBranchDstCommission: Sendable {
             /// Request type for "UpdateBranchDstCommission".
-            internal typealias Input = Admin_V1_UpdateBranchDstCommissionRequest
+            public typealias Input = Admin_V1_UpdateBranchDstCommissionRequest
             /// Response type for "UpdateBranchDstCommission".
-            internal typealias Output = Admin_V1_UpdateBranchDstCommissionResponse
+            public typealias Output = Admin_V1_UpdateBranchDstCommissionResponse
             /// Descriptor for "UpdateBranchDstCommission".
-            internal static let descriptor = GRPCCore.MethodDescriptor(
+            public static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "admin.v1.AdminService"),
                 method: "UpdateBranchDstCommission"
             )
         }
         /// Namespace for "UpdateEmployeeAccount" metadata.
-        internal enum UpdateEmployeeAccount {
+        public enum UpdateEmployeeAccount: Sendable {
             /// Request type for "UpdateEmployeeAccount".
-            internal typealias Input = Admin_V1_UpdateEmployeeAccountRequest
+            public typealias Input = Admin_V1_UpdateEmployeeAccountRequest
             /// Response type for "UpdateEmployeeAccount".
-            internal typealias Output = Admin_V1_UpdateEmployeeAccountResponse
+            public typealias Output = Admin_V1_UpdateEmployeeAccountResponse
             /// Descriptor for "UpdateEmployeeAccount".
-            internal static let descriptor = GRPCCore.MethodDescriptor(
+            public static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "admin.v1.AdminService"),
                 method: "UpdateEmployeeAccount"
             )
         }
+        /// Namespace for "DeleteEmployeeAccount" metadata.
+        public enum DeleteEmployeeAccount: Sendable {
+            /// Request type for "DeleteEmployeeAccount".
+            public typealias Input = Admin_V1_DeleteEmployeeAccountRequest
+            /// Response type for "DeleteEmployeeAccount".
+            public typealias Output = Admin_V1_DeleteEmployeeAccountResponse
+            /// Descriptor for "DeleteEmployeeAccount".
+            public static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "admin.v1.AdminService"),
+                method: "DeleteEmployeeAccount"
+            )
+        }
         /// Namespace for "AssignEmployeeBranch" metadata.
-        internal enum AssignEmployeeBranch {
+        public enum AssignEmployeeBranch: Sendable {
             /// Request type for "AssignEmployeeBranch".
-            internal typealias Input = Admin_V1_AssignEmployeeBranchRequest
+            public typealias Input = Admin_V1_AssignEmployeeBranchRequest
             /// Response type for "AssignEmployeeBranch".
-            internal typealias Output = Admin_V1_AssignEmployeeBranchResponse
+            public typealias Output = Admin_V1_AssignEmployeeBranchResponse
             /// Descriptor for "AssignEmployeeBranch".
-            internal static let descriptor = GRPCCore.MethodDescriptor(
+            public static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "admin.v1.AdminService"),
                 method: "AssignEmployeeBranch"
             )
         }
         /// Descriptors for all methods in the "admin.v1.AdminService" service.
-        internal static let descriptors: [GRPCCore.MethodDescriptor] = [
+        public static let descriptors: [GRPCCore.MethodDescriptor] = [
             CreateAdminAccount.descriptor,
             CreateEmployeeAccount.descriptor,
             ListEmployeeAccounts.descriptor,
             CreateDstAccount.descriptor,
+            UpdateDstAccount.descriptor,
             CreateBankBranch.descriptor,
             UpdateBankBranch.descriptor,
+            DeleteBankBranch.descriptor,
             UpdateBranchDstCommission.descriptor,
             UpdateEmployeeAccount.descriptor,
+            DeleteEmployeeAccount.descriptor,
             AssignEmployeeBranch.descriptor
         ]
     }
@@ -146,7 +185,7 @@ internal enum Admin_V1_AdminService {
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 extension GRPCCore.ServiceDescriptor {
     /// Service descriptor for the "admin.v1.AdminService" service.
-    internal static let admin_v1_AdminService = GRPCCore.ServiceDescriptor(fullyQualifiedService: "admin.v1.AdminService")
+    public static let admin_v1_AdminService = GRPCCore.ServiceDescriptor(fullyQualifiedService: "admin.v1.AdminService")
 }
 
 // MARK: admin.v1.AdminService (server)
@@ -163,7 +202,7 @@ extension Admin_V1_AdminService {
     ///
     /// Where possible, prefer using the stricter, less-verbose ``ServiceProtocol``
     /// or ``SimpleServiceProtocol`` instead.
-    internal protocol StreamingServiceProtocol: GRPCCore.RegistrableRPCService {
+    public protocol StreamingServiceProtocol: GRPCCore.RegistrableRPCService {
         /// Handle the "CreateAdminAccount" method.
         ///
         /// - Parameters:
@@ -220,6 +259,20 @@ extension Admin_V1_AdminService {
             context: GRPCCore.ServerContext
         ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_CreateDstAccountResponse>
 
+        /// Handle the "UpdateDstAccount" method.
+        ///
+        /// - Parameters:
+        ///   - request: A streaming request of `Admin_V1_UpdateDstAccountRequest` messages.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A streaming response of `Admin_V1_UpdateDstAccountResponse` messages.
+        func updateDstAccount(
+            request: GRPCCore.StreamingServerRequest<Admin_V1_UpdateDstAccountRequest>,
+            context: GRPCCore.ServerContext
+        ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_UpdateDstAccountResponse>
+
         /// Handle the "CreateBankBranch" method.
         ///
         /// - Parameters:
@@ -247,6 +300,20 @@ extension Admin_V1_AdminService {
             request: GRPCCore.StreamingServerRequest<Admin_V1_UpdateBankBranchRequest>,
             context: GRPCCore.ServerContext
         ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_UpdateBankBranchResponse>
+
+        /// Handle the "DeleteBankBranch" method.
+        ///
+        /// - Parameters:
+        ///   - request: A streaming request of `Admin_V1_DeleteBankBranchRequest` messages.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A streaming response of `Admin_V1_DeleteBankBranchResponse` messages.
+        func deleteBankBranch(
+            request: GRPCCore.StreamingServerRequest<Admin_V1_DeleteBankBranchRequest>,
+            context: GRPCCore.ServerContext
+        ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_DeleteBankBranchResponse>
 
         /// Handle the "UpdateBranchDstCommission" method.
         ///
@@ -276,6 +343,20 @@ extension Admin_V1_AdminService {
             context: GRPCCore.ServerContext
         ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_UpdateEmployeeAccountResponse>
 
+        /// Handle the "DeleteEmployeeAccount" method.
+        ///
+        /// - Parameters:
+        ///   - request: A streaming request of `Admin_V1_DeleteEmployeeAccountRequest` messages.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A streaming response of `Admin_V1_DeleteEmployeeAccountResponse` messages.
+        func deleteEmployeeAccount(
+            request: GRPCCore.StreamingServerRequest<Admin_V1_DeleteEmployeeAccountRequest>,
+            context: GRPCCore.ServerContext
+        ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_DeleteEmployeeAccountResponse>
+
         /// Handle the "AssignEmployeeBranch" method.
         ///
         /// - Parameters:
@@ -298,7 +379,7 @@ extension Admin_V1_AdminService {
     /// trailing response metadata. If you don't need these then consider using
     /// the ``SimpleServiceProtocol``. If you need fine grained control over your RPCs then
     /// use ``StreamingServiceProtocol``.
-    internal protocol ServiceProtocol: Admin_V1_AdminService.StreamingServiceProtocol {
+    public protocol ServiceProtocol: Admin_V1_AdminService.StreamingServiceProtocol {
         /// Handle the "CreateAdminAccount" method.
         ///
         /// - Parameters:
@@ -355,6 +436,20 @@ extension Admin_V1_AdminService {
             context: GRPCCore.ServerContext
         ) async throws -> GRPCCore.ServerResponse<Admin_V1_CreateDstAccountResponse>
 
+        /// Handle the "UpdateDstAccount" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Admin_V1_UpdateDstAccountRequest` message.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A response containing a single `Admin_V1_UpdateDstAccountResponse` message.
+        func updateDstAccount(
+            request: GRPCCore.ServerRequest<Admin_V1_UpdateDstAccountRequest>,
+            context: GRPCCore.ServerContext
+        ) async throws -> GRPCCore.ServerResponse<Admin_V1_UpdateDstAccountResponse>
+
         /// Handle the "CreateBankBranch" method.
         ///
         /// - Parameters:
@@ -382,6 +477,20 @@ extension Admin_V1_AdminService {
             request: GRPCCore.ServerRequest<Admin_V1_UpdateBankBranchRequest>,
             context: GRPCCore.ServerContext
         ) async throws -> GRPCCore.ServerResponse<Admin_V1_UpdateBankBranchResponse>
+
+        /// Handle the "DeleteBankBranch" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Admin_V1_DeleteBankBranchRequest` message.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A response containing a single `Admin_V1_DeleteBankBranchResponse` message.
+        func deleteBankBranch(
+            request: GRPCCore.ServerRequest<Admin_V1_DeleteBankBranchRequest>,
+            context: GRPCCore.ServerContext
+        ) async throws -> GRPCCore.ServerResponse<Admin_V1_DeleteBankBranchResponse>
 
         /// Handle the "UpdateBranchDstCommission" method.
         ///
@@ -411,6 +520,20 @@ extension Admin_V1_AdminService {
             context: GRPCCore.ServerContext
         ) async throws -> GRPCCore.ServerResponse<Admin_V1_UpdateEmployeeAccountResponse>
 
+        /// Handle the "DeleteEmployeeAccount" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Admin_V1_DeleteEmployeeAccountRequest` message.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A response containing a single `Admin_V1_DeleteEmployeeAccountResponse` message.
+        func deleteEmployeeAccount(
+            request: GRPCCore.ServerRequest<Admin_V1_DeleteEmployeeAccountRequest>,
+            context: GRPCCore.ServerContext
+        ) async throws -> GRPCCore.ServerResponse<Admin_V1_DeleteEmployeeAccountResponse>
+
         /// Handle the "AssignEmployeeBranch" method.
         ///
         /// - Parameters:
@@ -431,7 +554,7 @@ extension Admin_V1_AdminService {
     /// This is the highest level protocol for the service. The API is the easiest to use but
     /// doesn't provide access to request or response metadata. If you need access to these
     /// then use ``ServiceProtocol`` instead.
-    internal protocol SimpleServiceProtocol: Admin_V1_AdminService.ServiceProtocol {
+    public protocol SimpleServiceProtocol: Admin_V1_AdminService.ServiceProtocol {
         /// Handle the "CreateAdminAccount" method.
         ///
         /// - Parameters:
@@ -488,6 +611,20 @@ extension Admin_V1_AdminService {
             context: GRPCCore.ServerContext
         ) async throws -> Admin_V1_CreateDstAccountResponse
 
+        /// Handle the "UpdateDstAccount" method.
+        ///
+        /// - Parameters:
+        ///   - request: A `Admin_V1_UpdateDstAccountRequest` message.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A `Admin_V1_UpdateDstAccountResponse` to respond with.
+        func updateDstAccount(
+            request: Admin_V1_UpdateDstAccountRequest,
+            context: GRPCCore.ServerContext
+        ) async throws -> Admin_V1_UpdateDstAccountResponse
+
         /// Handle the "CreateBankBranch" method.
         ///
         /// - Parameters:
@@ -515,6 +652,20 @@ extension Admin_V1_AdminService {
             request: Admin_V1_UpdateBankBranchRequest,
             context: GRPCCore.ServerContext
         ) async throws -> Admin_V1_UpdateBankBranchResponse
+
+        /// Handle the "DeleteBankBranch" method.
+        ///
+        /// - Parameters:
+        ///   - request: A `Admin_V1_DeleteBankBranchRequest` message.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A `Admin_V1_DeleteBankBranchResponse` to respond with.
+        func deleteBankBranch(
+            request: Admin_V1_DeleteBankBranchRequest,
+            context: GRPCCore.ServerContext
+        ) async throws -> Admin_V1_DeleteBankBranchResponse
 
         /// Handle the "UpdateBranchDstCommission" method.
         ///
@@ -544,6 +695,20 @@ extension Admin_V1_AdminService {
             context: GRPCCore.ServerContext
         ) async throws -> Admin_V1_UpdateEmployeeAccountResponse
 
+        /// Handle the "DeleteEmployeeAccount" method.
+        ///
+        /// - Parameters:
+        ///   - request: A `Admin_V1_DeleteEmployeeAccountRequest` message.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A `Admin_V1_DeleteEmployeeAccountResponse` to respond with.
+        func deleteEmployeeAccount(
+            request: Admin_V1_DeleteEmployeeAccountRequest,
+            context: GRPCCore.ServerContext
+        ) async throws -> Admin_V1_DeleteEmployeeAccountResponse
+
         /// Handle the "AssignEmployeeBranch" method.
         ///
         /// - Parameters:
@@ -563,7 +728,7 @@ extension Admin_V1_AdminService {
 // Default implementation of 'registerMethods(with:)'.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 extension Admin_V1_AdminService.StreamingServiceProtocol {
-    internal func registerMethods<Transport>(with router: inout GRPCCore.RPCRouter<Transport>) where Transport: GRPCCore.ServerTransport {
+    public func registerMethods<Transport>(with router: inout GRPCCore.RPCRouter<Transport>) where Transport: GRPCCore.ServerTransport {
         router.registerHandler(
             forMethod: Admin_V1_AdminService.Method.CreateAdminAccount.descriptor,
             deserializer: GRPCProtobuf.ProtobufDeserializer<Admin_V1_CreateAdminAccountRequest>(),
@@ -609,6 +774,17 @@ extension Admin_V1_AdminService.StreamingServiceProtocol {
             }
         )
         router.registerHandler(
+            forMethod: Admin_V1_AdminService.Method.UpdateDstAccount.descriptor,
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Admin_V1_UpdateDstAccountRequest>(),
+            serializer: GRPCProtobuf.ProtobufSerializer<Admin_V1_UpdateDstAccountResponse>(),
+            handler: { request, context in
+                try await self.updateDstAccount(
+                    request: request,
+                    context: context
+                )
+            }
+        )
+        router.registerHandler(
             forMethod: Admin_V1_AdminService.Method.CreateBankBranch.descriptor,
             deserializer: GRPCProtobuf.ProtobufDeserializer<Admin_V1_CreateBankBranchRequest>(),
             serializer: GRPCProtobuf.ProtobufSerializer<Admin_V1_CreateBankBranchResponse>(),
@@ -625,6 +801,17 @@ extension Admin_V1_AdminService.StreamingServiceProtocol {
             serializer: GRPCProtobuf.ProtobufSerializer<Admin_V1_UpdateBankBranchResponse>(),
             handler: { request, context in
                 try await self.updateBankBranch(
+                    request: request,
+                    context: context
+                )
+            }
+        )
+        router.registerHandler(
+            forMethod: Admin_V1_AdminService.Method.DeleteBankBranch.descriptor,
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Admin_V1_DeleteBankBranchRequest>(),
+            serializer: GRPCProtobuf.ProtobufSerializer<Admin_V1_DeleteBankBranchResponse>(),
+            handler: { request, context in
+                try await self.deleteBankBranch(
                     request: request,
                     context: context
                 )
@@ -653,6 +840,17 @@ extension Admin_V1_AdminService.StreamingServiceProtocol {
             }
         )
         router.registerHandler(
+            forMethod: Admin_V1_AdminService.Method.DeleteEmployeeAccount.descriptor,
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Admin_V1_DeleteEmployeeAccountRequest>(),
+            serializer: GRPCProtobuf.ProtobufSerializer<Admin_V1_DeleteEmployeeAccountResponse>(),
+            handler: { request, context in
+                try await self.deleteEmployeeAccount(
+                    request: request,
+                    context: context
+                )
+            }
+        )
+        router.registerHandler(
             forMethod: Admin_V1_AdminService.Method.AssignEmployeeBranch.descriptor,
             deserializer: GRPCProtobuf.ProtobufDeserializer<Admin_V1_AssignEmployeeBranchRequest>(),
             serializer: GRPCProtobuf.ProtobufSerializer<Admin_V1_AssignEmployeeBranchResponse>(),
@@ -669,7 +867,7 @@ extension Admin_V1_AdminService.StreamingServiceProtocol {
 // Default implementation of streaming methods from 'StreamingServiceProtocol'.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 extension Admin_V1_AdminService.ServiceProtocol {
-    internal func createAdminAccount(
+    public func createAdminAccount(
         request: GRPCCore.StreamingServerRequest<Admin_V1_CreateAdminAccountRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_CreateAdminAccountResponse> {
@@ -680,7 +878,7 @@ extension Admin_V1_AdminService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    internal func createEmployeeAccount(
+    public func createEmployeeAccount(
         request: GRPCCore.StreamingServerRequest<Admin_V1_CreateEmployeeAccountRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_CreateEmployeeAccountResponse> {
@@ -691,7 +889,7 @@ extension Admin_V1_AdminService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    internal func listEmployeeAccounts(
+    public func listEmployeeAccounts(
         request: GRPCCore.StreamingServerRequest<Admin_V1_ListEmployeeAccountsRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_ListEmployeeAccountsResponse> {
@@ -702,7 +900,7 @@ extension Admin_V1_AdminService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    internal func createDstAccount(
+    public func createDstAccount(
         request: GRPCCore.StreamingServerRequest<Admin_V1_CreateDstAccountRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_CreateDstAccountResponse> {
@@ -713,7 +911,18 @@ extension Admin_V1_AdminService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    internal func createBankBranch(
+    public func updateDstAccount(
+        request: GRPCCore.StreamingServerRequest<Admin_V1_UpdateDstAccountRequest>,
+        context: GRPCCore.ServerContext
+    ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_UpdateDstAccountResponse> {
+        let response = try await self.updateDstAccount(
+            request: GRPCCore.ServerRequest(stream: request),
+            context: context
+        )
+        return GRPCCore.StreamingServerResponse(single: response)
+    }
+
+    public func createBankBranch(
         request: GRPCCore.StreamingServerRequest<Admin_V1_CreateBankBranchRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_CreateBankBranchResponse> {
@@ -724,7 +933,7 @@ extension Admin_V1_AdminService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    internal func updateBankBranch(
+    public func updateBankBranch(
         request: GRPCCore.StreamingServerRequest<Admin_V1_UpdateBankBranchRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_UpdateBankBranchResponse> {
@@ -735,7 +944,18 @@ extension Admin_V1_AdminService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    internal func updateBranchDstCommission(
+    public func deleteBankBranch(
+        request: GRPCCore.StreamingServerRequest<Admin_V1_DeleteBankBranchRequest>,
+        context: GRPCCore.ServerContext
+    ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_DeleteBankBranchResponse> {
+        let response = try await self.deleteBankBranch(
+            request: GRPCCore.ServerRequest(stream: request),
+            context: context
+        )
+        return GRPCCore.StreamingServerResponse(single: response)
+    }
+
+    public func updateBranchDstCommission(
         request: GRPCCore.StreamingServerRequest<Admin_V1_UpdateBranchDstCommissionRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_UpdateBranchDstCommissionResponse> {
@@ -746,7 +966,7 @@ extension Admin_V1_AdminService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    internal func updateEmployeeAccount(
+    public func updateEmployeeAccount(
         request: GRPCCore.StreamingServerRequest<Admin_V1_UpdateEmployeeAccountRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_UpdateEmployeeAccountResponse> {
@@ -757,7 +977,18 @@ extension Admin_V1_AdminService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    internal func assignEmployeeBranch(
+    public func deleteEmployeeAccount(
+        request: GRPCCore.StreamingServerRequest<Admin_V1_DeleteEmployeeAccountRequest>,
+        context: GRPCCore.ServerContext
+    ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_DeleteEmployeeAccountResponse> {
+        let response = try await self.deleteEmployeeAccount(
+            request: GRPCCore.ServerRequest(stream: request),
+            context: context
+        )
+        return GRPCCore.StreamingServerResponse(single: response)
+    }
+
+    public func assignEmployeeBranch(
         request: GRPCCore.StreamingServerRequest<Admin_V1_AssignEmployeeBranchRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Admin_V1_AssignEmployeeBranchResponse> {
@@ -772,7 +1003,7 @@ extension Admin_V1_AdminService.ServiceProtocol {
 // Default implementation of methods from 'ServiceProtocol'.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 extension Admin_V1_AdminService.SimpleServiceProtocol {
-    internal func createAdminAccount(
+    public func createAdminAccount(
         request: GRPCCore.ServerRequest<Admin_V1_CreateAdminAccountRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Admin_V1_CreateAdminAccountResponse> {
@@ -785,7 +1016,7 @@ extension Admin_V1_AdminService.SimpleServiceProtocol {
         )
     }
 
-    internal func createEmployeeAccount(
+    public func createEmployeeAccount(
         request: GRPCCore.ServerRequest<Admin_V1_CreateEmployeeAccountRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Admin_V1_CreateEmployeeAccountResponse> {
@@ -798,7 +1029,7 @@ extension Admin_V1_AdminService.SimpleServiceProtocol {
         )
     }
 
-    internal func listEmployeeAccounts(
+    public func listEmployeeAccounts(
         request: GRPCCore.ServerRequest<Admin_V1_ListEmployeeAccountsRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Admin_V1_ListEmployeeAccountsResponse> {
@@ -811,7 +1042,7 @@ extension Admin_V1_AdminService.SimpleServiceProtocol {
         )
     }
 
-    internal func createDstAccount(
+    public func createDstAccount(
         request: GRPCCore.ServerRequest<Admin_V1_CreateDstAccountRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Admin_V1_CreateDstAccountResponse> {
@@ -824,7 +1055,20 @@ extension Admin_V1_AdminService.SimpleServiceProtocol {
         )
     }
 
-    internal func createBankBranch(
+    public func updateDstAccount(
+        request: GRPCCore.ServerRequest<Admin_V1_UpdateDstAccountRequest>,
+        context: GRPCCore.ServerContext
+    ) async throws -> GRPCCore.ServerResponse<Admin_V1_UpdateDstAccountResponse> {
+        return GRPCCore.ServerResponse<Admin_V1_UpdateDstAccountResponse>(
+            message: try await self.updateDstAccount(
+                request: request.message,
+                context: context
+            ),
+            metadata: [:]
+        )
+    }
+
+    public func createBankBranch(
         request: GRPCCore.ServerRequest<Admin_V1_CreateBankBranchRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Admin_V1_CreateBankBranchResponse> {
@@ -837,7 +1081,7 @@ extension Admin_V1_AdminService.SimpleServiceProtocol {
         )
     }
 
-    internal func updateBankBranch(
+    public func updateBankBranch(
         request: GRPCCore.ServerRequest<Admin_V1_UpdateBankBranchRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Admin_V1_UpdateBankBranchResponse> {
@@ -850,7 +1094,20 @@ extension Admin_V1_AdminService.SimpleServiceProtocol {
         )
     }
 
-    internal func updateBranchDstCommission(
+    public func deleteBankBranch(
+        request: GRPCCore.ServerRequest<Admin_V1_DeleteBankBranchRequest>,
+        context: GRPCCore.ServerContext
+    ) async throws -> GRPCCore.ServerResponse<Admin_V1_DeleteBankBranchResponse> {
+        return GRPCCore.ServerResponse<Admin_V1_DeleteBankBranchResponse>(
+            message: try await self.deleteBankBranch(
+                request: request.message,
+                context: context
+            ),
+            metadata: [:]
+        )
+    }
+
+    public func updateBranchDstCommission(
         request: GRPCCore.ServerRequest<Admin_V1_UpdateBranchDstCommissionRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Admin_V1_UpdateBranchDstCommissionResponse> {
@@ -863,7 +1120,7 @@ extension Admin_V1_AdminService.SimpleServiceProtocol {
         )
     }
 
-    internal func updateEmployeeAccount(
+    public func updateEmployeeAccount(
         request: GRPCCore.ServerRequest<Admin_V1_UpdateEmployeeAccountRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Admin_V1_UpdateEmployeeAccountResponse> {
@@ -876,7 +1133,20 @@ extension Admin_V1_AdminService.SimpleServiceProtocol {
         )
     }
 
-    internal func assignEmployeeBranch(
+    public func deleteEmployeeAccount(
+        request: GRPCCore.ServerRequest<Admin_V1_DeleteEmployeeAccountRequest>,
+        context: GRPCCore.ServerContext
+    ) async throws -> GRPCCore.ServerResponse<Admin_V1_DeleteEmployeeAccountResponse> {
+        return GRPCCore.ServerResponse<Admin_V1_DeleteEmployeeAccountResponse>(
+            message: try await self.deleteEmployeeAccount(
+                request: request.message,
+                context: context
+            ),
+            metadata: [:]
+        )
+    }
+
+    public func assignEmployeeBranch(
         request: GRPCCore.ServerRequest<Admin_V1_AssignEmployeeBranchRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Admin_V1_AssignEmployeeBranchResponse> {
@@ -898,7 +1168,7 @@ extension Admin_V1_AdminService {
     ///
     /// You don't need to implement this protocol directly, use the generated
     /// implementation, ``Client``.
-    internal protocol ClientProtocol: Sendable {
+    public protocol ClientProtocol: Sendable {
         /// Call the "CreateAdminAccount" method.
         ///
         /// - Parameters:
@@ -975,6 +1245,25 @@ extension Admin_V1_AdminService {
             onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_CreateDstAccountResponse>) async throws -> Result
         ) async throws -> Result where Result: Sendable
 
+        /// Call the "UpdateDstAccount" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Admin_V1_UpdateDstAccountRequest` message.
+        ///   - serializer: A serializer for `Admin_V1_UpdateDstAccountRequest` messages.
+        ///   - deserializer: A deserializer for `Admin_V1_UpdateDstAccountResponse` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response, the result of which is
+        ///       returned to the caller. Returning from the closure will cancel the RPC if it
+        ///       hasn't already finished.
+        /// - Returns: The result of `handleResponse`.
+        func updateDstAccount<Result>(
+            request: GRPCCore.ClientRequest<Admin_V1_UpdateDstAccountRequest>,
+            serializer: some GRPCCore.MessageSerializer<Admin_V1_UpdateDstAccountRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Admin_V1_UpdateDstAccountResponse>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_UpdateDstAccountResponse>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
+
         /// Call the "CreateBankBranch" method.
         ///
         /// - Parameters:
@@ -1011,6 +1300,25 @@ extension Admin_V1_AdminService {
             deserializer: some GRPCCore.MessageDeserializer<Admin_V1_UpdateBankBranchResponse>,
             options: GRPCCore.CallOptions,
             onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_UpdateBankBranchResponse>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
+
+        /// Call the "DeleteBankBranch" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Admin_V1_DeleteBankBranchRequest` message.
+        ///   - serializer: A serializer for `Admin_V1_DeleteBankBranchRequest` messages.
+        ///   - deserializer: A deserializer for `Admin_V1_DeleteBankBranchResponse` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response, the result of which is
+        ///       returned to the caller. Returning from the closure will cancel the RPC if it
+        ///       hasn't already finished.
+        /// - Returns: The result of `handleResponse`.
+        func deleteBankBranch<Result>(
+            request: GRPCCore.ClientRequest<Admin_V1_DeleteBankBranchRequest>,
+            serializer: some GRPCCore.MessageSerializer<Admin_V1_DeleteBankBranchRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Admin_V1_DeleteBankBranchResponse>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_DeleteBankBranchResponse>) async throws -> Result
         ) async throws -> Result where Result: Sendable
 
         /// Call the "UpdateBranchDstCommission" method.
@@ -1051,6 +1359,25 @@ extension Admin_V1_AdminService {
             onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_UpdateEmployeeAccountResponse>) async throws -> Result
         ) async throws -> Result where Result: Sendable
 
+        /// Call the "DeleteEmployeeAccount" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Admin_V1_DeleteEmployeeAccountRequest` message.
+        ///   - serializer: A serializer for `Admin_V1_DeleteEmployeeAccountRequest` messages.
+        ///   - deserializer: A deserializer for `Admin_V1_DeleteEmployeeAccountResponse` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response, the result of which is
+        ///       returned to the caller. Returning from the closure will cancel the RPC if it
+        ///       hasn't already finished.
+        /// - Returns: The result of `handleResponse`.
+        func deleteEmployeeAccount<Result>(
+            request: GRPCCore.ClientRequest<Admin_V1_DeleteEmployeeAccountRequest>,
+            serializer: some GRPCCore.MessageSerializer<Admin_V1_DeleteEmployeeAccountRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Admin_V1_DeleteEmployeeAccountResponse>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_DeleteEmployeeAccountResponse>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
+
         /// Call the "AssignEmployeeBranch" method.
         ///
         /// - Parameters:
@@ -1076,14 +1403,14 @@ extension Admin_V1_AdminService {
     /// The ``Client`` provides an implementation of ``ClientProtocol`` which wraps
     /// a `GRPCCore.GRPCCClient`. The underlying `GRPCClient` provides the long-lived
     /// means of communication with the remote peer.
-    internal struct Client<Transport>: ClientProtocol where Transport: GRPCCore.ClientTransport {
+    public struct Client<Transport>: ClientProtocol where Transport: GRPCCore.ClientTransport {
         private let client: GRPCCore.GRPCClient<Transport>
 
         /// Creates a new client wrapping the provided `GRPCCore.GRPCClient`.
         ///
         /// - Parameters:
         ///   - client: A `GRPCCore.GRPCClient` providing a communication channel to the service.
-        internal init(wrapping client: GRPCCore.GRPCClient<Transport>) {
+        public init(wrapping client: GRPCCore.GRPCClient<Transport>) {
             self.client = client
         }
 
@@ -1098,7 +1425,7 @@ extension Admin_V1_AdminService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        internal func createAdminAccount<Result>(
+        public func createAdminAccount<Result>(
             request: GRPCCore.ClientRequest<Admin_V1_CreateAdminAccountRequest>,
             serializer: some GRPCCore.MessageSerializer<Admin_V1_CreateAdminAccountRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Admin_V1_CreateAdminAccountResponse>,
@@ -1128,7 +1455,7 @@ extension Admin_V1_AdminService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        internal func createEmployeeAccount<Result>(
+        public func createEmployeeAccount<Result>(
             request: GRPCCore.ClientRequest<Admin_V1_CreateEmployeeAccountRequest>,
             serializer: some GRPCCore.MessageSerializer<Admin_V1_CreateEmployeeAccountRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Admin_V1_CreateEmployeeAccountResponse>,
@@ -1158,7 +1485,7 @@ extension Admin_V1_AdminService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        internal func listEmployeeAccounts<Result>(
+        public func listEmployeeAccounts<Result>(
             request: GRPCCore.ClientRequest<Admin_V1_ListEmployeeAccountsRequest>,
             serializer: some GRPCCore.MessageSerializer<Admin_V1_ListEmployeeAccountsRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Admin_V1_ListEmployeeAccountsResponse>,
@@ -1188,7 +1515,7 @@ extension Admin_V1_AdminService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        internal func createDstAccount<Result>(
+        public func createDstAccount<Result>(
             request: GRPCCore.ClientRequest<Admin_V1_CreateDstAccountRequest>,
             serializer: some GRPCCore.MessageSerializer<Admin_V1_CreateDstAccountRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Admin_V1_CreateDstAccountResponse>,
@@ -1207,6 +1534,36 @@ extension Admin_V1_AdminService {
             )
         }
 
+        /// Call the "UpdateDstAccount" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Admin_V1_UpdateDstAccountRequest` message.
+        ///   - serializer: A serializer for `Admin_V1_UpdateDstAccountRequest` messages.
+        ///   - deserializer: A deserializer for `Admin_V1_UpdateDstAccountResponse` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response, the result of which is
+        ///       returned to the caller. Returning from the closure will cancel the RPC if it
+        ///       hasn't already finished.
+        /// - Returns: The result of `handleResponse`.
+        public func updateDstAccount<Result>(
+            request: GRPCCore.ClientRequest<Admin_V1_UpdateDstAccountRequest>,
+            serializer: some GRPCCore.MessageSerializer<Admin_V1_UpdateDstAccountRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Admin_V1_UpdateDstAccountResponse>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_UpdateDstAccountResponse>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Admin_V1_AdminService.Method.UpdateDstAccount.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
+
         /// Call the "CreateBankBranch" method.
         ///
         /// - Parameters:
@@ -1218,7 +1575,7 @@ extension Admin_V1_AdminService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        internal func createBankBranch<Result>(
+        public func createBankBranch<Result>(
             request: GRPCCore.ClientRequest<Admin_V1_CreateBankBranchRequest>,
             serializer: some GRPCCore.MessageSerializer<Admin_V1_CreateBankBranchRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Admin_V1_CreateBankBranchResponse>,
@@ -1248,7 +1605,7 @@ extension Admin_V1_AdminService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        internal func updateBankBranch<Result>(
+        public func updateBankBranch<Result>(
             request: GRPCCore.ClientRequest<Admin_V1_UpdateBankBranchRequest>,
             serializer: some GRPCCore.MessageSerializer<Admin_V1_UpdateBankBranchRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Admin_V1_UpdateBankBranchResponse>,
@@ -1267,6 +1624,36 @@ extension Admin_V1_AdminService {
             )
         }
 
+        /// Call the "DeleteBankBranch" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Admin_V1_DeleteBankBranchRequest` message.
+        ///   - serializer: A serializer for `Admin_V1_DeleteBankBranchRequest` messages.
+        ///   - deserializer: A deserializer for `Admin_V1_DeleteBankBranchResponse` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response, the result of which is
+        ///       returned to the caller. Returning from the closure will cancel the RPC if it
+        ///       hasn't already finished.
+        /// - Returns: The result of `handleResponse`.
+        public func deleteBankBranch<Result>(
+            request: GRPCCore.ClientRequest<Admin_V1_DeleteBankBranchRequest>,
+            serializer: some GRPCCore.MessageSerializer<Admin_V1_DeleteBankBranchRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Admin_V1_DeleteBankBranchResponse>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_DeleteBankBranchResponse>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Admin_V1_AdminService.Method.DeleteBankBranch.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
+
         /// Call the "UpdateBranchDstCommission" method.
         ///
         /// - Parameters:
@@ -1278,7 +1665,7 @@ extension Admin_V1_AdminService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        internal func updateBranchDstCommission<Result>(
+        public func updateBranchDstCommission<Result>(
             request: GRPCCore.ClientRequest<Admin_V1_UpdateBranchDstCommissionRequest>,
             serializer: some GRPCCore.MessageSerializer<Admin_V1_UpdateBranchDstCommissionRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Admin_V1_UpdateBranchDstCommissionResponse>,
@@ -1308,7 +1695,7 @@ extension Admin_V1_AdminService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        internal func updateEmployeeAccount<Result>(
+        public func updateEmployeeAccount<Result>(
             request: GRPCCore.ClientRequest<Admin_V1_UpdateEmployeeAccountRequest>,
             serializer: some GRPCCore.MessageSerializer<Admin_V1_UpdateEmployeeAccountRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Admin_V1_UpdateEmployeeAccountResponse>,
@@ -1327,6 +1714,36 @@ extension Admin_V1_AdminService {
             )
         }
 
+        /// Call the "DeleteEmployeeAccount" method.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Admin_V1_DeleteEmployeeAccountRequest` message.
+        ///   - serializer: A serializer for `Admin_V1_DeleteEmployeeAccountRequest` messages.
+        ///   - deserializer: A deserializer for `Admin_V1_DeleteEmployeeAccountResponse` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response, the result of which is
+        ///       returned to the caller. Returning from the closure will cancel the RPC if it
+        ///       hasn't already finished.
+        /// - Returns: The result of `handleResponse`.
+        public func deleteEmployeeAccount<Result>(
+            request: GRPCCore.ClientRequest<Admin_V1_DeleteEmployeeAccountRequest>,
+            serializer: some GRPCCore.MessageSerializer<Admin_V1_DeleteEmployeeAccountRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Admin_V1_DeleteEmployeeAccountResponse>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_DeleteEmployeeAccountResponse>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Admin_V1_AdminService.Method.DeleteEmployeeAccount.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
+
         /// Call the "AssignEmployeeBranch" method.
         ///
         /// - Parameters:
@@ -1338,7 +1755,7 @@ extension Admin_V1_AdminService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        internal func assignEmployeeBranch<Result>(
+        public func assignEmployeeBranch<Result>(
             request: GRPCCore.ClientRequest<Admin_V1_AssignEmployeeBranchRequest>,
             serializer: some GRPCCore.MessageSerializer<Admin_V1_AssignEmployeeBranchRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Admin_V1_AssignEmployeeBranchResponse>,
@@ -1371,7 +1788,7 @@ extension Admin_V1_AdminService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    internal func createAdminAccount<Result>(
+    public func createAdminAccount<Result>(
         request: GRPCCore.ClientRequest<Admin_V1_CreateAdminAccountRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_CreateAdminAccountResponse>) async throws -> Result = { response in
@@ -1396,7 +1813,7 @@ extension Admin_V1_AdminService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    internal func createEmployeeAccount<Result>(
+    public func createEmployeeAccount<Result>(
         request: GRPCCore.ClientRequest<Admin_V1_CreateEmployeeAccountRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_CreateEmployeeAccountResponse>) async throws -> Result = { response in
@@ -1421,7 +1838,7 @@ extension Admin_V1_AdminService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    internal func listEmployeeAccounts<Result>(
+    public func listEmployeeAccounts<Result>(
         request: GRPCCore.ClientRequest<Admin_V1_ListEmployeeAccountsRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_ListEmployeeAccountsResponse>) async throws -> Result = { response in
@@ -1446,7 +1863,7 @@ extension Admin_V1_AdminService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    internal func createDstAccount<Result>(
+    public func createDstAccount<Result>(
         request: GRPCCore.ClientRequest<Admin_V1_CreateDstAccountRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_CreateDstAccountResponse>) async throws -> Result = { response in
@@ -1462,6 +1879,31 @@ extension Admin_V1_AdminService.ClientProtocol {
         )
     }
 
+    /// Call the "UpdateDstAccount" method.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `Admin_V1_UpdateDstAccountRequest` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response, the result of which is
+    ///       returned to the caller. Returning from the closure will cancel the RPC if it
+    ///       hasn't already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func updateDstAccount<Result>(
+        request: GRPCCore.ClientRequest<Admin_V1_UpdateDstAccountRequest>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_UpdateDstAccountResponse>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.updateDstAccount(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<Admin_V1_UpdateDstAccountRequest>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Admin_V1_UpdateDstAccountResponse>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
     /// Call the "CreateBankBranch" method.
     ///
     /// - Parameters:
@@ -1471,7 +1913,7 @@ extension Admin_V1_AdminService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    internal func createBankBranch<Result>(
+    public func createBankBranch<Result>(
         request: GRPCCore.ClientRequest<Admin_V1_CreateBankBranchRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_CreateBankBranchResponse>) async throws -> Result = { response in
@@ -1496,7 +1938,7 @@ extension Admin_V1_AdminService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    internal func updateBankBranch<Result>(
+    public func updateBankBranch<Result>(
         request: GRPCCore.ClientRequest<Admin_V1_UpdateBankBranchRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_UpdateBankBranchResponse>) async throws -> Result = { response in
@@ -1512,6 +1954,31 @@ extension Admin_V1_AdminService.ClientProtocol {
         )
     }
 
+    /// Call the "DeleteBankBranch" method.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `Admin_V1_DeleteBankBranchRequest` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response, the result of which is
+    ///       returned to the caller. Returning from the closure will cancel the RPC if it
+    ///       hasn't already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func deleteBankBranch<Result>(
+        request: GRPCCore.ClientRequest<Admin_V1_DeleteBankBranchRequest>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_DeleteBankBranchResponse>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.deleteBankBranch(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<Admin_V1_DeleteBankBranchRequest>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Admin_V1_DeleteBankBranchResponse>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
     /// Call the "UpdateBranchDstCommission" method.
     ///
     /// - Parameters:
@@ -1521,7 +1988,7 @@ extension Admin_V1_AdminService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    internal func updateBranchDstCommission<Result>(
+    public func updateBranchDstCommission<Result>(
         request: GRPCCore.ClientRequest<Admin_V1_UpdateBranchDstCommissionRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_UpdateBranchDstCommissionResponse>) async throws -> Result = { response in
@@ -1546,7 +2013,7 @@ extension Admin_V1_AdminService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    internal func updateEmployeeAccount<Result>(
+    public func updateEmployeeAccount<Result>(
         request: GRPCCore.ClientRequest<Admin_V1_UpdateEmployeeAccountRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_UpdateEmployeeAccountResponse>) async throws -> Result = { response in
@@ -1562,6 +2029,31 @@ extension Admin_V1_AdminService.ClientProtocol {
         )
     }
 
+    /// Call the "DeleteEmployeeAccount" method.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `Admin_V1_DeleteEmployeeAccountRequest` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response, the result of which is
+    ///       returned to the caller. Returning from the closure will cancel the RPC if it
+    ///       hasn't already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func deleteEmployeeAccount<Result>(
+        request: GRPCCore.ClientRequest<Admin_V1_DeleteEmployeeAccountRequest>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_DeleteEmployeeAccountResponse>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.deleteEmployeeAccount(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<Admin_V1_DeleteEmployeeAccountRequest>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Admin_V1_DeleteEmployeeAccountResponse>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
     /// Call the "AssignEmployeeBranch" method.
     ///
     /// - Parameters:
@@ -1571,7 +2063,7 @@ extension Admin_V1_AdminService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    internal func assignEmployeeBranch<Result>(
+    public func assignEmployeeBranch<Result>(
         request: GRPCCore.ClientRequest<Admin_V1_AssignEmployeeBranchRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_AssignEmployeeBranchResponse>) async throws -> Result = { response in
@@ -1601,7 +2093,7 @@ extension Admin_V1_AdminService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    internal func createAdminAccount<Result>(
+    public func createAdminAccount<Result>(
         _ message: Admin_V1_CreateAdminAccountRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -1630,7 +2122,7 @@ extension Admin_V1_AdminService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    internal func createEmployeeAccount<Result>(
+    public func createEmployeeAccount<Result>(
         _ message: Admin_V1_CreateEmployeeAccountRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -1659,7 +2151,7 @@ extension Admin_V1_AdminService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    internal func listEmployeeAccounts<Result>(
+    public func listEmployeeAccounts<Result>(
         _ message: Admin_V1_ListEmployeeAccountsRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -1688,7 +2180,7 @@ extension Admin_V1_AdminService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    internal func createDstAccount<Result>(
+    public func createDstAccount<Result>(
         _ message: Admin_V1_CreateDstAccountRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -1707,6 +2199,35 @@ extension Admin_V1_AdminService.ClientProtocol {
         )
     }
 
+    /// Call the "UpdateDstAccount" method.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response, the result of which is
+    ///       returned to the caller. Returning from the closure will cancel the RPC if it
+    ///       hasn't already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func updateDstAccount<Result>(
+        _ message: Admin_V1_UpdateDstAccountRequest,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_UpdateDstAccountResponse>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<Admin_V1_UpdateDstAccountRequest>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.updateDstAccount(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
     /// Call the "CreateBankBranch" method.
     ///
     /// - Parameters:
@@ -1717,7 +2238,7 @@ extension Admin_V1_AdminService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    internal func createBankBranch<Result>(
+    public func createBankBranch<Result>(
         _ message: Admin_V1_CreateBankBranchRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -1746,7 +2267,7 @@ extension Admin_V1_AdminService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    internal func updateBankBranch<Result>(
+    public func updateBankBranch<Result>(
         _ message: Admin_V1_UpdateBankBranchRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -1765,6 +2286,35 @@ extension Admin_V1_AdminService.ClientProtocol {
         )
     }
 
+    /// Call the "DeleteBankBranch" method.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response, the result of which is
+    ///       returned to the caller. Returning from the closure will cancel the RPC if it
+    ///       hasn't already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func deleteBankBranch<Result>(
+        _ message: Admin_V1_DeleteBankBranchRequest,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_DeleteBankBranchResponse>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<Admin_V1_DeleteBankBranchRequest>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.deleteBankBranch(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
     /// Call the "UpdateBranchDstCommission" method.
     ///
     /// - Parameters:
@@ -1775,7 +2325,7 @@ extension Admin_V1_AdminService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    internal func updateBranchDstCommission<Result>(
+    public func updateBranchDstCommission<Result>(
         _ message: Admin_V1_UpdateBranchDstCommissionRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -1804,7 +2354,7 @@ extension Admin_V1_AdminService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    internal func updateEmployeeAccount<Result>(
+    public func updateEmployeeAccount<Result>(
         _ message: Admin_V1_UpdateEmployeeAccountRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -1823,6 +2373,35 @@ extension Admin_V1_AdminService.ClientProtocol {
         )
     }
 
+    /// Call the "DeleteEmployeeAccount" method.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response, the result of which is
+    ///       returned to the caller. Returning from the closure will cancel the RPC if it
+    ///       hasn't already finished.
+    /// - Returns: The result of `handleResponse`.
+    public func deleteEmployeeAccount<Result>(
+        _ message: Admin_V1_DeleteEmployeeAccountRequest,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Admin_V1_DeleteEmployeeAccountResponse>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<Admin_V1_DeleteEmployeeAccountRequest>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.deleteEmployeeAccount(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
     /// Call the "AssignEmployeeBranch" method.
     ///
     /// - Parameters:
@@ -1833,7 +2412,7 @@ extension Admin_V1_AdminService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    internal func assignEmployeeBranch<Result>(
+    public func assignEmployeeBranch<Result>(
         _ message: Admin_V1_AssignEmployeeBranchRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,

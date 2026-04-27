@@ -278,7 +278,6 @@ struct LOApplicationsView: View {
                                 .frame(maxWidth: .infinity)
 
                                 VStack(alignment: .leading, spacing: 20) {
-                                    verificationSection(app)
                                     internalRemarksSection(app)
                                 }
                                 .frame(maxWidth: .infinity)
@@ -290,7 +289,6 @@ struct LOApplicationsView: View {
                             borrowerHistorySection(app)
                             documentsSection(app)
                             sanctionLetterSection(app)
-                            verificationSection(app)
                             internalRemarksSection(app)
                             conversationSection(app)
                         }

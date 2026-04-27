@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/repository/generated"
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/audit"
 	loanv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/loanv1"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/interceptors"
 	"github.com/google/uuid"
@@ -54,10 +55,10 @@ type Service interface {
 
 type service struct {
 	queries generated.Querier
-	audit   interceptors.AuditService
+	audit   audit.AuditService
 }
 
-func NewService(queries generated.Querier, audit interceptors.AuditService) Service {
+func NewService(queries generated.Querier, audit audit.AuditService) Service {
 	return &service{queries: queries, audit: audit}
 }
 
@@ -600,7 +601,7 @@ case generated.LoanProductCategoryVEHICLE:
 
 	// Audit Log for status change
 	if s.audit != nil {
-		s.audit.Record(ctx, interceptors.AuditEntry{
+		s.audit.Record(ctx, audit.AuditEntry{
 			ActorID:      callerUserID,
 			ActorRole:    role,
 			Action:       "LOAN_APPLICATION_STATUS_CHANGED",

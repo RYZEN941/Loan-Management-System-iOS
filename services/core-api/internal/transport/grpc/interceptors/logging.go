@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/audit"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -13,26 +14,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type AuditService interface {
-	Record(ctx context.Context, entry AuditEntry)
-}
-
-type AuditEntry struct {
-	ActorID      uuid.UUID
-	ActorRole    string
-	Action       string
-	ResourceType string
-	ResourceID   uuid.UUID
-	Payload      any
-	Changes      any
-	StatusCode   string
-	IPAddress    string
-	UserAgent    string
-}
-
 // LoggingUnaryInterceptor logs one line per unary request with method, duration,
 // status code, and identity metadata when available.
-func LoggingUnaryInterceptor(auditSvc AuditService) grpc.UnaryServerInterceptor {
+func LoggingUnaryInterceptor(auditSvc audit.AuditService) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		started := time.Now()
 
@@ -76,7 +60,7 @@ func LoggingUnaryInterceptor(auditSvc AuditService) grpc.UnaryServerInterceptor 
 
 		// Perform audit logging for mutating methods
 		if auditSvc != nil && isMutatingMethod(info.FullMethod) && code == codes.OK {
-			auditSvc.Record(ctx, AuditEntry{
+			auditSvc.Record(ctx, audit.AuditEntry{
 				ActorID:    identity.UserID,
 				ActorRole:  identity.Role,
 				Action:     info.FullMethod,

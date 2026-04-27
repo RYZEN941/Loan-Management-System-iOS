@@ -6,26 +6,42 @@ import (
 	"log"
 
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/repository/generated"
-	"github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/interceptors"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type service struct {
-	queries generated.Querier
-	logChan chan interceptors.AuditEntry
+type AuditService interface {
+	Record(ctx context.Context, entry AuditEntry)
 }
 
-func NewService(queries generated.Querier) interceptors.AuditService {
+type AuditEntry struct {
+	ActorID      uuid.UUID
+	ActorRole    string
+	Action       string
+	ResourceType string
+	ResourceID   uuid.UUID
+	Payload      any
+	Changes      any
+	StatusCode   string
+	IPAddress    string
+	UserAgent    string
+}
+
+type service struct {
+	queries generated.Querier
+	logChan chan AuditEntry
+}
+
+func NewService(queries generated.Querier) AuditService {
 	s := &service{
 		queries: queries,
-		logChan: make(chan interceptors.AuditEntry, 100),
+		logChan: make(chan AuditEntry, 100),
 	}
 	go s.worker()
 	return s
 }
 
-func (s *service) Record(ctx context.Context, entry interceptors.AuditEntry) {
+func (s *service) Record(ctx context.Context, entry AuditEntry) {
 	select {
 	case s.logChan <- entry:
 	default:

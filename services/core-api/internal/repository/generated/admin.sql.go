@@ -84,7 +84,7 @@ INSERT INTO bank_branches (
     $1,
     $2,
     $3
-) RETURNING id, name, region, city, dst_commission, created_at
+) RETURNING id, name, region, city, dst_commission, created_at, is_deleted
 `
 
 type CreateBankBranchParams struct {
@@ -103,6 +103,7 @@ func (q *Queries) CreateBankBranch(ctx context.Context, arg CreateBankBranchPara
 		&i.City,
 		&i.DstCommission,
 		&i.CreatedAt,
+		&i.IsDeleted,
 	)
 	return i, err
 }
@@ -251,7 +252,7 @@ INSERT INTO manager_profiles (
     $1,
     $2,
     $3
-) RETURNING id, user_id, name, employee_serial, employee_code, branch_id, created_at
+) RETURNING id, user_id, name, branch_id, created_at, employee_serial, employee_code
 `
 
 type CreateManagerProfileParams struct {
@@ -267,10 +268,10 @@ func (q *Queries) CreateManagerProfile(ctx context.Context, arg CreateManagerPro
 		&i.ID,
 		&i.UserID,
 		&i.Name,
-		&i.EmployeeSerial,
-		&i.EmployeeCode,
 		&i.BranchID,
 		&i.CreatedAt,
+		&i.EmployeeSerial,
+		&i.EmployeeCode,
 	)
 	return i, err
 }
@@ -284,7 +285,7 @@ INSERT INTO officer_profiles (
     $1,
     $2,
     $3
-) RETURNING id, user_id, name, employee_serial, employee_code, branch_id, created_at
+) RETURNING id, user_id, name, branch_id, created_at, employee_serial, employee_code
 `
 
 type CreateOfficerProfileParams struct {
@@ -300,10 +301,10 @@ func (q *Queries) CreateOfficerProfile(ctx context.Context, arg CreateOfficerPro
 		&i.ID,
 		&i.UserID,
 		&i.Name,
-		&i.EmployeeSerial,
-		&i.EmployeeCode,
 		&i.BranchID,
 		&i.CreatedAt,
+		&i.EmployeeSerial,
+		&i.EmployeeCode,
 	)
 	return i, err
 }
@@ -320,7 +321,7 @@ func (q *Queries) GetAdminProfileByUserID(ctx context.Context, userID pgtype.UUI
 }
 
 const getBankBranchByID = `-- name: GetBankBranchByID :one
-SELECT id, name, region, city, dst_commission, created_at FROM bank_branches WHERE id = $1 AND is_deleted = false LIMIT 1
+SELECT id, name, region, city, dst_commission, created_at, is_deleted FROM bank_branches WHERE id = $1 AND is_deleted = false LIMIT 1
 `
 
 func (q *Queries) GetBankBranchByID(ctx context.Context, id pgtype.UUID) (BankBranch, error) {
@@ -333,6 +334,7 @@ func (q *Queries) GetBankBranchByID(ctx context.Context, id pgtype.UUID) (BankBr
 		&i.City,
 		&i.DstCommission,
 		&i.CreatedAt,
+		&i.IsDeleted,
 	)
 	return i, err
 }
@@ -413,7 +415,7 @@ func (q *Queries) GetDstProfileByUserID(ctx context.Context, userID pgtype.UUID)
 }
 
 const getManagerProfileByID = `-- name: GetManagerProfileByID :one
-SELECT id, user_id, name, employee_serial, employee_code, branch_id, created_at FROM manager_profiles WHERE id = $1 LIMIT 1
+SELECT id, user_id, name, branch_id, created_at, employee_serial, employee_code FROM manager_profiles WHERE id = $1 LIMIT 1
 `
 
 func (q *Queries) GetManagerProfileByID(ctx context.Context, id pgtype.UUID) (ManagerProfile, error) {
@@ -423,16 +425,16 @@ func (q *Queries) GetManagerProfileByID(ctx context.Context, id pgtype.UUID) (Ma
 		&i.ID,
 		&i.UserID,
 		&i.Name,
-		&i.EmployeeSerial,
-		&i.EmployeeCode,
 		&i.BranchID,
 		&i.CreatedAt,
+		&i.EmployeeSerial,
+		&i.EmployeeCode,
 	)
 	return i, err
 }
 
 const getManagerProfileByUserID = `-- name: GetManagerProfileByUserID :one
-SELECT id, user_id, name, employee_serial, employee_code, branch_id, created_at FROM manager_profiles WHERE user_id = $1 LIMIT 1
+SELECT id, user_id, name, branch_id, created_at, employee_serial, employee_code FROM manager_profiles WHERE user_id = $1 LIMIT 1
 `
 
 func (q *Queries) GetManagerProfileByUserID(ctx context.Context, userID pgtype.UUID) (ManagerProfile, error) {
@@ -442,16 +444,16 @@ func (q *Queries) GetManagerProfileByUserID(ctx context.Context, userID pgtype.U
 		&i.ID,
 		&i.UserID,
 		&i.Name,
-		&i.EmployeeSerial,
-		&i.EmployeeCode,
 		&i.BranchID,
 		&i.CreatedAt,
+		&i.EmployeeSerial,
+		&i.EmployeeCode,
 	)
 	return i, err
 }
 
 const getOfficerProfileByUserID = `-- name: GetOfficerProfileByUserID :one
-SELECT id, user_id, name, employee_serial, employee_code, branch_id, created_at FROM officer_profiles WHERE user_id = $1 LIMIT 1
+SELECT id, user_id, name, branch_id, created_at, employee_serial, employee_code FROM officer_profiles WHERE user_id = $1 LIMIT 1
 `
 
 func (q *Queries) GetOfficerProfileByUserID(ctx context.Context, userID pgtype.UUID) (OfficerProfile, error) {
@@ -461,16 +463,16 @@ func (q *Queries) GetOfficerProfileByUserID(ctx context.Context, userID pgtype.U
 		&i.ID,
 		&i.UserID,
 		&i.Name,
-		&i.EmployeeSerial,
-		&i.EmployeeCode,
 		&i.BranchID,
 		&i.CreatedAt,
+		&i.EmployeeSerial,
+		&i.EmployeeCode,
 	)
 	return i, err
 }
 
 const listBankBranches = `-- name: ListBankBranches :many
-SELECT id, name, region, city, dst_commission, created_at FROM bank_branches
+SELECT id, name, region, city, dst_commission, created_at, is_deleted FROM bank_branches
 WHERE is_deleted = false
 ORDER BY name ASC
 LIMIT $1 OFFSET $2
@@ -497,6 +499,7 @@ func (q *Queries) ListBankBranches(ctx context.Context, arg ListBankBranchesPara
 			&i.City,
 			&i.DstCommission,
 			&i.CreatedAt,
+			&i.IsDeleted,
 		); err != nil {
 			return nil, err
 		}

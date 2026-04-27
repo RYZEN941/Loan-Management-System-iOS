@@ -134,7 +134,7 @@ INSERT INTO application_documents (
     $5,
     $6,
     $7
-) RETURNING id, application_id, borrower_profile_id, required_doc_id, media_file_id, quality_flags, verification_status, rejection_reason, reviewed_by_user_id, reviewed_at, created_at, updated_at
+) RETURNING id, application_id, borrower_profile_id, required_doc_id, media_file_id, quality_flags, verification_status, rejection_reason, created_at, updated_at, reviewed_by_user_id, reviewed_at
 `
 
 type CreateApplicationDocumentParams struct {
@@ -167,10 +167,10 @@ func (q *Queries) CreateApplicationDocument(ctx context.Context, arg CreateAppli
 		&i.QualityFlags,
 		&i.VerificationStatus,
 		&i.RejectionReason,
-		&i.ReviewedByUserID,
-		&i.ReviewedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ReviewedByUserID,
+		&i.ReviewedAt,
 	)
 	return i, err
 }
@@ -745,7 +745,7 @@ func (q *Queries) GetApplicationCollateralByApplicationID(ctx context.Context, a
 }
 
 const getApplicationDocumentByID = `-- name: GetApplicationDocumentByID :one
-SELECT id, application_id, borrower_profile_id, required_doc_id, media_file_id, quality_flags, verification_status, rejection_reason, reviewed_by_user_id, reviewed_at, created_at, updated_at
+SELECT id, application_id, borrower_profile_id, required_doc_id, media_file_id, quality_flags, verification_status, rejection_reason, created_at, updated_at, reviewed_by_user_id, reviewed_at
 FROM application_documents
 WHERE id = $1
 `
@@ -762,10 +762,10 @@ func (q *Queries) GetApplicationDocumentByID(ctx context.Context, id pgtype.UUID
 		&i.QualityFlags,
 		&i.VerificationStatus,
 		&i.RejectionReason,
-		&i.ReviewedByUserID,
-		&i.ReviewedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ReviewedByUserID,
+		&i.ReviewedAt,
 	)
 	return i, err
 }
@@ -1450,7 +1450,7 @@ func (q *Queries) ListApplicationCoapplicants(ctx context.Context, applicationID
 }
 
 const listApplicationDocumentsByApplicationID = `-- name: ListApplicationDocumentsByApplicationID :many
-SELECT id, application_id, borrower_profile_id, required_doc_id, media_file_id, quality_flags, verification_status, rejection_reason, reviewed_by_user_id, reviewed_at, created_at, updated_at
+SELECT id, application_id, borrower_profile_id, required_doc_id, media_file_id, quality_flags, verification_status, rejection_reason, created_at, updated_at, reviewed_by_user_id, reviewed_at
 FROM application_documents
 WHERE application_id = $1
 ORDER BY created_at DESC
@@ -1474,10 +1474,10 @@ func (q *Queries) ListApplicationDocumentsByApplicationID(ctx context.Context, a
 			&i.QualityFlags,
 			&i.VerificationStatus,
 			&i.RejectionReason,
-			&i.ReviewedByUserID,
-			&i.ReviewedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ReviewedByUserID,
+			&i.ReviewedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -2234,7 +2234,7 @@ SET verification_status = $2,
     reviewed_at = CURRENT_TIMESTAMP,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = $1
-RETURNING id, application_id, borrower_profile_id, required_doc_id, media_file_id, quality_flags, verification_status, rejection_reason, reviewed_by_user_id, reviewed_at, created_at, updated_at
+RETURNING id, application_id, borrower_profile_id, required_doc_id, media_file_id, quality_flags, verification_status, rejection_reason, created_at, updated_at, reviewed_by_user_id, reviewed_at
 `
 
 type UpdateApplicationDocumentVerificationParams struct {
@@ -2261,10 +2261,10 @@ func (q *Queries) UpdateApplicationDocumentVerification(ctx context.Context, arg
 		&i.QualityFlags,
 		&i.VerificationStatus,
 		&i.RejectionReason,
-		&i.ReviewedByUserID,
-		&i.ReviewedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ReviewedByUserID,
+		&i.ReviewedAt,
 	)
 	return i, err
 }

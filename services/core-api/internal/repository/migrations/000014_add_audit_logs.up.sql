@@ -1,5 +1,3 @@
--- 004_audit_logs.sql
-
 CREATE TABLE audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     actor_id UUID REFERENCES users(id),

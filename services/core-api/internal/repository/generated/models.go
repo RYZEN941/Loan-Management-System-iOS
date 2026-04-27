@@ -394,48 +394,6 @@ func (ns NullCollateralVerificationStatus) Value() (driver.Value, error) {
 	return string(ns.CollateralVerificationStatus), nil
 }
 
-type ConsentTypeEnum string
-
-const (
-	ConsentTypeEnumAadharKyc ConsentTypeEnum = "aadhar_kyc"
-	ConsentTypeEnumPanKyc    ConsentTypeEnum = "pan_kyc"
-)
-
-func (e *ConsentTypeEnum) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = ConsentTypeEnum(s)
-	case string:
-		*e = ConsentTypeEnum(s)
-	default:
-		return fmt.Errorf("unsupported scan type for ConsentTypeEnum: %T", src)
-	}
-	return nil
-}
-
-type NullConsentTypeEnum struct {
-	ConsentTypeEnum ConsentTypeEnum `json:"consent_type_enum"`
-	Valid           bool            `json:"valid"` // Valid is true if ConsentTypeEnum is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullConsentTypeEnum) Scan(value interface{}) error {
-	if value == nil {
-		ns.ConsentTypeEnum, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.ConsentTypeEnum.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullConsentTypeEnum) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.ConsentTypeEnum), nil
-}
-
 type DocumentRequirementType string
 
 const (
@@ -1041,10 +999,10 @@ type ApplicationDocument struct {
 	QualityFlags       []string                   `json:"quality_flags"`
 	VerificationStatus DocumentVerificationStatus `json:"verification_status"`
 	RejectionReason    pgtype.Text                `json:"rejection_reason"`
-	ReviewedByUserID   pgtype.UUID                `json:"reviewed_by_user_id"`
-	ReviewedAt         pgtype.Timestamptz         `json:"reviewed_at"`
 	CreatedAt          pgtype.Timestamptz         `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz         `json:"updated_at"`
+	ReviewedByUserID   pgtype.UUID                `json:"reviewed_by_user_id"`
+	ReviewedAt         pgtype.Timestamptz         `json:"reviewed_at"`
 }
 
 type AuditLog struct {
@@ -1069,6 +1027,7 @@ type BankBranch struct {
 	City          string             `json:"city"`
 	DstCommission pgtype.Numeric     `json:"dst_commission"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	IsDeleted     bool               `json:"is_deleted"`
 }
 
 type BorrowerAadhaarKycCurrent struct {
@@ -1193,12 +1152,12 @@ type BorrowerProfile struct {
 	EmploymentType             BorrowerEmploymentType `json:"employment_type"`
 	MonthlyIncome              pgtype.Numeric         `json:"monthly_income"`
 	ProfileCompletenessPercent int32                  `json:"profile_completeness_percent"`
+	CreatedAt                  pgtype.Timestamptz     `json:"created_at"`
 	IsAadhaarVerified          bool                   `json:"is_aadhaar_verified"`
 	IsPanVerified              bool                   `json:"is_pan_verified"`
 	AadhaarVerifiedAt          pgtype.Timestamptz     `json:"aadhaar_verified_at"`
 	PanVerifiedAt              pgtype.Timestamptz     `json:"pan_verified_at"`
 	CibilScore                 int32                  `json:"cibil_score"`
-	CreatedAt                  pgtype.Timestamptz     `json:"created_at"`
 }
 
 type BureauScore struct {
@@ -1334,10 +1293,10 @@ type ManagerProfile struct {
 	ID             pgtype.UUID        `json:"id"`
 	UserID         pgtype.UUID        `json:"user_id"`
 	Name           string             `json:"name"`
-	EmployeeSerial int64              `json:"employee_serial"`
-	EmployeeCode   pgtype.Text        `json:"employee_code"`
 	BranchID       pgtype.UUID        `json:"branch_id"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	EmployeeSerial int64              `json:"employee_serial"`
+	EmployeeCode   pgtype.Text        `json:"employee_code"`
 }
 
 type MediaFile struct {
@@ -1362,10 +1321,10 @@ type OfficerProfile struct {
 	ID             pgtype.UUID        `json:"id"`
 	UserID         pgtype.UUID        `json:"user_id"`
 	Name           string             `json:"name"`
-	EmployeeSerial int64              `json:"employee_serial"`
-	EmployeeCode   pgtype.Text        `json:"employee_code"`
 	BranchID       pgtype.UUID        `json:"branch_id"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	EmployeeSerial int64              `json:"employee_serial"`
+	EmployeeCode   pgtype.Text        `json:"employee_code"`
 }
 
 type Payment struct {
@@ -1448,7 +1407,7 @@ type User struct {
 type UserConsent struct {
 	ID              pgtype.UUID        `json:"id"`
 	UserID          pgtype.UUID        `json:"user_id"`
-	ConsentType     ConsentTypeEnum    `json:"consent_type"`
+	ConsentType     interface{}        `json:"consent_type"`
 	ConsentVersion  string             `json:"consent_version"`
 	ConsentText     string             `json:"consent_text"`
 	ConsentTextHash string             `json:"consent_text_hash"`

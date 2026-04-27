@@ -145,6 +145,110 @@ func JWTUnaryInterceptor(cfg JWTConfig) grpc.UnaryServerInterceptor {
 	}
 }
 
+// JWTStreamInterceptor validates bearer JWTs for server-streaming RPCs.
+// It mirrors JWTUnaryInterceptor but uses grpc.StreamServerInterceptor.
+func JWTStreamInterceptor(cfg JWTConfig) grpc.StreamServerInterceptor {
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		if _, ok := cfg.PublicMethods[info.FullMethod]; ok {
+			return handler(srv, ss)
+		}
+
+		token, err := extractBearerToken(ss.Context())
+		if err != nil {
+			return status.Error(codes.Unauthenticated, err.Error())
+		}
+
+		claims, err := parseAndValidateJWT(token, cfg.SigningKey)
+		if err != nil {
+			return status.Error(codes.Unauthenticated, "invalid token")
+		}
+
+		if cfg.RedisClient == nil {
+			return status.Error(codes.Internal, "redis auth state unavailable")
+		}
+
+		key := fmt.Sprintf("active_token:%s", claims.Subject)
+		activeJTI, err := cfg.RedisClient.Get(ss.Context(), key).Result()
+		if err != nil {
+			if errors.Is(err, redis.Nil) {
+				return status.Error(codes.Unauthenticated, "session expired")
+			}
+			return status.Error(codes.Internal, "failed auth state lookup")
+		}
+
+		if activeJTI != claims.ID {
+			return status.Error(codes.Unauthenticated, "token is no longer active")
+		}
+
+		if claims.IsRequiringPasswordChange {
+			if info.FullMethod != "/auth.v1.AuthService/ChangePassword" && info.FullMethod != "/auth.v1.AuthService/Logout" && info.FullMethod != "/auth.v1.AuthService/GetMyProfile" {
+				return status.Error(codes.FailedPrecondition, "password change required")
+			}
+		}
+
+		if !claims.IsActive {
+			switch info.FullMethod {
+			case "/auth.v1.AuthService/Logout",
+				"/auth.v1.AuthService/GetMyProfile",
+				"/onboarding.v1.OnboardingService/CompleteBorrowerOnboarding",
+				"/auth.v1.AuthService/ChangePassword",
+				"/auth.v1.AuthService/SetupTOTP",
+				"/auth.v1.AuthService/VerifyTOTPSetup":
+				// Allowed
+			default:
+				return status.Error(codes.PermissionDenied, "user account is inactive. please complete onboarding.")
+			}
+		}
+
+		userID, err := uuid.Parse(claims.Subject)
+		if err != nil {
+			return status.Error(codes.Unauthenticated, "invalid subject claim")
+		}
+
+		ctx := context.WithValue(ss.Context(), ContextUserIDKey, userID)
+		ctx = context.WithValue(ctx, ContextRoleKey, claims.Role)
+
+		if identity, ok := ctx.Value(ContextIdentityKey).(*Identity); ok {
+			identity.UserID = userID
+			identity.Role = claims.Role
+		}
+
+		wrapped := &wrappedServerStream{ServerStream: ss, ctx: ctx}
+		return handler(srv, wrapped)
+	}
+}
+
+// wrappedServerStream wraps grpc.ServerStream to carry an overridden context.
+type wrappedServerStream struct {
+	grpc.ServerStream
+	ctx context.Context
+}
+
+func (w *wrappedServerStream) Context() context.Context { return w.ctx }
+
+// RBACStreamInterceptor enforces role-based access for streaming RPCs.
+func RBACStreamInterceptor(policy RBACPolicy) grpc.StreamServerInterceptor {
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		allowedRoles, ok := policy[info.FullMethod]
+		if !ok {
+			return handler(srv, ss)
+		}
+
+		userRole, ok := ss.Context().Value(ContextRoleKey).(string)
+		if !ok || userRole == "" {
+			return status.Error(codes.Unauthenticated, "missing user role")
+		}
+
+		for _, role := range allowedRoles {
+			if role == userRole {
+				return handler(srv, ss)
+			}
+		}
+
+		return status.Error(codes.PermissionDenied, "access denied for this role")
+	}
+}
+
 // UserIDFromContext returns the authenticated user ID set by JWTUnaryInterceptor.
 func UserIDFromContext(ctx context.Context) (uuid.UUID, bool) {
 	userID, ok := ctx.Value(ContextUserIDKey).(uuid.UUID)

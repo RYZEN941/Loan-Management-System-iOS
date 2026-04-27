@@ -178,6 +178,15 @@ func Run() error {
 			}),
 			grpcinterceptors.RBACUnaryInterceptor(rbacPolicy),
 		),
+		grpc.ChainStreamInterceptor(
+			grpcinterceptors.LoggingStreamInterceptor(),
+			grpcinterceptors.JWTStreamInterceptor(grpcinterceptors.JWTConfig{
+				SigningKey:    []byte(cfg.JWTKey),
+				RedisClient:   redisClient,
+				PublicMethods: publicMethods,
+			}),
+			grpcinterceptors.RBACStreamInterceptor(rbacPolicy),
+		),
 	)
 
 	healthServer := health.NewServer()

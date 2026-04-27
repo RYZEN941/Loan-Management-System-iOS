@@ -335,7 +335,11 @@ INSERT INTO loan_applications (
     created_by_user_id,
     created_by_role,
     created_by_channel,
-    product_snapshot_json
+    product_snapshot_json,
+    disbursement_account_number,
+    disbursement_ifsc_code,
+    disbursement_bank_name,
+    disbursement_account_holder_name
 ) VALUES (
     $1,
     $2,
@@ -350,25 +354,33 @@ INSERT INTO loan_applications (
     $11,
     $12,
     $13,
-    $14
-) RETURNING id, reference_number, primary_borrower_profile_id, loan_product_id, branch_id, requested_amount, tenure_months, offered_interest_rate, status, assigned_officer_user_id, escalation_reason, created_by_user_id, created_by_role, created_by_channel, product_snapshot_json, created_at, updated_at
+    $14,
+    $15,
+    $16,
+    $17,
+    $18
+) RETURNING id, reference_number, primary_borrower_profile_id, loan_product_id, branch_id, requested_amount, tenure_months, offered_interest_rate, status, assigned_officer_user_id, escalation_reason, created_by_user_id, created_by_role, created_by_channel, product_snapshot_json, created_at, updated_at, disbursement_account_number, disbursement_ifsc_code, disbursement_bank_name, disbursement_account_holder_name
 `
 
 type CreateLoanApplicationParams struct {
-	ReferenceNumber          string                      `json:"reference_number"`
-	PrimaryBorrowerProfileID pgtype.UUID                 `json:"primary_borrower_profile_id"`
-	LoanProductID            pgtype.UUID                 `json:"loan_product_id"`
-	BranchID                 pgtype.UUID                 `json:"branch_id"`
-	RequestedAmount          pgtype.Numeric              `json:"requested_amount"`
-	TenureMonths             int32                       `json:"tenure_months"`
-	OfferedInterestRate      pgtype.Numeric              `json:"offered_interest_rate"`
-	Status                   LoanApplicationStatus       `json:"status"`
-	AssignedOfficerUserID    pgtype.UUID                 `json:"assigned_officer_user_id"`
-	EscalationReason         pgtype.Text                 `json:"escalation_reason"`
-	CreatedByUserID          pgtype.UUID                 `json:"created_by_user_id"`
-	CreatedByRole            UserRole                    `json:"created_by_role"`
-	CreatedByChannel         ApplicationCreatedByChannel `json:"created_by_channel"`
-	ProductSnapshotJson      []byte                      `json:"product_snapshot_json"`
+	ReferenceNumber               string                      `json:"reference_number"`
+	PrimaryBorrowerProfileID      pgtype.UUID                 `json:"primary_borrower_profile_id"`
+	LoanProductID                 pgtype.UUID                 `json:"loan_product_id"`
+	BranchID                      pgtype.UUID                 `json:"branch_id"`
+	RequestedAmount               pgtype.Numeric              `json:"requested_amount"`
+	TenureMonths                  int32                       `json:"tenure_months"`
+	OfferedInterestRate           pgtype.Numeric              `json:"offered_interest_rate"`
+	Status                        LoanApplicationStatus       `json:"status"`
+	AssignedOfficerUserID         pgtype.UUID                 `json:"assigned_officer_user_id"`
+	EscalationReason              pgtype.Text                 `json:"escalation_reason"`
+	CreatedByUserID               pgtype.UUID                 `json:"created_by_user_id"`
+	CreatedByRole                 UserRole                    `json:"created_by_role"`
+	CreatedByChannel              ApplicationCreatedByChannel `json:"created_by_channel"`
+	ProductSnapshotJson           []byte                      `json:"product_snapshot_json"`
+	DisbursementAccountNumber     pgtype.Text                 `json:"disbursement_account_number"`
+	DisbursementIfscCode          pgtype.Text                 `json:"disbursement_ifsc_code"`
+	DisbursementBankName          pgtype.Text                 `json:"disbursement_bank_name"`
+	DisbursementAccountHolderName pgtype.Text                 `json:"disbursement_account_holder_name"`
 }
 
 func (q *Queries) CreateLoanApplication(ctx context.Context, arg CreateLoanApplicationParams) (LoanApplication, error) {
@@ -387,6 +399,10 @@ func (q *Queries) CreateLoanApplication(ctx context.Context, arg CreateLoanAppli
 		arg.CreatedByRole,
 		arg.CreatedByChannel,
 		arg.ProductSnapshotJson,
+		arg.DisbursementAccountNumber,
+		arg.DisbursementIfscCode,
+		arg.DisbursementBankName,
+		arg.DisbursementAccountHolderName,
 	)
 	var i LoanApplication
 	err := row.Scan(
@@ -407,6 +423,10 @@ func (q *Queries) CreateLoanApplication(ctx context.Context, arg CreateLoanAppli
 		&i.ProductSnapshotJson,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DisbursementAccountNumber,
+		&i.DisbursementIfscCode,
+		&i.DisbursementBankName,
+		&i.DisbursementAccountHolderName,
 	)
 	return i, err
 }
@@ -797,7 +817,7 @@ func (q *Queries) GetLatestActiveBureauScoreByBorrowerProfile(ctx context.Contex
 }
 
 const getLoanApplicationByID = `-- name: GetLoanApplicationByID :one
-SELECT id, reference_number, primary_borrower_profile_id, loan_product_id, branch_id, requested_amount, tenure_months, offered_interest_rate, status, assigned_officer_user_id, escalation_reason, created_by_user_id, created_by_role, created_by_channel, product_snapshot_json, created_at, updated_at
+SELECT id, reference_number, primary_borrower_profile_id, loan_product_id, branch_id, requested_amount, tenure_months, offered_interest_rate, status, assigned_officer_user_id, escalation_reason, created_by_user_id, created_by_role, created_by_channel, product_snapshot_json, created_at, updated_at, disbursement_account_number, disbursement_ifsc_code, disbursement_bank_name, disbursement_account_holder_name
 FROM loan_applications
 WHERE id = $1
 LIMIT 1
@@ -824,13 +844,17 @@ func (q *Queries) GetLoanApplicationByID(ctx context.Context, id pgtype.UUID) (L
 		&i.ProductSnapshotJson,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DisbursementAccountNumber,
+		&i.DisbursementIfscCode,
+		&i.DisbursementBankName,
+		&i.DisbursementAccountHolderName,
 	)
 	return i, err
 }
 
 const getLoanApplicationViewByID = `-- name: GetLoanApplicationViewByID :one
 SELECT
-    la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at,
+    la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at, la.disbursement_account_number, la.disbursement_ifsc_code, la.disbursement_bank_name, la.disbursement_account_holder_name,
     lp.name AS product_name,
     lp.category AS product_category,
     bb.name AS branch_name,
@@ -844,28 +868,32 @@ LIMIT 1
 `
 
 type GetLoanApplicationViewByIDRow struct {
-	ID                       pgtype.UUID                 `json:"id"`
-	ReferenceNumber          string                      `json:"reference_number"`
-	PrimaryBorrowerProfileID pgtype.UUID                 `json:"primary_borrower_profile_id"`
-	LoanProductID            pgtype.UUID                 `json:"loan_product_id"`
-	BranchID                 pgtype.UUID                 `json:"branch_id"`
-	RequestedAmount          pgtype.Numeric              `json:"requested_amount"`
-	TenureMonths             int32                       `json:"tenure_months"`
-	OfferedInterestRate      pgtype.Numeric              `json:"offered_interest_rate"`
-	Status                   LoanApplicationStatus       `json:"status"`
-	AssignedOfficerUserID    pgtype.UUID                 `json:"assigned_officer_user_id"`
-	EscalationReason         pgtype.Text                 `json:"escalation_reason"`
-	CreatedByUserID          pgtype.UUID                 `json:"created_by_user_id"`
-	CreatedByRole            UserRole                    `json:"created_by_role"`
-	CreatedByChannel         ApplicationCreatedByChannel `json:"created_by_channel"`
-	ProductSnapshotJson      []byte                      `json:"product_snapshot_json"`
-	CreatedAt                pgtype.Timestamptz          `json:"created_at"`
-	UpdatedAt                pgtype.Timestamptz          `json:"updated_at"`
-	ProductName              string                      `json:"product_name"`
-	ProductCategory          LoanProductCategory         `json:"product_category"`
-	BranchName               string                      `json:"branch_name"`
-	BranchRegion             string                      `json:"branch_region"`
-	BranchCity               string                      `json:"branch_city"`
+	ID                            pgtype.UUID                 `json:"id"`
+	ReferenceNumber               string                      `json:"reference_number"`
+	PrimaryBorrowerProfileID      pgtype.UUID                 `json:"primary_borrower_profile_id"`
+	LoanProductID                 pgtype.UUID                 `json:"loan_product_id"`
+	BranchID                      pgtype.UUID                 `json:"branch_id"`
+	RequestedAmount               pgtype.Numeric              `json:"requested_amount"`
+	TenureMonths                  int32                       `json:"tenure_months"`
+	OfferedInterestRate           pgtype.Numeric              `json:"offered_interest_rate"`
+	Status                        LoanApplicationStatus       `json:"status"`
+	AssignedOfficerUserID         pgtype.UUID                 `json:"assigned_officer_user_id"`
+	EscalationReason              pgtype.Text                 `json:"escalation_reason"`
+	CreatedByUserID               pgtype.UUID                 `json:"created_by_user_id"`
+	CreatedByRole                 UserRole                    `json:"created_by_role"`
+	CreatedByChannel              ApplicationCreatedByChannel `json:"created_by_channel"`
+	ProductSnapshotJson           []byte                      `json:"product_snapshot_json"`
+	CreatedAt                     pgtype.Timestamptz          `json:"created_at"`
+	UpdatedAt                     pgtype.Timestamptz          `json:"updated_at"`
+	DisbursementAccountNumber     pgtype.Text                 `json:"disbursement_account_number"`
+	DisbursementIfscCode          pgtype.Text                 `json:"disbursement_ifsc_code"`
+	DisbursementBankName          pgtype.Text                 `json:"disbursement_bank_name"`
+	DisbursementAccountHolderName pgtype.Text                 `json:"disbursement_account_holder_name"`
+	ProductName                   string                      `json:"product_name"`
+	ProductCategory               LoanProductCategory         `json:"product_category"`
+	BranchName                    string                      `json:"branch_name"`
+	BranchRegion                  string                      `json:"branch_region"`
+	BranchCity                    string                      `json:"branch_city"`
 }
 
 func (q *Queries) GetLoanApplicationViewByID(ctx context.Context, id pgtype.UUID) (GetLoanApplicationViewByIDRow, error) {
@@ -889,6 +917,10 @@ func (q *Queries) GetLoanApplicationViewByID(ctx context.Context, id pgtype.UUID
 		&i.ProductSnapshotJson,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DisbursementAccountNumber,
+		&i.DisbursementIfscCode,
+		&i.DisbursementBankName,
+		&i.DisbursementAccountHolderName,
 		&i.ProductName,
 		&i.ProductCategory,
 		&i.BranchName,
@@ -1256,7 +1288,7 @@ func (q *Queries) IsApplicationBorrowerParticipant(ctx context.Context, arg IsAp
 
 const listAllLoanApplications = `-- name: ListAllLoanApplications :many
 SELECT
-    la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at,
+    la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at, la.disbursement_account_number, la.disbursement_ifsc_code, la.disbursement_bank_name, la.disbursement_account_holder_name,
     lp.name AS product_name,
     bb.name AS branch_name
 FROM loan_applications la
@@ -1272,25 +1304,29 @@ type ListAllLoanApplicationsParams struct {
 }
 
 type ListAllLoanApplicationsRow struct {
-	ID                       pgtype.UUID                 `json:"id"`
-	ReferenceNumber          string                      `json:"reference_number"`
-	PrimaryBorrowerProfileID pgtype.UUID                 `json:"primary_borrower_profile_id"`
-	LoanProductID            pgtype.UUID                 `json:"loan_product_id"`
-	BranchID                 pgtype.UUID                 `json:"branch_id"`
-	RequestedAmount          pgtype.Numeric              `json:"requested_amount"`
-	TenureMonths             int32                       `json:"tenure_months"`
-	OfferedInterestRate      pgtype.Numeric              `json:"offered_interest_rate"`
-	Status                   LoanApplicationStatus       `json:"status"`
-	AssignedOfficerUserID    pgtype.UUID                 `json:"assigned_officer_user_id"`
-	EscalationReason         pgtype.Text                 `json:"escalation_reason"`
-	CreatedByUserID          pgtype.UUID                 `json:"created_by_user_id"`
-	CreatedByRole            UserRole                    `json:"created_by_role"`
-	CreatedByChannel         ApplicationCreatedByChannel `json:"created_by_channel"`
-	ProductSnapshotJson      []byte                      `json:"product_snapshot_json"`
-	CreatedAt                pgtype.Timestamptz          `json:"created_at"`
-	UpdatedAt                pgtype.Timestamptz          `json:"updated_at"`
-	ProductName              string                      `json:"product_name"`
-	BranchName               string                      `json:"branch_name"`
+	ID                            pgtype.UUID                 `json:"id"`
+	ReferenceNumber               string                      `json:"reference_number"`
+	PrimaryBorrowerProfileID      pgtype.UUID                 `json:"primary_borrower_profile_id"`
+	LoanProductID                 pgtype.UUID                 `json:"loan_product_id"`
+	BranchID                      pgtype.UUID                 `json:"branch_id"`
+	RequestedAmount               pgtype.Numeric              `json:"requested_amount"`
+	TenureMonths                  int32                       `json:"tenure_months"`
+	OfferedInterestRate           pgtype.Numeric              `json:"offered_interest_rate"`
+	Status                        LoanApplicationStatus       `json:"status"`
+	AssignedOfficerUserID         pgtype.UUID                 `json:"assigned_officer_user_id"`
+	EscalationReason              pgtype.Text                 `json:"escalation_reason"`
+	CreatedByUserID               pgtype.UUID                 `json:"created_by_user_id"`
+	CreatedByRole                 UserRole                    `json:"created_by_role"`
+	CreatedByChannel              ApplicationCreatedByChannel `json:"created_by_channel"`
+	ProductSnapshotJson           []byte                      `json:"product_snapshot_json"`
+	CreatedAt                     pgtype.Timestamptz          `json:"created_at"`
+	UpdatedAt                     pgtype.Timestamptz          `json:"updated_at"`
+	DisbursementAccountNumber     pgtype.Text                 `json:"disbursement_account_number"`
+	DisbursementIfscCode          pgtype.Text                 `json:"disbursement_ifsc_code"`
+	DisbursementBankName          pgtype.Text                 `json:"disbursement_bank_name"`
+	DisbursementAccountHolderName pgtype.Text                 `json:"disbursement_account_holder_name"`
+	ProductName                   string                      `json:"product_name"`
+	BranchName                    string                      `json:"branch_name"`
 }
 
 func (q *Queries) ListAllLoanApplications(ctx context.Context, arg ListAllLoanApplicationsParams) ([]ListAllLoanApplicationsRow, error) {
@@ -1320,6 +1356,10 @@ func (q *Queries) ListAllLoanApplications(ctx context.Context, arg ListAllLoanAp
 			&i.ProductSnapshotJson,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DisbursementAccountNumber,
+			&i.DisbursementIfscCode,
+			&i.DisbursementBankName,
+			&i.DisbursementAccountHolderName,
 			&i.ProductName,
 			&i.BranchName,
 		); err != nil {
@@ -1521,7 +1561,7 @@ func (q *Queries) ListEmiScheduleByLoanID(ctx context.Context, loanID pgtype.UUI
 
 const listLoanApplicationsByAssignedOfficer = `-- name: ListLoanApplicationsByAssignedOfficer :many
 SELECT
-    la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at,
+    la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at, la.disbursement_account_number, la.disbursement_ifsc_code, la.disbursement_bank_name, la.disbursement_account_holder_name,
     lp.name AS product_name,
     bb.name AS branch_name
 FROM loan_applications la
@@ -1539,25 +1579,29 @@ type ListLoanApplicationsByAssignedOfficerParams struct {
 }
 
 type ListLoanApplicationsByAssignedOfficerRow struct {
-	ID                       pgtype.UUID                 `json:"id"`
-	ReferenceNumber          string                      `json:"reference_number"`
-	PrimaryBorrowerProfileID pgtype.UUID                 `json:"primary_borrower_profile_id"`
-	LoanProductID            pgtype.UUID                 `json:"loan_product_id"`
-	BranchID                 pgtype.UUID                 `json:"branch_id"`
-	RequestedAmount          pgtype.Numeric              `json:"requested_amount"`
-	TenureMonths             int32                       `json:"tenure_months"`
-	OfferedInterestRate      pgtype.Numeric              `json:"offered_interest_rate"`
-	Status                   LoanApplicationStatus       `json:"status"`
-	AssignedOfficerUserID    pgtype.UUID                 `json:"assigned_officer_user_id"`
-	EscalationReason         pgtype.Text                 `json:"escalation_reason"`
-	CreatedByUserID          pgtype.UUID                 `json:"created_by_user_id"`
-	CreatedByRole            UserRole                    `json:"created_by_role"`
-	CreatedByChannel         ApplicationCreatedByChannel `json:"created_by_channel"`
-	ProductSnapshotJson      []byte                      `json:"product_snapshot_json"`
-	CreatedAt                pgtype.Timestamptz          `json:"created_at"`
-	UpdatedAt                pgtype.Timestamptz          `json:"updated_at"`
-	ProductName              string                      `json:"product_name"`
-	BranchName               string                      `json:"branch_name"`
+	ID                            pgtype.UUID                 `json:"id"`
+	ReferenceNumber               string                      `json:"reference_number"`
+	PrimaryBorrowerProfileID      pgtype.UUID                 `json:"primary_borrower_profile_id"`
+	LoanProductID                 pgtype.UUID                 `json:"loan_product_id"`
+	BranchID                      pgtype.UUID                 `json:"branch_id"`
+	RequestedAmount               pgtype.Numeric              `json:"requested_amount"`
+	TenureMonths                  int32                       `json:"tenure_months"`
+	OfferedInterestRate           pgtype.Numeric              `json:"offered_interest_rate"`
+	Status                        LoanApplicationStatus       `json:"status"`
+	AssignedOfficerUserID         pgtype.UUID                 `json:"assigned_officer_user_id"`
+	EscalationReason              pgtype.Text                 `json:"escalation_reason"`
+	CreatedByUserID               pgtype.UUID                 `json:"created_by_user_id"`
+	CreatedByRole                 UserRole                    `json:"created_by_role"`
+	CreatedByChannel              ApplicationCreatedByChannel `json:"created_by_channel"`
+	ProductSnapshotJson           []byte                      `json:"product_snapshot_json"`
+	CreatedAt                     pgtype.Timestamptz          `json:"created_at"`
+	UpdatedAt                     pgtype.Timestamptz          `json:"updated_at"`
+	DisbursementAccountNumber     pgtype.Text                 `json:"disbursement_account_number"`
+	DisbursementIfscCode          pgtype.Text                 `json:"disbursement_ifsc_code"`
+	DisbursementBankName          pgtype.Text                 `json:"disbursement_bank_name"`
+	DisbursementAccountHolderName pgtype.Text                 `json:"disbursement_account_holder_name"`
+	ProductName                   string                      `json:"product_name"`
+	BranchName                    string                      `json:"branch_name"`
 }
 
 func (q *Queries) ListLoanApplicationsByAssignedOfficer(ctx context.Context, arg ListLoanApplicationsByAssignedOfficerParams) ([]ListLoanApplicationsByAssignedOfficerRow, error) {
@@ -1587,6 +1631,10 @@ func (q *Queries) ListLoanApplicationsByAssignedOfficer(ctx context.Context, arg
 			&i.ProductSnapshotJson,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DisbursementAccountNumber,
+			&i.DisbursementIfscCode,
+			&i.DisbursementBankName,
+			&i.DisbursementAccountHolderName,
 			&i.ProductName,
 			&i.BranchName,
 		); err != nil {
@@ -1602,7 +1650,7 @@ func (q *Queries) ListLoanApplicationsByAssignedOfficer(ctx context.Context, arg
 
 const listLoanApplicationsByBranchID = `-- name: ListLoanApplicationsByBranchID :many
 SELECT
-    la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at,
+    la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at, la.disbursement_account_number, la.disbursement_ifsc_code, la.disbursement_bank_name, la.disbursement_account_holder_name,
     lp.name AS product_name,
     bb.name AS branch_name
 FROM loan_applications la
@@ -1620,25 +1668,29 @@ type ListLoanApplicationsByBranchIDParams struct {
 }
 
 type ListLoanApplicationsByBranchIDRow struct {
-	ID                       pgtype.UUID                 `json:"id"`
-	ReferenceNumber          string                      `json:"reference_number"`
-	PrimaryBorrowerProfileID pgtype.UUID                 `json:"primary_borrower_profile_id"`
-	LoanProductID            pgtype.UUID                 `json:"loan_product_id"`
-	BranchID                 pgtype.UUID                 `json:"branch_id"`
-	RequestedAmount          pgtype.Numeric              `json:"requested_amount"`
-	TenureMonths             int32                       `json:"tenure_months"`
-	OfferedInterestRate      pgtype.Numeric              `json:"offered_interest_rate"`
-	Status                   LoanApplicationStatus       `json:"status"`
-	AssignedOfficerUserID    pgtype.UUID                 `json:"assigned_officer_user_id"`
-	EscalationReason         pgtype.Text                 `json:"escalation_reason"`
-	CreatedByUserID          pgtype.UUID                 `json:"created_by_user_id"`
-	CreatedByRole            UserRole                    `json:"created_by_role"`
-	CreatedByChannel         ApplicationCreatedByChannel `json:"created_by_channel"`
-	ProductSnapshotJson      []byte                      `json:"product_snapshot_json"`
-	CreatedAt                pgtype.Timestamptz          `json:"created_at"`
-	UpdatedAt                pgtype.Timestamptz          `json:"updated_at"`
-	ProductName              string                      `json:"product_name"`
-	BranchName               string                      `json:"branch_name"`
+	ID                            pgtype.UUID                 `json:"id"`
+	ReferenceNumber               string                      `json:"reference_number"`
+	PrimaryBorrowerProfileID      pgtype.UUID                 `json:"primary_borrower_profile_id"`
+	LoanProductID                 pgtype.UUID                 `json:"loan_product_id"`
+	BranchID                      pgtype.UUID                 `json:"branch_id"`
+	RequestedAmount               pgtype.Numeric              `json:"requested_amount"`
+	TenureMonths                  int32                       `json:"tenure_months"`
+	OfferedInterestRate           pgtype.Numeric              `json:"offered_interest_rate"`
+	Status                        LoanApplicationStatus       `json:"status"`
+	AssignedOfficerUserID         pgtype.UUID                 `json:"assigned_officer_user_id"`
+	EscalationReason              pgtype.Text                 `json:"escalation_reason"`
+	CreatedByUserID               pgtype.UUID                 `json:"created_by_user_id"`
+	CreatedByRole                 UserRole                    `json:"created_by_role"`
+	CreatedByChannel              ApplicationCreatedByChannel `json:"created_by_channel"`
+	ProductSnapshotJson           []byte                      `json:"product_snapshot_json"`
+	CreatedAt                     pgtype.Timestamptz          `json:"created_at"`
+	UpdatedAt                     pgtype.Timestamptz          `json:"updated_at"`
+	DisbursementAccountNumber     pgtype.Text                 `json:"disbursement_account_number"`
+	DisbursementIfscCode          pgtype.Text                 `json:"disbursement_ifsc_code"`
+	DisbursementBankName          pgtype.Text                 `json:"disbursement_bank_name"`
+	DisbursementAccountHolderName pgtype.Text                 `json:"disbursement_account_holder_name"`
+	ProductName                   string                      `json:"product_name"`
+	BranchName                    string                      `json:"branch_name"`
 }
 
 func (q *Queries) ListLoanApplicationsByBranchID(ctx context.Context, arg ListLoanApplicationsByBranchIDParams) ([]ListLoanApplicationsByBranchIDRow, error) {
@@ -1668,6 +1720,10 @@ func (q *Queries) ListLoanApplicationsByBranchID(ctx context.Context, arg ListLo
 			&i.ProductSnapshotJson,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DisbursementAccountNumber,
+			&i.DisbursementIfscCode,
+			&i.DisbursementBankName,
+			&i.DisbursementAccountHolderName,
 			&i.ProductName,
 			&i.BranchName,
 		); err != nil {
@@ -1683,7 +1739,7 @@ func (q *Queries) ListLoanApplicationsByBranchID(ctx context.Context, arg ListLo
 
 const listLoanApplicationsByCreatedByUserID = `-- name: ListLoanApplicationsByCreatedByUserID :many
 SELECT
-    la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at,
+    la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at, la.disbursement_account_number, la.disbursement_ifsc_code, la.disbursement_bank_name, la.disbursement_account_holder_name,
     lp.name AS product_name,
     bb.name AS branch_name
 FROM loan_applications la
@@ -1701,25 +1757,29 @@ type ListLoanApplicationsByCreatedByUserIDParams struct {
 }
 
 type ListLoanApplicationsByCreatedByUserIDRow struct {
-	ID                       pgtype.UUID                 `json:"id"`
-	ReferenceNumber          string                      `json:"reference_number"`
-	PrimaryBorrowerProfileID pgtype.UUID                 `json:"primary_borrower_profile_id"`
-	LoanProductID            pgtype.UUID                 `json:"loan_product_id"`
-	BranchID                 pgtype.UUID                 `json:"branch_id"`
-	RequestedAmount          pgtype.Numeric              `json:"requested_amount"`
-	TenureMonths             int32                       `json:"tenure_months"`
-	OfferedInterestRate      pgtype.Numeric              `json:"offered_interest_rate"`
-	Status                   LoanApplicationStatus       `json:"status"`
-	AssignedOfficerUserID    pgtype.UUID                 `json:"assigned_officer_user_id"`
-	EscalationReason         pgtype.Text                 `json:"escalation_reason"`
-	CreatedByUserID          pgtype.UUID                 `json:"created_by_user_id"`
-	CreatedByRole            UserRole                    `json:"created_by_role"`
-	CreatedByChannel         ApplicationCreatedByChannel `json:"created_by_channel"`
-	ProductSnapshotJson      []byte                      `json:"product_snapshot_json"`
-	CreatedAt                pgtype.Timestamptz          `json:"created_at"`
-	UpdatedAt                pgtype.Timestamptz          `json:"updated_at"`
-	ProductName              string                      `json:"product_name"`
-	BranchName               string                      `json:"branch_name"`
+	ID                            pgtype.UUID                 `json:"id"`
+	ReferenceNumber               string                      `json:"reference_number"`
+	PrimaryBorrowerProfileID      pgtype.UUID                 `json:"primary_borrower_profile_id"`
+	LoanProductID                 pgtype.UUID                 `json:"loan_product_id"`
+	BranchID                      pgtype.UUID                 `json:"branch_id"`
+	RequestedAmount               pgtype.Numeric              `json:"requested_amount"`
+	TenureMonths                  int32                       `json:"tenure_months"`
+	OfferedInterestRate           pgtype.Numeric              `json:"offered_interest_rate"`
+	Status                        LoanApplicationStatus       `json:"status"`
+	AssignedOfficerUserID         pgtype.UUID                 `json:"assigned_officer_user_id"`
+	EscalationReason              pgtype.Text                 `json:"escalation_reason"`
+	CreatedByUserID               pgtype.UUID                 `json:"created_by_user_id"`
+	CreatedByRole                 UserRole                    `json:"created_by_role"`
+	CreatedByChannel              ApplicationCreatedByChannel `json:"created_by_channel"`
+	ProductSnapshotJson           []byte                      `json:"product_snapshot_json"`
+	CreatedAt                     pgtype.Timestamptz          `json:"created_at"`
+	UpdatedAt                     pgtype.Timestamptz          `json:"updated_at"`
+	DisbursementAccountNumber     pgtype.Text                 `json:"disbursement_account_number"`
+	DisbursementIfscCode          pgtype.Text                 `json:"disbursement_ifsc_code"`
+	DisbursementBankName          pgtype.Text                 `json:"disbursement_bank_name"`
+	DisbursementAccountHolderName pgtype.Text                 `json:"disbursement_account_holder_name"`
+	ProductName                   string                      `json:"product_name"`
+	BranchName                    string                      `json:"branch_name"`
 }
 
 func (q *Queries) ListLoanApplicationsByCreatedByUserID(ctx context.Context, arg ListLoanApplicationsByCreatedByUserIDParams) ([]ListLoanApplicationsByCreatedByUserIDRow, error) {
@@ -1749,6 +1809,10 @@ func (q *Queries) ListLoanApplicationsByCreatedByUserID(ctx context.Context, arg
 			&i.ProductSnapshotJson,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DisbursementAccountNumber,
+			&i.DisbursementIfscCode,
+			&i.DisbursementBankName,
+			&i.DisbursementAccountHolderName,
 			&i.ProductName,
 			&i.BranchName,
 		); err != nil {
@@ -1764,7 +1828,7 @@ func (q *Queries) ListLoanApplicationsByCreatedByUserID(ctx context.Context, arg
 
 const listLoanApplicationsForBorrowerProfile = `-- name: ListLoanApplicationsForBorrowerProfile :many
 SELECT
-    la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at,
+    la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at, la.disbursement_account_number, la.disbursement_ifsc_code, la.disbursement_bank_name, la.disbursement_account_holder_name,
     lp.name AS product_name,
     bb.name AS branch_name
 FROM loan_applications la
@@ -1782,25 +1846,29 @@ type ListLoanApplicationsForBorrowerProfileParams struct {
 }
 
 type ListLoanApplicationsForBorrowerProfileRow struct {
-	ID                       pgtype.UUID                 `json:"id"`
-	ReferenceNumber          string                      `json:"reference_number"`
-	PrimaryBorrowerProfileID pgtype.UUID                 `json:"primary_borrower_profile_id"`
-	LoanProductID            pgtype.UUID                 `json:"loan_product_id"`
-	BranchID                 pgtype.UUID                 `json:"branch_id"`
-	RequestedAmount          pgtype.Numeric              `json:"requested_amount"`
-	TenureMonths             int32                       `json:"tenure_months"`
-	OfferedInterestRate      pgtype.Numeric              `json:"offered_interest_rate"`
-	Status                   LoanApplicationStatus       `json:"status"`
-	AssignedOfficerUserID    pgtype.UUID                 `json:"assigned_officer_user_id"`
-	EscalationReason         pgtype.Text                 `json:"escalation_reason"`
-	CreatedByUserID          pgtype.UUID                 `json:"created_by_user_id"`
-	CreatedByRole            UserRole                    `json:"created_by_role"`
-	CreatedByChannel         ApplicationCreatedByChannel `json:"created_by_channel"`
-	ProductSnapshotJson      []byte                      `json:"product_snapshot_json"`
-	CreatedAt                pgtype.Timestamptz          `json:"created_at"`
-	UpdatedAt                pgtype.Timestamptz          `json:"updated_at"`
-	ProductName              string                      `json:"product_name"`
-	BranchName               string                      `json:"branch_name"`
+	ID                            pgtype.UUID                 `json:"id"`
+	ReferenceNumber               string                      `json:"reference_number"`
+	PrimaryBorrowerProfileID      pgtype.UUID                 `json:"primary_borrower_profile_id"`
+	LoanProductID                 pgtype.UUID                 `json:"loan_product_id"`
+	BranchID                      pgtype.UUID                 `json:"branch_id"`
+	RequestedAmount               pgtype.Numeric              `json:"requested_amount"`
+	TenureMonths                  int32                       `json:"tenure_months"`
+	OfferedInterestRate           pgtype.Numeric              `json:"offered_interest_rate"`
+	Status                        LoanApplicationStatus       `json:"status"`
+	AssignedOfficerUserID         pgtype.UUID                 `json:"assigned_officer_user_id"`
+	EscalationReason              pgtype.Text                 `json:"escalation_reason"`
+	CreatedByUserID               pgtype.UUID                 `json:"created_by_user_id"`
+	CreatedByRole                 UserRole                    `json:"created_by_role"`
+	CreatedByChannel              ApplicationCreatedByChannel `json:"created_by_channel"`
+	ProductSnapshotJson           []byte                      `json:"product_snapshot_json"`
+	CreatedAt                     pgtype.Timestamptz          `json:"created_at"`
+	UpdatedAt                     pgtype.Timestamptz          `json:"updated_at"`
+	DisbursementAccountNumber     pgtype.Text                 `json:"disbursement_account_number"`
+	DisbursementIfscCode          pgtype.Text                 `json:"disbursement_ifsc_code"`
+	DisbursementBankName          pgtype.Text                 `json:"disbursement_bank_name"`
+	DisbursementAccountHolderName pgtype.Text                 `json:"disbursement_account_holder_name"`
+	ProductName                   string                      `json:"product_name"`
+	BranchName                    string                      `json:"branch_name"`
 }
 
 func (q *Queries) ListLoanApplicationsForBorrowerProfile(ctx context.Context, arg ListLoanApplicationsForBorrowerProfileParams) ([]ListLoanApplicationsForBorrowerProfileRow, error) {
@@ -1830,6 +1898,10 @@ func (q *Queries) ListLoanApplicationsForBorrowerProfile(ctx context.Context, ar
 			&i.ProductSnapshotJson,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DisbursementAccountNumber,
+			&i.DisbursementIfscCode,
+			&i.DisbursementBankName,
+			&i.DisbursementAccountHolderName,
 			&i.ProductName,
 			&i.BranchName,
 		); err != nil {
@@ -2253,7 +2325,7 @@ SET tenure_months = $2,
     offered_interest_rate = $3,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = $1
-RETURNING id, reference_number, primary_borrower_profile_id, loan_product_id, branch_id, requested_amount, tenure_months, offered_interest_rate, status, assigned_officer_user_id, escalation_reason, created_by_user_id, created_by_role, created_by_channel, product_snapshot_json, created_at, updated_at
+RETURNING id, reference_number, primary_borrower_profile_id, loan_product_id, branch_id, requested_amount, tenure_months, offered_interest_rate, status, assigned_officer_user_id, escalation_reason, created_by_user_id, created_by_role, created_by_channel, product_snapshot_json, created_at, updated_at, disbursement_account_number, disbursement_ifsc_code, disbursement_bank_name, disbursement_account_holder_name
 `
 
 type UpdateLoanApplicationTermsParams struct {
@@ -2283,6 +2355,10 @@ func (q *Queries) UpdateLoanApplicationTerms(ctx context.Context, arg UpdateLoan
 		&i.ProductSnapshotJson,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DisbursementAccountNumber,
+		&i.DisbursementIfscCode,
+		&i.DisbursementBankName,
+		&i.DisbursementAccountHolderName,
 	)
 	return i, err
 }

@@ -142,7 +142,11 @@ INSERT INTO loan_applications (
     created_by_user_id,
     created_by_role,
     created_by_channel,
-    product_snapshot_json
+    product_snapshot_json,
+    disbursement_account_number,
+    disbursement_ifsc_code,
+    disbursement_bank_name,
+    disbursement_account_holder_name
 ) VALUES (
     $1,
     $2,
@@ -157,7 +161,11 @@ INSERT INTO loan_applications (
     $11,
     $12,
     $13,
-    $14
+    $14,
+    $15,
+    $16,
+    $17,
+    $18
 ) RETURNING *;
 
 -- name: GetLoanApplicationByID :one

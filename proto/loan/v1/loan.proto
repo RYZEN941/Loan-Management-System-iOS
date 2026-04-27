@@ -404,6 +404,10 @@ message LoanApplication {
   string updated_at = 17;
   string product_snapshot_json = 18;
   string offered_interest_rate = 19;
+  string disbursement_account_number = 20;
+  string disbursement_ifsc_code = 21;
+  string disbursement_bank_name = 22;
+  string disbursement_account_holder_name = 23;
 }
 
 // Request to create a loan application.
@@ -414,6 +418,10 @@ message CreateLoanApplicationRequest {
   string requested_amount = 4;
   int32 tenure_months = 5;
   LoanApplicationStatus status = 6;
+  string disbursement_account_number = 7;
+  string disbursement_ifsc_code = 8;
+  string disbursement_bank_name = 9;
+  string disbursement_account_holder_name = 10;
 }
 
 // Response containing the created loan application.

@@ -358,8 +358,12 @@ func (s *service) CreateLoanApplication(ctx context.Context, req *loanv1.CreateL
 		EscalationReason:         pgtype.Text{},
 		CreatedByUserID:          uuidToPg(callerUserID),
 		CreatedByRole:            generated.UserRole(role),
-		CreatedByChannel:         channel,
-		ProductSnapshotJson:      []byte(buildProductSnapshotJSON(product)),
+		CreatedByChannel:              channel,
+		ProductSnapshotJson:           []byte(buildProductSnapshotJSON(product)),
+		DisbursementAccountNumber:     pgText(req.GetDisbursementAccountNumber()),
+		DisbursementIfscCode:          pgText(req.GetDisbursementIfscCode()),
+		DisbursementBankName:          pgText(req.GetDisbursementBankName()),
+		DisbursementAccountHolderName: pgText(req.GetDisbursementAccountHolderName()),
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to create loan application")
@@ -1796,7 +1800,11 @@ func mapLoanApplicationBase(row generated.LoanApplication, productName, branchNa
 		CreatedAt:                timeToString(row.CreatedAt),
 		UpdatedAt:                timeToString(row.UpdatedAt),
 		ProductSnapshotJson:      string(row.ProductSnapshotJson),
-		OfferedInterestRate:      numericToString(row.OfferedInterestRate),
+		OfferedInterestRate:           numericToString(row.OfferedInterestRate),
+		DisbursementAccountNumber:     textToString(row.DisbursementAccountNumber),
+		DisbursementIfscCode:          textToString(row.DisbursementIfscCode),
+		DisbursementBankName:          textToString(row.DisbursementBankName),
+		DisbursementAccountHolderName: textToString(row.DisbursementAccountHolderName),
 	}
 }
 
@@ -1820,7 +1828,11 @@ func mapLoanApplicationView(row generated.GetLoanApplicationViewByIDRow) *loanv1
 		CreatedAt:                timeToString(row.CreatedAt),
 		UpdatedAt:                timeToString(row.UpdatedAt),
 		ProductSnapshotJson:      string(row.ProductSnapshotJson),
-		OfferedInterestRate:      numericToString(row.OfferedInterestRate),
+		OfferedInterestRate:           numericToString(row.OfferedInterestRate),
+		DisbursementAccountNumber:     textToString(row.DisbursementAccountNumber),
+		DisbursementIfscCode:          textToString(row.DisbursementIfscCode),
+		DisbursementBankName:          textToString(row.DisbursementBankName),
+		DisbursementAccountHolderName: textToString(row.DisbursementAccountHolderName),
 	}
 }
 
@@ -1844,7 +1856,11 @@ func mapLoanApplicationRowForBorrower(row generated.ListLoanApplicationsForBorro
 		CreatedAt:                timeToString(row.CreatedAt),
 		UpdatedAt:                timeToString(row.UpdatedAt),
 		ProductSnapshotJson:      string(row.ProductSnapshotJson),
-		OfferedInterestRate:      numericToString(row.OfferedInterestRate),
+		OfferedInterestRate:           numericToString(row.OfferedInterestRate),
+		DisbursementAccountNumber:     textToString(row.DisbursementAccountNumber),
+		DisbursementIfscCode:          textToString(row.DisbursementIfscCode),
+		DisbursementBankName:          textToString(row.DisbursementBankName),
+		DisbursementAccountHolderName: textToString(row.DisbursementAccountHolderName),
 	}
 }
 
@@ -1868,7 +1884,11 @@ func mapLoanApplicationRowForBranch(row generated.ListLoanApplicationsByBranchID
 		CreatedAt:                timeToString(row.CreatedAt),
 		UpdatedAt:                timeToString(row.UpdatedAt),
 		ProductSnapshotJson:      string(row.ProductSnapshotJson),
-		OfferedInterestRate:      numericToString(row.OfferedInterestRate),
+		OfferedInterestRate:           numericToString(row.OfferedInterestRate),
+		DisbursementAccountNumber:     textToString(row.DisbursementAccountNumber),
+		DisbursementIfscCode:          textToString(row.DisbursementIfscCode),
+		DisbursementBankName:          textToString(row.DisbursementBankName),
+		DisbursementAccountHolderName: textToString(row.DisbursementAccountHolderName),
 	}
 }
 
@@ -1892,7 +1912,11 @@ func mapLoanApplicationRowForAdmin(row generated.ListAllLoanApplicationsRow) *lo
 		CreatedAt:                timeToString(row.CreatedAt),
 		UpdatedAt:                timeToString(row.UpdatedAt),
 		ProductSnapshotJson:      string(row.ProductSnapshotJson),
-		OfferedInterestRate:      numericToString(row.OfferedInterestRate),
+		OfferedInterestRate:           numericToString(row.OfferedInterestRate),
+		DisbursementAccountNumber:     textToString(row.DisbursementAccountNumber),
+		DisbursementIfscCode:          textToString(row.DisbursementIfscCode),
+		DisbursementBankName:          textToString(row.DisbursementBankName),
+		DisbursementAccountHolderName: textToString(row.DisbursementAccountHolderName),
 	}
 }
 
@@ -1916,7 +1940,11 @@ func mapLoanApplicationRowForOfficer(row generated.ListLoanApplicationsByAssigne
 		CreatedAt:                timeToString(row.CreatedAt),
 		UpdatedAt:                timeToString(row.UpdatedAt),
 		ProductSnapshotJson:      string(row.ProductSnapshotJson),
-		OfferedInterestRate:      numericToString(row.OfferedInterestRate),
+		OfferedInterestRate:           numericToString(row.OfferedInterestRate),
+		DisbursementAccountNumber:     textToString(row.DisbursementAccountNumber),
+		DisbursementIfscCode:          textToString(row.DisbursementIfscCode),
+		DisbursementBankName:          textToString(row.DisbursementBankName),
+		DisbursementAccountHolderName: textToString(row.DisbursementAccountHolderName),
 	}
 }
 
@@ -1940,7 +1968,11 @@ func mapLoanApplicationRowForDst(row generated.ListLoanApplicationsByCreatedByUs
 		CreatedAt:                timeToString(row.CreatedAt),
 		UpdatedAt:                timeToString(row.UpdatedAt),
 		ProductSnapshotJson:      string(row.ProductSnapshotJson),
-		OfferedInterestRate:      numericToString(row.OfferedInterestRate),
+		OfferedInterestRate:           numericToString(row.OfferedInterestRate),
+		DisbursementAccountNumber:     textToString(row.DisbursementAccountNumber),
+		DisbursementIfscCode:          textToString(row.DisbursementIfscCode),
+		DisbursementBankName:          textToString(row.DisbursementBankName),
+		DisbursementAccountHolderName: textToString(row.DisbursementAccountHolderName),
 	}
 }
 

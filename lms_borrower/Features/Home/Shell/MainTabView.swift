@@ -87,7 +87,7 @@ struct MainTabView: View {
         case .rejectionReason: RejectionStatusView()
         case .emiCalculator: EMICalculatorView()
         case .activeLoanDetails(let application): ActiveLoanDetailsView(application: application)
-        case .amortisationSchedule: AmortisationScheduleView()
+        case .amortisationSchedule(let loanId): AmortisationScheduleView(loanId: loanId)
         case .outstandingBalance: OutstandingBalanceView()
         case .repaymentDashboard(let applicationId): RepaymentDashboardView(applicationId: applicationId)
         case .repaymentsList(let loanId, let tab): RepaymentsListView(loanId: loanId, selectedTab: tab)
@@ -110,7 +110,7 @@ struct MainTabView: View {
         case .languageSelection: LanguageSelectionView()
         case .accessibilitySettings: AccessibilitySettingsView()
         case .statementDownload: StatementDownloadView()
-        case .notifications: NotificationsView()
+        case .notifications: AppNotificationsView()
         case .autoPaySetup: AutoPaySetupView() // NEW: AutoPay Route
         }
     }

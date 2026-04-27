@@ -25,7 +25,7 @@ enum AppRoute: Hashable {
     // Feature 7: EMI & Loan Management
     case emiCalculator
     case activeLoanDetails(BorrowerLoanApplication)
-    case amortisationSchedule
+    case amortisationSchedule(loanId: String?)
     case outstandingBalance
     
     // Feature 8: Repayment Module

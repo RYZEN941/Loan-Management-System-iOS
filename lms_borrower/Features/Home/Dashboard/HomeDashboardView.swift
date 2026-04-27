@@ -580,7 +580,7 @@ struct QuickActionItemView: View {
                 router.push(.repaymentsList(loanId: loanId, initialTab: 1))
             }
             else if action.label == String(localized: "Support") { router.push(.chatList) }
-            else if action.label == String(localized: "Schedule") { router.push(.amortisationSchedule) }
+            else if action.label == String(localized: "Schedule") { router.push(.amortisationSchedule(loanId: nil)) }
             else if action.label == String(localized: "Foreclose") { router.push(.outstandingBalance) }
             else if action.label == String(localized: "Statement") { router.push(.statementDownload) }
             else if action.label == String(localized: "Analytics") { router.push(.costBreakdown) }

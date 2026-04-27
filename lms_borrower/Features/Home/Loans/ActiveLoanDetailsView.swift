@@ -97,7 +97,7 @@ struct ActiveLoanDetailsView: View {
     private var actionGrid: some View {
         HStack(spacing: 16) {
             LoanActionTile(icon: "chart.bar.doc.horizontal", title: "Amortisation\nSchedule") {
-                router.push(.amortisationSchedule)
+                router.push(.amortisationSchedule(loanId: viewModel.activeLoan?.id))
             }
             LoanActionTile(icon: "indianrupeesign.circle", title: "Outstanding\nBreakdown") {
                 router.push(.outstandingBalance)

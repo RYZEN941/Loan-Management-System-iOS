@@ -85,8 +85,7 @@ struct RejectionStatusView: View {
                 
                 // Support Action
                 Button {
-                    // 2. Route to chat!
-                    router.push(.chatConversation(roomID: "Support Agent"))
+                    router.push(.chatList)
                 } label: {
                     HStack {
                         Image(systemName: "headphones")

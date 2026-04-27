@@ -14,19 +14,20 @@ final class ChatListViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
     @Published var searchQuery: String = ""
-    @Published var participantNames: [String: String] = [:] // Cache for participant names
+    @Published var participantNames: [String: String] = [:]
 
     private let chatService: ChatServiceProtocol
     private var cancellables = Set<AnyCancellable>()
     private var currentUserID: String = ""
+    private var searchDebounceTask: Task<Void, Never>?
 
     init(chatService: ChatServiceProtocol = ServiceContainer.chatService) {
         self.chatService = chatService
-        self.currentUserID = getCurrentUserID()
+        self.currentUserID = Self.resolveCurrentUserID()
         loadChatRooms()
     }
 
-    private func getCurrentUserID() -> String {
+    private static func resolveCurrentUserID() -> String {
         guard let accessToken = try? TokenStore.shared.accessToken(),
               let userID = JWTClaimsDecoder.subject(from: accessToken) else {
             return ""
@@ -43,18 +44,10 @@ final class ChatListViewModel: ObservableObject {
         Task {
             do {
                 let rooms = try await chatService.listMyChatRooms(limit: 50, offset: 0)
+                let names = await resolveParticipantNames(for: rooms)
                 await MainActor.run {
                     self.chatRooms = rooms
-                    // Populate participant names from eligible users if available
-                    for room in rooms {
-                        let otherUserID = room.otherUserID(currentUserID: currentUserID)
-                        if participantNames[otherUserID] == nil {
-                            // Check if we have this user in eligible users
-                            if let user = eligibleUsers.first(where: { $0.id == otherUserID }) {
-                                participantNames[otherUserID] = user.displayName
-                            }
-                        }
-                    }
+                    self.participantNames.merge(names) { _, new in new }
                     self.isLoading = false
                 }
             } catch {
@@ -66,13 +59,37 @@ final class ChatListViewModel: ObservableObject {
         }
     }
 
+    private func resolveParticipantNames(for rooms: [ChatRoom]) async -> [String: String] {
+        var names: [String: String] = [:]
+        for room in rooms {
+            let otherID = room.otherUserID(currentUserID: currentUserID)
+            if names[otherID] == nil {
+                names[otherID] = "User"
+            }
+        }
+        do {
+            let users = try await chatService.listEligibleUsers(query: "", limit: 100, offset: 0)
+            for user in users {
+                names[user.id] = user.displayName
+            }
+        } catch {
+            // Best-effort: names without a match stay "User"
+        }
+        return names
+    }
+
+    // MARK: - Search with debounce
+
     func searchEligibleUsers() {
+        searchDebounceTask?.cancel()
         guard !searchQuery.isEmpty else {
             eligibleUsers = []
             return
         }
 
-        Task {
+        searchDebounceTask = Task {
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else { return }
             do {
                 let users = try await chatService.listEligibleUsers(
                     query: searchQuery,
@@ -81,6 +98,9 @@ final class ChatListViewModel: ObservableObject {
                 )
                 await MainActor.run {
                     self.eligibleUsers = users
+                    for user in users {
+                        self.participantNames[user.id] = user.displayName
+                    }
                 }
             } catch {
                 await MainActor.run {
@@ -92,38 +112,28 @@ final class ChatListViewModel: ObservableObject {
 
     // MARK: - Room Creation
 
-    func createRoomWithUser(userID: String, contextApplicationID: String? = nil) -> ChatRoom? {
-        var createdRoom: ChatRoom?
-
-        Task {
-            do {
-                let room = try await chatService.createOrGetDirectRoom(
-                    targetUserID: userID,
-                    contextApplicationID: contextApplicationID
-                )
-                await MainActor.run {
-                    // Add to beginning of list if not already present
-                    if !self.chatRooms.contains(where: { $0.id == room.id }) {
-                        self.chatRooms.insert(room, at: 0)
-                    }
-                    createdRoom = room
-                }
-            } catch {
-                await MainActor.run {
-                    self.errorMessage = error.localizedDescription
-                }
+    func createRoomWithUser(userID: String, contextApplicationID: String? = nil) async throws -> ChatRoom {
+        let room = try await chatService.createOrGetDirectRoom(
+            targetUserID: userID,
+            contextApplicationID: contextApplicationID
+        )
+        if !chatRooms.contains(where: { $0.id == room.id }) {
+            chatRooms.insert(room, at: 0)
+        }
+        if participantNames[userID] == nil {
+            if let user = eligibleUsers.first(where: { $0.id == userID }) {
+                participantNames[userID] = user.displayName
             }
         }
-
-        return createdRoom
+        return room
     }
 
     // MARK: - UI Helpers
 
-    func chatPreviewModels(participantNames: [String: String]) -> [ChatPreviewModel] {
+    func chatPreviewModels() -> [ChatPreviewModel] {
         return chatRooms.map { room in
             let otherUserID = room.otherUserID(currentUserID: currentUserID)
-            let participantName = participantNames[otherUserID] ?? "Unknown"
+            let participantName = participantNames[otherUserID] ?? "User"
             return ChatPreviewModel(from: room, participantName: participantName, hasUnread: false)
         }
     }

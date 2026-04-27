@@ -102,7 +102,7 @@ struct MainTabView: View {
         case .scoreHistory: ScoreHistoryView()
         case .benefitsUnlocked(let score): BenefitsUnlockedView(score: score)
         case .chatList: ChatListView()
-        case .chatConversation(let agentName): ChatConversationView(roomID: agentName)
+        case .chatConversation(let roomID): ChatConversationView(roomID: roomID)
         case .editProfile: EditProfileView()
         case .kycStatus: KYCStatusView()
         case .loanHistory: LoanHistoryView()

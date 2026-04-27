@@ -93,8 +93,10 @@ func Run() error {
 		"/auth.v1.AuthService/VerifyForgotPasswordOTPs": {},
 		"/auth.v1.AuthService/ResetForgotPassword":      {},
 		"/auth.v1.AuthService/RefreshToken":             {},
-		"/grpc.health.v1.Health/Check":                  {},
-		"/grpc.health.v1.Health/Watch":                  {},
+		"/grpc.health.v1.Health/Check":                                    {},
+		"/grpc.health.v1.Health/Watch":                                    {},
+		"/grpc.reflection.v1.ServerReflection/ServerReflectionInfo":       {},
+		"/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo":  {},
 	}
 
 	rbacPolicy := grpcinterceptors.RBACPolicy{

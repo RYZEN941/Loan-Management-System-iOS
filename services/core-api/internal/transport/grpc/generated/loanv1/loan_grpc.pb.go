@@ -48,6 +48,8 @@ const (
 	LoanService_RecordPayment_FullMethodName                         = "/loan.v1.LoanService/RecordPayment"
 	LoanService_ListPayments_FullMethodName                          = "/loan.v1.LoanService/ListPayments"
 	LoanService_RescheduleLoan_FullMethodName                        = "/loan.v1.LoanService/RescheduleLoan"
+	LoanService_InitiatePayment_FullMethodName                       = "/loan.v1.LoanService/InitiatePayment"
+	LoanService_VerifyPayment_FullMethodName                         = "/loan.v1.LoanService/VerifyPayment"
 )
 
 // LoanServiceClient is the client API for LoanService service.
@@ -114,6 +116,10 @@ type LoanServiceClient interface {
 	ListPayments(ctx context.Context, in *ListPaymentsRequest, opts ...grpc.CallOption) (*ListPaymentsResponse, error)
 	// Reschedule an active loan by changing its tenure. Manager/admin only.
 	RescheduleLoan(ctx context.Context, in *RescheduleLoanRequest, opts ...grpc.CallOption) (*RescheduleLoanResponse, error)
+	// Initiate a Razorpay payment for a loan/EMI.
+	InitiatePayment(ctx context.Context, in *InitiatePaymentRequest, opts ...grpc.CallOption) (*InitiatePaymentResponse, error)
+	// Verify a completed Razorpay payment.
+	VerifyPayment(ctx context.Context, in *VerifyPaymentRequest, opts ...grpc.CallOption) (*VerifyPaymentResponse, error)
 }
 
 type loanServiceClient struct {
@@ -414,6 +420,26 @@ func (c *loanServiceClient) RescheduleLoan(ctx context.Context, in *RescheduleLo
 	return out, nil
 }
 
+func (c *loanServiceClient) InitiatePayment(ctx context.Context, in *InitiatePaymentRequest, opts ...grpc.CallOption) (*InitiatePaymentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InitiatePaymentResponse)
+	err := c.cc.Invoke(ctx, LoanService_InitiatePayment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) VerifyPayment(ctx context.Context, in *VerifyPaymentRequest, opts ...grpc.CallOption) (*VerifyPaymentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VerifyPaymentResponse)
+	err := c.cc.Invoke(ctx, LoanService_VerifyPayment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // LoanServiceServer is the server API for LoanService service.
 // All implementations must embed UnimplementedLoanServiceServer
 // for forward compatibility.
@@ -478,6 +504,10 @@ type LoanServiceServer interface {
 	ListPayments(context.Context, *ListPaymentsRequest) (*ListPaymentsResponse, error)
 	// Reschedule an active loan by changing its tenure. Manager/admin only.
 	RescheduleLoan(context.Context, *RescheduleLoanRequest) (*RescheduleLoanResponse, error)
+	// Initiate a Razorpay payment for a loan/EMI.
+	InitiatePayment(context.Context, *InitiatePaymentRequest) (*InitiatePaymentResponse, error)
+	// Verify a completed Razorpay payment.
+	VerifyPayment(context.Context, *VerifyPaymentRequest) (*VerifyPaymentResponse, error)
 	mustEmbedUnimplementedLoanServiceServer()
 }
 
@@ -574,6 +604,12 @@ func (UnimplementedLoanServiceServer) ListPayments(context.Context, *ListPayment
 }
 func (UnimplementedLoanServiceServer) RescheduleLoan(context.Context, *RescheduleLoanRequest) (*RescheduleLoanResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RescheduleLoan not implemented")
+}
+func (UnimplementedLoanServiceServer) InitiatePayment(context.Context, *InitiatePaymentRequest) (*InitiatePaymentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InitiatePayment not implemented")
+}
+func (UnimplementedLoanServiceServer) VerifyPayment(context.Context, *VerifyPaymentRequest) (*VerifyPaymentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method VerifyPayment not implemented")
 }
 func (UnimplementedLoanServiceServer) mustEmbedUnimplementedLoanServiceServer() {}
 func (UnimplementedLoanServiceServer) testEmbeddedByValue()                     {}
@@ -1118,6 +1154,42 @@ func _LoanService_RescheduleLoan_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _LoanService_InitiatePayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InitiatePaymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).InitiatePayment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_InitiatePayment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).InitiatePayment(ctx, req.(*InitiatePaymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_VerifyPayment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(VerifyPaymentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).VerifyPayment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_VerifyPayment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).VerifyPayment(ctx, req.(*VerifyPaymentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // LoanService_ServiceDesc is the grpc.ServiceDesc for LoanService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1240,6 +1312,14 @@ var LoanService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RescheduleLoan",
 			Handler:    _LoanService_RescheduleLoan_Handler,
+		},
+		{
+			MethodName: "InitiatePayment",
+			Handler:    _LoanService_InitiatePayment_Handler,
+		},
+		{
+			MethodName: "VerifyPayment",
+			Handler:    _LoanService_VerifyPayment_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

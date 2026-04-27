@@ -1374,6 +1374,19 @@ type Payment struct {
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`
 }
 
+type PaymentOrder struct {
+	ID                pgtype.UUID        `json:"id"`
+	RazorpayOrderID   string             `json:"razorpay_order_id"`
+	LoanID            pgtype.UUID        `json:"loan_id"`
+	EmiScheduleID     pgtype.UUID        `json:"emi_schedule_id"`
+	Amount            pgtype.Numeric     `json:"amount"`
+	Status            PaymentStatus      `json:"status"`
+	RazorpayPaymentID pgtype.Text        `json:"razorpay_payment_id"`
+	RazorpaySignature pgtype.Text        `json:"razorpay_signature"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
 type ProductEligibilityRule struct {
 	ID                     pgtype.UUID        `json:"id"`
 	LoanProductID          pgtype.UUID        `json:"loan_product_id"`

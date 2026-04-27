@@ -72,6 +72,10 @@ service LoanService {
   rpc ListPayments(ListPaymentsRequest) returns (ListPaymentsResponse);
   // Reschedule an active loan by changing its tenure. Manager/admin only.
   rpc RescheduleLoan(RescheduleLoanRequest) returns (RescheduleLoanResponse);
+  // Initiate a Razorpay payment for a loan/EMI.
+  rpc InitiatePayment(InitiatePaymentRequest) returns (InitiatePaymentResponse);
+  // Verify a completed Razorpay payment.
+  rpc VerifyPayment(VerifyPaymentRequest) returns (VerifyPaymentResponse);
 }
 
 // Category of a loan product.
@@ -795,4 +799,31 @@ message RescheduleLoanRequest {
 message RescheduleLoanResponse {
   Loan loan = 1;
   repeated EmiScheduleItem new_schedule = 2;
+}
+
+// Request to initiate a Razorpay payment.
+message InitiatePaymentRequest {
+  string loan_id = 1;
+  string emi_schedule_id = 2; // Optional, for specific EMI payment
+  string amount = 3;
+}
+
+// Response containing the Razorpay order details.
+message InitiatePaymentResponse {
+  string razorpay_order_id = 1;
+  string amount = 2;
+  string currency = 3;
+}
+
+// Request to verify a Razorpay payment.
+message VerifyPaymentRequest {
+  string razorpay_order_id = 1;
+  string razorpay_payment_id = 2;
+  string razorpay_signature = 3;
+}
+
+// Response for payment verification.
+message VerifyPaymentResponse {
+  bool success = 1;
+  Payment payment = 2;
 }

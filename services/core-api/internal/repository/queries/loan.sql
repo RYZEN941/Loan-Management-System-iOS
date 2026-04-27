@@ -684,3 +684,34 @@ WHERE loan_id = $1 AND status = 'SUCCESS';
 SELECT COUNT(*) AS paid_count
 FROM emi_schedules
 WHERE loan_id = $1 AND status = 'PAID';
+
+-- name: CreatePaymentOrder :one
+INSERT INTO payment_orders (
+    razorpay_order_id,
+    loan_id,
+    emi_schedule_id,
+    amount,
+    status
+) VALUES (
+    $1, $2, $3, $4, $5
+)
+RETURNING *;
+
+-- name: GetPaymentOrderByRazorpayOrderID :one
+SELECT *
+FROM payment_orders
+WHERE razorpay_order_id = $1;
+
+-- name: UpdatePaymentOrderStatus :exec
+UPDATE payment_orders
+SET status = $2,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = $1;
+
+-- name: UpdatePaymentOrderVerification :exec
+UPDATE payment_orders
+SET razorpay_payment_id = $2,
+    razorpay_signature = $3,
+    status = $4,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = $1;

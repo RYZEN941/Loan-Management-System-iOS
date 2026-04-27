@@ -41,6 +41,7 @@ type Querier interface {
 	CreateMediaFile(ctx context.Context, arg CreateMediaFileParams) (MediaFile, error)
 	CreateOfficerProfile(ctx context.Context, arg CreateOfficerProfileParams) (OfficerProfile, error)
 	CreatePayment(ctx context.Context, arg CreatePaymentParams) (Payment, error)
+	CreatePaymentOrder(ctx context.Context, arg CreatePaymentOrderParams) (PaymentOrder, error)
 	CreateProductFee(ctx context.Context, arg CreateProductFeeParams) (ProductFee, error)
 	CreateProductRequiredDocument(ctx context.Context, arg CreateProductRequiredDocumentParams) (ProductRequiredDocument, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
@@ -79,6 +80,7 @@ type Querier interface {
 	GetManagerProfileByUserID(ctx context.Context, userID pgtype.UUID) (ManagerProfile, error)
 	GetOfficerProfileByUserID(ctx context.Context, userID pgtype.UUID) (OfficerProfile, error)
 	GetPaymentByExternalTransactionID(ctx context.Context, externalTransactionID string) (Payment, error)
+	GetPaymentOrderByRazorpayOrderID(ctx context.Context, razorpayOrderID string) (PaymentOrder, error)
 	GetProductEligibilityRuleByProductID(ctx context.Context, loanProductID pgtype.UUID) (ProductEligibilityRule, error)
 	GetProductRequiredDocumentByIDAndProduct(ctx context.Context, arg GetProductRequiredDocumentByIDAndProductParams) (ProductRequiredDocument, error)
 	GetRefreshTokenByHashedToken(ctx context.Context, hashedToken string) (RefreshToken, error)
@@ -149,6 +151,8 @@ type Querier interface {
 	UpdateLoanStatusAndOutstanding(ctx context.Context, arg UpdateLoanStatusAndOutstandingParams) error
 	UpdateManagerBranch(ctx context.Context, arg UpdateManagerBranchParams) error
 	UpdateOfficerBranch(ctx context.Context, arg UpdateOfficerBranchParams) error
+	UpdatePaymentOrderStatus(ctx context.Context, arg UpdatePaymentOrderStatusParams) error
+	UpdatePaymentOrderVerification(ctx context.Context, arg UpdatePaymentOrderVerificationParams) error
 	UpdateUserVerification(ctx context.Context, arg UpdateUserVerificationParams) error
 	UpdateWebAuthnCredentialSignCount(ctx context.Context, arg UpdateWebAuthnCredentialSignCountParams) error
 	UpsertApplicationCollateral(ctx context.Context, arg UpsertApplicationCollateralParams) (ApplicationCollateral, error)

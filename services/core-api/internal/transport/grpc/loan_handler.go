@@ -35,6 +35,10 @@ type LoanService interface {
 	ListEmiSchedule(ctx context.Context, req *loanv1.ListEmiScheduleRequest) (*loanv1.ListEmiScheduleResponse, error)
 	RecordPayment(ctx context.Context, req *loanv1.RecordPaymentRequest) (*loanv1.RecordPaymentResponse, error)
 	ListPayments(ctx context.Context, req *loanv1.ListPaymentsRequest) (*loanv1.ListPaymentsResponse, error)
+	RescheduleLoan(ctx context.Context, req *loanv1.RescheduleLoanRequest) (*loanv1.RescheduleLoanResponse, error)
+	InitiatePayment(ctx context.Context, req *loanv1.InitiatePaymentRequest) (*loanv1.InitiatePaymentResponse, error)
+	VerifyPayment(ctx context.Context, req *loanv1.VerifyPaymentRequest) (*loanv1.VerifyPaymentResponse, error)
+	ProcessPaymentFromWebhook(ctx context.Context, orderID, paymentID string) error
 }
 
 type LoanHandler struct {
@@ -129,4 +133,13 @@ func (h *LoanHandler) RecordPayment(ctx context.Context, req *loanv1.RecordPayme
 }
 func (h *LoanHandler) ListPayments(ctx context.Context, req *loanv1.ListPaymentsRequest) (*loanv1.ListPaymentsResponse, error) {
 	return h.loanService.ListPayments(ctx, req)
+}
+func (h *LoanHandler) RescheduleLoan(ctx context.Context, req *loanv1.RescheduleLoanRequest) (*loanv1.RescheduleLoanResponse, error) {
+	return h.loanService.RescheduleLoan(ctx, req)
+}
+func (h *LoanHandler) InitiatePayment(ctx context.Context, req *loanv1.InitiatePaymentRequest) (*loanv1.InitiatePaymentResponse, error) {
+	return h.loanService.InitiatePayment(ctx, req)
+}
+func (h *LoanHandler) VerifyPayment(ctx context.Context, req *loanv1.VerifyPaymentRequest) (*loanv1.VerifyPaymentResponse, error) {
+	return h.loanService.VerifyPayment(ctx, req)
 }

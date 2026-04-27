@@ -12,8 +12,10 @@ import (
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/config"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/db"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/integrations/r2"
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/integrations/razorpay"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/integrations/sandbox"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/repository/generated"
+	"net/http"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/admin"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/auth"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/branch"
@@ -69,7 +71,8 @@ func Run() error {
 	dstService := dst.NewService(queries)
 	sandboxKYCClient := sandbox.NewKYCClient(cfg.SandboxBaseURL, cfg.SandboxAPIKey, cfg.SandboxSecret)
 	kycService := kyc.NewService(pgPool, queries, sandboxKYCClient)
-	loanService := loan.NewService(queries, auditService)
+	razorpayClient := razorpay.NewClient(cfg.RazorpayKeyID, cfg.RazorpayKeySecret)
+	loanService := loan.NewService(queries, auditService, razorpayClient)
 	r2Client, err := r2.NewClient(context.Background(), cfg.R2AccountID, cfg.R2AccessKeyID, cfg.R2SecretAccessKey, cfg.R2BucketName, cfg.R2PublicBaseURL)
 	if err != nil {
 		return fmt.Errorf("failed to initialize r2 client: %w", err)
@@ -77,7 +80,7 @@ func Run() error {
 	mediaService := media.NewService(queries, r2Client, time.Duration(cfg.R2UploadURLTTLSecs)*time.Second, cfg.MediaMaxUploadSize)
 	onboardingService := onboarding.NewService(queries, redisClient, cfg)
 	branchService := branch.NewService(queries)
-	application := app.New(adminService, authService, chatService, dstService, kycService, loanService, mediaService, onboardingService, branchService)
+	application := app.New(adminService, authService, chatService, dstService, kycService, loanService, mediaService, onboardingService, branchService, razorpayClient)
 
 	publicMethods := map[string]struct{}{
 		// BOOTSTRAP ADMIN ONLY:
@@ -157,6 +160,8 @@ func Run() error {
 		"/loan.v1.LoanService/ListEmiSchedule":                        {"borrower", "officer", "manager", "admin", "dst"},
 		"/loan.v1.LoanService/RecordPayment":                          {"officer", "manager", "admin"},
 		"/loan.v1.LoanService/ListPayments":                           {"borrower", "officer", "manager", "admin", "dst"},
+		"/loan.v1.LoanService/InitiatePayment":                        {"borrower"},
+		"/loan.v1.LoanService/VerifyPayment":                          {"borrower"},
 		"/media.v1.MediaService/InitiateMediaUpload":                  {"borrower", "officer", "manager", "admin", "dst"},
 		"/media.v1.MediaService/CompleteMediaUpload":                  {"borrower", "officer", "manager", "admin", "dst"},
 		"/media.v1.MediaService/ListMedia":                            {"borrower", "officer", "manager", "admin", "dst"},
@@ -207,6 +212,15 @@ func Run() error {
 	onboardingv1.RegisterOnboardingServiceServer(grpcServer, application.OnboardingHandler)
 	branchv1.RegisterBranchServiceServer(grpcServer, application.BranchHandler)
 	reflection.Register(grpcServer)
+
+	go func() {
+		log.Printf("http server (webhooks) listening on :%s", cfg.HTTPPort)
+		mux := http.NewServeMux()
+		mux.Handle("/webhooks/razorpay", application.RazorpayWebhookHandler)
+		if err := http.ListenAndServe(":"+cfg.HTTPPort, mux); err != nil {
+			log.Printf("http server error: %v", err)
+		}
+	}()
 
 	log.Printf("grpc server listening on :%s", cfg.GRPCPort)
 	return grpcServer.Serve(lis)

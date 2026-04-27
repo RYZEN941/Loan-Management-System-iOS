@@ -28,11 +28,17 @@ type Config struct {
 	R2PublicBaseURL    string
 	R2UploadURLTTLSecs int
 	MediaMaxUploadSize int64
+
+	HTTPPort              string
+	RazorpayKeyID         string
+	RazorpayKeySecret     string
+	RazorpayWebhookSecret string
 }
 
 func Load() Config {
 	return Config{
 		GRPCPort:    envOrDefault("GRPC_PORT", "8080"),
+		HTTPPort:    envOrDefault("HTTP_PORT", "8081"),
 		JWTKey:      envOrDefault("JWT_SIGNING_KEY", "dev-only-change-me"),
 		PostgresDSN: envOrDefault("POSTGRES_DSN", "postgres://lms:lms@localhost:5432/lms?sslmode=disable"),
 		RedisAddr:   envOrDefault("REDIS_ADDR", "localhost:6379"),
@@ -53,6 +59,10 @@ func Load() Config {
 		R2PublicBaseURL:    os.Getenv("R2_PUBLIC_BASE_URL"),
 		R2UploadURLTTLSecs: envIntOrDefault("R2_UPLOAD_URL_TTL_SECONDS", 900),
 		MediaMaxUploadSize: envInt64OrDefault("MEDIA_MAX_UPLOAD_BYTES", 10485760),
+
+		RazorpayKeyID:         os.Getenv("RAZORPAY_KEY_ID"),
+		RazorpayKeySecret:     os.Getenv("RAZORPAY_KEY_SECRET"),
+		RazorpayWebhookSecret: os.Getenv("RAZORPAY_WEBHOOK_SECRET"),
 	}
 }
 

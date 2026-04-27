@@ -518,6 +518,51 @@ func (q *Queries) CreatePayment(ctx context.Context, arg CreatePaymentParams) (P
 	return i, err
 }
 
+const createPaymentOrder = `-- name: CreatePaymentOrder :one
+INSERT INTO payment_orders (
+    razorpay_order_id,
+    loan_id,
+    emi_schedule_id,
+    amount,
+    status
+) VALUES (
+    $1, $2, $3, $4, $5
+)
+RETURNING id, razorpay_order_id, loan_id, emi_schedule_id, amount, status, razorpay_payment_id, razorpay_signature, created_at, updated_at
+`
+
+type CreatePaymentOrderParams struct {
+	RazorpayOrderID string         `json:"razorpay_order_id"`
+	LoanID          pgtype.UUID    `json:"loan_id"`
+	EmiScheduleID   pgtype.UUID    `json:"emi_schedule_id"`
+	Amount          pgtype.Numeric `json:"amount"`
+	Status          PaymentStatus  `json:"status"`
+}
+
+func (q *Queries) CreatePaymentOrder(ctx context.Context, arg CreatePaymentOrderParams) (PaymentOrder, error) {
+	row := q.db.QueryRow(ctx, createPaymentOrder,
+		arg.RazorpayOrderID,
+		arg.LoanID,
+		arg.EmiScheduleID,
+		arg.Amount,
+		arg.Status,
+	)
+	var i PaymentOrder
+	err := row.Scan(
+		&i.ID,
+		&i.RazorpayOrderID,
+		&i.LoanID,
+		&i.EmiScheduleID,
+		&i.Amount,
+		&i.Status,
+		&i.RazorpayPaymentID,
+		&i.RazorpaySignature,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createProductFee = `-- name: CreateProductFee :one
 INSERT INTO product_fees (
     loan_product_id,
@@ -1093,6 +1138,30 @@ func (q *Queries) GetPaymentByExternalTransactionID(ctx context.Context, externa
 		&i.ExternalTransactionID,
 		&i.Status,
 		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getPaymentOrderByRazorpayOrderID = `-- name: GetPaymentOrderByRazorpayOrderID :one
+SELECT id, razorpay_order_id, loan_id, emi_schedule_id, amount, status, razorpay_payment_id, razorpay_signature, created_at, updated_at
+FROM payment_orders
+WHERE razorpay_order_id = $1
+`
+
+func (q *Queries) GetPaymentOrderByRazorpayOrderID(ctx context.Context, razorpayOrderID string) (PaymentOrder, error) {
+	row := q.db.QueryRow(ctx, getPaymentOrderByRazorpayOrderID, razorpayOrderID)
+	var i PaymentOrder
+	err := row.Scan(
+		&i.ID,
+		&i.RazorpayOrderID,
+		&i.LoanID,
+		&i.EmiScheduleID,
+		&i.Amount,
+		&i.Status,
+		&i.RazorpayPaymentID,
+		&i.RazorpaySignature,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -2324,6 +2393,49 @@ type UpdateLoanStatusAndOutstandingParams struct {
 
 func (q *Queries) UpdateLoanStatusAndOutstanding(ctx context.Context, arg UpdateLoanStatusAndOutstandingParams) error {
 	_, err := q.db.Exec(ctx, updateLoanStatusAndOutstanding, arg.ID, arg.Status, arg.OutstandingBalance)
+	return err
+}
+
+const updatePaymentOrderStatus = `-- name: UpdatePaymentOrderStatus :exec
+UPDATE payment_orders
+SET status = $2,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+`
+
+type UpdatePaymentOrderStatusParams struct {
+	ID     pgtype.UUID   `json:"id"`
+	Status PaymentStatus `json:"status"`
+}
+
+func (q *Queries) UpdatePaymentOrderStatus(ctx context.Context, arg UpdatePaymentOrderStatusParams) error {
+	_, err := q.db.Exec(ctx, updatePaymentOrderStatus, arg.ID, arg.Status)
+	return err
+}
+
+const updatePaymentOrderVerification = `-- name: UpdatePaymentOrderVerification :exec
+UPDATE payment_orders
+SET razorpay_payment_id = $2,
+    razorpay_signature = $3,
+    status = $4,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+`
+
+type UpdatePaymentOrderVerificationParams struct {
+	ID                pgtype.UUID   `json:"id"`
+	RazorpayPaymentID pgtype.Text   `json:"razorpay_payment_id"`
+	RazorpaySignature pgtype.Text   `json:"razorpay_signature"`
+	Status            PaymentStatus `json:"status"`
+}
+
+func (q *Queries) UpdatePaymentOrderVerification(ctx context.Context, arg UpdatePaymentOrderVerificationParams) error {
+	_, err := q.db.Exec(ctx, updatePaymentOrderVerification,
+		arg.ID,
+		arg.RazorpayPaymentID,
+		arg.RazorpaySignature,
+		arg.Status,
+	)
 	return err
 }
 

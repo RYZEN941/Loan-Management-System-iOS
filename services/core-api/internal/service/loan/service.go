@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"math"
 	"math/rand"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/repository/generated"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/audit"
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/integrations/razorpay"
 	loanv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/loanv1"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/interceptors"
 	"github.com/google/uuid"
@@ -52,15 +54,19 @@ type Service interface {
 	RecordPayment(ctx context.Context, req *loanv1.RecordPaymentRequest) (*loanv1.RecordPaymentResponse, error)
 	ListPayments(ctx context.Context, req *loanv1.ListPaymentsRequest) (*loanv1.ListPaymentsResponse, error)
 	RescheduleLoan(ctx context.Context, req *loanv1.RescheduleLoanRequest) (*loanv1.RescheduleLoanResponse, error)
+	InitiatePayment(ctx context.Context, req *loanv1.InitiatePaymentRequest) (*loanv1.InitiatePaymentResponse, error)
+	VerifyPayment(ctx context.Context, req *loanv1.VerifyPaymentRequest) (*loanv1.VerifyPaymentResponse, error)
+	ProcessPaymentFromWebhook(ctx context.Context, orderID, paymentID string) error
 }
 
 type service struct {
-	queries generated.Querier
-	audit   audit.AuditService
+	queries  generated.Querier
+	audit    audit.AuditService
+	razorpay *razorpay.Client
 }
 
-func NewService(queries generated.Querier, audit audit.AuditService) Service {
-	return &service{queries: queries, audit: audit}
+func NewService(queries generated.Querier, audit audit.AuditService, razorpay *razorpay.Client) Service {
+	return &service{queries: queries, audit: audit, razorpay: razorpay}
 }
 
 func (s *service) CreateLoanProduct(ctx context.Context, req *loanv1.CreateLoanProductRequest) (*loanv1.CreateLoanProductResponse, error) {
@@ -2867,4 +2873,196 @@ func (s *service) RescheduleLoan(ctx context.Context, req *loanv1.RescheduleLoan
 		Loan:        mapLoan(updatedLoan),
 		NewSchedule: newSchedule,
 	}, nil
+}
+
+func (s *service) InitiatePayment(ctx context.Context, req *loanv1.InitiatePaymentRequest) (*loanv1.InitiatePaymentResponse, error) {
+	loanID, err := parseUUID(req.GetLoanId(), "loan_id")
+	if err != nil {
+		return nil, err
+	}
+	loanRow, err := s.queries.GetLoanByID(ctx, uuidToPg(loanID))
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "loan not found")
+	}
+	if loanRow.Status != generated.LoanStatusACTIVE {
+		return nil, status.Error(codes.FailedPrecondition, "loan is not active")
+	}
+
+	amount, err := parseNumeric(req.GetAmount(), "amount")
+	if err != nil {
+		return nil, err
+	}
+	amountF, _ := numericToFloat64(amount)
+
+	emiScheduleID := pgtype.UUID{}
+	if strings.TrimSpace(req.GetEmiScheduleId()) != "" {
+		id, err := parseUUID(req.GetEmiScheduleId(), "emi_schedule_id")
+		if err != nil {
+			return nil, err
+		}
+		emiRow, err := s.queries.GetEmiScheduleByID(ctx, uuidToPg(id))
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, "emi_schedule_id not found")
+		}
+		if emiRow.LoanID != uuidToPg(loanID) {
+			return nil, status.Error(codes.InvalidArgument, "emi_schedule_id does not belong to loan_id")
+		}
+		emiScheduleID = uuidToPg(id)
+	}
+
+	// Create Razorpay Order
+	amountPaise := int64(amountF * 100)
+	receipt := fmt.Sprintf("rcpt_%s", uuid.New().String()[:8])
+	razorpayOrderID, err := s.razorpay.CreateOrder(amountPaise, receipt)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	// Save to database
+	_, err = s.queries.CreatePaymentOrder(ctx, generated.CreatePaymentOrderParams{
+		RazorpayOrderID: razorpayOrderID,
+		LoanID:          uuidToPg(loanID),
+		EmiScheduleID:   emiScheduleID,
+		Amount:          amount,
+		Status:          generated.PaymentStatusPENDING,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to save payment order")
+	}
+
+	return &loanv1.InitiatePaymentResponse{
+		RazorpayOrderId: razorpayOrderID,
+		Amount:          req.GetAmount(),
+		Currency:        "INR",
+	}, nil
+}
+
+func (s *service) VerifyPayment(ctx context.Context, req *loanv1.VerifyPaymentRequest) (*loanv1.VerifyPaymentResponse, error) {
+	orderID := req.GetRazorpayOrderId()
+	paymentID := req.GetRazorpayPaymentId()
+	signature := req.GetRazorpaySignature()
+
+	// Verify signature
+	if err := s.razorpay.VerifySignature(orderID, paymentID, signature); err != nil {
+		return nil, status.Error(codes.Unauthenticated, "invalid signature")
+	}
+
+	// Update order status
+	orderRow, err := s.queries.GetPaymentOrderByRazorpayOrderID(ctx, orderID)
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "payment order not found")
+	}
+
+	if orderRow.Status == generated.PaymentStatusSUCCESS {
+		// Already processed
+		return &loanv1.VerifyPaymentResponse{Success: true}, nil
+	}
+
+	// Process the payment
+	payment, err := s.processSuccessfulPayment(ctx, orderRow.LoanID, orderRow.EmiScheduleID, orderRow.Amount, paymentID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to process successful payment")
+	}
+
+	// Mark order as success
+	err = s.queries.UpdatePaymentOrderVerification(ctx, generated.UpdatePaymentOrderVerificationParams{
+		ID:                orderRow.ID,
+		RazorpayPaymentID: pgText(paymentID),
+		RazorpaySignature: pgText(signature),
+		Status:            generated.PaymentStatusSUCCESS,
+	})
+
+	return &loanv1.VerifyPaymentResponse{
+		Success: true,
+		Payment: mapPayment(payment),
+	}, nil
+}
+
+func (s *service) processSuccessfulPayment(ctx context.Context, loanID pgtype.UUID, emiID pgtype.UUID, amount pgtype.Numeric, externalID string) (generated.Payment, error) {
+	// 1. Create Payment Record
+	paymentRow, err := s.queries.CreatePayment(ctx, generated.CreatePaymentParams{
+		LoanID:                loanID,
+		EmiScheduleID:         emiID,
+		Amount:                amount,
+		ExternalTransactionID: externalID,
+		Status:                generated.PaymentStatusSUCCESS,
+	})
+	if err != nil {
+		return generated.Payment{}, err
+	}
+
+	// 2. Update EMI Status if applicable
+	if emiID.Valid {
+		s.queries.UpdateEmiScheduleStatus(ctx, generated.UpdateEmiScheduleStatusParams{
+			ID:     emiID,
+			Status: generated.EmiStatusPAID,
+		})
+	}
+
+	// 3. Update Loan Balance
+	loanRow, _ := s.queries.GetLoanByID(ctx, loanID)
+	amountF, _ := numericToFloat64(amount)
+	outstandingF, _ := numericToFloat64(loanRow.OutstandingBalance)
+	newOutstandingF := math.Max(0, outstandingF-amountF)
+	newOutstanding, _ := float64ToNumeric(newOutstandingF)
+
+	s.queries.UpdateLoanStatusAndOutstanding(ctx, generated.UpdateLoanStatusAndOutstandingParams{
+		ID:                 loanID,
+		Status:             loanRow.Status,
+		OutstandingBalance: newOutstanding,
+	})
+
+	// 4. Handle Tenure Reduction for Unscheduled Payments
+	if !emiID.Valid {
+		rateF, _ := numericToFloat64(loanRow.InterestRate)
+		emiAmountF, _ := numericToFloat64(loanRow.EmiAmount)
+		newTenure := calculateRemainingTenure(newOutstandingF, rateF, emiAmountF)
+
+		s.queries.DeleteUpcomingEmiSchedulesByLoanID(ctx, loanID)
+
+		rows, _ := s.queries.ListEmiScheduleByLoanID(ctx, loanID)
+		lastNum := int32(0)
+		lastDate := time.Now().UTC()
+		for _, r := range rows {
+			if r.InstallmentNumber > lastNum {
+				lastNum = r.InstallmentNumber
+				lastDate = r.DueDate.Time
+			}
+		}
+
+		for i := 1; i <= newTenure; i++ {
+			dueDate := lastDate.AddDate(0, i, 0)
+			s.queries.CreateEmiScheduleItem(ctx, generated.CreateEmiScheduleItemParams{
+				LoanID:            loanID,
+				InstallmentNumber: lastNum + int32(i),
+				DueDate:           pgtype.Date{Time: dueDate, Valid: true},
+				EmiAmount:         loanRow.EmiAmount,
+				Status:            generated.EmiStatusUPCOMING,
+			})
+		}
+	}
+
+	return paymentRow, nil
+}
+
+func (s *service) ProcessPaymentFromWebhook(ctx context.Context, orderID, paymentID string) error {
+	orderRow, err := s.queries.GetPaymentOrderByRazorpayOrderID(ctx, orderID)
+	if err != nil {
+		return err
+	}
+
+	if orderRow.Status == generated.PaymentStatusSUCCESS {
+		return nil
+	}
+
+	_, err = s.processSuccessfulPayment(ctx, orderRow.LoanID, orderRow.EmiScheduleID, orderRow.Amount, paymentID)
+	if err != nil {
+		return err
+	}
+
+	return s.queries.UpdatePaymentOrderVerification(ctx, generated.UpdatePaymentOrderVerificationParams{
+		ID:                orderRow.ID,
+		RazorpayPaymentID: pgText(paymentID),
+		Status:            generated.PaymentStatusSUCCESS,
+	})
 }

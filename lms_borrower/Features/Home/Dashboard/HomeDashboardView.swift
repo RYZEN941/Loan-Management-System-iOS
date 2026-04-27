@@ -380,7 +380,7 @@ struct InProgressApplicationsCard: View {
                                 .font(.system(size: 18, weight: .bold))
                                 .foregroundColor(DS.textPrimary)
                             
-                            Text("Status: \(app.status.displayName)")
+                            Text("Status: \(BorrowerSanctionLetterSupport.statusTitle(for: app))")
                                 .font(.system(size: 14))
                                 .foregroundColor(DS.textSecondary)
                         }
@@ -425,14 +425,15 @@ struct InProgressApplicationsCard: View {
 struct ApplicationStepTracker: View {
     let currentStatus: LoanApplicationStatus
     
-    let steps = ["Application", "Verification", "Approval", "Disbursement"]
+    let steps = ["Application", "Verification", "Approval", "Sanction", "Disbursement"]
     
     private var currentStep: Int {
         switch currentStatus {
         case .draft: return 0
         case .submitted, .underReview, .officerReview, .managerReview: return 1
-        case .approved, .officerApproved, .managerApproved: return 2
-        case .disbursed: return 3
+        case .approved, .officerApproved: return 2
+        case .managerApproved: return 3
+        case .disbursed: return 4
         case .rejected, .officerRejected, .managerRejected, .cancelled: return 0 // Fallback
         default: return 0
         }
@@ -451,7 +452,7 @@ struct ApplicationStepTracker: View {
                         .frame(width: progressWidth(for: geometry.size.width), height: 6)
 
                     HStack(spacing: 0) {
-                        ForEach(0..<4) { index in
+                        ForEach(0..<steps.count) { index in
                             Circle()
                                 .fill(index <= currentStep ? DS.primary : .white)
                                 .frame(width: 14, height: 14)
@@ -465,7 +466,7 @@ struct ApplicationStepTracker: View {
                 }
 
                 HStack(spacing: 0) {
-                    ForEach(0..<4) { index in
+                    ForEach(0..<steps.count) { index in
                         Text(steps[index])
                             .font(.system(size: 10, weight: index == currentStep ? .bold : .medium))
                             .foregroundColor(index <= currentStep ? DS.textPrimary : DS.textSecondary.opacity(0.6))
@@ -479,12 +480,13 @@ struct ApplicationStepTracker: View {
     }
     
     private func progressWidth(for availableWidth: CGFloat) -> CGFloat {
-        (availableWidth / 3.0) * CGFloat(currentStep)
+        guard steps.count > 1 else { return 0 }
+        return (availableWidth / CGFloat(steps.count - 1)) * CGFloat(currentStep)
     }
     
     private func stepAlignment(_ index: Int) -> Alignment {
         if index == 0 { return .leading }
-        if index == 3 { return .trailing }
+        if index == steps.count - 1 { return .trailing }
         return .center
     }
 }
@@ -779,12 +781,18 @@ final class HomeDashboardViewModel: ObservableObject {
             async let profileTask = authRepository.getMyProfile()
 
             let (applications, loans, profile) = try await (applicationsTask, loansTask, profileTask)
-            let applicationsById = Dictionary(uniqueKeysWithValues: applications.map { ($0.id, $0) })
             let schedules = try await loadSchedules(for: loans)
             let activeApplicationIDs = Set(loans.map(\.applicationId))
+            let reconciledApplications = applications.map { application in
+                if application.status == .disbursed && !activeApplicationIDs.contains(application.id) {
+                    return application.withStatus(.managerApproved)
+                }
+                return application
+            }
+            let applicationsById = Dictionary(uniqueKeysWithValues: reconciledApplications.map { ($0.id, $0) })
             credibilityScore = profile.cibilScore
 
-            inProgressApplications = applications
+            inProgressApplications = reconciledApplications
                 .filter { !activeApplicationIDs.contains($0.id) && $0.status.isInProgressForDashboard }
                 .sorted { parseDate($0.updatedAt) > parseDate($1.updatedAt) }
 

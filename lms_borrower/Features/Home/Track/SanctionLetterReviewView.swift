@@ -7,15 +7,61 @@ struct SanctionLetterReviewView: View {
 
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var session: SessionStore
+    @State private var latestApplication: BorrowerLoanApplication?
+    @State private var product: LoanProduct?
     @State private var isSubmitting = false
+    @State private var isLoadingReadiness = false
     @State private var errorMessage: String?
+
+    private let loanService: LoanServiceProtocol = ServiceContainer.loanService
+
+    private var currentApplication: BorrowerLoanApplication {
+        latestApplication ?? application
+    }
 
     private var content: BorrowerSanctionLetterContent {
         BorrowerSanctionLetterSupport.makeLetter(
-            for: application,
+            for: currentApplication,
             borrowerName: session.userName,
             mobileNumber: session.userPhone
         )
+    }
+
+    private var mandatoryRequirements: [ProductRequiredDocument] {
+        product?.requiredDocuments.filter(\.isMandatory) ?? []
+    }
+
+    private var approvedRequirementIDs: Set<String> {
+        Set(
+            currentApplication.documents
+                .filter { $0.verificationStatus == .pass }
+                .map(\.requiredDocId)
+        )
+    }
+
+    private var approvedMandatoryCount: Int {
+        mandatoryRequirements.filter { approvedRequirementIDs.contains($0.id) }.count
+    }
+
+    private var pendingMandatoryRequirements: [ProductRequiredDocument] {
+        mandatoryRequirements.filter { !approvedRequirementIDs.contains($0.id) }
+    }
+
+    private var readinessMessage: String? {
+        if isLoadingReadiness {
+            return "Checking mandatory document approvals before final acceptance."
+        }
+        if product == nil {
+            return "Unable to verify mandatory document approvals right now."
+        }
+        if pendingMandatoryRequirements.isEmpty {
+            return nil
+        }
+        return "All mandatory documents must be verified before you can accept the sanction letter."
+    }
+
+    private var canAcceptSanctionLetter: Bool {
+        !isSubmitting && !isLoadingReadiness && product != nil && pendingMandatoryRequirements.isEmpty
     }
 
     var body: some View {
@@ -26,6 +72,7 @@ struct SanctionLetterReviewView: View {
                     introCopy
                     identityTable
                     termsTable
+                    documentApprovalSection
                     conditionsSection
 
                     if let errorMessage {
@@ -59,14 +106,14 @@ struct SanctionLetterReviewView: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
-                        .background(DS.primary)
+                        .background(canAcceptSanctionLetter ? DS.primary : DS.primary.opacity(0.45))
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                     }
-                    .disabled(isSubmitting)
+                    .disabled(!canAcceptSanctionLetter)
 
-                    Text("Acceptance will create the real loan record and update the application to disbursed.")
+                    Text(readinessMessage ?? "Acceptance will create the real loan record and update the application to disbursed.")
                         .font(.footnote)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(readinessMessage == nil ? .secondary : .orange)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(20)
@@ -80,6 +127,9 @@ struct SanctionLetterReviewView: View {
                         dismiss()
                     }
                 }
+            }
+            .task {
+                await loadReadinessData()
             }
         }
     }
@@ -135,8 +185,46 @@ struct SanctionLetterReviewView: View {
                 .font(.headline)
 
             HStack(spacing: 12) {
-                summaryPill(title: "Status", value: "Pending Acceptance")
+                summaryPill(title: "Status", value: pendingMandatoryRequirements.isEmpty ? "Pending Acceptance" : "Docs Pending")
                 summaryPill(title: "Version", value: "v1")
+            }
+        }
+        .padding(20)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+
+    private var documentApprovalSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Document Approval Status")
+                .font(.headline)
+
+            HStack(spacing: 12) {
+                summaryPill(title: "Mandatory Approved", value: "\(approvedMandatoryCount)/\(mandatoryRequirements.count)")
+                summaryPill(title: "Application Status", value: BorrowerSanctionLetterSupport.statusTitle(for: currentApplication))
+            }
+
+            if let readinessMessage {
+                Text(readinessMessage)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if !pendingMandatoryRequirements.isEmpty {
+                ForEach(pendingMandatoryRequirements, id: \.id) { requirement in
+                    HStack(spacing: 10) {
+                        Image(systemName: "clock.badge.exclamationmark")
+                            .foregroundColor(.orange)
+                        Text(requirement.requirementType.displayName)
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text(documentStatusText(for: requirement))
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(.orange)
+                    }
+                }
             }
         }
         .padding(20)
@@ -193,5 +281,27 @@ struct SanctionLetterReviewView: View {
         .padding(.vertical, 12)
         .background(DS.primary.opacity(0.08))
         .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func documentStatusText(for requirement: ProductRequiredDocument) -> String {
+        if let document = currentApplication.documents.first(where: { $0.requiredDocId == requirement.id }) {
+            return document.verificationStatus.displayName
+        }
+        return "Not Uploaded"
+    }
+
+    private func loadReadinessData() async {
+        isLoadingReadiness = true
+        defer { isLoadingReadiness = false }
+
+        do {
+            async let fetchedApplication = loanService.getLoanApplication(applicationId: application.id)
+            async let fetchedProduct = loanService.getLoanProduct(productId: application.loanProductId)
+            let (detail, fetchedLoanProduct) = try await (fetchedApplication, fetchedProduct)
+            latestApplication = detail
+            product = fetchedLoanProduct
+        } catch {
+            errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to verify document readiness."
+        }
     }
 }

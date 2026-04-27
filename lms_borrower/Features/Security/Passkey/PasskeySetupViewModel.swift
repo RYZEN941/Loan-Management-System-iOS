@@ -22,14 +22,14 @@ final class PasskeySetupViewModel: ObservableObject {
 
     init(
         authRepository: AuthRepository? = nil,
-        passkeyManager: PasskeyManager = .shared,
-        tokenStore: TokenStore = .shared,
-        passkeyStatusStore: PasskeyStatusStore = .shared
+        passkeyManager: PasskeyManager? = nil,
+        tokenStore: TokenStore? = nil,
+        passkeyStatusStore: PasskeyStatusStore? = nil
     ) {
         self.authRepository = authRepository ?? AuthRepository()
-        self.passkeyManager = passkeyManager
-        self.tokenStore = tokenStore
-        self.passkeyStatusStore = passkeyStatusStore
+        self.passkeyManager = passkeyManager ?? .shared
+        self.tokenStore = tokenStore ?? .shared
+        self.passkeyStatusStore = passkeyStatusStore ?? .shared
     }
 
     func registerPasskey() async -> Bool {

@@ -5,9 +5,17 @@ struct ChatListView: View {
     @EnvironmentObject var sessionStore: SessionStore
     @StateObject private var viewModel = ChatListViewModel()
     @State private var showNewChatSheet = false
+
+    private var currentUserID: String {
+        sessionStore.borrowerProfileId.isEmpty ? "" : sessionStore.borrowerProfileId
+    }
+
+    private var visibleRooms: [ChatRoom] {
+        viewModel.filteredChatRooms(currentUserID: currentUserID)
+    }
     
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
+        ZStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
 
@@ -26,10 +34,7 @@ struct ChatListView: View {
                     // Search Bar
                     HStack {
                         Image(systemName: "magnifyingglass").foregroundColor(.secondary)
-                        TextField("Search conversations...", text: $viewModel.searchQuery)
-                            .onChange(of: viewModel.searchQuery) { _, _ in
-                                viewModel.searchEligibleUsers()
-                            }
+                        TextField("Search conversations...", text: $viewModel.conversationSearchQuery)
                         Spacer()
                     }
                     .padding(12)
@@ -42,7 +47,7 @@ struct ChatListView: View {
                         ProgressView("Loading conversations...")
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.vertical, 40)
-                    } else if viewModel.chatRooms.isEmpty {
+                    } else if visibleRooms.isEmpty && viewModel.chatRooms.isEmpty {
                         VStack(spacing: 12) {
                             Image(systemName: "bubble.left.and.bubble.right")
                                 .font(.system(size: 44))
@@ -55,14 +60,32 @@ struct ChatListView: View {
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
                         }
-                        .padding(.vertical, 40)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 28)
+                        .padding(.top, 72)
+                    } else if visibleRooms.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 40))
+                                .foregroundColor(.secondary)
+                            Text("No matching conversations")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                            Text("Try a different name or keyword.")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 28)
+                        .padding(.top, 72)
                     } else {
                         LazyVStack(spacing: 16) {
-                            ForEach(viewModel.chatRooms) { room in
+                            ForEach(visibleRooms) { room in
                                 Button {
                                     router.push(.chatConversation(roomID: room.id))
                                 } label: {
-                                    let otherUserID = room.otherUserID(currentUserID: sessionStore.borrowerProfileId.isEmpty ? "" : sessionStore.borrowerProfileId)
+                                    let otherUserID = room.otherUserID(currentUserID: currentUserID)
                                     let participantName = viewModel.participantNames[otherUserID] ?? "User"
                                     ChatRoomPreviewRow(room: room, participantName: participantName)
                                 }
@@ -70,29 +93,38 @@ struct ChatListView: View {
                             }
                         }
                         .padding(.horizontal, 20)
-                        .padding(.bottom, 80) // Space for floating button
                     }
                 }
+                .padding(.bottom, 110)
             }
             .refreshable {
                 viewModel.refresh()
             }
 
             // Floating New Chat Button
-            Button {
-                showNewChatSheet = true
-            } label: {
-                Image(systemName: "plus.message.fill")
-                    .font(.title2)
-                    .foregroundColor(.white)
-                    .padding(18)
-                    .background(DS.primary)
-                    .clipShape(Circle())
-                    .shadow(color: .mainBlue.opacity(0.4), radius: 8, x: 0, y: 4)
-            }
-            .padding(20)
-            .sheet(isPresented: $showNewChatSheet) {
-                NewChatSheet(viewModel: viewModel)
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Button {
+                        viewModel.userSearchQuery = ""
+                        viewModel.eligibleUsers = []
+                        showNewChatSheet = true
+                    } label: {
+                        Image(systemName: "plus.message.fill")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                            .padding(18)
+                            .background(DS.primary)
+                            .clipShape(Circle())
+                            .shadow(color: .mainBlue.opacity(0.4), radius: 8, x: 0, y: 4)
+                    }
+                    .padding(.trailing, 20)
+                    .padding(.bottom, 86)
+                    .sheet(isPresented: $showNewChatSheet) {
+                        NewChatSheet(viewModel: viewModel)
+                    }
+                }
             }
         }
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
@@ -167,17 +199,52 @@ struct NewChatSheet: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
-                if viewModel.eligibleUsers.isEmpty {
+                HStack {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.secondary)
+                    TextField("Search support team or staff...", text: $viewModel.userSearchQuery)
+                        .onChange(of: viewModel.userSearchQuery) { _, _ in
+                            viewModel.searchEligibleUsers()
+                        }
+                }
+                .padding(12)
+                .background(Color.secondary.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+
+                if viewModel.userSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     VStack(spacing: 12) {
-                        Image(systemName: "magnifyingglass")
+                        Image(systemName: "bubble.left.and.bubble.right")
                             .font(.system(size: 44))
                             .foregroundColor(.secondary)
-                        Text("Search for users to start a conversation")
+                        Text("Search to start a conversation")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                        Text("Find a support team member or staff contact to begin chatting.")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                     }
-                    .padding(.vertical, 40)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 40)
+                    Spacer()
+                } else if viewModel.eligibleUsers.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 44))
+                            .foregroundColor(.secondary)
+                        Text("No users found")
+                            .font(.headline)
+                            .foregroundColor(.secondary)
+                        Text("Try a different search term.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 40)
+                    Spacer()
                 } else {
                     List {
                         ForEach(viewModel.eligibleUsers) { user in
@@ -218,6 +285,7 @@ struct NewChatSheet: View {
                     .listStyle(.plain)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .navigationTitle("New Conversation")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

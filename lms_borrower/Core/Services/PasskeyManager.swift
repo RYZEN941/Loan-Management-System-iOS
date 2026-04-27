@@ -170,10 +170,24 @@ extension PasskeyManager: ASAuthorizationControllerDelegate {
 
 extension PasskeyManager: ASAuthorizationControllerPresentationContextProviding {
     func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
-        UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap { $0.windows }
-            .first(where: \.isKeyWindow) ?? UIWindow()
+        let windowScenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        let windowScene = windowScenes.first { $0.activationState == .foregroundActive }
+            ?? windowScenes.first { $0.activationState == .foregroundInactive }
+            ?? windowScenes.first
+
+        if let window = windowScene?.windows.first(where: \.isKeyWindow) {
+            return window
+        }
+
+        if let window = windowScene?.windows.first {
+            return window
+        }
+
+        if let fallbackScene = windowScenes.first {
+            return UIWindow(windowScene: fallbackScene)
+        }
+
+        preconditionFailure("No UIWindowScene available for passkey presentation.")
     }
 }
 

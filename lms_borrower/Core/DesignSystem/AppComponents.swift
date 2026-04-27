@@ -99,6 +99,7 @@ struct AppSecureField: View {
 struct OTPBoxRow: View {
     @Binding var otp: String
     @FocusState.Binding var focused: Bool
+    var isSecure: Bool = false
 
     var body: some View {
         ZStack {
@@ -134,9 +135,15 @@ struct OTPBoxRow: View {
                                 .frame(width: 2, height: 22)
                                 .opacity(0.8)
                         } else {
-                            Text(character)
-                                .font(.system(size: 22, weight: .bold, design: .rounded))
-                                .foregroundColor(DS.primary)
+                            if isSecure && !character.isEmpty {
+                                Circle()
+                                    .fill(DS.primary)
+                                    .frame(width: 12, height: 12)
+                            } else {
+                                Text(character)
+                                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                                    .foregroundColor(DS.primary)
+                            }
                         }
                     }
                     .frame(height: 56)

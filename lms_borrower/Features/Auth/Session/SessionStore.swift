@@ -25,6 +25,7 @@ final class SessionStore: ObservableObject {
     @Published var logoutBannerMessage: String? = nil
     /// The borrower profile UUID returned by GetMyProfile — used when creating loan applications.
     @Published var borrowerProfileId: String
+    @Published var profileImageData: Data?
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -37,8 +38,10 @@ final class SessionStore: ObservableObject {
         userEmail  = UserDefaults.standard.string(forKey: "loanOS_userEmail") ?? ""
         userPhone  = UserDefaults.standard.string(forKey: "loanOS_userPhone") ?? ""
         borrowerProfileId = UserDefaults.standard.string(forKey: "loanOS_borrowerProfileId") ?? ""
+        profileImageData = nil
         isOnboardingComplete = false
         refreshOnboardingCompletionStatus()
+        refreshProfileImage()
         // Real implementation would read cached KYC status or fetch it globally
         
         NotificationCenter.default.publisher(for: .sessionExpired)
@@ -81,6 +84,7 @@ final class SessionStore: ObservableObject {
             setOnboardingComplete(false)
         }
         refreshOnboardingCompletionStatus()
+        refreshProfileImage()
         self.kycStatus = kycStatus
         self.logoutBannerMessage = nil
         isLoggedIn = true
@@ -159,6 +163,20 @@ final class SessionStore: ObservableObject {
 
         isOnboardingComplete = complete
         UserDefaults.standard.set(complete, forKey: Self.onboardingCompletionKeyPrefix + identifier)
+    }
+
+    func updateProfileImage(_ data: Data?) {
+        guard let key = activeProfileImageKey else {
+            profileImageData = data
+            return
+        }
+
+        profileImageData = data
+        if let data {
+            UserDefaults.standard.set(data, forKey: key)
+        } else {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
     }
 
     static func stageSignupProfile(name: String, email: String, phone: String) {
@@ -291,6 +309,7 @@ final class SessionStore: ObservableObject {
         }
 
         isOnboardingComplete = onboardingCompletion(for: normalizedIdentifier)
+        refreshProfileImage()
     }
 
     @discardableResult
@@ -313,6 +332,7 @@ final class SessionStore: ObservableObject {
 
     private static let stagedSignupProfilePrefix = "loanOS_staged_signup_profile_"
     private static let onboardingCompletionKeyPrefix = "loanOS_onboarding_complete_"
+    private static let profileImageKeyPrefix = "loanOS_profile_image_"
 
     private func clearName() {
         userName = ""
@@ -359,6 +379,19 @@ final class SessionStore: ObservableObject {
             return
         }
         isOnboardingComplete = onboardingCompletion(for: identifier)
+    }
+
+    private func refreshProfileImage() {
+        guard let key = activeProfileImageKey else {
+            profileImageData = nil
+            return
+        }
+        profileImageData = UserDefaults.standard.data(forKey: key)
+    }
+
+    private var activeProfileImageKey: String? {
+        guard let identifier = activeOnboardingIdentifier else { return nil }
+        return Self.profileImageKeyPrefix + identifier
     }
 
     private func onboardingCompletion(for identifier: String) -> Bool {

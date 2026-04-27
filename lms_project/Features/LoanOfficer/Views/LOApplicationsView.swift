@@ -287,6 +287,7 @@ struct LOApplicationsView: View {
                 .background(Theme.Colors.adaptiveBackground(colorScheme))
                 .safeAreaInset(edge: .bottom) {
                     LOActionPanel(
+                        status: app.status,
                         onSendToManager: { applicationsVM.sendToManager(app) },
                         onReject: { applicationsVM.rejectApplication(app) },
                         onRequestDocs: { applicationsVM.requestDocuments(app) }

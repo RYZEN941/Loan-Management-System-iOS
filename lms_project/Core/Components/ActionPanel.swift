@@ -8,12 +8,52 @@ import SwiftUI
 // MARK: - Loan Officer Action Panel
 
 struct LOActionPanel: View {
+    let status: ApplicationStatus
     let onSendToManager: () -> Void
     let onReject: () -> Void
     let onRequestDocs: () -> Void
     
     @State private var showRejectAlert = false
     @Environment(\.colorScheme) private var colorScheme
+
+    private var primaryActionTitle: String {
+        switch status {
+        case .pending, .officerReview, .underReview:
+            return "Approve"
+        case .officerApproved:
+            return "Send to Manager"
+        case .managerReview:
+            return "Sent to Manager"
+        case .managerApproved, .approved:
+            return "Approved"
+        case .officerRejected, .managerRejected, .rejected:
+            return "Rejected"
+        }
+    }
+
+    private var primaryActionIcon: String {
+        switch status {
+        case .pending, .officerReview, .underReview:
+            return "checkmark.circle.fill"
+        case .officerApproved:
+            return "arrow.up.circle.fill"
+        case .managerReview:
+            return "hourglass.circle.fill"
+        case .managerApproved, .approved:
+            return "checkmark.seal.fill"
+        case .officerRejected, .managerRejected, .rejected:
+            return "xmark.circle.fill"
+        }
+    }
+
+    private var isPrimaryActionEnabled: Bool {
+        switch status {
+        case .pending, .officerReview, .underReview, .officerApproved:
+            return true
+        case .managerReview, .managerApproved, .approved, .officerRejected, .managerRejected, .rejected:
+            return false
+        }
+    }
     
     var body: some View {
         VStack(spacing: Theme.Spacing.md) {
@@ -49,16 +89,17 @@ struct LOActionPanel: View {
                 
                 // Send to Manager
                 Button(action: onSendToManager) {
-                    Label("Send to Manager", systemImage: "arrow.up.circle.fill")
+                    Label(primaryActionTitle, systemImage: primaryActionIcon)
                         .font(Theme.Typography.subheadline)
                         .fontWeight(.semibold)
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .frame(height: Theme.Layout.buttonHeight)
-                        .background(Theme.Colors.adaptivePrimary(colorScheme))
+                        .background(isPrimaryActionEnabled ? Theme.Colors.adaptivePrimary(colorScheme) : Theme.Colors.neutral.opacity(0.45))
                         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
                 }
                 .buttonStyle(.plain)
+                .disabled(!isPrimaryActionEnabled)
             }
         }
         .padding(Theme.Spacing.md)
@@ -160,4 +201,3 @@ struct ManagerActionPanel: View {
         .padding(Theme.Spacing.md)
     }
 }
-

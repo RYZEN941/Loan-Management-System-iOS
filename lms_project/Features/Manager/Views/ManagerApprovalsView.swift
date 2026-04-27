@@ -131,7 +131,7 @@ struct ManagerApprovalsView: View {
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Applications")
-                        .font(.system(size: 20, weight: .bold))
+                        .font(.system(size: 24, weight: .bold))
                 }
                 Spacer()
                 Text("\(displayedApplications.count)")
@@ -215,6 +215,7 @@ struct ManagerApprovalsView: View {
                         detailHeader(app)
                         financialSection(app)
                         borrowerInfoSection(app)
+                        borrowerHistorySection(app)
                         editTermsSummarySection(app)   // ← Manager can edit terms
                         documentsSummarySection(app)
                         sanctionLetterSection(app)
@@ -404,7 +405,7 @@ struct ManagerApprovalsView: View {
         .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(ManagerTheme.Colors.surface(colorScheme)))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
+                .stroke(Theme.Colors.primary.opacity(0.20), lineWidth: 1.5)
         )
     }
 
@@ -428,41 +429,63 @@ struct ManagerApprovalsView: View {
         VStack(alignment: .leading, spacing: 14) {
             SectionHeader(title: "Risk & Credit Analysis", icon: "gauge.with.needle.fill")
                 .description("Key financial indicators, CIBIL score, and DTI ratios for risk mitigation.")
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                finCard("Monthly Income",  app.financials.monthlyIncome.currencyFormatted, "dollarsign.circle.fill", ManagerTheme.Colors.primary(colorScheme))
-                finCard("CIBIL Score",     "\(app.financials.cibilScore)", "bolt.fill", cibilColor(app.financials.cibilScore))
-                finCard("DTI Ratio",       app.financials.dtiRatio.percentFormatted, "chart.pie.fill", dtiColor(app.financials.dtiRatio))
-                finCard("Annual Income",   app.financials.annualIncome.currencyFormatted, "calendar.badge.clock", ManagerTheme.Colors.primary(colorScheme))
-                finCard("Bank Balance",    app.financials.bankBalance.currencyFormatted, "building.columns.fill", ManagerTheme.Colors.primary(colorScheme))
-                finCard("Risk Assessment", app.riskLevel.displayName, "shield.lefthalf.filled", app.riskLevel.adaptiveColor(colorScheme))
-                finCard("FOIR (%)",        String(format: "%.1f%%", app.financials.foir), "percent", ManagerTheme.Colors.primary(colorScheme))
-                finCard("LTV Ratio (%)",   String(format: "%.1f%%", app.financials.ltvRatio), "house.fill", ManagerTheme.Colors.primary(colorScheme))
-                finCard("Proposed EMI",    app.financials.proposedEMI.currencyFormatted, "indianrupeesign.circle.fill", ManagerTheme.Colors.primary(colorScheme))
+            VStack(spacing: 8) {
+                HStack(spacing: 8) {
+                    finCard("Monthly Income",  app.financials.monthlyIncome.currencyFormatted, "dollarsign.circle.fill", ManagerTheme.Colors.primary(colorScheme))
+                    finCard("Annual Income",   app.financials.annualIncome.currencyFormatted, "calendar.badge.clock", ManagerTheme.Colors.primary(colorScheme))
+                    finCard("Bank Balance",    app.financials.bankBalance.currencyFormatted, "building.columns.fill", ManagerTheme.Colors.primary(colorScheme))
+                }
+                HStack(spacing: 8) {
+                    finCard("CIBIL Score",     "\(app.financials.cibilScore)", "bolt.fill", cibilColor(app.financials.cibilScore))
+                    finCard("DTI Ratio",       app.financials.dtiRatio.percentFormatted, "chart.pie.fill", dtiColor(app.financials.dtiRatio))
+                    finCard("FOIR (%)",        String(format: "%.1f%%", app.financials.foir), "percent", ManagerTheme.Colors.primary(colorScheme))
+                }
+                HStack(spacing: 8) {
+                    finCard("LTV Ratio (%)",   String(format: "%.1f%%", app.financials.ltvRatio), "house.fill", ManagerTheme.Colors.primary(colorScheme))
+                    finCard("Risk Assessment", app.riskLevel.displayName, "shield.lefthalf.filled", app.riskLevel.adaptiveColor(colorScheme))
+                    finCard("Proposed EMI",    app.financials.proposedEMI.currencyFormatted, "indianrupeesign.circle.fill", ManagerTheme.Colors.primary(colorScheme))
+                }
             }
         }
         .padding(18)
         .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(ManagerTheme.Colors.surface(colorScheme)))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
+                .stroke(Theme.Colors.primary.opacity(0.20), lineWidth: 1.5)
         )
     }
 
     private func finCard(_ label: String, _ value: String, _ icon: String, _ tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: icon).font(.system(size: 12)).foregroundStyle(tint)
-                Text(label).font(.system(size: 10, weight: .bold)).foregroundStyle(.tertiary).textCase(.uppercase)
-            }
-            Text(value).font(.system(size: 16, weight: .bold, design: .rounded)).foregroundStyle(tint)
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(tint)
+                .frame(width: 4, height: 44)
+
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(tint)
+
+            Text(label)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .layoutPriority(1)
+
+            Spacer(minLength: 4)
+
+            Text(value)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundStyle(tint)
+                .layoutPriority(2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(ManagerTheme.Colors.surface(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(tint.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.sm)
-                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(tint.opacity(0.15), lineWidth: 1)
         )
     }
 
@@ -471,6 +494,98 @@ struct ManagerApprovalsView: View {
     }
     private func dtiColor(_ r: Double) -> Color { 
         r <= 0.30 ? Theme.Colors.adaptiveSuccess(colorScheme) : r <= 0.40 ? Theme.Colors.adaptiveWarning(colorScheme) : Theme.Colors.adaptiveCritical(colorScheme) 
+    }
+
+    // MARK: - Borrower History Section
+    private func borrowerHistorySection(_ app: LoanApplication) -> some View {
+        let thisBank = sampleThisBankLoans(for: app)
+        let otherBanks = sampleOtherBankLoans(for: app)
+
+        return VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Borrower History", icon: "clock.arrow.circlepath")
+                .description("Previous loans from this bank and other institutions.")
+
+            // ── This Bank ──
+            VStack(alignment: .leading, spacing: 8) {
+                historySubHeader("This Bank", icon: "building.columns.fill", color: Theme.Colors.primary)
+                if thisBank.isEmpty {
+                    Text("No previous loans with this bank.")
+                        .font(.system(size: 13)).foregroundStyle(.secondary)
+                        .padding(.leading, 4)
+                } else {
+                    ForEach(thisBank) { entry in historyRow(entry) }
+                }
+            }
+            
+            // ── Other Banks ──
+            VStack(alignment: .leading, spacing: 8) {
+                historySubHeader("Other Banks / NBFCs", icon: "building.2.fill", color: Color(hex: "#5E5CE6"))
+                if otherBanks.isEmpty {
+                    Text("No declared external loan history.")
+                        .font(.system(size: 13)).foregroundStyle(.secondary)
+                        .padding(.leading, 4)
+                } else {
+                    ForEach(otherBanks) { entry in historyRow(entry) }
+                }
+            }
+        }
+        .padding(18)
+        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(ManagerTheme.Colors.surface(colorScheme)))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                .stroke(Theme.Colors.primary.opacity(0.20), lineWidth: 1.5)
+        )
+    }
+
+    private func historySubHeader(_ title: String, icon: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon).font(.system(size: 13, weight: .semibold)).foregroundStyle(color)
+            Text(title).font(.system(size: 14, weight: .bold)).foregroundStyle(.primary)
+        }
+    }
+
+    private func historyRow(_ entry: BorrowerLoanHistoryEntry) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(entry.loanType).font(.system(size: 14, weight: .semibold)).foregroundStyle(.primary)
+                Text(entry.institution).font(.system(size: 12)).foregroundStyle(.secondary)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(entry.amount).font(.system(size: 14, weight: .bold, design: .rounded))
+                Text(entry.status).font(.system(size: 11, weight: .semibold)).foregroundStyle(entry.statusColor)
+            }
+        }
+        .padding(.horizontal, 12).padding(.vertical, 10)
+        .background(entry.statusColor.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8).stroke(entry.statusColor.opacity(0.1), lineWidth: 1)
+        )
+    }
+
+    private func sampleThisBankLoans(for app: LoanApplication) -> [BorrowerLoanHistoryEntry] {
+        if app.borrower.name.contains("Ramesh") || app.id.hasSuffix("12") {
+            return [
+                BorrowerLoanHistoryEntry(loanType: "Personal Loan", institution: "Our Bank", amount: "₹1,50,000", status: "Closed", statusColor: Theme.Colors.success),
+                BorrowerLoanHistoryEntry(loanType: "Vehicle Loan",  institution: "Our Bank", amount: "₹3,20,000", status: "Active",  statusColor: Theme.Colors.primary)
+            ]
+        }
+        return []
+    }
+
+    private func sampleOtherBankLoans(for app: LoanApplication) -> [BorrowerLoanHistoryEntry] {
+        if app.borrower.name.contains("Kumar") || app.id.hasSuffix("12") {
+            return [
+                BorrowerLoanHistoryEntry(loanType: "Home Loan",     institution: "HDFC Bank",  amount: "₹28,00,000", status: "Active",  statusColor: Theme.Colors.warning),
+                BorrowerLoanHistoryEntry(loanType: "Credit Card",   institution: "ICICI Bank", amount: "₹50,000",    status: "Overdue", statusColor: Theme.Colors.critical)
+            ]
+        } else if app.borrower.name.contains("Anjali") {
+            return [
+                BorrowerLoanHistoryEntry(loanType: "Education Loan", institution: "SBI",       amount: "₹4,00,000",  status: "Closed", statusColor: Theme.Colors.success)
+            ]
+        }
+        return []
     }
 
     // MARK: - Documents
@@ -549,7 +664,7 @@ struct ManagerApprovalsView: View {
         .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(ManagerTheme.Colors.surface(colorScheme)))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
+                .stroke(Theme.Colors.primary.opacity(0.20), lineWidth: 1.5)
         )
     }
 
@@ -627,7 +742,7 @@ struct ManagerApprovalsView: View {
         .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(ManagerTheme.Colors.surface(colorScheme)))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
+                .stroke(Theme.Colors.primary.opacity(0.20), lineWidth: 1.5)
         )
     }
 
@@ -800,7 +915,7 @@ struct ManagerApprovalsView: View {
         .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(ManagerTheme.Colors.surface(colorScheme)))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
+                .stroke(Theme.Colors.primary.opacity(0.20), lineWidth: 1.5)
         )
     }
 
@@ -848,7 +963,7 @@ struct ManagerApprovalsView: View {
             .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(ManagerTheme.Colors.surface(colorScheme)))
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                    .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
+                    .stroke(Theme.Colors.primary.opacity(0.20), lineWidth: 1.5)
             )
     }
 
@@ -867,13 +982,17 @@ struct ManagerApprovalsView: View {
                 }
                 Text(msg.text)
                     .font(Theme.Typography.subheadline)
-                    .foregroundStyle(msg.type == .managerRemark ? .white : (msg.isFromCurrentUser ? .white : .primary))
+                    .foregroundStyle(msg.type == .managerRemark ? .white : .black)
                     .padding(.horizontal, 14).padding(.vertical, 10)
                     .background(
                         msg.type == .managerRemark ? ManagerTheme.Colors.primary(colorScheme)
-                        : (msg.isFromCurrentUser ? ManagerTheme.Colors.primary(colorScheme).opacity(0.8) : ManagerTheme.Colors.surfaceSecondary(colorScheme))
+                        : (msg.isFromCurrentUser ? Color(hex: "#E5E5EA") : Color.white)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(msg.type == .managerRemark ? Color.clear : Color.black.opacity(0.08), lineWidth: 1)
+                    )
                 Text(msg.timestamp.timeFormatted).font(.system(size: 10)).foregroundStyle(.tertiary)
             }
             if !(msg.isFromCurrentUser || msg.type == .managerRemark) { Spacer(minLength: 80) }
@@ -914,7 +1033,7 @@ struct ManagerApprovalsView: View {
         .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(ManagerTheme.Colors.surface(colorScheme)))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
+                .stroke(Theme.Colors.primary.opacity(0.20), lineWidth: 1.5)
         )
     }
 

@@ -51,14 +51,69 @@ struct ManagerPortfolioView: View {
         }
     }
 
+    private func sectionLabel(title: String, icon: String) -> some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            Image(systemName: icon)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
+            Text(title)
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+        }
+    }
+
+    private func summaryCard(title: String, value: String, icon: String, color: Color, subtitle: String? = nil, action: (() -> Void)? = nil) -> some View {
+        let card = HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(color)
+                .frame(width: 4, height: 44)
+
+            Image(systemName: icon)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(color)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                if let subtitle = subtitle {
+                    Text(subtitle)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(color)
+                }
+            }
+            .layoutPriority(1)
+
+            Spacer(minLength: 4)
+
+            Text(value)
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .foregroundStyle(color)
+                .layoutPriority(2)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(color.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(color.opacity(0.15), lineWidth: 1)
+        )
+        
+        if let action = action {
+            return AnyView(Button(action: action) { card }.buttonStyle(.plain))
+        } else {
+            return AnyView(card)
+        }
+    }
+
     private var globalFilterBar: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Portfolio Analysis")
-                    .font(Theme.Typography.titleLarge)
-                Text("Real-time branch metrics and distribution")
-                    .font(Theme.Typography.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
             }
             Spacer()
             
@@ -134,22 +189,21 @@ struct ManagerPortfolioView: View {
     
     private var portfolioSummary: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "Portfolio Summary", icon: "chart.pie.fill")
-                .description("Key metrics of total loan volume and average disbursement value.")
+            sectionLabel(title: "Portfolio Summary", icon: "chart.pie.fill")
             
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.md) {
                 let highRiskCount = filteredPortfolioApplications.filter { $0.riskLevel == .high }.count
                 let totalCount = max(1, filteredPortfolioApplications.count)
                 let highRiskPct = (Double(highRiskCount) / Double(totalCount)) * 100
                 
-                KPICard(title: "High Risk Distribution", value: String(format: "%.1f%%", highRiskPct),
-                        icon: "shield.fill", color: Theme.Colors.critical) {
+                summaryCard(title: "High Risk Distribution", value: String(format: "%.1f%%", highRiskPct),
+                        icon: "shield.fill", color: Theme.Colors.adaptiveCritical(colorScheme)) {
                     applicationsVM.filterRisk = .high
                     applicationsVM.filterLoanType = dashboardVM.portfolioLoanType
                     selectedTab = 1
                 }
                 
-                KPICard(title: "Avg. Loan Size", value: avgLoanSize.compactFormatted,
+                summaryCard(title: "Avg. Loan Size", value: avgLoanSize.compactFormatted,
                         icon: "chart.bar.fill", color: Theme.Colors.adaptiveWarning(colorScheme),
                         subtitle: "↑ 2.4% vs last period")
             }
@@ -167,8 +221,7 @@ struct ManagerPortfolioView: View {
     
     private var loanDistribution: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "Disbursement Trend", icon: "chart.line.uptrend.xyaxis")
-                .description("Analysis of loan approvals and disbursement performance over time.")
+            sectionLabel(title: "Disbursement Trend", icon: "chart.line.uptrend.xyaxis")
             
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                 HStack {
@@ -191,196 +244,76 @@ struct ManagerPortfolioView: View {
                 }
                 
                 PremiumLineChart(
-                    data: [3200000, 3800000, 3500000, 4200000, 4800000, 5100000],
+                    data: [3.2, 3.8, 3.5, 4.2, 4.8, 5.1],
                     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
                     accentColor: ManagerTheme.Colors.primary(colorScheme),
                     showPoints: true,
-                    unit: "cr"
+                    unit: "Cr"
                 )
-                .frame(height: 140)
+                .frame(height: 180)
+                .padding(.leading, 16)
             }
             .padding(Theme.Spacing.lg)
             .background(ManagerTheme.Colors.surface(colorScheme))
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                    .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
+                    .stroke(Theme.Colors.primary.opacity(0.20), lineWidth: 1.5)
             )
         }
     }
     
     private var riskOverview: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "Risk Analysis", icon: "shield.fill")
-                .description("Categorical breakdown of applications based on calculated risk profiles.")
+            sectionLabel(title: "Risk Analysis", icon: "shield.fill")
             
             VStack(spacing: Theme.Spacing.md) {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.md) {
-                    let total = max(1, Double(filteredPortfolioApplications.count))
-                    
-                    // Column 1: Low Risk
-                    VStack(spacing: Theme.Spacing.md) {
-                        let lowCount = filteredPortfolioApplications.filter { $0.riskLevel == .low }.count
-                        riskDistCard(label: "Low %", value: String(format: "%.0f%%", (Double(lowCount)/total)*100), color: Theme.Colors.adaptiveSuccess(colorScheme)) {
-                            applicationsVM.filterRisk = .low
-                            applicationsVM.filterLoanType = dashboardVM.portfolioLoanType
-                            selectedTab = 1
-                        }
-                        riskCard(level: .low, count: lowCount) {
-                            applicationsVM.filterRisk = .low
-                            applicationsVM.filterLoanType = dashboardVM.portfolioLoanType
-                            selectedTab = 1
-                        }
+                let lowCount = filteredPortfolioApplications.filter { $0.riskLevel == .low }.count
+                let medCount = filteredPortfolioApplications.filter { $0.riskLevel == .medium }.count
+                let highCount = filteredPortfolioApplications.filter { $0.riskLevel == .high }.count
+                let total = max(1, Double(filteredPortfolioApplications.count))
+                
+                HStack(spacing: 8) {
+                    summaryCard(title: "Low Risk", value: "\(lowCount)", icon: "shield.fill", color: Theme.Colors.adaptiveSuccess(colorScheme), subtitle: String(format: "%.0f%%", (Double(lowCount)/total)*100)) {
+                        applicationsVM.filterRisk = .low
+                        applicationsVM.filterLoanType = dashboardVM.portfolioLoanType
+                        selectedTab = 1
                     }
-                    
-                    // Column 2: Medium Risk
-                    VStack(spacing: Theme.Spacing.md) {
-                        let medCount = filteredPortfolioApplications.filter { $0.riskLevel == .medium }.count
-                        riskDistCard(label: "Med %", value: String(format: "%.0f%%", (Double(medCount)/total)*100), color: ManagerTheme.Colors.primary(colorScheme)) {
-                            applicationsVM.filterRisk = .medium
-                            applicationsVM.filterLoanType = dashboardVM.portfolioLoanType
-                            selectedTab = 1
-                        }
-                        riskCard(level: .medium, count: medCount) {
-                            applicationsVM.filterRisk = .medium
-                            applicationsVM.filterLoanType = dashboardVM.portfolioLoanType
-                            selectedTab = 1
-                        }
+                    summaryCard(title: "Med Risk", value: "\(medCount)", icon: "shield.fill", color: ManagerTheme.Colors.primary(colorScheme), subtitle: String(format: "%.0f%%", (Double(medCount)/total)*100)) {
+                        applicationsVM.filterRisk = .medium
+                        applicationsVM.filterLoanType = dashboardVM.portfolioLoanType
+                        selectedTab = 1
                     }
-                    
-                    // Column 3: High Risk
-                    VStack(spacing: Theme.Spacing.md) {
-                        let highCount = filteredPortfolioApplications.filter { $0.riskLevel == .high }.count
-                        riskDistCard(label: "High %", value: String(format: "%.0f%%", (Double(highCount)/total)*100), color: Theme.Colors.adaptiveCritical(colorScheme)) {
-                            applicationsVM.filterRisk = .high
-                            applicationsVM.filterLoanType = dashboardVM.portfolioLoanType
-                            selectedTab = 1
-                        }
-                        riskCard(level: .high, count: highCount) {
-                            applicationsVM.filterRisk = .high
-                            applicationsVM.filterLoanType = dashboardVM.portfolioLoanType
-                            selectedTab = 1
-                        }
+                    summaryCard(title: "High Risk", value: "\(highCount)", icon: "shield.fill", color: Theme.Colors.adaptiveCritical(colorScheme), subtitle: String(format: "%.0f%%", (Double(highCount)/total)*100)) {
+                        applicationsVM.filterRisk = .high
+                        applicationsVM.filterLoanType = dashboardVM.portfolioLoanType
+                        selectedTab = 1
                     }
                 }
             }
         }
-    }
-    
-    private func riskDistCard(label: String, value: String, color: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(spacing: 4) {
-                Text(value).font(.system(size: 20, weight: .bold, design: .rounded)).foregroundStyle(color)
-                Text(label).font(Theme.Typography.caption2).foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(ManagerTheme.Colors.surface(colorScheme))
-            .cornerRadius(Theme.Radius.md)
-            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.md).stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 0.5))
-        }
-        .buttonStyle(.plain)
-    }
-    
-    private func riskCard(level: RiskLevel, count: Int, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                HStack {
-                    Image(systemName: "circle.fill")
-                        .font(.system(size: 8))
-                        .foregroundStyle(level.adaptiveColor(colorScheme))
-                    Text(level.displayName)
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                }
-                Text("\(count)")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
-                Text("applications")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(Theme.Spacing.md)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(ManagerTheme.Colors.surface(colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                    .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
     }
 
     private var npaSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "NPA Analysis", icon: "exclamationmark.shield.fill")
+            sectionLabel(title: "NPA Analysis", icon: "exclamationmark.shield.fill")
             
-            if dashboardVM.portfolioLoanType == nil {
-                VStack(spacing: 0) {
-                    npaRow(type: .personalLoan, value: "2.1%", color: .red)
-                    Divider()
-                    npaRow(type: .homeLoan, value: "0.4%", color: .green)
-                    Divider()
-                    npaRow(type: .businessLoan, value: "3.2%", color: .red)
-                    Divider()
-                    npaRow(type: .vehicleLoan, value: "1.5%", color: .orange)
-                }
-                .background(ManagerTheme.Colors.surface(colorScheme))
-                .cornerRadius(Theme.Radius.lg)
-                .overlay(RoundedRectangle(cornerRadius: Theme.Radius.lg).stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1))
-            } else {
-                HStack {
-                    VStack(alignment: .leading) {
-                        Text("NPA Status for \(dashboardVM.portfolioLoanType?.displayName ?? "")")
-                            .font(Theme.Typography.caption)
-                            .foregroundStyle(.secondary)
-                        Text("NPA: \(npaValueFor(dashboardVM.portfolioLoanType))")
-                            .font(.system(size: 24, weight: .bold, design: .rounded))
-                            .foregroundStyle(Theme.Colors.adaptiveCritical(colorScheme))
-                    }
-                    Spacer()
-                }
-                .padding()
-                .background(ManagerTheme.Colors.surface(colorScheme))
-                .cornerRadius(Theme.Radius.lg)
-                .overlay(RoundedRectangle(cornerRadius: Theme.Radius.lg).stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1))
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.md) {
+                npaCard(type: .personalLoan, value: "2.1%", color: Theme.Colors.adaptiveCritical(colorScheme))
+                npaCard(type: .homeLoan, value: "0.4%", color: Theme.Colors.adaptiveSuccess(colorScheme))
+                npaCard(type: .businessLoan, value: "3.2%", color: Theme.Colors.adaptiveCritical(colorScheme))
+                npaCard(type: .vehicleLoan, value: "1.5%", color: Theme.Colors.adaptiveWarning(colorScheme))
             }
         }
     }
 
-    private func npaValueFor(_ type: LoanType?) -> String {
-        switch type {
-        case .personalLoan: return "2.1%"
-        case .homeLoan: return "0.4%"
-        case .businessLoan: return "3.2%"
-        case .vehicleLoan: return "1.5%"
-        default: return "1.2%"
-        }
-    }
-
-    private func npaRow(type: LoanType, value: String, color: Color) -> some View {
-        Button {
+    private func npaCard(type: LoanType, value: String, color: Color) -> some View {
+        summaryCard(title: type.displayName, value: value, icon: "percent", color: color) {
             withAnimation {
                 dashboardVM.portfolioLoanType = type
+                selectedTab = 2 // stay on portfolio to show filtered state
             }
-        } label: {
-            HStack {
-                Circle().fill(color).frame(width: 8, height: 8)
-                Text(type.displayName)
-                    .font(Theme.Typography.subheadline)
-                Spacer()
-                Text(value)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Theme.Colors.adaptiveCritical(colorScheme))
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.tertiary)
-            }
-            .padding()
         }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Live Portfolio Data (Backed by ApplicationsViewModel)

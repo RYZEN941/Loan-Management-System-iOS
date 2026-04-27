@@ -61,10 +61,6 @@ struct ManagerDstView: View {
             } message: {
                 Text("Remove \(agentToDelete?.name ?? "this agent") from this list? This is a frontend-only action.")
             }
-            .overlay(alignment: .top) {
-                feedbackBanner
-                    .padding(.top, 8)
-            }
             .onAppear {
                 adminVM.loadData()
                 Task {
@@ -78,10 +74,7 @@ struct ManagerDstView: View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Direct Sales Team")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                Text("Manage and monitor your branch's field agents")
-                    .font(Theme.Typography.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
             }
             Spacer()
             
@@ -219,35 +212,36 @@ private struct DstKPICard: View {
     @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                ZStack {
-                    Circle()
-                        .fill(color.opacity(0.1))
-                        .frame(width: 36, height: 36)
-                    Image(systemName: icon)
-                        .font(.system(size: 16))
-                        .foregroundStyle(color)
-                }
-                Spacer()
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(value)
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
-                Text(title)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.secondary)
-            }
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(color)
+                .frame(width: 4, height: 44)
+
+            Image(systemName: icon)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(color)
+
+            Text(title)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .layoutPriority(1)
+
+            Spacer(minLength: 4)
+
+            Text(value)
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .foregroundStyle(color)
+                .layoutPriority(2)
         }
-        .padding(20)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(ManagerTheme.Colors.surface(colorScheme))
-        .cornerRadius(Theme.Radius.lg)
+        .background(color.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(color.opacity(0.15), lineWidth: 1)
         )
     }
 }
@@ -265,17 +259,17 @@ private struct DstCard: View {
                 ZStack {
                     Circle()
                         .fill(ManagerTheme.Colors.primary(colorScheme).opacity(0.1))
-                        .frame(width: 52, height: 52)
+                        .frame(width: 64, height: 64)
                     Text(agent.initials)
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.system(size: 22, weight: .bold))
                         .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
                 }
                 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(agent.name)
-                        .font(.system(size: 17, weight: .semibold))
+                        .font(.system(size: 20, weight: .semibold))
                     Text(agent.email)
-                        .font(.system(size: 13))
+                        .font(.system(size: 15))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
@@ -284,29 +278,29 @@ private struct DstCard: View {
                 
                 DstStatusBadge(isActive: agent.isActive)
             }
-            .padding(16)
+            .padding(20)
             
             Divider()
             
             HStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Contact")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.tertiary)
                         .textCase(.uppercase)
                     Text(agent.phone)
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: 16, weight: .medium))
                 }
-                .padding(16)
+                .padding(20)
                 
                 Spacer()
                 
-                HStack(spacing: 8) {
+                HStack(spacing: 12) {
                     actionButton(icon: agent.isActive ? "person.fill.xmark" : "person.fill.checkmark", color: agent.isActive ? .orange : Theme.Colors.adaptiveSuccess(colorScheme), action: onToggle)
                     actionButton(icon: "pencil", color: ManagerTheme.Colors.primary(colorScheme), action: onEdit)
                     actionButton(icon: "trash", color: Theme.Colors.adaptiveCritical(colorScheme), action: onDelete)
                 }
-                .padding(.trailing, 16)
+                .padding(.trailing, 20)
             }
             .background(ManagerTheme.Colors.surfaceSecondary(colorScheme).opacity(0.3))
         }
@@ -322,9 +316,9 @@ private struct DstCard: View {
     private func actionButton(icon: String, color: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(color)
-                .frame(width: 38, height: 38)
+                .frame(width: 46, height: 46)
                 .background(ManagerTheme.Colors.surface(colorScheme))
                 .clipShape(Circle())
                 .shadow(color: Color.black.opacity(0.05), radius: 2, y: 1)

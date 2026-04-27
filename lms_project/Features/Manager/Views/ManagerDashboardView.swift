@@ -52,19 +52,20 @@ struct ManagerDashboardView: View {
     
     // MARK: - Greeting
     private var greetingBar: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text(greetingText)
-                    .font(Theme.Typography.titleLarge)
-                HStack(spacing: Theme.Spacing.sm) {
-                    Image(systemName: "building.2.fill")
-                        .font(.system(size: 11))
-                        .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
-                    Text("Branch Operations Oversight")
-                        .font(Theme.Typography.subheadline)
-                        .foregroundStyle(.secondary)
-                }
+        HStack(alignment: .bottom, spacing: 10) {
+            Text(greetingText)
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+
+            HStack(spacing: 4) {
+                Image(systemName: "location.fill")
+                    .font(.system(size: 13, weight: .medium))
+                Text(authVM.currentUser?.branch ?? "Branch")
+                    .font(.system(size: 15, weight: .medium))
             }
+            .foregroundStyle(.secondary)
+            .padding(.bottom, 4)
+            
             Spacer()
         }
         .padding(.top, Theme.Spacing.md)
@@ -72,7 +73,7 @@ struct ManagerDashboardView: View {
     
     private var greetingText: String {
         let name = authVM.currentUser?.name.split(separator: " ").first.map(String.init) ?? "Manager"
-        return "Welcome Back, \(name)"
+        return "Good Morning, \(name)"
     }
     
     // MARK: - Navigation Helpers
@@ -91,11 +92,21 @@ struct ManagerDashboardView: View {
         selectedTab = 2
     }
 
+    private func sectionLabel(title: String, icon: String) -> some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            Image(systemName: icon)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
+            Text(title)
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+        }
+    }
+
     // MARK: - Priority Queue
     private var priorityQueueSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "Priority Queue", icon: "exclamationmark.triangle.fill")
-                .description("Actionable metrics requiring immediate manager attention.")
+            sectionLabel(title: "Priority Queue", icon: "exclamationmark.triangle.fill")
             
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.md) {
                 KPIDataCard(title: "Pending", value: "\(pendingCount)",
@@ -137,7 +148,7 @@ struct ManagerDashboardView: View {
             HStack(spacing: 12) {
                 Image(systemName: "sparkles")
                     .foregroundStyle(.orange)
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 26, weight: .bold))
                 
                 HStack(spacing: 16) {
                     actionPill("\(highRiskCount) high-risk applications")
@@ -153,10 +164,10 @@ struct ManagerDashboardView: View {
     }
 
     private func actionPill(_ text: String) -> some View {
-        HStack(spacing: 4) {
-            Circle().fill(.orange).frame(width: 4, height: 4)
+        HStack(spacing: 6) {
+            Circle().fill(.orange).frame(width: 6, height: 6)
             Text(text)
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(.secondary)
         }
     }
@@ -175,16 +186,16 @@ struct ManagerDashboardView: View {
     // MARK: - Risk Snapshot
     private var riskSnapshotSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "Risk Snapshot", icon: "chart.pie.fill")
+            sectionLabel(title: "Risk Snapshot", icon: "chart.pie.fill")
             
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.md) {
                 KPIDataCard(title: "High Risk Pending", value: "\(highRiskPendingCount)",
-                        icon: "shield.exclamationmark.fill", color: Theme.Colors.adaptiveCritical(colorScheme)) {
+                        icon: "exclamationmark.shield.fill", color: Theme.Colors.adaptiveCritical(colorScheme)) {
                     navigateToApprovals(status: .underReview, risk: .high)
                 }
                 
                 KPIDataCard(title: "High Risk Approved", value: "\(approvedHighRiskCount)",
-                        icon: "shield.checkmark.fill", color: Theme.Colors.adaptiveSuccess(colorScheme)) {
+                        icon: "checkmark.shield.fill", color: Theme.Colors.adaptiveSuccess(colorScheme)) {
                     navigateToApprovals(status: .approved, risk: .high)
                 }
             }
@@ -194,7 +205,7 @@ struct ManagerDashboardView: View {
     // MARK: - Portfolio Health
     private var portfolioHealthMinimal: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            SectionHeader(title: "Portfolio Health", icon: "heart.text.square.fill")
+            sectionLabel(title: "Portfolio Health", icon: "heart.text.square.fill")
             
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.md) {
                 KPIDataCard(title: "NPA %", value: String(format: "%.1f%%", npaPercent),
@@ -285,42 +296,46 @@ struct KPIDataCard: View {
     }
     
     private var cardContent: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                ZStack {
-                    Circle()
-                        .fill(color.opacity(0.12))
-                        .frame(width: 34, height: 34)
-                    Image(systemName: icon)
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(color)
-                }
-                Spacer()
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
+        VStack(spacing: 8) {
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(color)
+                    .frame(width: 4, height: 44)
+
+                Image(systemName: icon)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(color)
+
+                Text(title)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .layoutPriority(1)
+
+                Spacer(minLength: 4)
+
                 Text(value)
                     .font(.system(size: 24, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
-                Text(title)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.secondary)
-                
-                if showCTA {
+                    .foregroundStyle(color)
+                    .layoutPriority(2)
+            }
+            if showCTA {
+                HStack {
+                    Spacer()
                     Text("Review Now →")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
-                        .padding(.top, 4)
                 }
             }
         }
-        .padding(18)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(ManagerTheme.Colors.surface(colorScheme))
-        .cornerRadius(Theme.Radius.lg)
+        .background(color.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(color.opacity(0.15), lineWidth: 1)
         )
     }
 }

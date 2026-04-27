@@ -145,6 +145,96 @@ struct Media_V1_CompleteMediaUploadResponse: Sendable, SwiftProtobuf.Message, Sw
     static func == (lhs: Self, rhs: Self) -> Bool { lhs.mediaID == rhs.mediaID }
 }
 
+struct Media_V1_ListMediaRequest: Sendable, SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+    static let protoMessageName = "media.v1.ListMediaRequest"
+    static let _protobuf_nameMap: SwiftProtobuf._NameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}limit\0\u{1}offset\0")
+
+    var limit: Int32 = 0
+    var offset: Int32 = 0
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+    mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+        while let f = try decoder.nextFieldNumber() {
+            switch f {
+            case 1: try decoder.decodeSingularInt32Field(value: &limit)
+            case 2: try decoder.decodeSingularInt32Field(value: &offset)
+            default: break
+            }
+        }
+    }
+    func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+        if limit != 0 { try visitor.visitSingularInt32Field(value: limit, fieldNumber: 1) }
+        if offset != 0 { try visitor.visitSingularInt32Field(value: offset, fieldNumber: 2) }
+        try unknownFields.traverse(visitor: &visitor)
+    }
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.limit == rhs.limit && lhs.offset == rhs.offset }
+}
+
+struct Media_V1_MediaItem: Sendable, SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+    static let protoMessageName = "media.v1.MediaItem"
+    static let _protobuf_nameMap: SwiftProtobuf._NameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}media_id\0\u{3}file_name\0\u{3}content_type\0\u{3}size_bytes\0\u{3}file_url\0\u{1}note\0\u{3}uploaded_at\0")
+
+    var mediaID: String = ""
+    var fileName: String = ""
+    var contentType: String = ""
+    var sizeBytes: Int64 = 0
+    var fileUrl: String = ""
+    var note: String = ""
+    var uploadedAt: String = ""
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+    mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+        while let f = try decoder.nextFieldNumber() {
+            switch f {
+            case 1: try decoder.decodeSingularStringField(value: &mediaID)
+            case 2: try decoder.decodeSingularStringField(value: &fileName)
+            case 3: try decoder.decodeSingularStringField(value: &contentType)
+            case 4: try decoder.decodeSingularInt64Field(value: &sizeBytes)
+            case 5: try decoder.decodeSingularStringField(value: &fileUrl)
+            case 6: try decoder.decodeSingularStringField(value: &note)
+            case 7: try decoder.decodeSingularStringField(value: &uploadedAt)
+            default: break
+            }
+        }
+    }
+    func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+        if !mediaID.isEmpty { try visitor.visitSingularStringField(value: mediaID, fieldNumber: 1) }
+        if !fileName.isEmpty { try visitor.visitSingularStringField(value: fileName, fieldNumber: 2) }
+        if !contentType.isEmpty { try visitor.visitSingularStringField(value: contentType, fieldNumber: 3) }
+        if sizeBytes != 0 { try visitor.visitSingularInt64Field(value: sizeBytes, fieldNumber: 4) }
+        if !fileUrl.isEmpty { try visitor.visitSingularStringField(value: fileUrl, fieldNumber: 5) }
+        if !note.isEmpty { try visitor.visitSingularStringField(value: note, fieldNumber: 6) }
+        if !uploadedAt.isEmpty { try visitor.visitSingularStringField(value: uploadedAt, fieldNumber: 7) }
+        try unknownFields.traverse(visitor: &visitor)
+    }
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.mediaID == rhs.mediaID }
+}
+
+struct Media_V1_ListMediaResponse: Sendable, SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+    static let protoMessageName = "media.v1.ListMediaResponse"
+    static let _protobuf_nameMap: SwiftProtobuf._NameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}items\0")
+
+    var items: [Media_V1_MediaItem] = []
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+    mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+        while let f = try decoder.nextFieldNumber() {
+            switch f {
+            case 1: try decoder.decodeRepeatedMessageField(value: &items)
+            default: break
+            }
+        }
+    }
+    func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+        if !items.isEmpty { try visitor.visitRepeatedMessageField(value: items, fieldNumber: 1) }
+        try unknownFields.traverse(visitor: &visitor)
+    }
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.items == rhs.items }
+}
+
 // MARK: - Service Method Descriptors
 
 enum Media_V1_MediaService {
@@ -154,6 +244,9 @@ enum Media_V1_MediaService {
         }
         enum CompleteMediaUpload {
             static let descriptor = GRPCCore.MethodDescriptor(service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "media.v1.MediaService"), method: "CompleteMediaUpload")
+        }
+        enum ListMedia {
+            static let descriptor = GRPCCore.MethodDescriptor(service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "media.v1.MediaService"), method: "ListMedia")
         }
     }
 }
@@ -199,6 +292,25 @@ struct MediaAPI {
         }
 
         return completeResponse.mediaID
+    }
+
+    func listMedia(limit: Int32 = 100, offset: Int32 = 0) async throws -> [Media_V1_MediaItem] {
+        var req = Media_V1_ListMediaRequest()
+        req.limit = limit
+        req.offset = offset
+
+        let metadata = await CoreAPIClient.authorizedMetadata()
+        return try await CoreAPIClient.withClient { client in
+            try await client.unary(
+                request: .init(message: req, metadata: metadata),
+                descriptor: Media_V1_MediaService.Method.ListMedia.descriptor,
+                serializer: GRPCProtobuf.ProtobufSerializer<Media_V1_ListMediaRequest>(),
+                deserializer: GRPCProtobuf.ProtobufDeserializer<Media_V1_ListMediaResponse>(),
+                options: .defaults
+            ) { response in
+                try response.message.items
+            }
+        }
     }
 
     // MARK: - Private gRPC Methods

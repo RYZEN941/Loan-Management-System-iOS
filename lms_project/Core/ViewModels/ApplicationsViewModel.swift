@@ -772,7 +772,8 @@ class ApplicationsViewModel: ObservableObject {
         guard #available(iOS 18.0, *) else { return }
         do {
             let detail = try await LoanAPI().getLoanApplication(applicationID: applicationID)
-            let enriched = LoanApplication.from(proto: detail.application, documents: detail.documents)
+            var enriched = LoanApplication.from(proto: detail.application, documents: detail.documents)
+            enriched = try await enrichDocumentsWithMedia(enriched)
             if let index = applications.firstIndex(where: { $0.id == applicationID }) {
                 applications[index] = enriched
             }
@@ -782,6 +783,56 @@ class ApplicationsViewModel: ObservableObject {
         } catch {
             // Keep list data if detail fetch fails.
         }
+    }
+
+    private func enrichDocumentsWithMedia(_ application: LoanApplication) async throws -> LoanApplication {
+        let mediaIDs: Set<String> = Set(application.documents.compactMap { doc in
+            guard let mediaFileID = doc.mediaFileID?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !mediaFileID.isEmpty else {
+                return nil
+            }
+            return mediaFileID
+        })
+
+        guard !mediaIDs.isEmpty else { return application }
+
+        var matchedMedia: [String: Media_V1_MediaItem] = [:]
+        var offset: Int32 = 0
+        let pageSize: Int32 = 100
+        let maxPages = 20
+
+        for _ in 0..<maxPages {
+            let page = try await MediaAPI().listMedia(limit: pageSize, offset: offset)
+            if page.isEmpty { break }
+
+            for item in page where mediaIDs.contains(item.mediaID) {
+                matchedMedia[item.mediaID] = item
+            }
+
+            if matchedMedia.count == mediaIDs.count || page.count < Int(pageSize) {
+                break
+            }
+            offset += pageSize
+        }
+
+        guard !matchedMedia.isEmpty else { return application }
+
+        var enriched = application
+        enriched.documents = application.documents.map { document in
+            guard let mediaFileID = document.mediaFileID,
+                  let media = matchedMedia[mediaFileID] else {
+                return document
+            }
+
+            var updated = document
+            updated.fileName = media.fileName.isEmpty ? document.fileName : media.fileName
+            updated.contentType = media.contentType.isEmpty ? document.contentType : media.contentType
+            if !media.fileUrl.isEmpty {
+                updated.fileURL = URL(string: media.fileUrl)
+            }
+            return updated
+        }
+        return enriched
     }
 }
 

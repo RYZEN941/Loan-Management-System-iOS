@@ -112,6 +112,10 @@ struct LoanDocument: Identifiable, Codable, Hashable {
     var label: String
     var status: DocumentStatus
     var uploadedAt: Date?
+    var mediaFileID: String? = nil
+    var fileName: String? = nil
+    var contentType: String? = nil
+    var fileURL: URL? = nil
 }
 
 // MARK: - Verification Item

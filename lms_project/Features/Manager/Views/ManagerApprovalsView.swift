@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import WebKit
 
 struct ManagerApprovalsView: View {
     private enum ManagerChip: String, CaseIterable {
@@ -27,6 +28,7 @@ struct ManagerApprovalsView: View {
     @State private var showRegenerateConfirmation = false
     @State private var showRevokeConfirmation = false
     @State private var previewLetter: SanctionLetterVersion? = nil
+    @State private var previewDocument: LoanDocument? = nil
     @State private var selectedVersionIndex = 0
     @State private var selectedManagerChip: ManagerChip = .all
 
@@ -86,6 +88,9 @@ struct ManagerApprovalsView: View {
             .sheet(isPresented: $applicationsVM.showRejectionRemarksSheet) { rejectionSheet }
             .sheet(isPresented: $applicationsVM.showSendBackSheet) { sendBackSheet }
             .sheet(item: $previewLetter) { version in sanctionLetterPreview(version) }
+            .sheet(item: $previewDocument) { document in
+                documentPreviewSheet(document)
+            }
             .sheet(isPresented: $showEditTerms) {
                 if let app = applicationsVM.selectedApplication {
                     editTermsSheet(app)
@@ -473,16 +478,70 @@ struct ManagerApprovalsView: View {
         VStack(alignment: .leading, spacing: 14) {
             SectionHeader(title: "Document Verification", icon: "doc.on.doc.fill")
                 .description("Final checklist of all verified documents submitted by the borrower.")
-            VStack(spacing: 0) {
-                ForEach(app.documents) { doc in
-                    HStack {
-                        Image(systemName: doc.type.icon).font(.system(size: 14)).foregroundStyle(ManagerTheme.Colors.primary(colorScheme)).frame(width: 24)
-                        Text(doc.label).font(Theme.Typography.subheadline).foregroundStyle(.primary)
-                        Spacer()
-                        DocStatusBadge(status: doc.status)
+            if app.documents.isEmpty {
+                HStack(spacing: 12) {
+                    Image(systemName: "doc.text.magnifyingglass")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    Text("No uploaded documents are attached to this application yet.")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(app.documents) { doc in
+                        HStack(alignment: .center, spacing: 12) {
+                            Image(systemName: doc.type.icon)
+                                .font(.system(size: 14))
+                                .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
+                                .frame(width: 24)
+
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(doc.label)
+                                    .font(Theme.Typography.subheadline)
+                                    .foregroundStyle(.primary)
+
+                                if let fileName = doc.fileName, !fileName.isEmpty {
+                                    Text(fileName)
+                                        .font(Theme.Typography.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                } else if doc.mediaFileID != nil {
+                                    Text("Uploaded file linked to this application")
+                                        .font(Theme.Typography.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+
+                                if let uploadedAt = doc.uploadedAt {
+                                    Text("Uploaded \(uploadedAt.relativeFormatted)")
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundStyle(.tertiary)
+                                }
+                            }
+
+                            Spacer()
+
+                            if doc.fileURL != nil {
+                                Button {
+                                    previewDocument = doc
+                                } label: {
+                                    Label("Preview", systemImage: "eye")
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .background(ManagerTheme.Colors.primary(colorScheme).opacity(0.08))
+                                        .clipShape(Capsule())
+                                }
+                                .buttonStyle(.plain)
+                            }
+
+                            DocStatusBadge(status: doc.status)
+                        }
+                        .padding(.vertical, 12)
+                        if doc.id != app.documents.last?.id { Divider() }
                     }
-                    .padding(.vertical, 12)
-                    if doc.id != app.documents.last?.id { Divider() }
                 }
             }
         }
@@ -677,6 +736,57 @@ struct ManagerApprovalsView: View {
         }
         .padding(12)
         .overlay(Divider(), alignment: .bottom)
+    }
+
+    private func documentPreviewSheet(_ document: LoanDocument) -> some View {
+        NavigationStack {
+            Group {
+                if let url = document.fileURL {
+                    if (document.contentType ?? "").hasPrefix("image/") {
+                        ScrollView {
+                            AsyncImage(url: url) { phase in
+                                switch phase {
+                                case .success(let image):
+                                    image
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(maxWidth: .infinity)
+                                        .padding()
+                                case .failure:
+                                    previewUnavailable(message: "The uploaded image could not be loaded.")
+                                case .empty:
+                                    ProgressView("Loading document...")
+                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                @unknown default:
+                                    previewUnavailable(message: "Preview is unavailable for this file.")
+                                }
+                            }
+                        }
+                    } else {
+                        RemoteDocumentWebView(url: url)
+                    }
+                } else {
+                    previewUnavailable(message: "This document does not have a preview URL yet.")
+                }
+            }
+            .background(ManagerTheme.Colors.background(colorScheme))
+            .navigationTitle(document.fileName ?? document.label)
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    private func previewUnavailable(message: String) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: "eye.slash")
+                .font(.system(size: 28, weight: .medium))
+                .foregroundStyle(.secondary)
+            Text(message)
+                .font(Theme.Typography.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(24)
     }
 
     // MARK: - Verification
@@ -1005,5 +1115,19 @@ struct ManagerApprovalsView: View {
             }
         }
         .presentationDetents([.medium])
+    }
+}
+
+private struct RemoteDocumentWebView: UIViewRepresentable {
+    let url: URL
+
+    func makeUIView(context: Context) -> WKWebView {
+        let webView = WKWebView()
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        return webView
+    }
+
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        webView.load(URLRequest(url: url))
     }
 }

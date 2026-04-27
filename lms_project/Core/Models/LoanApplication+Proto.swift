@@ -103,7 +103,11 @@ private extension LoanDocument {
             type: DocumentType.fromRequiredDocID(value.requiredDocID),
             label: DocumentType.fromRequiredDocID(value.requiredDocID).displayName,
             status: DocumentStatus.from(verificationStatus: value.verificationStatus),
-            uploadedAt: Date.fromBackendTimestamp(value.createdAt)
+            uploadedAt: Date.fromBackendTimestamp(value.createdAt),
+            mediaFileID: value.mediaFileID.isEmpty ? nil : value.mediaFileID,
+            fileName: nil,
+            contentType: nil,
+            fileURL: nil
         )
     }
 }

@@ -394,6 +394,48 @@ func (ns NullCollateralVerificationStatus) Value() (driver.Value, error) {
 	return string(ns.CollateralVerificationStatus), nil
 }
 
+type ConsentTypeEnum string
+
+const (
+	ConsentTypeEnumAadharKyc ConsentTypeEnum = "aadhar_kyc"
+	ConsentTypeEnumPanKyc    ConsentTypeEnum = "pan_kyc"
+)
+
+func (e *ConsentTypeEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ConsentTypeEnum(s)
+	case string:
+		*e = ConsentTypeEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ConsentTypeEnum: %T", src)
+	}
+	return nil
+}
+
+type NullConsentTypeEnum struct {
+	ConsentTypeEnum ConsentTypeEnum `json:"consent_type_enum"`
+	Valid           bool            `json:"valid"` // Valid is true if ConsentTypeEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullConsentTypeEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.ConsentTypeEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ConsentTypeEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullConsentTypeEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ConsentTypeEnum), nil
+}
+
 type DocumentRequirementType string
 
 const (
@@ -1407,7 +1449,7 @@ type User struct {
 type UserConsent struct {
 	ID              pgtype.UUID        `json:"id"`
 	UserID          pgtype.UUID        `json:"user_id"`
-	ConsentType     interface{}        `json:"consent_type"`
+	ConsentType     ConsentTypeEnum    `json:"consent_type"`
 	ConsentVersion  string             `json:"consent_version"`
 	ConsentText     string             `json:"consent_text"`
 	ConsentTextHash string             `json:"consent_text_hash"`

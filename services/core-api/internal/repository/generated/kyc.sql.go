@@ -308,7 +308,7 @@ INSERT INTO user_consents (
 
 type CreateUserConsentParams struct {
 	UserID          pgtype.UUID        `json:"user_id"`
-	ConsentType     interface{}        `json:"consent_type"`
+	ConsentType     ConsentTypeEnum    `json:"consent_type"`
 	ConsentVersion  string             `json:"consent_version"`
 	ConsentText     string             `json:"consent_text"`
 	ConsentTextHash string             `json:"consent_text_hash"`
@@ -367,8 +367,8 @@ LIMIT 1
 `
 
 type GetLatestGrantedConsentByTypeParams struct {
-	UserID      pgtype.UUID `json:"user_id"`
-	ConsentType interface{} `json:"consent_type"`
+	UserID      pgtype.UUID     `json:"user_id"`
+	ConsentType ConsentTypeEnum `json:"consent_type"`
 }
 
 func (q *Queries) GetLatestGrantedConsentByType(ctx context.Context, arg GetLatestGrantedConsentByTypeParams) (UserConsent, error) {

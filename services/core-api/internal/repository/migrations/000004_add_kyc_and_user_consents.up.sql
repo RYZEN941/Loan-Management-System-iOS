@@ -6,12 +6,7 @@ ALTER TABLE borrower_profiles
   ADD COLUMN IF NOT EXISTS aadhaar_verified_at TIMESTAMP WITH TIME ZONE,
   ADD COLUMN IF NOT EXISTS pan_verified_at TIMESTAMP WITH TIME ZONE;
 
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'consent_type_enum') THEN
-    CREATE TYPE consent_type_enum AS ENUM ('aadhar_kyc', 'pan_kyc');
-  END IF;
-END $$;
+CREATE TYPE consent_type_enum AS ENUM ('aadhar_kyc', 'pan_kyc');
 
 CREATE TABLE IF NOT EXISTS borrower_aadhaar_kyc_history (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

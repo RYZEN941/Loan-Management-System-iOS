@@ -63,7 +63,7 @@ struct ChatListView: View {
                                     router.push(.chatConversation(roomID: room.id))
                                 } label: {
                                     let otherUserID = room.otherUserID(currentUserID: sessionStore.borrowerProfileId.isEmpty ? "" : sessionStore.borrowerProfileId)
-                                    let participantName = viewModel.participantNames[otherUserID] ?? "Unknown"
+                                    let participantName = viewModel.participantNames[otherUserID] ?? "User"
                                     ChatRoomPreviewRow(room: room, participantName: participantName)
                                 }
                                 .buttonStyle(PlainButtonStyle())
@@ -97,10 +97,12 @@ struct ChatListView: View {
         }
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
-        .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
-            Button("OK") {
-                viewModel.errorMessage = nil
-            }
+        .alert("Error", isPresented: Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )) {
+            Button("Retry") { viewModel.refresh() }
+            Button("Dismiss", role: .cancel) { viewModel.errorMessage = nil }
         } message: {
             if let error = viewModel.errorMessage {
                 Text(error)
@@ -112,15 +114,6 @@ struct ChatListView: View {
 struct ChatRoomPreviewRow: View {
     let room: ChatRoom
     let participantName: String
-    @EnvironmentObject var sessionStore: SessionStore
-
-    private var currentUserID: String {
-        guard let accessToken = try? TokenStore.shared.accessToken(),
-              let userID = JWTClaimsDecoder.subject(from: accessToken) else {
-            return ""
-        }
-        return userID
-    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
@@ -167,7 +160,9 @@ struct ChatRoomPreviewRow: View {
 struct NewChatSheet: View {
     @ObservedObject var viewModel: ChatListViewModel
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var router: AppRouter
     @State private var selectedUser: ChatUser?
+    @State private var isCreating = false
 
     var body: some View {
         NavigationStack {
@@ -188,9 +183,7 @@ struct NewChatSheet: View {
                         ForEach(viewModel.eligibleUsers) { user in
                             Button {
                                 selectedUser = user
-                                if let room = viewModel.createRoomWithUser(userID: user.id) {
-                                    dismiss()
-                                }
+                                createRoomAndNavigate(user: user)
                             } label: {
                                 HStack {
                                     Circle()
@@ -211,9 +204,14 @@ struct NewChatSheet: View {
                                     }
 
                                     Spacer()
+
+                                    if isCreating && selectedUser?.id == user.id {
+                                        ProgressView()
+                                    }
                                 }
                                 .padding(.vertical, 4)
                             }
+                            .disabled(isCreating)
                             .buttonStyle(PlainButtonStyle())
                         }
                     }
@@ -227,6 +225,25 @@ struct NewChatSheet: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                }
+            }
+        }
+    }
+
+    private func createRoomAndNavigate(user: ChatUser) {
+        isCreating = true
+        Task {
+            do {
+                let room = try await viewModel.createRoomWithUser(userID: user.id)
+                await MainActor.run {
+                    isCreating = false
+                    dismiss()
+                    router.push(.chatConversation(roomID: room.id))
+                }
+            } catch {
+                await MainActor.run {
+                    isCreating = false
+                    // errorMessage is set by viewModel
                 }
             }
         }

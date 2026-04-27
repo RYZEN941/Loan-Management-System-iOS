@@ -148,7 +148,7 @@ struct ActiveLoanDetailsView: View {
 
     private var supportButton: some View {
         Button {
-            router.push(.chatConversation(roomID: "loan-support-room"))
+            router.push(.chatList)
         } label: {
             HStack {
                 Image(systemName: "message.fill")

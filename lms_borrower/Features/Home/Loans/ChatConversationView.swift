@@ -9,26 +9,35 @@ class ChatConversationViewModel: ObservableObject {
     @Published var isLoading: Bool = true
     @Published var errorMessage: String? = nil
     @Published var participantName: String = "User"
+    @Published var participantRole: String = ""
 
     private let chatService: ChatServiceProtocol
     private let roomID: String
     private var currentUserID: String = ""
     private var messageStreamTask: Task<Void, Never>?
+    private var lastMessageID: String? = nil
 
     init(roomID: String, chatService: ChatServiceProtocol = ServiceContainer.chatService) {
         self.roomID = roomID
         self.chatService = chatService
-        self.currentUserID = getCurrentUserID()
+        self.currentUserID = Self.resolveCurrentUserID()
         loadMessages()
         startStreaming()
     }
 
-    private func getCurrentUserID() -> String {
+    private static func resolveCurrentUserID() -> String {
         guard let accessToken = try? TokenStore.shared.accessToken(),
               let userID = JWTClaimsDecoder.subject(from: accessToken) else {
             return ""
         }
         return userID
+    }
+
+    var isCurrentUser: (String) -> Bool {
+        return { [weak self] senderID in
+            guard let self else { return false }
+            return senderID == self.currentUserID
+        }
     }
 
     deinit {
@@ -48,8 +57,11 @@ class ChatConversationViewModel: ObservableObject {
                     limit: 100,
                     offset: 0
                 )
+                if let last = loadedMessages.last {
+                    lastMessageID = last.id
+                }
                 await MainActor.run {
-                    self.messages = loadedMessages.reversed() // Show newest at bottom
+                    self.messages = loadedMessages.reversed()
                     self.isLoading = false
                 }
             } catch {
@@ -64,16 +76,17 @@ class ChatConversationViewModel: ObservableObject {
     // MARK: - Streaming
 
     private func startStreaming() {
+        messageStreamTask?.cancel()
         messageStreamTask = Task {
-            let stream = chatService.subscribeToRoomMessages(roomID: roomID, afterMessageID: nil)
+            let stream = chatService.subscribeToRoomMessages(roomID: roomID, afterMessageID: lastMessageID)
 
             do {
                 for try await event in stream {
                     if Task.isCancelled { break }
 
                     if !event.isHeartbeat, let newMessage = event.message {
+                        lastMessageID = newMessage.id
                         await MainActor.run {
-                            // Add new message if not already present
                             if !self.messages.contains(where: { $0.id == newMessage.id }) {
                                 self.messages.append(newMessage)
                             }
@@ -105,15 +118,15 @@ class ChatConversationViewModel: ObservableObject {
                     metadataJSON: nil
                 )
                 await MainActor.run {
-                    // Optimistically add message (stream will also deliver it)
                     if !self.messages.contains(where: { $0.id == sentMessage.id }) {
                         self.messages.append(sentMessage)
                     }
+                    self.lastMessageID = sentMessage.id
                 }
             } catch {
                 await MainActor.run {
                     self.errorMessage = error.localizedDescription
-                    self.inputText = text // Restore text on error
+                    self.inputText = text
                 }
             }
         }
@@ -121,6 +134,7 @@ class ChatConversationViewModel: ObservableObject {
 
     func refresh() {
         loadMessages()
+        startStreaming()
     }
 }
 
@@ -154,7 +168,7 @@ struct ChatConversationView: View {
                                     .frame(height: 0)
                                 LazyVStack(spacing: 2) {
                                     ForEach(viewModel.messages) { message in
-                                        ChatBubble(message: message, participantName: viewModel.participantName)
+                                        ChatBubble(message: message, isFromMe: viewModel.isCurrentUser(message.senderUserID))
                                             .id(message.id)
                                     }
                                 }
@@ -174,7 +188,7 @@ struct ChatConversationView: View {
                                 }
                             }
                         }
-                        .onChange(of: viewModel.messages.count) { _ in
+                        .onChange(of: viewModel.messages.count) { _, _ in
                             if let last = viewModel.messages.last {
                                 withAnimation(.easeOut(duration: 0.22)) {
                                     scrollProxy.scrollTo(last.id, anchor: .bottom)
@@ -189,6 +203,7 @@ struct ChatConversationView: View {
 
                 MessagesNavigationBar(
                     participantName: viewModel.participantName,
+                    participantRole: viewModel.participantRole,
                     dismiss: dismiss,
                     scrollOffset: scrollOffset,
                     topInset: topInset
@@ -203,10 +218,12 @@ struct ChatConversationView: View {
         .toolbar(.hidden, for: .tabBar)
         .navigationBarBackButtonHidden(true)
         .navigationBarHidden(true)
-        .alert("Error", isPresented: .constant(viewModel.errorMessage != nil)) {
-            Button("OK") {
-                viewModel.errorMessage = nil
-            }
+        .alert("Error", isPresented: Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )) {
+            Button("Retry") { viewModel.refresh() }
+            Button("Dismiss", role: .cancel) { viewModel.errorMessage = nil }
         } message: {
             if let error = viewModel.errorMessage {
                 Text(error)
@@ -217,6 +234,7 @@ struct ChatConversationView: View {
 
 struct MessagesNavigationBar: View {
     let participantName: String
+    let participantRole: String
     let dismiss: DismissAction
     let scrollOffset: CGFloat
     let topInset: CGFloat
@@ -270,7 +288,7 @@ struct MessagesNavigationBar: View {
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundColor(.primary)
                             .lineLimit(1)
-                        Text("Support Agent")
+                        Text(participantRole.isEmpty ? "Support" : participantRole)
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                     }
@@ -280,20 +298,7 @@ struct MessagesNavigationBar: View {
 
                 Spacer()
 
-                HStack(spacing: 18) {
-                    Button {} label: {
-                        Image(systemName: "phone.fill")
-                            .font(.system(size: 17))
-                            .foregroundColor(.mainBlue)
-                    }
-
-                    Button {} label: {
-                        Image(systemName: "video.fill")
-                            .font(.system(size: 17))
-                            .foregroundColor(.mainBlue)
-                    }
-                }
-                .frame(width: 72, alignment: .trailing)
+                Color.clear.frame(width: 72)
             }
             .padding(.horizontal, 16)
             .padding(.top, topInset + 6)
@@ -306,32 +311,19 @@ struct MessagesNavigationBar: View {
 
 struct ChatBubble: View {
     let message: ChatMessage
-    let participantName: String
-    @EnvironmentObject var sessionStore: SessionStore
-
-    private var currentUserID: String {
-        guard let accessToken = try? TokenStore.shared.accessToken(),
-              let userID = JWTClaimsDecoder.subject(from: accessToken) else {
-            return ""
-        }
-        return userID
-    }
-
-    var isCurrentUser: Bool {
-        message.isFromCurrentUser(currentUserID: currentUserID)
-    }
+    let isFromMe: Bool
 
     var body: some View {
         VStack(spacing: 0) {
             HStack(alignment: .bottom, spacing: 6) {
-                if isCurrentUser {
+                if isFromMe {
                     Spacer(minLength: 60)
                 } else {
                     Circle()
                         .fill(DS.primaryLight)
                         .frame(width: 28, height: 28)
                         .overlay(
-                            Text(String(participantName.prefix(1)))
+                            Text("S")
                                 .font(.system(size: 11, weight: .bold))
                                 .foregroundColor(.mainBlue)
                         )
@@ -341,18 +333,18 @@ struct ChatBubble: View {
                     .font(.body)
                     .multilineTextAlignment(.leading)
                     .lineSpacing(1.5)
-                    .foregroundColor(isCurrentUser ? .white : .primary)
+                    .foregroundColor(isFromMe ? .white : .primary)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
-                    .frame(maxWidth: 255, alignment: isCurrentUser ? .trailing : .leading)
+                    .frame(maxWidth: 255, alignment: isFromMe ? .trailing : .leading)
                     .background(
-                        isCurrentUser
+                        isFromMe
                             ? DS.primary
                             : Color(UIColor.secondarySystemGroupedBackground)
                     )
-                    .clipShape(BubbleShape(isCurrentUser: isCurrentUser))
+                    .clipShape(BubbleShape(isCurrentUser: isFromMe))
 
-                if !isCurrentUser {
+                if !isFromMe {
                     Spacer(minLength: 60)
                 }
             }
@@ -360,16 +352,16 @@ struct ChatBubble: View {
             .padding(.vertical, 2)
 
             HStack {
-                if isCurrentUser {
+                if isFromMe {
                     Spacer()
                 }
 
                 Text(message.formattedTime)
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
-                    .padding(.horizontal, isCurrentUser ? 18 : 50)
+                    .padding(.horizontal, isFromMe ? 18 : 50)
 
-                if !isCurrentUser {
+                if !isFromMe {
                     Spacer()
                 }
             }
@@ -419,40 +411,31 @@ struct InputBarView: View {
             Divider()
 
             HStack(spacing: 10) {
-                Button {} label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundColor(.mainBlue)
-                }
+                TextField("Message", text: $viewModel.inputText)
+                    .font(.system(size: 16))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
 
-                HStack {
-                    TextField("iMessage", text: $viewModel.inputText)
-                        .font(.system(size: 16))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-
-                    if !viewModel.inputText.isEmpty {
-                        Button {
-                            viewModel.sendMessage()
-                        } label: {
-                            Image(systemName: "arrow.up.circle.fill")
-                                .font(.system(size: 28))
-                                .foregroundColor(.mainBlue)
-                        }
-                        .padding(.trailing, 4)
+                if !viewModel.inputText.isEmpty {
+                    Button {
+                        viewModel.sendMessage()
+                    } label: {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundColor(.mainBlue)
                     }
+                    .padding(.trailing, 4)
                 }
-                .background(Color(UIColor.systemBackground))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color(UIColor.separator), lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 20))
             }
+            .background(Color(UIColor.systemBackground))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(Color(UIColor.separator), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 20))
             .padding(.horizontal, 12)
             .padding(.top, 10)
             .padding(.bottom, 10)
-            .background(Color.clear)
         }
     }
 }

@@ -50,48 +50,69 @@ class ApplicationsViewModel: ObservableObject {
     @Published var pendingSendBackApp: LoanApplication? = nil
     @Published var sendBackReason = ""
     @Published var sendBackCustomRemark = ""
-
+    
+    @Published var minAmount: Double = 0
+    @Published var maxAmount: Double = 100_000_000 // 10 Cr
+    @Published var startDate: Date = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
+    
     private let dataService = MockDataService.shared
     private let xmlService = XMLParserService.shared
     // TODO: Replace with UserStore.shared.branchID once auth session exposes it
     private let defaultBranchID = ""
+    
+    // MARK: - Sorting State
+        @Published var currentSort: SortOption = .newestFirst
 
+        enum SortOption {
+            case newestFirst
+            case longestInQueue // FIFO
+            case highestAmount
+        }
     // MARK: - Filtered Applications
 
     var filteredApplications: [LoanApplication] {
-        var result = applications
+            var result = applications
 
-        if let status = filterStatus {
-            result = result.filter { $0.status == status }
-        }
+            // 1. Status Filter (Connects to the Chips)
+            if let status = filterStatus {
+                result = result.filter { $0.status == status }
+            }
 
-        if let risk = filterRisk {
-            result = result.filter { $0.riskLevel == risk }
-        }
+            // 2. Search Text
+            if !searchText.isEmpty {
+                result = result.filter {
+                    $0.borrower.name.localizedCaseInsensitiveContains(searchText) ||
+                    $0.id.localizedCaseInsensitiveContains(searchText) ||
+                    $0.borrower.employer.localizedCaseInsensitiveContains(searchText)
+                }
+            }
 
-        if let sla = filterSLA {
-            result = result.filter { $0.slaStatus == sla }
-        }
-
-        if filterHighValue {
-            // Define High Value as > 50 Lakhs (5,000,000)
-            result = result.filter { $0.loan.amount >= 5000000 }
-        }
-
-        if let type = filterLoanType {
-            result = result.filter { $0.loan.type == type }
-        }
-
-        if !searchText.isEmpty {
+            // 3. Amount Range Filter
             result = result.filter {
-                $0.borrower.name.localizedCaseInsensitiveContains(searchText) ||
-                $0.id.localizedCaseInsensitiveContains(searchText) ||
-                $0.borrower.employer.localizedCaseInsensitiveContains(searchText)
+                $0.loan.amount >= minAmount && $0.loan.amount <= maxAmount
+            }
+
+            // 4. Date Range Filter
+            result = result.filter {
+                $0.createdAt >= startDate
+            }
+
+            // 5. Final Sorting Pipeline
+            return result.sorted {
+                if $0.slaStatus != $1.slaStatus {
+                    return $0.slaStatus == .overdue
+                }
+                
+                switch currentSort {
+                case .newestFirst:
+                    return $0.createdAt > $1.createdAt
+                case .longestInQueue:
+                    return $0.createdAt < $1.createdAt
+                case .highestAmount:
+                    return $0.loan.amount > $1.loan.amount
+                }
             }
         }
-
-        return result
-    }
 
     func resetFiltersToAll() {
         filterStatus = nil
@@ -99,7 +120,16 @@ class ApplicationsViewModel: ObservableObject {
         filterSLA = nil
         filterHighValue = false
         filterLoanType = nil
+        minAmount = 0
+                maxAmount = 10_000_000
+                startDate = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
     }
+    
+    func updateSort(_ option: SortOption) {
+            withAnimation {
+                currentSort = option
+            }
+        }
 
     // MARK: - Load Data
 

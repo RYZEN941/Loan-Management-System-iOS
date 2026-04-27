@@ -14,6 +14,7 @@ import UniformTypeIdentifiers
 // MARK: - Main View
 
 struct LOApplicationsView: View {
+    
     private enum LOChip: String, CaseIterable {
         case all = "All"
         case new = "New"
@@ -22,7 +23,7 @@ struct LOApplicationsView: View {
         case approved = "Approved"
         case rejected = "Rejected"
     }
-
+    @State private var showFilterSheet = false
     @EnvironmentObject var applicationsVM: ApplicationsViewModel
     @Environment(\.colorScheme) private var colorScheme
     @Binding var showProfile: Bool
@@ -81,11 +82,43 @@ struct LOApplicationsView: View {
                             .symbolVariant(sidebarCollapsed ? .none : .fill)
                     }
                 }
+                // Replace the existing ToolbarItem for the "plus" button with this:
                 ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        showNewApplication = true
-                    } label: {
-                        Image(systemName: "plus")
+                    HStack(spacing: 8) {
+                        // 1. Existing Plus Button
+                        Button {
+                            showNewApplication = true
+                        } label: {
+                            Image(systemName: "plus")
+                        }
+                        
+                        // MARK: - Update this specific block in LOApplicationsView.swift
+
+                        Menu {
+                            Section("Sort Applications") {
+                                Button {
+                                    applicationsVM.updateSort(.newestFirst) // Wire this to Line 89
+                                } label: {
+                                    Label("Date (Newest First)", systemImage: "calendar")
+                                }
+                                
+                                Button {
+                                    applicationsVM.updateSort(.highestAmount) // Wire this to Line 93
+                                } label: {
+                                    Label("Loan Amount (High to Low)", systemImage: "indianrupeesign.circle")
+                                }
+                            }
+                            
+                            Section("Advanced Filters") {
+                                Button {
+                                    showFilterSheet = true
+                                } label: {
+                                    Label("Amount & Date Ranges...", systemImage: "slider.horizontal.3")
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "line.3.horizontal.decrease.circle")
+                        }
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -127,6 +160,9 @@ struct LOApplicationsView: View {
                     sanctionLetterAppID = nil
                 }
             }
+            .sheet(isPresented: $showFilterSheet) {
+                    FilterRangeSheet(applicationsVM: applicationsVM)
+                }
         }
         .animation(.easeInOut(duration: 0.28), value: sidebarCollapsed)
     }
@@ -179,7 +215,18 @@ struct LOApplicationsView: View {
                 HStack(spacing: 10) {
                     ForEach(LOChip.allCases, id: \.self) { chip in
                         AppFilterChip(label: chip.rawValue, isSelected: selectedLOChip == chip) {
-                            withAnimation(.spring(response: 0.3)) { selectedLOChip = chip }
+                            withAnimation(.spring(response: 0.3)) {
+                                selectedLOChip = chip
+                                // Pass the selection to the ViewModel
+                                switch chip {
+                                case .all: applicationsVM.filterStatus = nil
+                                case .new: applicationsVM.filterStatus = .pending
+                                case .myReview: applicationsVM.filterStatus = .officerReview
+                                case .sentToManager: applicationsVM.filterStatus = .managerReview
+                                case .approved: applicationsVM.filterStatus = .approved
+                                case .rejected: applicationsVM.filterStatus = .rejected
+                                }
+                            }
                         }
                     }
                 }
@@ -203,7 +250,7 @@ struct LOApplicationsView: View {
             } else {
                 ScrollView {
                     LazyVStack(spacing: 0) {
-                        ForEach(filteredLOApplications) { app in
+                        ForEach(applicationsVM.filteredApplications) { app in
                             // Inside applicationListPanel ScrollView
                             ApplicationRow(
                                 application: app,
@@ -228,29 +275,46 @@ struct LOApplicationsView: View {
         .background(Theme.Colors.adaptiveSurface(colorScheme))
     }
 
-    private var filteredLOApplications: [LoanApplication] {
-        let base: [LoanApplication]
-        switch selectedLOChip {
-        case .all:
-            base = applicationsVM.applications
-        case .new:
-            base = applicationsVM.applications.filter { $0.status == .pending }
-        case .myReview:
-            base = applicationsVM.applications.filter { $0.status == .officerReview }
-        case .sentToManager:
-            base = applicationsVM.applications.filter { $0.status == .managerReview || $0.status == .officerApproved }
-        case .approved:
-            base = applicationsVM.applications.filter { $0.status == .approved || $0.status == .managerApproved }
-        case .rejected:
-            base = applicationsVM.applications.filter { $0.status == .rejected || $0.status == .officerRejected || $0.status == .managerRejected }
-        }
+    // MARK: - Advanced Filtering & Sorting Logic
 
+    private var filteredLOApplications: [LoanApplication] {
+        // 1. Start with the base list from VM
+        var base = applicationsVM.applications
+        
+        // 2. Apply Status Filter (from Chips)
+        switch selectedLOChip {
+        case .all: break
+        case .new:
+            base = base.filter { $0.status == .pending }
+        case .myReview:
+            base = base.filter { $0.status == .officerReview }
+        case .sentToManager:
+            base = base.filter { $0.status == .managerReview || $0.status == .officerApproved }
+        case .approved:
+            base = base.filter { $0.status == .approved || $0.status == .managerApproved }
+        case .rejected:
+            base = base.filter { $0.status == .rejected || $0.status == .officerRejected || $0.status == .managerRejected }
+        }
+        
+        // 3. Apply Search Query
         let query = applicationsVM.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return base }
-        return base.filter {
-            $0.borrower.name.localizedCaseInsensitiveContains(query) ||
-            $0.id.localizedCaseInsensitiveContains(query) ||
-            $0.borrower.employer.localizedCaseInsensitiveContains(query)
+        if !query.isEmpty {
+            base = base.filter {
+                $0.borrower.name.localizedCaseInsensitiveContains(query) ||
+                $0.id.localizedCaseInsensitiveContains(query) ||
+                $0.borrower.employer.localizedCaseInsensitiveContains(query)
+            }
+        }
+        
+        return base.sorted {
+            if $0.slaStatus != $1.slaStatus {
+                return $0.slaStatus == .overdue
+            }
+            // Optional: Add Risk Level as the tie-breaker before Date
+            if $0.riskLevel != $1.riskLevel {
+                return $0.riskLevel == .high
+            }
+            return $0.createdAt > $1.createdAt
         }
     }
 

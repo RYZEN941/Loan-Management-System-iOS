@@ -38,10 +38,17 @@ message CompleteBorrowerOnboardingRequest {
   BorrowerEmploymentType employment_type = 9;
   string monthly_income = 10;
   int32 profile_completeness_percent = 11;
+  // Device ID for the refresh token minted on activation.
+  string device_id = 14;
 }
 
 message CompleteBorrowerOnboardingResponse {
   bool success = 1;
+  // Fresh token pair issued after activation.
+  // The new access token has is_active=true, replacing the stale
+  // is_active=false token the borrower held during onboarding.
+  string access_token = 2;
+  string refresh_token = 3;
 }
 
 message UpdateBorrowerProfileRequest {

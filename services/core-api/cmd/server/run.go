@@ -72,7 +72,7 @@ func Run() error {
 		return fmt.Errorf("failed to initialize r2 client: %w", err)
 	}
 	mediaService := media.NewService(queries, r2Client, time.Duration(cfg.R2UploadURLTTLSecs)*time.Second, cfg.MediaMaxUploadSize)
-	onboardingService := onboarding.NewService(queries)
+	onboardingService := onboarding.NewService(queries, redisClient, cfg)
 	branchService := branch.NewService(queries)
 	application := app.New(adminService, authService, chatService, dstService, kycService, loanService, mediaService, onboardingService, branchService)
 

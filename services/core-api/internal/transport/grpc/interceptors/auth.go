@@ -113,20 +113,27 @@ func JWTUnaryInterceptor(cfg JWTConfig) grpc.UnaryServerInterceptor {
 			}
 		}
 
-		// Enforce active profile requirement (onboarding)
-		if !claims.IsActive {
-			switch info.FullMethod {
-			case "/auth.v1.AuthService/Logout",
-				"/auth.v1.AuthService/GetMyProfile",
-				"/onboarding.v1.OnboardingService/CompleteBorrowerOnboarding",
-				"/auth.v1.AuthService/ChangePassword",
-				"/auth.v1.AuthService/SetupTOTP",
-				"/auth.v1.AuthService/VerifyTOTPSetup":
-				// Allowed
-			default:
-				return nil, status.Error(codes.PermissionDenied, "user account is inactive. please complete onboarding.")
-			}
+// Enforce active profile requirement (onboarding)
+	// Inactive users can only access auth self-service, onboarding, and KYC read endpoints.
+	// Once CompleteBorrowerOnboarding succeeds, the user is activated and a fresh
+	// token pair is returned — all subsequent calls use the new token with is_active=true.
+	if !claims.IsActive {
+		switch info.FullMethod {
+		case "/auth.v1.AuthService/Logout",
+			"/auth.v1.AuthService/GetMyProfile",
+			"/auth.v1.AuthService/GetBorrowerProfile",
+			"/onboarding.v1.OnboardingService/CompleteBorrowerOnboarding",
+			"/onboarding.v1.OnboardingService/UpdateBorrowerProfile",
+			"/auth.v1.AuthService/ChangePassword",
+			"/auth.v1.AuthService/SetupTOTP",
+			"/auth.v1.AuthService/VerifyTOTPSetup",
+			"/kyc.v1.KycService/GetBorrowerKycStatus",
+			"/kyc.v1.KycService/ListBorrowerKycHistory":
+			// Allowed
+		default:
+			return nil, status.Error(codes.PermissionDenied, "user account is inactive. please complete onboarding.")
 		}
+	}
 
 		userID, err := uuid.Parse(claims.Subject)
 		if err != nil {

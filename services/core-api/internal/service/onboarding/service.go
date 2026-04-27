@@ -2,15 +2,21 @@ package onboarding
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"math/rand"
 	"strings"
 	"time"
 
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/config"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/repository/generated"
 	onboardingv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/onboardingv1"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/interceptors"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/redis/go-redis/v9"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -22,15 +28,14 @@ type Service interface {
 
 type service struct {
 	queries generated.Querier
+	redis   redis.Cmdable
+	cfg     config.Config
 }
 
-// NewService constructs onboarding service dependencies.
-func NewService(queries generated.Querier) Service {
-	return &service{queries: queries}
+func NewService(queries generated.Querier, redis redis.Cmdable, cfg config.Config) Service {
+	return &service{queries: queries, redis: redis, cfg: cfg}
 }
 
-// CompleteBorrowerOnboarding creates borrower profile details for self or assisted onboarding.
-// Borrower self-flow uses caller identity; staff roles can target borrower_user_id.
 func (s *service) CompleteBorrowerOnboarding(ctx context.Context, req *onboardingv1.CompleteBorrowerOnboardingRequest) (*onboardingv1.CompleteBorrowerOnboardingResponse, error) {
 	callerUserID, ok := interceptors.UserIDFromContext(ctx)
 	if !ok {
@@ -113,7 +118,70 @@ func (s *service) CompleteBorrowerOnboarding(ctx context.Context, req *onboardin
 		return nil, status.Error(codes.Internal, "failed to activate user")
 	}
 
-	return &onboardingv1.CompleteBorrowerOnboardingResponse{Success: true}, nil
+	deviceID := strings.TrimSpace(req.GetDeviceId())
+	if deviceID == "" {
+		deviceID = "onboarding"
+	}
+
+	tokens, err := s.mintTokens(ctx, targetUserID, string(user.Role), deviceID)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "onboarding completed but failed to issue tokens: %v", err)
+	}
+
+	return &onboardingv1.CompleteBorrowerOnboardingResponse{
+		Success:      true,
+		AccessToken:  tokens.accessToken,
+		RefreshToken: tokens.refreshToken,
+	}, nil
+}
+
+type tokenPair struct {
+	accessToken  string
+	refreshToken string
+}
+
+func (s *service) mintTokens(ctx context.Context, userID uuid.UUID, role, deviceID string) (*tokenPair, error) {
+	jti := uuid.New().String()
+
+	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to fetch user for token minting")
+	}
+
+	claims := interceptors.AuthClaims{
+		Role:                      role,
+		IsActive:                  user.IsActive.Bool,
+		IsRequiringPasswordChange: user.IsRequiringPasswordChange.Bool,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   userID.String(),
+			ID:        jti,
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	accessToken, _ := token.SignedString([]byte(s.cfg.JWTKey))
+
+	refreshToken := uuid.New().String()
+	hash := sha256.Sum256([]byte(refreshToken))
+	hashedToken := hex.EncodeToString(hash[:])
+
+	expiresAt := time.Now().Add(7 * 24 * time.Hour)
+	_, err = s.queries.CreateRefreshToken(ctx, generated.CreateRefreshTokenParams{
+		UserID:      pgtype.UUID{Bytes: userID, Valid: true},
+		DeviceID:    deviceID,
+		HashedToken: hashedToken,
+		ExpiresAt:   pgtype.Timestamptz{Time: expiresAt, Valid: true},
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to persist refresh token")
+	}
+
+	err = s.redis.Set(ctx, fmt.Sprintf("active_token:%s", userID.String()), jti, 15*time.Minute).Err()
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to set active session")
+	}
+
+	return &tokenPair{accessToken: accessToken, refreshToken: refreshToken}, nil
 }
 
 // UpdateBorrowerProfile updates an existing borrower profile.

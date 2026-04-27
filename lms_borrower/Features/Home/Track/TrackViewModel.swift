@@ -21,7 +21,8 @@ final class TrackViewModel: ObservableObject {
             isLoading = true
             errorMessage = nil
             do {
-                applications = try await service.listLoanApplications(limit: 50, offset: 0)
+                let fetched = try await service.listLoanApplications(limit: 50, offset: 0)
+                applications = try await reconcileSanctionLetterStates(in: fetched)
                 if selectedApplication == nil {
                     selectedApplication = applications.first
                 }
@@ -35,7 +36,8 @@ final class TrackViewModel: ObservableObject {
     func fetchApplicationDetail(applicationId: String) {
         Task {
             do {
-                let detail = try await service.getLoanApplication(applicationId: applicationId)
+                let fetched = try await service.getLoanApplication(applicationId: applicationId)
+                let detail = try await reconcileSanctionLetterState(fetched)
                 applyUpdatedApplication(detail)
             } catch {
                 errorMessage = "Failed to load application detail"
@@ -83,6 +85,52 @@ final class TrackViewModel: ObservableObject {
             applications[idx] = application
         }
         selectedApplication = application
+    }
+
+    private func reconcileSanctionLetterStates(
+        in applications: [BorrowerLoanApplication]
+    ) async throws -> [BorrowerLoanApplication] {
+        try await withThrowingTaskGroup(of: (Int, BorrowerLoanApplication).self) { group in
+            for (index, application) in applications.enumerated() {
+                group.addTask { [service] in
+                    if application.status != .disbursed {
+                        return (index, application)
+                    }
+
+                    do {
+                        _ = try await service.getLoan(loanId: nil, applicationId: application.id)
+                        return (index, application)
+                    } catch let error as LoanError {
+                        if case .notFound = error {
+                            return (index, application.withStatus(.managerApproved))
+                        }
+                        throw error
+                    }
+                }
+            }
+
+            var reconciled = applications
+            for try await (index, application) in group {
+                reconciled[index] = application
+            }
+            return reconciled
+        }
+    }
+
+    private func reconcileSanctionLetterState(
+        _ application: BorrowerLoanApplication
+    ) async throws -> BorrowerLoanApplication {
+        guard application.status == .disbursed else { return application }
+
+        do {
+            _ = try await service.getLoan(loanId: nil, applicationId: application.id)
+            return application
+        } catch let error as LoanError {
+            if case .notFound = error {
+                return application.withStatus(.managerApproved)
+            }
+            throw error
+        }
     }
 
     var statusDisplayItems: [(app: BorrowerLoanApplication, statusLabel: String, statusColor: Color)] {

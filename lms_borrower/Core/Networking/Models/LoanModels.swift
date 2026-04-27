@@ -65,6 +65,28 @@ struct BorrowerLoanApplication: Identifiable, Hashable {
     var documents: [BorrowerApplicationDocument]
 }
 
+extension BorrowerLoanApplication {
+    func withStatus(_ status: LoanApplicationStatus) -> BorrowerLoanApplication {
+        BorrowerLoanApplication(
+            id: id,
+            referenceNumber: referenceNumber,
+            primaryBorrowerProfileId: primaryBorrowerProfileId,
+            loanProductId: loanProductId,
+            loanProductName: loanProductName,
+            branchId: branchId,
+            branchName: branchName,
+            requestedAmount: requestedAmount,
+            tenureMonths: tenureMonths,
+            status: status,
+            escalationReason: escalationReason,
+            offeredInterestRate: offeredInterestRate,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            documents: documents
+        )
+    }
+}
+
 // MARK: - BorrowerApplicationDocument
 // Maps to: proto message ApplicationDocument (loan.proto line 496)
 struct BorrowerApplicationDocument: Identifiable, Hashable {

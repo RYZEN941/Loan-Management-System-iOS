@@ -657,3 +657,30 @@ SELECT *
 FROM payments
 WHERE external_transaction_id = $1
 LIMIT 1;
+
+-- name: DeleteUpcomingEmiSchedulesByLoanID :exec
+DELETE FROM emi_schedules
+WHERE loan_id = $1 AND status = 'UPCOMING';
+
+-- name: MarkUpcomingSchedulesAsOverdue :execrows
+UPDATE emi_schedules
+SET status = 'OVERDUE'
+WHERE status = 'UPCOMING' AND due_date < CURRENT_DATE;
+
+-- name: UpdateLoanEmiAndOutstanding :one
+UPDATE loans
+SET emi_amount = $2,
+    outstanding_balance = $3,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+RETURNING *;
+
+-- name: GetTotalSuccessfulPaymentsByLoanID :one
+SELECT COALESCE(SUM(amount), 0.0)::numeric AS total_paid
+FROM payments
+WHERE loan_id = $1 AND status = 'SUCCESS';
+
+-- name: CountPaidEmiInstallmentsByLoanID :one
+SELECT COUNT(*) AS paid_count
+FROM emi_schedules
+WHERE loan_id = $1 AND status = 'PAID';

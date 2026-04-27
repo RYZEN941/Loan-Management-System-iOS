@@ -16,6 +16,7 @@ type Querier interface {
 	ChangeUserPassword(ctx context.Context, arg ChangeUserPasswordParams) error
 	CountApprovedRequiredDocsByApplication(ctx context.Context, id pgtype.UUID) (int64, error)
 	CountMandatoryRequiredDocsByApplication(ctx context.Context, id pgtype.UUID) (int64, error)
+	CountPaidEmiInstallmentsByLoanID(ctx context.Context, loanID pgtype.UUID) (int64, error)
 	CreateAdminProfile(ctx context.Context, userID pgtype.UUID) (AdminProfile, error)
 	CreateAdminUser(ctx context.Context, arg CreateAdminUserParams) (User, error)
 	CreateApplicationCoapplicant(ctx context.Context, arg CreateApplicationCoapplicantParams) (ApplicationCoapplicant, error)
@@ -48,6 +49,7 @@ type Querier interface {
 	CreateWebAuthnCredential(ctx context.Context, arg CreateWebAuthnCredentialParams) (WebauthnCredential, error)
 	DeleteProductFeesByProductID(ctx context.Context, loanProductID pgtype.UUID) error
 	DeleteProductRequiredDocumentsByProductID(ctx context.Context, loanProductID pgtype.UUID) error
+	DeleteUpcomingEmiSchedulesByLoanID(ctx context.Context, loanID pgtype.UUID) error
 	GetActiveMediaFileByIDAndUser(ctx context.Context, arg GetActiveMediaFileByIDAndUserParams) (MediaFile, error)
 	GetAdminProfileByUserID(ctx context.Context, userID pgtype.UUID) (AdminProfile, error)
 	GetApplicationCollateralByApplicationID(ctx context.Context, applicationID pgtype.UUID) (ApplicationCollateral, error)
@@ -81,6 +83,7 @@ type Querier interface {
 	GetProductRequiredDocumentByIDAndProduct(ctx context.Context, arg GetProductRequiredDocumentByIDAndProductParams) (ProductRequiredDocument, error)
 	GetRefreshTokenByHashedToken(ctx context.Context, hashedToken string) (RefreshToken, error)
 	GetRefreshTokenByHashedTokenAny(ctx context.Context, hashedToken string) (RefreshToken, error)
+	GetTotalSuccessfulPaymentsByLoanID(ctx context.Context, loanID pgtype.UUID) (pgtype.Numeric, error)
 	GetUserByEmailOrPhone(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 	GetWebAuthnCredentialByID(ctx context.Context, credentialID []byte) (WebauthnCredential, error)
@@ -121,6 +124,7 @@ type Querier interface {
 	ListProductRequiredDocumentsByProductID(ctx context.Context, loanProductID pgtype.UUID) ([]ProductRequiredDocument, error)
 	MarkBorrowerAadhaarVerified(ctx context.Context, arg MarkBorrowerAadhaarVerifiedParams) error
 	MarkBorrowerPanVerified(ctx context.Context, arg MarkBorrowerPanVerifiedParams) error
+	MarkUpcomingSchedulesAsOverdue(ctx context.Context) (int64, error)
 	ResetUserPassword(ctx context.Context, arg ResetUserPasswordParams) error
 	RevokeRefreshToken(ctx context.Context, hashedToken string) error
 	RevokeRefreshTokensForUserDevice(ctx context.Context, arg RevokeRefreshTokensForUserDeviceParams) error
@@ -140,6 +144,7 @@ type Querier interface {
 	UpdateLoanApplicationEscalation(ctx context.Context, arg UpdateLoanApplicationEscalationParams) error
 	UpdateLoanApplicationStatus(ctx context.Context, arg UpdateLoanApplicationStatusParams) error
 	UpdateLoanApplicationTerms(ctx context.Context, arg UpdateLoanApplicationTermsParams) (LoanApplication, error)
+	UpdateLoanEmiAndOutstanding(ctx context.Context, arg UpdateLoanEmiAndOutstandingParams) (Loan, error)
 	UpdateLoanProduct(ctx context.Context, arg UpdateLoanProductParams) (LoanProduct, error)
 	UpdateLoanStatusAndOutstanding(ctx context.Context, arg UpdateLoanStatusAndOutstandingParams) error
 	UpdateManagerBranch(ctx context.Context, arg UpdateManagerBranchParams) error

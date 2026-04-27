@@ -51,6 +51,7 @@ type Service interface {
 	ListEmiSchedule(ctx context.Context, req *loanv1.ListEmiScheduleRequest) (*loanv1.ListEmiScheduleResponse, error)
 	RecordPayment(ctx context.Context, req *loanv1.RecordPaymentRequest) (*loanv1.RecordPaymentResponse, error)
 	ListPayments(ctx context.Context, req *loanv1.ListPaymentsRequest) (*loanv1.ListPaymentsResponse, error)
+	RescheduleLoan(ctx context.Context, req *loanv1.RescheduleLoanRequest) (*loanv1.RescheduleLoanResponse, error)
 }
 
 type service struct {
@@ -1337,20 +1338,22 @@ func (s *service) RecordPayment(ctx context.Context, req *loanv1.RecordPaymentRe
 	if err != nil {
 		return nil, err
 	}
-	loanMeta, err := s.queries.GetLoanByIDWithApplication(ctx, uuidToPg(loanID))
+	loanRow, err := s.queries.GetLoanByIDWithApplication(ctx, uuidToPg(loanID))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, status.Error(codes.NotFound, "loan not found")
 		}
 		return nil, status.Error(codes.Internal, "failed to fetch loan")
 	}
-	if err := s.ensureCanAccessLoan(ctx, loanMeta.PrimaryBorrowerProfileID, loanMeta.BranchID, loanMeta.AssignedOfficerUserID); err != nil {
+	if err := s.ensureCanAccessLoan(ctx, loanRow.PrimaryBorrowerProfileID, loanRow.BranchID, loanRow.AssignedOfficerUserID); err != nil {
 		return nil, err
 	}
 	amount, err := parseNumeric(req.GetAmount(), "amount")
 	if err != nil {
 		return nil, err
 	}
+	amountF, _ := numericToFloat64(amount)
+
 	emiScheduleID := pgtype.UUID{}
 	if strings.TrimSpace(req.GetEmiScheduleId()) != "" {
 		id, err := parseUUID(req.GetEmiScheduleId(), "emi_schedule_id")
@@ -1367,13 +1370,28 @@ func (s *service) RecordPayment(ctx context.Context, req *loanv1.RecordPaymentRe
 		if emiRow.LoanID != uuidToPg(loanID) {
 			return nil, status.Error(codes.InvalidArgument, "emi_schedule_id does not belong to loan_id")
 		}
+		// Validate amount matches schedule
+		emiAmountF, _ := numericToFloat64(emiRow.EmiAmount)
+		if math.Abs(amountF-emiAmountF) > 0.01 {
+			return nil, status.Error(codes.InvalidArgument, "payment amount must match emi amount for scheduled payments")
+		}
 		emiScheduleID = uuidToPg(id)
+
+		// Mark EMI as paid
+		if err := s.queries.UpdateEmiScheduleStatus(ctx, generated.UpdateEmiScheduleStatusParams{
+			ID:     emiScheduleID,
+			Status: generated.EmiStatusPAID,
+		}); err != nil {
+			return nil, status.Error(codes.Internal, "failed to update emi status")
+		}
 	}
+
 	externalID := strings.TrimSpace(req.GetExternalTransactionId())
 	if externalID == "" {
 		return nil, status.Error(codes.InvalidArgument, "external_transaction_id is required")
 	}
-	row, err := s.queries.CreatePayment(ctx, generated.CreatePaymentParams{
+
+	paymentRow, err := s.queries.CreatePayment(ctx, generated.CreatePaymentParams{
 		LoanID:                uuidToPg(loanID),
 		EmiScheduleID:         emiScheduleID,
 		Amount:                amount,
@@ -1383,7 +1401,61 @@ func (s *service) RecordPayment(ctx context.Context, req *loanv1.RecordPaymentRe
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to record payment")
 	}
-	return &loanv1.RecordPaymentResponse{Payment: mapPayment(row)}, nil
+
+	// Update loan balance
+	outstandingF, _ := numericToFloat64(loanRow.OutstandingBalance)
+	newOutstandingF := outstandingF - amountF
+	if newOutstandingF < 0 {
+		newOutstandingF = 0
+	}
+	newOutstanding, _ := float64ToNumeric(newOutstandingF)
+
+	if req.GetStatus() == loanv1.PaymentStatus_PAYMENT_STATUS_SUCCESS {
+		err = s.queries.UpdateLoanStatusAndOutstanding(ctx, generated.UpdateLoanStatusAndOutstandingParams{
+			ID:                 uuidToPg(loanID),
+			Status:             loanRow.Status,
+			OutstandingBalance: newOutstanding,
+		})
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed to update loan balance")
+		}
+
+		// If unscheduled (part-payment), recalculate tenure and truncate schedule
+		if !emiScheduleID.Valid {
+			rateF, _ := numericToFloat64(loanRow.InterestRate)
+			emiAmountF, _ := numericToFloat64(loanRow.EmiAmount)
+			newTenure := calculateRemainingTenure(newOutstandingF, rateF, emiAmountF)
+
+			// Truncate and regenerate future schedule
+			if err := s.queries.DeleteUpcomingEmiSchedulesByLoanID(ctx, uuidToPg(loanID)); err != nil {
+				return nil, status.Error(codes.Internal, "failed to clear future schedule")
+			}
+
+			// Find last installment
+			rows, _ := s.queries.ListEmiScheduleByLoanID(ctx, uuidToPg(loanID))
+			lastNum := int32(0)
+			lastDate := time.Now().UTC()
+			for _, r := range rows {
+				if r.InstallmentNumber > lastNum {
+					lastNum = r.InstallmentNumber
+					lastDate = r.DueDate.Time
+				}
+			}
+
+			for i := 1; i <= newTenure; i++ {
+				dueDate := lastDate.AddDate(0, i, 0)
+				s.queries.CreateEmiScheduleItem(ctx, generated.CreateEmiScheduleItemParams{
+					LoanID:            uuidToPg(loanID),
+					InstallmentNumber: lastNum + int32(i),
+					DueDate:           pgtype.Date{Time: dueDate, Valid: true},
+					EmiAmount:         loanRow.EmiAmount,
+					Status:            generated.EmiStatusUPCOMING,
+				})
+			}
+		}
+	}
+
+	return &loanv1.RecordPaymentResponse{Payment: mapPayment(paymentRow)}, nil
 }
 
 func (s *service) ListPayments(ctx context.Context, req *loanv1.ListPaymentsRequest) (*loanv1.ListPaymentsResponse, error) {
@@ -2236,6 +2308,23 @@ func round2(v float64) float64 {
 	return math.Round(v*100) / 100
 }
 
+func calculateRemainingTenure(principal, annualRate, emi float64) int {
+	if principal <= 0 || emi <= 0 {
+		return 0
+	}
+	if annualRate <= 0 {
+		return int(math.Ceil(principal / emi))
+	}
+	monthlyRate := (annualRate / 12.0) / 100.0
+	// n = -log(1 - (P*r)/E) / log(1+r)
+	val := 1 - (principal*monthlyRate)/emi
+	if val <= 0 {
+		return 1 // Should not happen with sane inputs, but ensures we don't log(<=0)
+	}
+	n := -math.Log(val) / math.Log(1+monthlyRate)
+	return int(math.Ceil(n))
+}
+
 func (s *service) generateInitialEmiSchedule(ctx context.Context, loanID pgtype.UUID, startDate time.Time, tenureMonths int, emiAmount pgtype.Numeric) error {
 	if tenureMonths <= 0 {
 		return status.Error(codes.FailedPrecondition, "tenure_months must be > 0")
@@ -2654,3 +2743,107 @@ func toProtoCreatedByChannel(v generated.ApplicationCreatedByChannel) loanv1.App
 }
 
 var _ Service = (*service)(nil)
+
+func (s *service) RescheduleLoan(ctx context.Context, req *loanv1.RescheduleLoanRequest) (*loanv1.RescheduleLoanResponse, error) {
+	_, role, err := requireUserAndRole(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if role != "manager" && role != "admin" {
+		return nil, status.Error(codes.PermissionDenied, "only manager or admin can reschedule loans")
+	}
+
+	loanID, err := parseUUID(req.GetLoanId(), "loan_id")
+	if err != nil {
+		return nil, err
+	}
+
+	loanRow, err := s.queries.GetLoanByID(ctx, uuidToPg(loanID))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, status.Error(codes.NotFound, "loan not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to fetch loan")
+	}
+
+	if loanRow.Status != generated.LoanStatusACTIVE {
+		return nil, status.Error(codes.FailedPrecondition, "only active loans can be rescheduled")
+	}
+
+	newTenure := int(req.GetNewTenureMonths())
+	if newTenure <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "new_tenure_months must be > 0")
+	}
+
+	outstandingF, err := numericToFloat64(loanRow.OutstandingBalance)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to parse outstanding balance")
+	}
+
+	rateF, err := numericToFloat64(loanRow.InterestRate)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to parse interest rate")
+	}
+
+	// Recalculate EMI
+	newEmiF := calculateReducingEMI(outstandingF, rateF, newTenure)
+	newEmi, err := float64ToNumeric(newEmiF)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to compute new emi")
+	}
+
+	// Transactionally update loan and schedule
+	if err := s.queries.DeleteUpcomingEmiSchedulesByLoanID(ctx, uuidToPg(loanID)); err != nil {
+		return nil, status.Error(codes.Internal, "failed to clear future schedule")
+	}
+
+	updatedLoan, err := s.queries.UpdateLoanEmiAndOutstanding(ctx, generated.UpdateLoanEmiAndOutstandingParams{
+		ID:                 uuidToPg(loanID),
+		EmiAmount:          newEmi,
+		OutstandingBalance: loanRow.OutstandingBalance,
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to update loan terms")
+	}
+
+	// Find the last non-upcoming installment number
+	rows, err := s.queries.ListEmiScheduleByLoanID(ctx, uuidToPg(loanID))
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to fetch current schedule")
+	}
+
+	lastInstallmentNum := int32(0)
+	lastDueDate := time.Now().UTC()
+	for _, row := range rows {
+		if row.InstallmentNumber > lastInstallmentNum {
+			lastInstallmentNum = row.InstallmentNumber
+			lastDueDate = row.DueDate.Time
+		}
+	}
+
+	// Generate new entries
+	for i := 1; i <= newTenure; i++ {
+		dueDate := lastDueDate.AddDate(0, i, 0)
+		if _, err := s.queries.CreateEmiScheduleItem(ctx, generated.CreateEmiScheduleItemParams{
+			LoanID:            uuidToPg(loanID),
+			InstallmentNumber: lastInstallmentNum + int32(i),
+			DueDate:           pgtype.Date{Time: dueDate, Valid: true},
+			EmiAmount:         newEmi,
+			Status:            generated.EmiStatusUPCOMING,
+		}); err != nil {
+			return nil, status.Error(codes.Internal, "failed to generate new schedule")
+		}
+	}
+
+	// Fetch final schedule for response
+	finalRows, _ := s.queries.ListEmiScheduleByLoanID(ctx, uuidToPg(loanID))
+	newSchedule := make([]*loanv1.EmiScheduleItem, 0, len(finalRows))
+	for _, r := range finalRows {
+		newSchedule = append(newSchedule, mapEmi(r))
+	}
+
+	return &loanv1.RescheduleLoanResponse{
+		Loan:        mapLoan(updatedLoan),
+		NewSchedule: newSchedule,
+	}, nil
+}

@@ -47,6 +47,7 @@ const (
 	LoanService_ListEmiSchedule_FullMethodName                       = "/loan.v1.LoanService/ListEmiSchedule"
 	LoanService_RecordPayment_FullMethodName                         = "/loan.v1.LoanService/RecordPayment"
 	LoanService_ListPayments_FullMethodName                          = "/loan.v1.LoanService/ListPayments"
+	LoanService_RescheduleLoan_FullMethodName                        = "/loan.v1.LoanService/RescheduleLoan"
 )
 
 // LoanServiceClient is the client API for LoanService service.
@@ -111,6 +112,8 @@ type LoanServiceClient interface {
 	RecordPayment(ctx context.Context, in *RecordPaymentRequest, opts ...grpc.CallOption) (*RecordPaymentResponse, error)
 	// List payments for a loan.
 	ListPayments(ctx context.Context, in *ListPaymentsRequest, opts ...grpc.CallOption) (*ListPaymentsResponse, error)
+	// Reschedule an active loan by changing its tenure. Manager/admin only.
+	RescheduleLoan(ctx context.Context, in *RescheduleLoanRequest, opts ...grpc.CallOption) (*RescheduleLoanResponse, error)
 }
 
 type loanServiceClient struct {
@@ -401,6 +404,16 @@ func (c *loanServiceClient) ListPayments(ctx context.Context, in *ListPaymentsRe
 	return out, nil
 }
 
+func (c *loanServiceClient) RescheduleLoan(ctx context.Context, in *RescheduleLoanRequest, opts ...grpc.CallOption) (*RescheduleLoanResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RescheduleLoanResponse)
+	err := c.cc.Invoke(ctx, LoanService_RescheduleLoan_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // LoanServiceServer is the server API for LoanService service.
 // All implementations must embed UnimplementedLoanServiceServer
 // for forward compatibility.
@@ -463,6 +476,8 @@ type LoanServiceServer interface {
 	RecordPayment(context.Context, *RecordPaymentRequest) (*RecordPaymentResponse, error)
 	// List payments for a loan.
 	ListPayments(context.Context, *ListPaymentsRequest) (*ListPaymentsResponse, error)
+	// Reschedule an active loan by changing its tenure. Manager/admin only.
+	RescheduleLoan(context.Context, *RescheduleLoanRequest) (*RescheduleLoanResponse, error)
 	mustEmbedUnimplementedLoanServiceServer()
 }
 
@@ -556,6 +571,9 @@ func (UnimplementedLoanServiceServer) RecordPayment(context.Context, *RecordPaym
 }
 func (UnimplementedLoanServiceServer) ListPayments(context.Context, *ListPaymentsRequest) (*ListPaymentsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListPayments not implemented")
+}
+func (UnimplementedLoanServiceServer) RescheduleLoan(context.Context, *RescheduleLoanRequest) (*RescheduleLoanResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RescheduleLoan not implemented")
 }
 func (UnimplementedLoanServiceServer) mustEmbedUnimplementedLoanServiceServer() {}
 func (UnimplementedLoanServiceServer) testEmbeddedByValue()                     {}
@@ -1082,6 +1100,24 @@ func _LoanService_ListPayments_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _LoanService_RescheduleLoan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RescheduleLoanRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).RescheduleLoan(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_RescheduleLoan_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).RescheduleLoan(ctx, req.(*RescheduleLoanRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // LoanService_ServiceDesc is the grpc.ServiceDesc for LoanService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1200,6 +1236,10 @@ var LoanService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListPayments",
 			Handler:    _LoanService_ListPayments_Handler,
+		},
+		{
+			MethodName: "RescheduleLoan",
+			Handler:    _LoanService_RescheduleLoan_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

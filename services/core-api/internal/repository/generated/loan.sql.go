@@ -64,6 +64,19 @@ func (q *Queries) CountMandatoryRequiredDocsByApplication(ctx context.Context, i
 	return total_count, err
 }
 
+const countPaidEmiInstallmentsByLoanID = `-- name: CountPaidEmiInstallmentsByLoanID :one
+SELECT COUNT(*) AS paid_count
+FROM emi_schedules
+WHERE loan_id = $1 AND status = 'PAID'
+`
+
+func (q *Queries) CountPaidEmiInstallmentsByLoanID(ctx context.Context, loanID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countPaidEmiInstallmentsByLoanID, loanID)
+	var paid_count int64
+	err := row.Scan(&paid_count)
+	return paid_count, err
+}
+
 const createApplicationCoapplicant = `-- name: CreateApplicationCoapplicant :one
 INSERT INTO application_coapplicants (
     application_id,
@@ -596,6 +609,16 @@ func (q *Queries) DeleteProductRequiredDocumentsByProductID(ctx context.Context,
 	return err
 }
 
+const deleteUpcomingEmiSchedulesByLoanID = `-- name: DeleteUpcomingEmiSchedulesByLoanID :exec
+DELETE FROM emi_schedules
+WHERE loan_id = $1 AND status = 'UPCOMING'
+`
+
+func (q *Queries) DeleteUpcomingEmiSchedulesByLoanID(ctx context.Context, loanID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteUpcomingEmiSchedulesByLoanID, loanID)
+	return err
+}
+
 const getActiveMediaFileByIDAndUser = `-- name: GetActiveMediaFileByIDAndUser :one
 SELECT id, user_id, original_file_name, content_type, size_bytes, storage_provider, bucket_name, object_key, etag, file_url, note, uploaded_at, created_at, updated_at, is_deleted
 FROM media_files
@@ -1121,6 +1144,19 @@ func (q *Queries) GetProductRequiredDocumentByIDAndProduct(ctx context.Context, 
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const getTotalSuccessfulPaymentsByLoanID = `-- name: GetTotalSuccessfulPaymentsByLoanID :one
+SELECT COALESCE(SUM(amount), 0.0)::numeric AS total_paid
+FROM payments
+WHERE loan_id = $1 AND status = 'SUCCESS'
+`
+
+func (q *Queries) GetTotalSuccessfulPaymentsByLoanID(ctx context.Context, loanID pgtype.UUID) (pgtype.Numeric, error) {
+	row := q.db.QueryRow(ctx, getTotalSuccessfulPaymentsByLoanID, loanID)
+	var total_paid pgtype.Numeric
+	err := row.Scan(&total_paid)
+	return total_paid, err
 }
 
 const isApplicationBorrowerParticipant = `-- name: IsApplicationBorrowerParticipant :one
@@ -2022,6 +2058,20 @@ func (q *Queries) ListProductRequiredDocumentsByProductID(ctx context.Context, l
 	return items, nil
 }
 
+const markUpcomingSchedulesAsOverdue = `-- name: MarkUpcomingSchedulesAsOverdue :execrows
+UPDATE emi_schedules
+SET status = 'OVERDUE'
+WHERE status = 'UPCOMING' AND due_date < CURRENT_DATE
+`
+
+func (q *Queries) MarkUpcomingSchedulesAsOverdue(ctx context.Context) (int64, error) {
+	result, err := q.db.Exec(ctx, markUpcomingSchedulesAsOverdue)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const softDeleteLoanProduct = `-- name: SoftDeleteLoanProduct :exec
 UPDATE loan_products
 SET is_deleted = true,
@@ -2162,6 +2212,38 @@ func (q *Queries) UpdateLoanApplicationTerms(ctx context.Context, arg UpdateLoan
 		&i.CreatedByRole,
 		&i.CreatedByChannel,
 		&i.ProductSnapshotJson,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateLoanEmiAndOutstanding = `-- name: UpdateLoanEmiAndOutstanding :one
+UPDATE loans
+SET emi_amount = $2,
+    outstanding_balance = $3,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+RETURNING id, application_id, principal_amount, interest_rate, emi_amount, outstanding_balance, status, created_at, updated_at
+`
+
+type UpdateLoanEmiAndOutstandingParams struct {
+	ID                 pgtype.UUID    `json:"id"`
+	EmiAmount          pgtype.Numeric `json:"emi_amount"`
+	OutstandingBalance pgtype.Numeric `json:"outstanding_balance"`
+}
+
+func (q *Queries) UpdateLoanEmiAndOutstanding(ctx context.Context, arg UpdateLoanEmiAndOutstandingParams) (Loan, error) {
+	row := q.db.QueryRow(ctx, updateLoanEmiAndOutstanding, arg.ID, arg.EmiAmount, arg.OutstandingBalance)
+	var i Loan
+	err := row.Scan(
+		&i.ID,
+		&i.ApplicationID,
+		&i.PrincipalAmount,
+		&i.InterestRate,
+		&i.EmiAmount,
+		&i.OutstandingBalance,
+		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

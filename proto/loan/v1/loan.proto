@@ -70,6 +70,8 @@ service LoanService {
   rpc RecordPayment(RecordPaymentRequest) returns (RecordPaymentResponse);
   // List payments for a loan.
   rpc ListPayments(ListPaymentsRequest) returns (ListPaymentsResponse);
+  // Reschedule an active loan by changing its tenure. Manager/admin only.
+  rpc RescheduleLoan(RescheduleLoanRequest) returns (RescheduleLoanResponse);
 }
 
 // Category of a loan product.
@@ -781,4 +783,16 @@ message ListPaymentsRequest {
 // Response containing a list of payments.
 message ListPaymentsResponse {
   repeated Payment items = 1;
+}
+
+// Request to reschedule an active loan.
+message RescheduleLoanRequest {
+  string loan_id = 1;
+  int32 new_tenure_months = 2;
+}
+
+// Response containing the updated loan after rescheduling.
+message RescheduleLoanResponse {
+  Loan loan = 1;
+  repeated EmiScheduleItem new_schedule = 2;
 }

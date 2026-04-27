@@ -124,6 +124,9 @@ func (s *service) InitiateAadhaarKyc(ctx context.Context, req *kycv1.InitiateAad
 	if aadhaarNumber == "" {
 		return nil, status.Error(codes.InvalidArgument, "aadhaar_number is required")
 	}
+	if err := validateAadhaarNumber(aadhaarNumber); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
 	reason := strings.TrimSpace(req.GetReason())
 	if reason == "" {
 		reason = "KYC verification"
@@ -138,7 +141,7 @@ func (s *service) InitiateAadhaarKyc(ctx context.Context, req *kycv1.InitiateAad
 	apiResp, raw, err := s.client.GenerateAadhaarOTP(ctx, apiReq)
 	if err != nil {
 		log.Printf("InitiateAadhaarKyc: GenerateAadhaarOTP failed user=%s: %v", userID, err)
-		return nil, status.Errorf(codes.Internal, "aadhaar otp generation failed: %s", sandboxErrMsg(err))
+		return nil, status.Error(codes.Internal, "aadhaar otp generation failed")
 	}
 
 	attemptedAt := nowPgTimestamptz()
@@ -189,7 +192,7 @@ func (s *service) VerifyAadhaarKycOtp(ctx context.Context, req *kycv1.VerifyAadh
 	apiResp, raw, err := s.client.VerifyAadhaarOTP(ctx, apiReq)
 	if err != nil {
 		log.Printf("VerifyAadhaarKycOtp: API failed user=%s: %v", userID, err)
-		return nil, status.Errorf(codes.Internal, "aadhaar otp verification failed: %s", sandboxErrMsg(err))
+		return nil, status.Error(codes.Internal, "aadhaar otp verification failed")
 	}
 
 	isValid := strings.EqualFold(strings.TrimSpace(apiResp.Data.Status), "VALID")
@@ -318,7 +321,7 @@ func (s *service) VerifyPanKyc(ctx context.Context, req *kycv1.VerifyPanKycReque
 	apiResp, raw, err := s.client.VerifyPAN(ctx, apiReq)
 	if err != nil {
 		log.Printf("VerifyPanKyc: API failed user=%s pan=%s: %v", userID, pan, err)
-		return nil, status.Errorf(codes.Internal, "pan verification failed: %s", sandboxErrMsg(err))
+		return nil, status.Error(codes.Internal, "pan verification failed")
 	}
 
 	isValid := strings.EqualFold(strings.TrimSpace(apiResp.Data.Status), "valid")
@@ -754,4 +757,28 @@ func mapProviderGender(v string) string {
 	default:
 		return ""
 	}
+}
+
+func validateAadhaarNumber(aadhaar string) error {
+	if len(aadhaar) != 12 {
+		return fmt.Errorf("aadhaar number must be exactly 12 digits")
+	}
+	for _, d := range aadhaar {
+		if d < '0' || d > '9' {
+			return fmt.Errorf("aadhaar number must contain only digits")
+		}
+	}
+	weights := []int{1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1}
+	var sum int
+	for i, w := range weights {
+		digit := int(aadhaar[i] - '0')
+		product := digit * w
+		sum += product/10 + product%10
+	}
+	checkDigit := int(aadhaar[11] - '0')
+	expected := (10 - (sum % 10)) % 10
+	if checkDigit != expected {
+		return fmt.Errorf("invalid aadhaar number")
+	}
+	return nil
 }

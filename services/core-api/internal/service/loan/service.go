@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
 	"math"
 	"math/rand"
 	"strconv"
@@ -880,7 +881,8 @@ func (s *service) AddApplicationDocument(ctx context.Context, req *loanv1.AddApp
 		PrimaryBorrowerProfileID: uuidToPg(borrowerProfileID),
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to validate borrower participation: %v", err)
+		log.Printf("AddApplicationDocument: borrower participation check failed: %v", err)
+		return nil, status.Error(codes.Internal, "failed to validate borrower participation")
 	}
 	if !participantCheck {
 		return nil, status.Error(codes.InvalidArgument, "borrower_profile_id is not part of this application")
@@ -896,7 +898,8 @@ func (s *service) AddApplicationDocument(ctx context.Context, req *loanv1.AddApp
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, status.Error(codes.InvalidArgument, "media_file_id not found for current user")
 		}
-		return nil, status.Errorf(codes.Internal, "failed to validate media file: %v", err)
+		log.Printf("AddApplicationDocument: media file validation failed: %v", err)
+		return nil, status.Error(codes.Internal, "failed to validate media file")
 	}
 	requiredDocID := pgtype.UUID{}
 	if strings.TrimSpace(req.GetRequiredDocId()) != "" {
@@ -911,7 +914,8 @@ func (s *service) AddApplicationDocument(ctx context.Context, req *loanv1.AddApp
 			if errors.Is(err, pgx.ErrNoRows) {
 				return nil, status.Error(codes.InvalidArgument, "required_doc_id is not valid for this application product")
 			}
-			return nil, status.Errorf(codes.Internal, "failed to validate required document: %v", err)
+			log.Printf("AddApplicationDocument: required document validation failed: %v", err)
+			return nil, status.Error(codes.Internal, "failed to validate required document")
 		}
 		requiredDocID = uuidToPg(docID)
 	}
@@ -929,7 +933,8 @@ func (s *service) AddApplicationDocument(ctx context.Context, req *loanv1.AddApp
 		RejectionReason:    pgtype.Text{},
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to add document: %v", err)
+		log.Printf("AddApplicationDocument: document creation failed: %v", err)
+		return nil, status.Error(codes.Internal, "failed to add document")
 	}
 	return &loanv1.AddApplicationDocumentResponse{Document: mapDocument(row)}, nil
 }

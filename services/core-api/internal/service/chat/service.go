@@ -490,9 +490,12 @@ func (s *service) validateOfficerCanChatWith(ctx context.Context, officerUserID,
 
 	switch targetUser.Role {
 	case generated.UserRoleBorrower:
-		// Must be assigned to borrower's application
+		targetBorrowerProfile, err := s.queries.GetBorrowerProfileByUserID(ctx, uuidToPg(targetUserID))
+		if err != nil {
+			return status.Error(codes.NotFound, "borrower profile not found")
+		}
 		apps, err := s.queries.ListLoanApplicationsForBorrowerProfile(ctx, generated.ListLoanApplicationsForBorrowerProfileParams{
-			PrimaryBorrowerProfileID: pgtype.UUID{Bytes: targetUserID, Valid: true},
+			PrimaryBorrowerProfileID: targetBorrowerProfile.ID,
 			Limit:                    1000,
 			Offset:                   0,
 		})
@@ -560,8 +563,12 @@ func (s *service) validateManagerCanChatWith(ctx context.Context, managerUserID,
 		return status.Error(codes.PermissionDenied, "target manager is not in same branch")
 	case generated.UserRoleBorrower:
 		// Check if borrower has application in manager's branch
+		targetBorrowerProfile, err := s.queries.GetBorrowerProfileByUserID(ctx, uuidToPg(targetUserID))
+		if err != nil {
+			return status.Error(codes.NotFound, "borrower profile not found")
+		}
 		apps, err := s.queries.ListLoanApplicationsForBorrowerProfile(ctx, generated.ListLoanApplicationsForBorrowerProfileParams{
-			PrimaryBorrowerProfileID: pgtype.UUID{Bytes: targetUserID, Valid: true},
+			PrimaryBorrowerProfileID: targetBorrowerProfile.ID,
 			Limit:                    1000,
 			Offset:                   0,
 		})
@@ -593,8 +600,12 @@ func (s *service) validateDstCanChatWith(ctx context.Context, dstUserID, targetU
 	switch targetUser.Role {
 	case generated.UserRoleBorrower:
 		// Check if DST created any application for this borrower
+		targetBorrowerProfile, err := s.queries.GetBorrowerProfileByUserID(ctx, uuidToPg(targetUserID))
+		if err != nil {
+			return status.Error(codes.NotFound, "borrower profile not found")
+		}
 		apps, err := s.queries.ListLoanApplicationsForBorrowerProfile(ctx, generated.ListLoanApplicationsForBorrowerProfileParams{
-			PrimaryBorrowerProfileID: pgtype.UUID{Bytes: targetUserID, Valid: true},
+			PrimaryBorrowerProfileID: targetBorrowerProfile.ID,
 			Limit:                    1000,
 			Offset:                   0,
 		})

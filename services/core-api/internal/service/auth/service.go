@@ -48,6 +48,7 @@ type Service interface {
 	ResetForgotPassword(ctx context.Context, req *authv1.ResetForgotPasswordRequest) (*authv1.ResetForgotPasswordResponse, error)
 	GetMyProfile(ctx context.Context, req *authv1.GetMyProfileRequest) (*authv1.GetMyProfileResponse, error)
 	GetBorrowerProfile(ctx context.Context, req *authv1.GetBorrowerProfileRequest) (*authv1.BorrowerProfile, error)
+	GetUser(ctx context.Context, req *authv1.GetUserRequest) (*authv1.GetUserResponse, error)
 	SearchBorrowerSignupStatus(ctx context.Context, req *authv1.SearchBorrowerSignupStatusRequest) (*authv1.SearchBorrowerSignupStatusResponse, error)
 	RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequest) (*authv1.AuthTokens, error)
 	Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv1.LogoutResponse, error)
@@ -154,11 +155,11 @@ func (s *service) Hello(ctx context.Context, name string) (string, error) {
 func (s *service) InitiateSignup(ctx context.Context, req *authv1.SignupRequest) (*authv1.SignupResponse, error) {
 	_, err := s.queries.GetUserByEmailOrPhone(ctx, req.GetEmail())
 	if err == nil {
-		return nil, status.Error(codes.AlreadyExists, "email already registered")
+		return nil, status.Error(codes.AlreadyExists, "email or phone already registered")
 	}
 	_, err = s.queries.GetUserByEmailOrPhone(ctx, req.GetPhone())
 	if err == nil {
-		return nil, status.Error(codes.AlreadyExists, "phone number already registered")
+		return nil, status.Error(codes.AlreadyExists, "email or phone already registered")
 	}
 
 	hash, err := argon2.HashPassword(req.GetPassword(), argon2.DefaultConfig())
@@ -649,7 +650,10 @@ func (s *service) InitiateForgotPassword(ctx context.Context, req *authv1.Initia
 
 	user, err := s.queries.GetUserByEmailOrPhone(ctx, identifier)
 	if err != nil {
-		return nil, status.Error(codes.NotFound, "user not found")
+		// Return success without revealing whether user exists
+		return &authv1.InitiateForgotPasswordResponse{
+			ChallengeSent: false,
+		}, nil
 	}
 
 	emailOTP := "123456"
@@ -948,6 +952,36 @@ func (s *service) GetBorrowerProfile(ctx context.Context, req *authv1.GetBorrowe
 	}
 
 	return result, nil
+}
+
+func (s *service) GetUser(ctx context.Context, req *authv1.GetUserRequest) (*authv1.GetUserResponse, error) {
+	targetUserIDStr := strings.TrimSpace(req.GetUserId())
+	if targetUserIDStr == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+	targetUserID, err := uuid.Parse(targetUserIDStr)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "user_id must be a valid uuid")
+	}
+
+	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: targetUserID, Valid: true})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, status.Error(codes.NotFound, "user not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to fetch user")
+	}
+
+	return &authv1.GetUserResponse{
+		User: &authv1.UserPublicProfile{
+			UserId:    user.ID.String(),
+			Email:     user.Email,
+			Phone:     user.Phone,
+			Role:      mapDBRoleToProto(user.Role),
+			IsActive:  user.IsActive.Bool,
+			CreatedAt: timeToString(user.CreatedAt),
+		},
+	}, nil
 }
 
 func (s *service) SearchBorrowerSignupStatus(ctx context.Context, req *authv1.SearchBorrowerSignupStatusRequest) (*authv1.SearchBorrowerSignupStatusResponse, error) {

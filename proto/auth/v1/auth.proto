@@ -29,6 +29,7 @@ service AuthService {
 
   rpc GetMyProfile(GetMyProfileRequest) returns (GetMyProfileResponse);
   rpc GetBorrowerProfile(GetBorrowerProfileRequest) returns (BorrowerProfile);
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
   rpc SearchBorrowerSignupStatus(SearchBorrowerSignupStatusRequest) returns (SearchBorrowerSignupStatusResponse);
   rpc RefreshToken(RefreshTokenRequest) returns (AuthTokens);
   rpc Logout(LogoutRequest) returns (LogoutResponse);
@@ -315,4 +316,21 @@ message LogoutRequest {
 
 message LogoutResponse {
   bool success = 1;
+}
+
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message UserPublicProfile {
+  string user_id = 1;
+  string email = 2;
+  string phone = 3;
+  UserRole role = 4;
+  bool is_active = 5;
+  string created_at = 6;
+}
+
+message GetUserResponse {
+  UserPublicProfile user = 1;
 }

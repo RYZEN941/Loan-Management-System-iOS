@@ -2,6 +2,7 @@ package onboarding
 
 import (
 	"context"
+	"log"
 	"math/rand"
 	"strings"
 	"time"
@@ -122,7 +123,8 @@ func (s *service) CompleteBorrowerOnboarding(ctx context.Context, req *onboardin
 
 	tokens, err := util.MintTokens(ctx, s.queries, s.redis, s.cfg.JWTKey, targetUserID, string(user.Role), deviceID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "onboarding completed but failed to issue tokens: %v", err)
+		log.Printf("CompleteBorrowerOnboarding: token minting failed user=%s: %v", targetUserID, err)
+		return nil, status.Error(codes.Internal, "failed to issue tokens")
 	}
 
 	return &onboardingv1.CompleteBorrowerOnboardingResponse{

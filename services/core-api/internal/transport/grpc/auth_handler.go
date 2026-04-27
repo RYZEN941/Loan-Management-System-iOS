@@ -28,6 +28,7 @@ type AuthService interface {
 	FinishWebAuthnLogin(ctx context.Context, req *authv1.WebAuthnFinishLoginRequest) (*authv1.AuthTokens, error)
 	GetMyProfile(ctx context.Context, req *authv1.GetMyProfileRequest) (*authv1.GetMyProfileResponse, error)
 	GetBorrowerProfile(ctx context.Context, req *authv1.GetBorrowerProfileRequest) (*authv1.BorrowerProfile, error)
+	GetUser(ctx context.Context, req *authv1.GetUserRequest) (*authv1.GetUserResponse, error)
 	SearchBorrowerSignupStatus(ctx context.Context, req *authv1.SearchBorrowerSignupStatusRequest) (*authv1.SearchBorrowerSignupStatusResponse, error)
 	RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequest) (*authv1.AuthTokens, error)
 	Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv1.LogoutResponse, error)
@@ -104,6 +105,10 @@ func (h *AuthHandler) GetMyProfile(ctx context.Context, req *authv1.GetMyProfile
 
 func (h *AuthHandler) GetBorrowerProfile(ctx context.Context, req *authv1.GetBorrowerProfileRequest) (*authv1.BorrowerProfile, error) {
 	return h.authService.GetBorrowerProfile(ctx, req)
+}
+
+func (h *AuthHandler) GetUser(ctx context.Context, req *authv1.GetUserRequest) (*authv1.GetUserResponse, error) {
+	return h.authService.GetUser(ctx, req)
 }
 
 func (h *AuthHandler) SearchBorrowerSignupStatus(ctx context.Context, req *authv1.SearchBorrowerSignupStatusRequest) (*authv1.SearchBorrowerSignupStatusResponse, error) {

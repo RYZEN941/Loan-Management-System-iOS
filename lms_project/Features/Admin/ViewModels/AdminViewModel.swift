@@ -709,12 +709,13 @@ class AdminViewModel: ObservableObject {
 
         let resolvedName = account.name.trimmingCharacters(in: .whitespacesAndNewlines)
         let name = resolvedName.isEmpty
-            ? account.email.components(separatedBy: "@").first?.replacingOccurrences(of: ".", with: " ").capitalized ?? "N/A"
+            ? account.email.components(separatedBy: "@").first?.replacingOccurrences(of: ".", with: " ").capitalized ?? "Unknown"
             : resolvedName
 
-        // Show "N/A" for any field the backend did not populate.
+        // Keep branch labels aligned with the editable admin UI, while still
+        // surfacing missing contact fields clearly.
         let branchName = account.branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            ? "N/A" : account.branchName
+            ? "Unassigned" : account.branchName
         let phone = account.phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? "N/A" : account.phoneNumber
 
@@ -752,13 +753,15 @@ class AdminViewModel: ObservableObject {
             users
                 .map(\.branch)
                 .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty && $0 != "N/A" }
+                .filter { !$0.isEmpty && $0 != "Unassigned" }
         )
         .sorted()
         .map { branchName in
             BranchModel(
                 id: branchName.lowercased().replacingOccurrences(of: " ", with: "-"),
                 name: branchName,
+                region: "",
+                city: "",
                 location: branchName
             )
         }
@@ -800,11 +803,10 @@ class AdminViewModel: ObservableObject {
         let resolvedName = account.name.trimmingCharacters(in: .whitespacesAndNewlines)
         let fallbackName = account.email.components(separatedBy: "@").first?
             .replacingOccurrences(of: ".", with: " ")
-            .capitalized ?? "N/A"
+            .capitalized ?? "DST Agent"
 
-        // Show "N/A" for any field not populated by the backend.
-        let branch = account.branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            ? "N/A" : account.branchName
+        let branchName = account.branchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? "Unassigned" : account.branchName
         let phone = account.phoneNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             ? "N/A" : account.phoneNumber
 
@@ -814,8 +816,8 @@ class AdminViewModel: ObservableObject {
             email: account.email.isEmpty ? "N/A" : account.email,
             role: .dst,
             branchID: account.branchID.isEmpty ? nil : account.branchID,
-            branch: account.branchName.isEmpty ? "Unassigned" : account.branchName,
-            phone: account.phoneNumber,
+            branch: branchName,
+            phone: phone,
             isActive: account.isActive,
             joinedAt: joinedAt,
             employeeCode: nil

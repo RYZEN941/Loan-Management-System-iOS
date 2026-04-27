@@ -9,6 +9,9 @@ struct SanctionLetterReviewView: View {
     @EnvironmentObject private var session: SessionStore
     @State private var isSubmitting = false
     @State private var errorMessage: String?
+    @State private var product: LoanProduct?
+
+    private let loanService: LoanServiceProtocol = ServiceContainer.loanService
 
     private var content: BorrowerSanctionLetterContent {
         BorrowerSanctionLetterSupport.makeLetter(
@@ -16,6 +19,22 @@ struct SanctionLetterReviewView: View {
             borrowerName: session.userName,
             mobileNumber: session.userPhone
         )
+    }
+
+    private var mandatoryRequiredDocuments: [ProductRequiredDocument] {
+        product?.requiredDocuments.filter(\.isMandatory) ?? []
+    }
+
+    private var approvedRequiredDocumentIDs: Set<String> {
+        Set(
+            application.documents
+                .filter { $0.verificationStatus == .pass }
+                .map(\.requiredDocId)
+        )
+    }
+
+    private var approvedMandatoryDocumentCount: Int {
+        mandatoryRequiredDocuments.filter { approvedRequiredDocumentIDs.contains($0.id) }.count
     }
 
     var body: some View {
@@ -27,6 +46,7 @@ struct SanctionLetterReviewView: View {
                     identityTable
                     termsTable
                     conditionsSection
+                    requiredDocumentsSection
 
                     if let errorMessage {
                         Text(errorMessage)
@@ -42,6 +62,8 @@ struct SanctionLetterReviewView: View {
                             do {
                                 try await acceptAction()
                                 dismiss()
+                            } catch let loanError as LoanError {
+                                errorMessage = enhancedErrorMessage(for: loanError)
                             } catch {
                                 errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to accept sanction letter."
                             }
@@ -74,6 +96,9 @@ struct SanctionLetterReviewView: View {
             .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
             .navigationTitle("Sanction Letter")
             .navigationBarTitleDisplayMode(.inline)
+            .task {
+                await loadProduct()
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Close") {
@@ -160,6 +185,40 @@ struct SanctionLetterReviewView: View {
         .clipShape(RoundedRectangle(cornerRadius: 18))
     }
 
+    private var requiredDocumentsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Document Readiness")
+                .font(.headline)
+
+            if mandatoryRequiredDocuments.isEmpty {
+                Text("No mandatory documents are currently configured for this loan product in the borrower app.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("\(approvedMandatoryDocumentCount)/\(mandatoryRequiredDocuments.count) mandatory product documents approved")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(approvedMandatoryDocumentCount == mandatoryRequiredDocuments.count ? Color(hex: "#00C48C") : .orange)
+
+                ForEach(mandatoryRequiredDocuments, id: \.id) { document in
+                    HStack(spacing: 10) {
+                        Image(systemName: approvedRequiredDocumentIDs.contains(document.id) ? "checkmark.circle.fill" : "circle")
+                            .foregroundColor(approvedRequiredDocumentIDs.contains(document.id) ? Color(hex: "#00C48C") : .secondary)
+                        Text(document.requirementType.displayName)
+                            .font(.subheadline)
+                        Spacer()
+                        Text(approvedRequiredDocumentIDs.contains(document.id) ? "Approved" : "Pending")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(approvedRequiredDocumentIDs.contains(document.id) ? Color(hex: "#00C48C") : .orange)
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+    }
+
     private func tableRow(_ label: String, _ value: String, isLast: Bool = false) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Text(label)
@@ -193,5 +252,26 @@ struct SanctionLetterReviewView: View {
         .padding(.vertical, 12)
         .background(DS.primary.opacity(0.08))
         .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func loadProduct() async {
+        do {
+            product = try await loanService.getLoanProduct(productId: application.loanProductId)
+        } catch {
+            // Keep sanction letter usable even if product detail fetch fails.
+        }
+    }
+
+    private func enhancedErrorMessage(for error: LoanError) -> String {
+        switch error {
+        case .preconditionFailed(let message)
+            where message.localizedCaseInsensitiveContains("mandatory documents"):
+            if mandatoryRequiredDocuments.isEmpty {
+                return "\(message)\n\nThis borrower app currently sees no mandatory documents for this product, so the backend product configuration may be out of sync. Please verify required documents for this loan product in the backend/admin system."
+            }
+            return message
+        default:
+            return error.localizedDescription
+        }
     }
 }

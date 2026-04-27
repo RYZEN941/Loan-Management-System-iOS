@@ -565,25 +565,26 @@ struct QuickActionItemView: View {
 
     var body: some View {
         Button {
-            if action.label == String(localized: "AutoPay") { router.push(.autoPaySetup) }
-            // repaymentDashboard & repaymentsList require a loanId/applicationId;
-            // these are provided via the loan context from the dashboard ViewModel
-            // and accessed through the @EnvironmentObject viewModel injected in the parent.
-            // For safety: these buttons rely on HomeDashboardView's viewModel.
-            // If no active loan, the destination view will show a "no loan" empty state.
-            else if action.label == String(localized: "Pay EMI") {
+            switch action.kind {
+            case .autoPay:
+                router.push(.autoPaySetup)
+            case .payEMI:
                 let appId = viewModel.activeLoans.first?.application?.id ?? ""
                 router.push(.repaymentDashboard(applicationId: appId))
-            }
-            else if action.label == String(localized: "History") {
+            case .history:
                 let loanId = viewModel.activeLoans.first?.id ?? ""
                 router.push(.repaymentsList(loanId: loanId, initialTab: 1))
+            case .support:
+                router.push(.chatList)
+            case .schedule:
+                router.push(.amortisationSchedule(loanId: viewModel.activeLoans.first?.id))
+            case .foreclose:
+                router.push(.outstandingBalance)
+            case .statement:
+                router.push(.statementDownload)
+            case .analytics:
+                router.push(.costBreakdown)
             }
-            else if action.label == String(localized: "Support") { router.push(.chatList) }
-            else if action.label == String(localized: "Schedule") { router.push(.amortisationSchedule(loanId: nil)) }
-            else if action.label == String(localized: "Foreclose") { router.push(.outstandingBalance) }
-            else if action.label == String(localized: "Statement") { router.push(.statementDownload) }
-            else if action.label == String(localized: "Analytics") { router.push(.costBreakdown) }
         } label: {
             VStack(spacing: 10) {
                 RoundedRectangle(cornerRadius: 16).fill(DS.primaryLight).frame(width: 64, height: 64)
@@ -712,7 +713,24 @@ struct NextEMIInfo {
     let emiScheduleId: String
     let applicationId: String
 }
-struct QuickAction: Identifiable { let id = UUID(); let icon: String; let label: String }
+enum QuickActionKind: String, Hashable {
+    case autoPay
+    case payEMI
+    case history
+    case support
+    case schedule
+    case foreclose
+    case statement
+    case analytics
+}
+
+struct QuickAction: Identifiable {
+    let kind: QuickActionKind
+    let icon: String
+    let label: String
+
+    var id: QuickActionKind { kind }
+}
 
 private func formatINRCurrency(_ amount: Double) -> String {
     let formatter = NumberFormatter()
@@ -741,14 +759,14 @@ final class HomeDashboardViewModel: ObservableObject {
     @Published var errorMessage: String? = nil
 
     let quickActions: [QuickAction] = [
-        QuickAction(icon: "arrow.triangle.2.circlepath", label: String(localized: "AutoPay")),
-        QuickAction(icon: "indianrupeesign.circle.fill", label: String(localized: "Pay EMI")),
-        QuickAction(icon: "clock.arrow.circlepath", label: String(localized: "History")),
-        QuickAction(icon: "headset", label: String(localized: "Support")),
-        QuickAction(icon: "calendar", label: String(localized: "Schedule")),
-        QuickAction(icon: "arrow.left.arrow.right", label: String(localized: "Foreclose")),
-        QuickAction(icon: "doc.plaintext.fill", label: String(localized: "Statement")),
-        QuickAction(icon: "chart.bar.fill", label: String(localized: "Analytics"))
+        QuickAction(kind: .autoPay, icon: "arrow.triangle.2.circlepath", label: String(localized: "AutoPay")),
+        QuickAction(kind: .payEMI, icon: "indianrupeesign.circle.fill", label: String(localized: "Pay EMI")),
+        QuickAction(kind: .history, icon: "clock.arrow.circlepath", label: String(localized: "History")),
+        QuickAction(kind: .support, icon: "headset", label: String(localized: "Support")),
+        QuickAction(kind: .schedule, icon: "calendar", label: String(localized: "Schedule")),
+        QuickAction(kind: .foreclose, icon: "arrow.left.arrow.right", label: String(localized: "Foreclose")),
+        QuickAction(kind: .statement, icon: "doc.plaintext.fill", label: String(localized: "Statement")),
+        QuickAction(kind: .analytics, icon: "chart.bar.fill", label: String(localized: "Analytics"))
     ]
 
     private let service: LoanServiceProtocol

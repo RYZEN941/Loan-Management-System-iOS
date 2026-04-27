@@ -69,12 +69,12 @@ struct ManagerPortfolioView: View {
                 .frame(width: 4, height: 44)
 
             Image(systemName: icon)
-                .font(.system(size: 20, weight: .semibold))
+                .font(.system(size: 23, weight: .semibold))
                 .foregroundStyle(color)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.system(size: 18, weight: .medium))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                 if let subtitle = subtitle {
@@ -88,7 +88,7 @@ struct ManagerPortfolioView: View {
             Spacer(minLength: 4)
 
             Text(value)
-                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .font(.system(size: 27, weight: .bold, design: .rounded))
                 .foregroundStyle(color)
                 .layoutPriority(2)
         }

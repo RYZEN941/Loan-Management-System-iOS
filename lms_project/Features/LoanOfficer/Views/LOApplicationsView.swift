@@ -428,11 +428,11 @@ struct LOApplicationsView: View {
                 .frame(width: 4, height: 44)
 
             Image(systemName: icon)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: 23, weight: .semibold))
                 .foregroundStyle(tint)
 
             Text(label)
-                .font(.system(size: 13, weight: .medium))
+                .font(.system(size: 18, weight: .medium))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .layoutPriority(1)
@@ -440,7 +440,7 @@ struct LOApplicationsView: View {
             Spacer(minLength: 4)
 
             Text(value)
-                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .font(.system(size: 27, weight: .bold, design: .rounded))
                 .foregroundStyle(tint)
                 .layoutPriority(2)
         }

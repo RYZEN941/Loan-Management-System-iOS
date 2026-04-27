@@ -87,46 +87,47 @@ struct LODashboardView: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             sectionLabel(title: "Portfolio Overview", icon: "briefcase.fill")
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    overviewCard(title: "Active Cases", value: "\(assignedCount)", icon: "doc.on.doc.fill", color: Theme.Colors.primary)
-                    overviewCard(title: "Pending Review", value: "\(pendingReviewCount)", icon: "timer", color: Theme.Colors.warning)
-                    overviewCard(title: "High Risk", value: "\(highRiskCount)", icon: "shield.righthalf.filled", color: Theme.Colors.critical)
-                    overviewCard(title: "Approved", value: "\(approvedCount)", icon: "checkmark.seal.fill", color: Theme.Colors.success)
-                }
-                .padding(.horizontal, 2)
-                .padding(.vertical, 2)
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.md) {
+                overviewCard(title: "Active Cases", value: "\(assignedCount)", icon: "doc.on.doc.fill", color: Theme.Colors.primary)
+                overviewCard(title: "Pending Review", value: "\(pendingReviewCount)", icon: "timer", color: Theme.Colors.warning)
+                overviewCard(title: "High Risk", value: "\(highRiskCount)", icon: "shield.righthalf.filled", color: Theme.Colors.critical)
+                overviewCard(title: "Approved", value: "\(approvedCount)", icon: "checkmark.seal.fill", color: Theme.Colors.success)
             }
         }
     }
 
     private func overviewCard(title: String, value: String, icon: String, color: Color) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 2)
                 .fill(color)
-                .frame(width: 4, height: 24)
+                .frame(width: 4, height: 44)
 
             Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: 23, weight: .semibold))
                 .foregroundStyle(color)
 
-            Text(title)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .layoutPriority(1)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            .layoutPriority(1)
+
+            Spacer(minLength: 4)
 
             Text(value)
-                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .font(.system(size: 27, weight: .bold, design: .rounded))
                 .foregroundStyle(color)
                 .layoutPriority(2)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .background(color.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 10)
                 .stroke(color.opacity(0.15), lineWidth: 1)
         )
     }

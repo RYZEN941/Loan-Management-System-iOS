@@ -27,6 +27,13 @@ struct LOApplicationsView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Binding var showProfile: Bool
 
+    // MARK: - Theme Helpers
+        private var primary:  Color { Theme.Colors.adaptivePrimary(colorScheme) } // Blue
+        private var surface:  Color { Theme.Colors.adaptiveSurface(colorScheme) }
+        private var bg:       Color { Theme.Colors.adaptiveBackground(colorScheme) }
+        private var border:   Color { Theme.Colors.adaptiveBorder(colorScheme) }
+        private var secondary: Color { Color.secondary }
+    
     @State private var showNewApplication = false
     @State private var sidebarCollapsed   = false
     
@@ -197,13 +204,17 @@ struct LOApplicationsView: View {
                 ScrollView {
                     LazyVStack(spacing: 0) {
                         ForEach(filteredLOApplications) { app in
+                            // Inside applicationListPanel ScrollView
                             ApplicationRow(
                                 application: app,
                                 isSelected: applicationsVM.selectedApplication?.id == app.id,
                                 useMinimalStyle: true
                             )
+                            .padding(.horizontal, 8)
+                            .background(applicationsVM.selectedApplication?.id == app.id ? primary.opacity(0.08) : Color.clear)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
                             .onTapGesture {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                withAnimation(.spring(response: 0.3)) {
                                     applicationsVM.selectApplication(app)
                                 }
                             }
@@ -315,72 +326,46 @@ struct LOApplicationsView: View {
     // ────────────────────────────────────────────────────────────────
 
     private func detailHeader(_ app: LoanApplication) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top, spacing: 16) {
-                // Avatar with Gradient
-                ZStack {
-                    Circle()
-                        .fill(Theme.Colors.primary)
-                        .frame(width: 60, height: 60)
-                    Text(app.borrower.name.prefix(1))
-                        .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text(app.borrower.name)
-                            .font(Theme.Typography.title)
-                        Spacer()
-                        StatusBadge(status: app.status)
-                    }
-                    
-                    HStack(spacing: 6) {
-                        Text(app.loan.amount.currencyFormatted)
-                            .font(.system(size: 18, weight: .bold, design: .rounded))
-                            .foregroundStyle(Theme.Colors.primary)
-                        Text("•")
-                            .foregroundStyle(.tertiary)
-                        Text(app.loan.type.displayName)
-                            .font(Theme.Typography.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    
-                    Text("ID: \(app.id)")
-                        .font(.system(size: 12, weight: .medium, design: .monospaced))
-                        .foregroundStyle(.tertiary)
-                        .padding(.top, 2)
-                    Text("Assigned: \(applicationsVM.officerDisplayName(for: app.assignedTo))")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
-                    Text("Created By: \(applicationsVM.officerDisplayName(for: app.createdByUserID))")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
-                }
+        HStack(spacing: 20) {
+            // Subtle Gray Avatar
+            ZStack {
+                Circle()
+                    .fill(Color(.systemFill).opacity(0.5))
+                    .frame(width: 64, height: 64)
+                Text(app.borrower.name.prefix(1))
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
             }
 
-            // Borrower meta row
-            HStack(spacing: 20) {
-                metaItem(icon: "building.2.fill", text: app.borrower.employer)
-                metaItem(icon: "person.text.rectangle.fill", text: app.borrower.employmentType)
-                metaItem(icon: "phone.fill", text: app.borrower.phone)
-                Spacer()
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(app.borrower.name)
+                        .font(.system(size: 22, weight: .bold, design: .rounded))
+                    StatusBadge(status: app.status)
+                }
+                
+                HStack(spacing: 8) {
+                    Text(app.loan.amount.currencyFormatted)
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(primary)
+                    Text("•").foregroundStyle(.tertiary)
+                    Text(app.loan.type.displayName)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                
+                Text("ID: \(app.id)")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(.tertiary)
             }
-            .font(.system(size: 13, weight: .medium))
-            .foregroundStyle(.secondary)
-            .padding(.top, 4)
+            Spacer()
         }
         .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .fill(Theme.Colors.adaptiveSurface(colorScheme))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
-        )
+        .background(surface)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
+        .overlay(RoundedRectangle(cornerRadius: Theme.Radius.lg).stroke(border, lineWidth: 1))
     }
-
+    
     private func metaItem(icon: String, text: String) -> some View {
         HStack(spacing: 4) {
             Image(systemName: icon).font(.system(size: 12))
@@ -393,67 +378,68 @@ struct LOApplicationsView: View {
     // ────────────────────────────────────────────────────────────────
 
     private func financialSection(_ app: LoanApplication) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "Financial Details", icon: "indianrupeesign.circle")
-                .description("Verified income, expenses, and credit risk assessment data.")
-
-            VStack(spacing: 8) {
-                HStack(spacing: 8) {
-                    finCard("Monthly Income",  app.financials.monthlyIncome.currencyFormatted,  "arrow.up.circle.fill",   .primary)
-                    finCard("Annual Income",   app.financials.annualIncome.currencyFormatted,   "calendar.circle.fill",  .primary)
-                    finCard("Existing EMI",    app.financials.existingEMI.currencyFormatted,    "arrow.down.circle.fill", Theme.Colors.warning)
+            VStack(alignment: .leading, spacing: 20) {
+                // Header with a subtle trailing info or refresh indicator
+                HStack {
+                    sectionLabel("Financial Overview", icon: "chart.bar.fill")
+                    Spacer()
+                    Image(systemName: "checkmark.shield.fill")
+                        .font(.system(size: 12))
+                        .foregroundStyle(primary.opacity(0.5))
                 }
-                HStack(spacing: 8) {
-                    finCard("CIBIL Score",     "\(app.financials.cibilScore)",                  "chart.bar.fill",         cibilColor(app.financials.cibilScore))
-                    finCard("DTI Ratio",       app.financials.dtiRatio.percentFormatted,        "percent",                dtiColor(app.financials.dtiRatio))
-                    finCard("Bank Balance",    app.financials.bankBalance.currencyFormatted,     "building.columns.fill",  Theme.Colors.success)
+                
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                    modernFinTile("Monthly Income", app.financials.monthlyIncome.currencyFormatted, icon: "arrow.up.right.circle")
+                    modernFinTile("Existing EMI", app.financials.existingEMI.currencyFormatted, icon: "arrow.down.left.circle")
+                    modernFinTile("CIBIL Score", "\(app.financials.cibilScore)", icon: "gauge.medium", color: cibilColor(app.financials.cibilScore))
+                    modernFinTile("DTI Ratio", app.financials.dtiRatio.percentFormatted, icon: "percent")
+                    modernFinTile("Bank Balance", app.financials.bankBalance.currencyFormatted, icon: "building.columns")
+                    modernFinTile("Annual Income", app.financials.annualIncome.currencyFormatted, icon: "calendar")
                 }
             }
+            .padding(20)
+            .background(surface)
+            .clipShape(RoundedRectangle(cornerRadius: 24)) // Slightly larger radius for the container
+            .overlay(
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(border, lineWidth: 1)
+            )
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .fill(Theme.Colors.adaptiveSurface(colorScheme))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(Theme.Colors.primary.opacity(0.20), lineWidth: 1.5)
-        )
-    }
 
-    private func finCard(_ label: String, _ value: String, _ icon: String, _ tint: Color) -> some View {
-        HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(tint)
-                .frame(width: 4, height: 44)
-
-            Image(systemName: icon)
-                .font(.system(size: 23, weight: .semibold))
-                .foregroundStyle(tint)
-
-            Text(label)
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .layoutPriority(1)
-
-            Spacer(minLength: 4)
-
-            Text(value)
-                .font(.system(size: 27, weight: .bold, design: .rounded))
-                .foregroundStyle(tint)
-                .layoutPriority(2)
+        private func modernFinTile(_ label: String, _ value: String, icon: String, color: Color = .primary) -> some View {
+            VStack(alignment: .leading, spacing: 8) {
+                // Icon and Label Row
+                HStack(spacing: 6) {
+                    Image(systemName: icon)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(color.opacity(0.6))
+                    
+                    Text(label.uppercased())
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .tracking(0.8)
+                }
+                
+                Text(value)
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundStyle(color == Theme.Colors.success ? primary : color)
+                    .minimumScaleFactor(0.8)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            // Subtle tile background
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(color.opacity(0.04)) // Extremely subtle tint based on the color of the metric
+            )
+            // Inner hair-line border for the tile
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(color.opacity(0.08), lineWidth: 0.5)
+            )
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(tint.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(tint.opacity(0.15), lineWidth: 1)
-        )
-    }
 
     private func cibilColor(_ s: Int)    -> Color { s >= 750 ? Theme.Colors.success : s >= 650 ? Theme.Colors.neutral : Theme.Colors.critical }
     private func dtiColor(_ r: Double)   -> Color { r <= 0.30 ? Theme.Colors.success : r <= 0.40 ? Theme.Colors.neutral : Theme.Colors.critical }
@@ -705,45 +691,6 @@ struct LOApplicationsView: View {
 
     private func canUploadSanctionLetter(_ app: LoanApplication) -> Bool {
         app.status == .approved || app.status == .managerApproved
-    }
-
-    // ────────────────────────────────────────────────────────────────
-    // MARK: - Verification Section
-    // ────────────────────────────────────────────────────────────────
-
-    private func verificationSection(_ app: LoanApplication) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "AI Verification", icon: "cpu.fill")
-                .description("Automated data cross-referencing and authenticity checks.")
-                .info { /* Info Action */ }
-
-            let mismatches = app.verification.filter { !$0.isMatch }.count
-            if mismatches > 0 {
-                HStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.Colors.critical)
-                    Text("\(mismatches) mismatch\(mismatches > 1 ? "es" : "") found")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.Colors.critical)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Theme.Colors.critical.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-            }
-
-            ForEach(app.verification) { item in
-                VerificationRow(item: item)
-            }
-        }
-        .padding(16)
-        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg)
-            .fill(Theme.Colors.adaptiveSurface(colorScheme)))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(Theme.Colors.primary.opacity(0.20), lineWidth: 1.5)
-        )
     }
 
     // ────────────────────────────────────────────────────────────────

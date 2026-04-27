@@ -2,9 +2,6 @@
 //  LODashboardView.swift
 //  lms_project
 //
-//  Loan Officer Dashboard: Portrait-first redesign with large readable cards,
-//  colourful KPI tiles, and a clear at-a-glance layout.
-//
 
 import SwiftUI
 
@@ -12,28 +9,46 @@ struct LODashboardView: View {
     @EnvironmentObject var applicationsVM: ApplicationsViewModel
     @EnvironmentObject var authVM: AuthViewModel
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.horizontalSizeClass) private var hSizeClass
+    
     @Binding var selectedTab: Int
     @Binding var showProfile: Bool
+    
+    @State private var isAnimating = false
+
+    private var primary:  Color { Theme.Colors.adaptivePrimary(colorScheme) }
+    private var warning:  Color { Theme.Colors.adaptiveWarning(colorScheme) }
+    private var critical: Color { Theme.Colors.adaptiveCritical(colorScheme) }
+    private var success:  Color { Theme.Colors.adaptiveSuccess(colorScheme) }
+    private var surface:  Color { Theme.Colors.adaptiveSurface(colorScheme) }
+    private var bg:       Color { Theme.Colors.adaptiveBackground(colorScheme) }
+    private var border:   Color { Theme.Colors.adaptiveBorder(colorScheme) }
+
+    // 4 cols landscape / iPad, 2 cols portrait iPhone
+    private var responsiveGrid: [GridItem] {
+        let count = hSizeClass == .regular ? 4 : 2
+        return Array(repeating: GridItem(.flexible(), spacing: 10), count: count)
+    }
 
     var body: some View {
         NavigationStack {
             ZStack {
-                Theme.Colors.adaptiveBackground(colorScheme).ignoresSafeArea()
-
+                bg.ignoresSafeArea()
+                
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: Theme.Spacing.xl) {
-                        greetingHeader
-                        kpiSection
+                    VStack(spacing: 20) {
+                        greetingBar
+                        portfolioOverviewSection
                         performanceTrendSection
                         recentApplicationsSection
                     }
-                    .padding(.horizontal, Theme.Spacing.lg)
-                    .padding(.top, Theme.Spacing.md)
-                    .padding(.bottom, Theme.Spacing.xxl)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 28)
                 }
             }
             .navigationTitle("Dashboard")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     ProfileNavButton(showProfile: $showProfile)
@@ -41,268 +56,222 @@ struct LODashboardView: View {
             }
             .onAppear {
                 applicationsVM.loadData(autoSelectFirst: false)
+                withAnimation(.easeOut(duration: 0.5)) { isAnimating = true }
             }
         }
     }
 
-    // MARK: - Greeting Header
+    // MARK: — Greeting Bar (Unified)
 
-    private var greetingHeader: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            // Date pill
-            HStack(spacing: 6) {
-                Image(systemName: "calendar")
-                    .font(.system(size: 13, weight: .semibold))
-                Text(todayFormatted)
-                    .font(.system(size: 13, weight: .semibold))
-            }
-            .foregroundStyle(Theme.Colors.primary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(Theme.Colors.primary.opacity(0.10))
-            .clipShape(Capsule())
-
-            // Greeting text
-            HStack(alignment: .bottom, spacing: 10) {
+    private var greetingBar: some View {
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(greetingText)
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
-
-                HStack(spacing: 4) {
-                    Image(systemName: "location.fill")
-                        .font(.system(size: 13, weight: .medium))
+                    .font(Theme.Typography.titleLarge)
+                HStack(spacing: 5) {
+                    Image(systemName: "mappin.and.ellipse")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(primary)
                     Text(authVM.currentUser?.branch ?? "Branch")
-                        .font(.system(size: 15, weight: .medium))
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(.secondary)
                 }
+            }
+            Spacer()
+            HStack(spacing: 5) {
+                Circle().fill(Color.blue).frame(width: 6, height: 6)
+                Text(todayFormatted.uppercased())
+                    .font(Theme.Typography.caption2)
+                    .foregroundStyle(primary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(primary.opacity(0.10))
+            .clipShape(Capsule())
+        }
+        .opacity(isAnimating ? 1 : 0)
+    }
+
+    private var greetingText: String {
+        let name = authVM.currentUser?.name.split(separator: " ").first.map(String.init) ?? "Officer"
+        let hour = Calendar.current.component(.hour, from: Date())
+        let prefix = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening"
+        return "\(prefix), \(name)"
+    }
+
+    private var todayFormatted: String {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d"
+        return f.string(from: Date())
+    }
+
+    // MARK: — Portfolio Overview (Updated to match Health Cards)
+
+    private var portfolioOverviewSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader(title: "Portfolio Overview", icon: "briefcase.fill")
+
+            LazyVGrid(columns: responsiveGrid, spacing: 10) {
+                healthCard(label: "Active Cases", value: "\(assignedCount)", badge: "Assigned", color: primary)
+                healthCard(label: "Pending Review", value: "\(pendingReviewCount)", badge: "In Queue", color: warning)
+                healthCard(label: "High Risk", value: "\(highRiskCount)", badge: "Critical", color: critical)
+                healthCard(label: "Approved", value: "\(approvedCount)", badge: "Life-time", color: success)
+            }
+        }
+        .opacity(isAnimating ? 1 : 0)
+        .offset(y: isAnimating ? 0 : 14)
+    }
+
+    private func healthCard(label: String, value: String, badge: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(label)
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.secondary)
-                .padding(.bottom, 4)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    // MARK: - KPI Section (Portfolio Overview)
-
-    private var kpiSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            sectionLabel(title: "Portfolio Overview", icon: "briefcase.fill")
-
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: Theme.Spacing.md) {
-                overviewCard(title: "Active Cases", value: "\(assignedCount)", icon: "doc.on.doc.fill", color: Theme.Colors.primary)
-                overviewCard(title: "Pending Review", value: "\(pendingReviewCount)", icon: "timer", color: Theme.Colors.warning)
-                overviewCard(title: "High Risk", value: "\(highRiskCount)", icon: "shield.righthalf.filled", color: Theme.Colors.critical)
-                overviewCard(title: "Approved", value: "\(approvedCount)", icon: "checkmark.seal.fill", color: Theme.Colors.success)
-            }
-        }
-    }
-
-    private func overviewCard(title: String, value: String, icon: String, color: Color) -> some View {
-        HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 2)
-                .fill(color)
-                .frame(width: 4, height: 44)
-
-            Image(systemName: icon)
-                .font(.system(size: 23, weight: .semibold))
-                .foregroundStyle(color)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            .layoutPriority(1)
-
-            Spacer(minLength: 4)
-
+                .textCase(.uppercase)
+                .tracking(0.3)
             Text(value)
-                .font(.system(size: 27, weight: .bold, design: .rounded))
+                .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundStyle(color)
-                .layoutPriority(2)
+                .lineLimit(1)
+            Text(badge)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(color)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(color.opacity(0.10))
+                .clipShape(Capsule())
         }
+        .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(color.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .background(surface)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
         .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(color.opacity(0.15), lineWidth: 1)
+            RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                .stroke(border, lineWidth: 1)
         )
     }
 
-    // MARK: - Performance Trend
+    // MARK: — Performance Trend
 
     private var performanceTrendSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            sectionLabel(title: "Performance Trend", icon: "chart.line.uptrend.xyaxis")
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader(title: "Performance Trend", icon: "chart.line.uptrend.xyaxis")
 
-            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            VStack(alignment: .leading, spacing: 14) {
                 HStack {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("\(approvedCount) Loans Approved")
-                            .font(.system(size: 18, weight: .bold, design: .rounded))
-                        Text("Live from your applications")
-                            .font(.system(size: 14))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(approvedCount) Approved")
+                            .font(Theme.Typography.headline)
+                        Text("Live from your cases")
+                            .font(Theme.Typography.caption)
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.up.right")
-                        Text(approvalRateText)
-                    }
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Theme.Colors.success)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Theme.Colors.success.opacity(0.10))
-                    .clipShape(Capsule())
+                    Text(approvalRateText)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(success)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(success.opacity(0.1))
+                        .clipShape(Capsule())
                 }
 
                 PremiumLineChart(
                     data: weeklySeries,
                     labels: ["D-6", "D-5", "D-4", "D-3", "D-2", "D-1", "Today"],
-                    accentColor: Theme.Colors.primary,
+                    accentColor: primary,
                     showPoints: true,
-                    unit: "loans"
+                    unit: ""
                 )
-                .frame(height: 190)
+                .frame(height: 180)
             }
-            .padding(16)
-            .background(Theme.Colors.adaptiveSurface(colorScheme))
+            .padding(14)
+            .background(surface)
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                    .stroke(Theme.Colors.primary.opacity(0.20), lineWidth: 1.5)
+                    .stroke(border, lineWidth: 1)
             )
         }
+        .opacity(isAnimating ? 1 : 0)
+        .offset(y: isAnimating ? 0 : 20)
     }
 
-    // MARK: - Quick Actions
+    // MARK: — Recent Applications
 
     private var recentApplicationsSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
-                sectionLabel(title: "Recent Applications", icon: "square.grid.2x2.fill")
+                sectionHeader(title: "Recent Applications", icon: "clock.arrow.circlepath")
                 Spacer()
-                Button {
-                    withAnimation { selectedTab = 1 }
-                } label: {
+                Button { withAnimation { selectedTab = 1 } } label: {
                     Text("See All")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Theme.Colors.primary)
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(primary)
                 }
-                .buttonStyle(.plain)
             }
 
             VStack(spacing: 0) {
                 if activeApplications.isEmpty {
-                    VStack(spacing: 12) {
-                        Image(systemName: "tray.fill")
-                            .font(.system(size: 36))
-                            .foregroundStyle(.tertiary)
-                        Text("No active applications")
-                            .font(.system(size: 16))
-                            .foregroundStyle(.secondary)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(Theme.Spacing.xl)
+                    emptyRecentState
                 } else {
-                    VStack(spacing: 0) {
-                        ForEach(activeApplications.prefix(5)) { app in
-                            Button {
-                                applicationsVM.selectApplication(app)
-                                withAnimation { selectedTab = 1 }
-                            } label: {
-                                recentAppRow(app)
-                            }
-                            .buttonStyle(.plain)
-
-                            if app.id != activeApplications.prefix(5).last?.id {
-                                Divider().padding(.leading, 60)
-                            }
+                    ForEach(activeApplications.prefix(5)) { app in
+                        Button {
+                            applicationsVM.selectApplication(app)
+                            withAnimation { selectedTab = 1 }
+                        } label: {
+                            recentAppRow(app)
+                        }
+                        if app.id != activeApplications.prefix(5).last?.id {
+                            Divider().padding(.leading, 60)
                         }
                     }
                 }
             }
-            .padding(.vertical, 8)
-            .background(Theme.Colors.adaptiveSurface(colorScheme))
+            .background(surface)
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                    .stroke(Theme.Colors.primary.opacity(0.20), lineWidth: 1.5)
+                    .stroke(border, lineWidth: 1)
             )
         }
+        .opacity(isAnimating ? 1 : 0)
+        .offset(y: isAnimating ? 0 : 24)
     }
 
     private func recentAppRow(_ app: LoanApplication) -> some View {
-        HStack(spacing: Theme.Spacing.md) {
-            // Avatar
+        HStack(spacing: 12) {
             ZStack {
-                Circle()
-                    .fill(app.riskLevel.color.opacity(0.15))
-                    .frame(width: 44, height: 44)
-                Text(String(app.borrower.name.prefix(1)))
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(app.riskLevel.color)
+                Circle().fill(app.riskLevel.color.opacity(0.1)).frame(width: 44, height: 44)
+                Text(String(app.borrower.name.prefix(1))).font(.system(size: 16, weight: .bold)).foregroundStyle(app.riskLevel.color)
             }
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(app.borrower.name)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.primary)
-                HStack(spacing: 6) {
-                    Text(app.loan.amount.currencyFormatted)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(Theme.Colors.primary)
-                    Text("•")
-                        .foregroundStyle(.tertiary)
-                    Text(app.loan.type.displayName)
-                        .font(.system(size: 13))
-                        .foregroundStyle(.secondary)
-                }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(app.borrower.name).font(.system(size: 15, weight: .semibold))
+                Text(app.loan.amount.currencyFormatted).font(.system(size: 13)).foregroundStyle(.secondary)
             }
-
             Spacer()
-
             StatusBadge(status: app.status)
         }
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, 14)
-        .contentShape(Rectangle())
+        .padding(12)
     }
 
-    // MARK: - Section Label Helper
-
-    private func sectionLabel(title: String, icon: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.system(size: 15, weight: .bold))
-                .foregroundStyle(Theme.Colors.primary)
-            Text(title)
-                .font(.system(size: 19, weight: .bold, design: .rounded))
-                .foregroundStyle(.primary)
+    private var emptyRecentState: some View {
+        HStack {
+            Spacer()
+            Text("No recent applications").font(Theme.Typography.caption).foregroundStyle(.tertiary).padding(30)
+            Spacer()
         }
     }
 
-    // MARK: - Computed Helpers
-
-    private var todayFormatted: String {
-        let f = DateFormatter()
-        f.dateFormat = "EEEE, d MMM"
-        return f.string(from: Date())
-    }
-
-    private var greetingText: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        let name = authVM.currentUser?.name.split(separator: " ").first.map(String.init) ?? "Officer"
-        if hour < 12 { return "Good Morning, \(name)" }
-        if hour < 17 { return "Good Afternoon, \(name)" }
-        return "Good Evening, \(name)"
+    private func sectionHeader(title: String, icon: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon).font(.system(size: 12, weight: .bold)).foregroundStyle(primary)
+            Text(title.uppercased()).font(.system(size: 11, weight: .bold)).foregroundStyle(.secondary).tracking(0.7)
+        }
     }
 }
+
+// MARK: — Logic Extension
 
 private extension LODashboardView {
     var liveApplications: [LoanApplication] { applicationsVM.applications }
@@ -330,7 +299,7 @@ private extension LODashboardView {
     var approvalRateText: String {
         guard !liveApplications.isEmpty else { return "0%" }
         let rate = (Double(approvedCount) / Double(liveApplications.count)) * 100
-        return "\(Int(rate.rounded()))%"
+        return "\(Int(rate.rounded()))% Rate"
     }
 
     var weeklySeries: [Double] {
@@ -340,22 +309,5 @@ private extension LODashboardView {
             let day = calendar.date(byAdding: .day, value: -(6 - offset), to: today) ?? today
             return Double(liveApplications.filter { calendar.isDate($0.createdAt, inSameDayAs: day) }.count)
         }
-    }
-}
-
-struct MiniMetric: View {
-    let label: String
-    let value: String
-    let color: Color
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label).font(.system(size: 11, weight: .bold)).foregroundStyle(.tertiary).textCase(.uppercase)
-            Text(value).font(.system(size: 16, weight: .bold)).foregroundStyle(color)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(color.opacity(0.06))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }

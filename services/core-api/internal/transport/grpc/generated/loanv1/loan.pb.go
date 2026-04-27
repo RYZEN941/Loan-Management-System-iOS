@@ -20,6 +20,7 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Category of a loan product.
 type LoanProductCategory int32
 
 const (
@@ -75,6 +76,7 @@ func (LoanProductCategory) EnumDescriptor() ([]byte, []int) {
 	return file_loan_v1_loan_proto_rawDescGZIP(), []int{0}
 }
 
+// Whether the interest rate is fixed or floating.
 type InterestType int32
 
 const (
@@ -124,6 +126,7 @@ func (InterestType) EnumDescriptor() ([]byte, []int) {
 	return file_loan_v1_loan_proto_rawDescGZIP(), []int{1}
 }
 
+// Type of fee associated with a loan product.
 type ProductFeeType int32
 
 const (
@@ -176,6 +179,7 @@ func (ProductFeeType) EnumDescriptor() ([]byte, []int) {
 	return file_loan_v1_loan_proto_rawDescGZIP(), []int{2}
 }
 
+// How a product fee is calculated.
 type FeeCalcMethod int32
 
 const (
@@ -225,6 +229,7 @@ func (FeeCalcMethod) EnumDescriptor() ([]byte, []int) {
 	return file_loan_v1_loan_proto_rawDescGZIP(), []int{3}
 }
 
+// Category of document required for a loan product.
 type DocumentRequirementType int32
 
 const (
@@ -280,6 +285,7 @@ func (DocumentRequirementType) EnumDescriptor() ([]byte, []int) {
 	return file_loan_v1_loan_proto_rawDescGZIP(), []int{4}
 }
 
+// Status of a loan application through its approval lifecycle.
 type LoanApplicationStatus int32
 
 const (
@@ -362,6 +368,7 @@ func (LoanApplicationStatus) EnumDescriptor() ([]byte, []int) {
 	return file_loan_v1_loan_proto_rawDescGZIP(), []int{5}
 }
 
+// Relationship of a coapplicant to the primary borrower.
 type CoapplicantRelationship int32
 
 const (
@@ -417,6 +424,7 @@ func (CoapplicantRelationship) EnumDescriptor() ([]byte, []int) {
 	return file_loan_v1_loan_proto_rawDescGZIP(), []int{6}
 }
 
+// Type of collateral asset backing a loan.
 type CollateralAssetType int32
 
 const (
@@ -466,6 +474,7 @@ func (CollateralAssetType) EnumDescriptor() ([]byte, []int) {
 	return file_loan_v1_loan_proto_rawDescGZIP(), []int{7}
 }
 
+// Verification status of a collateral asset.
 type CollateralVerificationStatus int32
 
 const (
@@ -518,6 +527,7 @@ func (CollateralVerificationStatus) EnumDescriptor() ([]byte, []int) {
 	return file_loan_v1_loan_proto_rawDescGZIP(), []int{8}
 }
 
+// Type of property for real-estate collateral.
 type PropertyType int32
 
 const (
@@ -570,6 +580,7 @@ func (PropertyType) EnumDescriptor() ([]byte, []int) {
 	return file_loan_v1_loan_proto_rawDescGZIP(), []int{9}
 }
 
+// Construction status of a property.
 type PropertyStatus int32
 
 const (
@@ -619,6 +630,8 @@ func (PropertyStatus) EnumDescriptor() ([]byte, []int) {
 	return file_loan_v1_loan_proto_rawDescGZIP(), []int{10}
 }
 
+// Verification status of an uploaded application document.
+// Once changed from PENDING, verification_status is immutable.
 type DocumentVerificationStatus int32
 
 const (
@@ -671,6 +684,7 @@ func (DocumentVerificationStatus) EnumDescriptor() ([]byte, []int) {
 	return file_loan_v1_loan_proto_rawDescGZIP(), []int{11}
 }
 
+// Bureau score provider.
 type BureauProvider int32
 
 const (
@@ -723,6 +737,7 @@ func (BureauProvider) EnumDescriptor() ([]byte, []int) {
 	return file_loan_v1_loan_proto_rawDescGZIP(), []int{12}
 }
 
+// Status of an active loan.
 type LoanStatus int32
 
 const (
@@ -775,6 +790,7 @@ func (LoanStatus) EnumDescriptor() ([]byte, []int) {
 	return file_loan_v1_loan_proto_rawDescGZIP(), []int{13}
 }
 
+// Status of a single EMI installment.
 type EmiStatus int32
 
 const (
@@ -827,6 +843,7 @@ func (EmiStatus) EnumDescriptor() ([]byte, []int) {
 	return file_loan_v1_loan_proto_rawDescGZIP(), []int{14}
 }
 
+// Status of a payment transaction.
 type PaymentStatus int32
 
 const (
@@ -879,6 +896,7 @@ func (PaymentStatus) EnumDescriptor() ([]byte, []int) {
 	return file_loan_v1_loan_proto_rawDescGZIP(), []int{15}
 }
 
+// Channel through which an application was created.
 type ApplicationCreatedByChannel int32
 
 const (
@@ -931,6 +949,7 @@ func (ApplicationCreatedByChannel) EnumDescriptor() ([]byte, []int) {
 	return file_loan_v1_loan_proto_rawDescGZIP(), []int{16}
 }
 
+// Fee associated with a loan product.
 type ProductFee struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1002,6 +1021,7 @@ func (x *ProductFee) GetValue() string {
 	return ""
 }
 
+// A required document type for a loan product.
 type ProductRequiredDocument struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1065,6 +1085,7 @@ func (x *ProductRequiredDocument) GetIsMandatory() bool {
 	return false
 }
 
+// Eligibility rules for a loan product (age, income, bureau score, employment).
 type ProductEligibilityRule struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1144,6 +1165,7 @@ func (x *ProductEligibilityRule) GetAllowedEmploymentTypes() []string {
 	return nil
 }
 
+// A loan product definition with fees, required documents, and eligibility rules.
 type LoanProduct struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1303,6 +1325,7 @@ func (x *LoanProduct) GetRequiredDocuments() []*ProductRequiredDocument {
 	return nil
 }
 
+// Request to create a new loan product.
 type CreateLoanProductRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1406,6 +1429,7 @@ func (x *CreateLoanProductRequest) GetIsActive() bool {
 	return false
 }
 
+// Response containing the created loan product.
 type CreateLoanProductResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1453,6 +1477,7 @@ func (x *CreateLoanProductResponse) GetProduct() *LoanProduct {
 	return nil
 }
 
+// Request to update an existing loan product.
 type UpdateLoanProductRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1564,6 +1589,7 @@ func (x *UpdateLoanProductRequest) GetIsActive() bool {
 	return false
 }
 
+// Response containing the updated loan product.
 type UpdateLoanProductResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1611,6 +1637,7 @@ func (x *UpdateLoanProductResponse) GetProduct() *LoanProduct {
 	return nil
 }
 
+// Request to soft-delete a loan product.
 type DeleteLoanProductRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1658,6 +1685,7 @@ func (x *DeleteLoanProductRequest) GetProductId() string {
 	return ""
 }
 
+// Response for loan product deletion.
 type DeleteLoanProductResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1705,6 +1733,7 @@ func (x *DeleteLoanProductResponse) GetSuccess() bool {
 	return false
 }
 
+// Request to get a single loan product by ID.
 type GetLoanProductRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1752,6 +1781,7 @@ func (x *GetLoanProductRequest) GetProductId() string {
 	return ""
 }
 
+// Response containing the requested loan product.
 type GetLoanProductResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1799,6 +1829,7 @@ func (x *GetLoanProductResponse) GetProduct() *LoanProduct {
 	return nil
 }
 
+// Request to list loan products with pagination.
 type ListLoanProductsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1862,6 +1893,7 @@ func (x *ListLoanProductsRequest) GetIncludeDeleted() bool {
 	return false
 }
 
+// Response containing a paginated list of loan products.
 type ListLoanProductsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1909,6 +1941,7 @@ func (x *ListLoanProductsResponse) GetItems() []*LoanProduct {
 	return nil
 }
 
+// Request to upsert eligibility rules for a loan product.
 type UpsertProductEligibilityRuleRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -1988,6 +2021,7 @@ func (x *UpsertProductEligibilityRuleRequest) GetAllowedEmploymentTypes() []stri
 	return nil
 }
 
+// Response containing the upserted eligibility rule.
 type UpsertProductEligibilityRuleResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2035,6 +2069,7 @@ func (x *UpsertProductEligibilityRuleResponse) GetRule() *ProductEligibilityRule
 	return nil
 }
 
+// Input for a single product fee.
 type ProductFeeInput struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2098,6 +2133,7 @@ func (x *ProductFeeInput) GetValue() string {
 	return ""
 }
 
+// Request to replace all fees for a loan product.
 type ReplaceProductFeesRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2153,6 +2189,7 @@ func (x *ReplaceProductFeesRequest) GetItems() []*ProductFeeInput {
 	return nil
 }
 
+// Response containing the replaced product fees.
 type ReplaceProductFeesResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2200,6 +2237,7 @@ func (x *ReplaceProductFeesResponse) GetItems() []*ProductFee {
 	return nil
 }
 
+// Input for a single required document.
 type ProductRequiredDocumentInput struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2255,6 +2293,7 @@ func (x *ProductRequiredDocumentInput) GetIsMandatory() bool {
 	return false
 }
 
+// Request to replace all required documents for a loan product.
 type ReplaceProductRequiredDocumentsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2310,6 +2349,7 @@ func (x *ReplaceProductRequiredDocumentsRequest) GetItems() []*ProductRequiredDo
 	return nil
 }
 
+// Response containing the replaced required documents.
 type ReplaceProductRequiredDocumentsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2357,6 +2397,7 @@ func (x *ReplaceProductRequiredDocumentsResponse) GetItems() []*ProductRequiredD
 	return nil
 }
 
+// A loan application with status, assignment, and product snapshot.
 type LoanApplication struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2548,6 +2589,7 @@ func (x *LoanApplication) GetOfferedInterestRate() string {
 	return ""
 }
 
+// Request to create a loan application.
 type CreateLoanApplicationRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2635,6 +2677,7 @@ func (x *CreateLoanApplicationRequest) GetStatus() LoanApplicationStatus {
 	return LoanApplicationStatus_LOAN_APPLICATION_STATUS_UNSPECIFIED
 }
 
+// Response containing the created loan application.
 type CreateLoanApplicationResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2682,6 +2725,7 @@ func (x *CreateLoanApplicationResponse) GetApplication() *LoanApplication {
 	return nil
 }
 
+// Request to get a single loan application by ID.
 type GetLoanApplicationRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2729,6 +2773,7 @@ func (x *GetLoanApplicationRequest) GetApplicationId() string {
 	return ""
 }
 
+// Response containing the loan application and all sub-resources.
 type GetLoanApplicationResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2824,6 +2869,7 @@ func (x *GetLoanApplicationResponse) GetBureauScores() []*BureauScore {
 	return nil
 }
 
+// Request to list loan applications with optional branch filter.
 type ListLoanApplicationsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2887,6 +2933,7 @@ func (x *ListLoanApplicationsRequest) GetBranchId() string {
 	return ""
 }
 
+// Response containing a paginated list of loan applications.
 type ListLoanApplicationsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2934,6 +2981,7 @@ func (x *ListLoanApplicationsResponse) GetItems() []*LoanApplication {
 	return nil
 }
 
+// Request to advance the status of a loan application.
 type UpdateLoanApplicationStatusRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2997,6 +3045,7 @@ func (x *UpdateLoanApplicationStatusRequest) GetEscalationReason() string {
 	return ""
 }
 
+// Response for loan application status update.
 type UpdateLoanApplicationStatusResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3044,6 +3093,7 @@ func (x *UpdateLoanApplicationStatusResponse) GetSuccess() bool {
 	return false
 }
 
+// Request to update offered terms on a loan application.
 type UpdateLoanApplicationTermsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3107,6 +3157,7 @@ func (x *UpdateLoanApplicationTermsRequest) GetOfferedInterestRate() string {
 	return ""
 }
 
+// Response containing the updated loan application.
 type UpdateLoanApplicationTermsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3154,6 +3205,7 @@ func (x *UpdateLoanApplicationTermsResponse) GetApplication() *LoanApplication {
 	return nil
 }
 
+// Request to assign a loan officer to an application.
 type AssignLoanApplicationOfficerRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3209,6 +3261,7 @@ func (x *AssignLoanApplicationOfficerRequest) GetOfficerUserId() string {
 	return ""
 }
 
+// Response for officer assignment.
 type AssignLoanApplicationOfficerResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3256,6 +3309,7 @@ func (x *AssignLoanApplicationOfficerResponse) GetSuccess() bool {
 	return false
 }
 
+// A coapplicant linked to a loan application.
 type ApplicationCoapplicant struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3343,6 +3397,7 @@ func (x *ApplicationCoapplicant) GetCreatedAt() string {
 	return ""
 }
 
+// Request to add a coapplicant to an application.
 type AddApplicationCoapplicantRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3414,6 +3469,7 @@ func (x *AddApplicationCoapplicantRequest) GetConsentAcceptedAt() string {
 	return ""
 }
 
+// Response containing the added coapplicant.
 type AddApplicationCoapplicantResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3461,6 +3517,7 @@ func (x *AddApplicationCoapplicantResponse) GetItem() *ApplicationCoapplicant {
 	return nil
 }
 
+// Collateral details for a loan application.
 type ApplicationCollateral struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3564,6 +3621,7 @@ func (x *ApplicationCollateral) GetUpdatedAt() string {
 	return ""
 }
 
+// Request to upsert collateral for an application.
 type UpsertApplicationCollateralRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3643,6 +3701,7 @@ func (x *UpsertApplicationCollateralRequest) GetCollateralDetailsJson() string {
 	return ""
 }
 
+// Response containing the upserted collateral.
 type UpsertApplicationCollateralResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3690,6 +3749,7 @@ func (x *UpsertApplicationCollateralResponse) GetCollateral() *ApplicationCollat
 	return nil
 }
 
+// Vehicle details for a loan application.
 type LoanVehicle struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3825,6 +3885,7 @@ func (x *LoanVehicle) GetUpdatedAt() string {
 	return ""
 }
 
+// Request to upsert vehicle details for an application.
 type UpsertLoanVehicleRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3936,6 +3997,7 @@ func (x *UpsertLoanVehicleRequest) GetOnRoadPrice() string {
 	return ""
 }
 
+// Response containing the upserted vehicle.
 type UpsertLoanVehicleResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3983,6 +4045,7 @@ func (x *UpsertLoanVehicleResponse) GetVehicle() *LoanVehicle {
 	return nil
 }
 
+// Real-estate details for a loan application.
 type LoanRealEstate struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -4110,6 +4173,7 @@ func (x *LoanRealEstate) GetUpdatedAt() string {
 	return ""
 }
 
+// Request to upsert real-estate details for an application.
 type UpsertLoanRealEstateRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -4213,6 +4277,7 @@ func (x *UpsertLoanRealEstateRequest) GetAgreementValue() string {
 	return ""
 }
 
+// Response containing the upserted real-estate.
 type UpsertLoanRealEstateResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -4260,6 +4325,8 @@ func (x *UpsertLoanRealEstateResponse) GetRealEstate() *LoanRealEstate {
 	return nil
 }
 
+// An uploaded document against an application's required document slot.
+// verification_status is immutable once changed from PENDING.
 type ApplicationDocument struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -4275,6 +4342,8 @@ type ApplicationDocument struct {
 	RejectionReason    string                     `protobuf:"bytes,8,opt,name=rejection_reason,json=rejectionReason,proto3" json:"rejection_reason,omitempty"`
 	CreatedAt          string                     `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	UpdatedAt          string                     `protobuf:"bytes,10,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	ReviewedByUserId   string                     `protobuf:"bytes,11,opt,name=reviewed_by_user_id,json=reviewedByUserId,proto3" json:"reviewed_by_user_id,omitempty"`
+	ReviewedAt         string                     `protobuf:"bytes,12,opt,name=reviewed_at,json=reviewedAt,proto3" json:"reviewed_at,omitempty"`
 }
 
 func (x *ApplicationDocument) Reset() {
@@ -4379,6 +4448,21 @@ func (x *ApplicationDocument) GetUpdatedAt() string {
 	return ""
 }
 
+func (x *ApplicationDocument) GetReviewedByUserId() string {
+	if x != nil {
+		return x.ReviewedByUserId
+	}
+	return ""
+}
+
+func (x *ApplicationDocument) GetReviewedAt() string {
+	if x != nil {
+		return x.ReviewedAt
+	}
+	return ""
+}
+
+// Request to upload a document against an application.
 type AddApplicationDocumentRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -4466,6 +4550,7 @@ func (x *AddApplicationDocumentRequest) GetVerificationStatus() DocumentVerifica
 	return DocumentVerificationStatus_DOCUMENT_VERIFICATION_STATUS_UNSPECIFIED
 }
 
+// Response containing the added application document.
 type AddApplicationDocumentResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -4513,6 +4598,9 @@ func (x *AddApplicationDocumentResponse) GetDocument() *ApplicationDocument {
 	return nil
 }
 
+// Request to verify (pass/fail) an application document.
+// Only the assigned officer or branch manager can change verification status.
+// Once verification_status is changed from PENDING, it cannot be changed again.
 type UpdateApplicationDocumentVerificationRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -4576,12 +4664,13 @@ func (x *UpdateApplicationDocumentVerificationRequest) GetRejectionReason() stri
 	return ""
 }
 
+// Response containing the updated document after verification.
 type UpdateApplicationDocumentVerificationResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Success bool `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	Document *ApplicationDocument `protobuf:"bytes,1,opt,name=document,proto3" json:"document,omitempty"`
 }
 
 func (x *UpdateApplicationDocumentVerificationResponse) Reset() {
@@ -4616,13 +4705,14 @@ func (*UpdateApplicationDocumentVerificationResponse) Descriptor() ([]byte, []in
 	return file_loan_v1_loan_proto_rawDescGZIP(), []int{51}
 }
 
-func (x *UpdateApplicationDocumentVerificationResponse) GetSuccess() bool {
+func (x *UpdateApplicationDocumentVerificationResponse) GetDocument() *ApplicationDocument {
 	if x != nil {
-		return x.Success
+		return x.Document
 	}
-	return false
+	return nil
 }
 
+// A bureau score entry for a borrower on an application.
 type BureauScore struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -4718,6 +4808,7 @@ func (x *BureauScore) GetExpiresAt() string {
 	return ""
 }
 
+// Request to add a bureau score.
 type AddBureauScoreRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -4797,6 +4888,7 @@ func (x *AddBureauScoreRequest) GetExpiresAt() string {
 	return ""
 }
 
+// Response containing the added bureau score.
 type AddBureauScoreResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -4844,6 +4936,7 @@ func (x *AddBureauScoreResponse) GetItem() *BureauScore {
 	return nil
 }
 
+// An active loan created from a fully-approved application.
 type Loan struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -4955,6 +5048,8 @@ func (x *Loan) GetUpdatedAt() string {
 	return ""
 }
 
+// Request to create a loan from a manager-approved application.
+// All mandatory required documents must have at least one PASS verification.
 type CreateLoanRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -5018,6 +5113,7 @@ func (x *CreateLoanRequest) GetStatus() LoanStatus {
 	return LoanStatus_LOAN_STATUS_UNSPECIFIED
 }
 
+// Response containing the created loan.
 type CreateLoanResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -5065,6 +5161,7 @@ func (x *CreateLoanResponse) GetLoan() *Loan {
 	return nil
 }
 
+// Request to get a loan by ID or application ID.
 type GetLoanRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -5120,6 +5217,7 @@ func (x *GetLoanRequest) GetApplicationId() string {
 	return ""
 }
 
+// Response containing the loan.
 type GetLoanResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -5167,6 +5265,7 @@ func (x *GetLoanResponse) GetLoan() *Loan {
 	return nil
 }
 
+// Request to list loans with pagination.
 type ListLoansRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -5222,6 +5321,7 @@ func (x *ListLoansRequest) GetOffset() int32 {
 	return 0
 }
 
+// Response containing a paginated list of loans.
 type ListLoansResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -5269,6 +5369,7 @@ func (x *ListLoansResponse) GetItems() []*Loan {
 	return nil
 }
 
+// A single EMI schedule entry for a loan.
 type EmiScheduleItem struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -5356,6 +5457,7 @@ func (x *EmiScheduleItem) GetStatus() EmiStatus {
 	return EmiStatus_EMI_STATUS_UNSPECIFIED
 }
 
+// Request to add a single EMI schedule item.
 type AddEmiScheduleItemRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -5435,6 +5537,7 @@ func (x *AddEmiScheduleItemRequest) GetStatus() EmiStatus {
 	return EmiStatus_EMI_STATUS_UNSPECIFIED
 }
 
+// Response containing the added EMI schedule item.
 type AddEmiScheduleItemResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -5482,6 +5585,7 @@ func (x *AddEmiScheduleItemResponse) GetItem() *EmiScheduleItem {
 	return nil
 }
 
+// Request to list the EMI schedule for a loan.
 type ListEmiScheduleRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -5529,6 +5633,7 @@ func (x *ListEmiScheduleRequest) GetLoanId() string {
 	return ""
 }
 
+// Response containing the EMI schedule.
 type ListEmiScheduleResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -5576,6 +5681,7 @@ func (x *ListEmiScheduleResponse) GetItems() []*EmiScheduleItem {
 	return nil
 }
 
+// A payment recorded against an EMI.
 type Payment struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -5671,6 +5777,7 @@ func (x *Payment) GetCreatedAt() string {
 	return ""
 }
 
+// Request to record a payment against an EMI.
 type RecordPaymentRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -5750,6 +5857,7 @@ func (x *RecordPaymentRequest) GetStatus() PaymentStatus {
 	return PaymentStatus_PAYMENT_STATUS_UNSPECIFIED
 }
 
+// Response containing the recorded payment.
 type RecordPaymentResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -5797,6 +5905,7 @@ func (x *RecordPaymentResponse) GetPayment() *Payment {
 	return nil
 }
 
+// Request to list payments for a loan.
 type ListPaymentsRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -5844,6 +5953,7 @@ func (x *ListPaymentsRequest) GetLoanId() string {
 	return ""
 }
 
+// Response containing a list of payments.
 type ListPaymentsResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -6480,7 +6590,7 @@ var file_loan_v1_loan_proto_rawDesc = []byte{
 	0x5f, 0x65, 0x73, 0x74, 0x61, 0x74, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x17, 0x2e,
 	0x6c, 0x6f, 0x61, 0x6e, 0x2e, 0x76, 0x31, 0x2e, 0x4c, 0x6f, 0x61, 0x6e, 0x52, 0x65, 0x61, 0x6c,
 	0x45, 0x73, 0x74, 0x61, 0x74, 0x65, 0x52, 0x0a, 0x72, 0x65, 0x61, 0x6c, 0x45, 0x73, 0x74, 0x61,
-	0x74, 0x65, 0x22, 0xac, 0x03, 0x0a, 0x13, 0x41, 0x70, 0x70, 0x6c, 0x69, 0x63, 0x61, 0x74, 0x69,
+	0x74, 0x65, 0x22, 0xfc, 0x03, 0x0a, 0x13, 0x41, 0x70, 0x70, 0x6c, 0x69, 0x63, 0x61, 0x74, 0x69,
 	0x6f, 0x6e, 0x44, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64,
 	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x25, 0x0a, 0x0e, 0x61, 0x70,
 	0x70, 0x6c, 0x69, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01,
@@ -6507,6 +6617,11 @@ var file_loan_v1_loan_proto_rawDesc = []byte{
 	0x74, 0x18, 0x09, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x63, 0x72, 0x65, 0x61, 0x74, 0x65, 0x64,
 	0x41, 0x74, 0x12, 0x1d, 0x0a, 0x0a, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x5f, 0x61, 0x74,
 	0x18, 0x0a, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x75, 0x70, 0x64, 0x61, 0x74, 0x65, 0x64, 0x41,
+	0x74, 0x12, 0x2d, 0x0a, 0x13, 0x72, 0x65, 0x76, 0x69, 0x65, 0x77, 0x65, 0x64, 0x5f, 0x62, 0x79,
+	0x5f, 0x75, 0x73, 0x65, 0x72, 0x5f, 0x69, 0x64, 0x18, 0x0b, 0x20, 0x01, 0x28, 0x09, 0x52, 0x10,
+	0x72, 0x65, 0x76, 0x69, 0x65, 0x77, 0x65, 0x64, 0x42, 0x79, 0x55, 0x73, 0x65, 0x72, 0x49, 0x64,
+	0x12, 0x1f, 0x0a, 0x0b, 0x72, 0x65, 0x76, 0x69, 0x65, 0x77, 0x65, 0x64, 0x5f, 0x61, 0x74, 0x18,
+	0x0c, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0a, 0x72, 0x65, 0x76, 0x69, 0x65, 0x77, 0x65, 0x64, 0x41,
 	0x74, 0x22, 0xbd, 0x02, 0x0a, 0x1d, 0x41, 0x64, 0x64, 0x41, 0x70, 0x70, 0x6c, 0x69, 0x63, 0x61,
 	0x74, 0x69, 0x6f, 0x6e, 0x44, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x75,
 	0x65, 0x73, 0x74, 0x12, 0x25, 0x0a, 0x0e, 0x61, 0x70, 0x70, 0x6c, 0x69, 0x63, 0x61, 0x74, 0x69,
@@ -6546,11 +6661,13 @@ var file_loan_v1_loan_proto_rawDesc = []byte{
 	0x74, 0x61, 0x74, 0x75, 0x73, 0x12, 0x29, 0x0a, 0x10, 0x72, 0x65, 0x6a, 0x65, 0x63, 0x74, 0x69,
 	0x6f, 0x6e, 0x5f, 0x72, 0x65, 0x61, 0x73, 0x6f, 0x6e, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52,
 	0x0f, 0x72, 0x65, 0x6a, 0x65, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x61, 0x73, 0x6f, 0x6e,
-	0x22, 0x49, 0x0a, 0x2d, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x41, 0x70, 0x70, 0x6c, 0x69, 0x63,
+	0x22, 0x69, 0x0a, 0x2d, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x41, 0x70, 0x70, 0x6c, 0x69, 0x63,
 	0x61, 0x74, 0x69, 0x6f, 0x6e, 0x44, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x56, 0x65, 0x72,
 	0x69, 0x66, 0x69, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
-	0x65, 0x12, 0x18, 0x0a, 0x07, 0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x08, 0x52, 0x07, 0x73, 0x75, 0x63, 0x63, 0x65, 0x73, 0x73, 0x22, 0xfd, 0x01, 0x0a, 0x0b,
+	0x65, 0x12, 0x38, 0x0a, 0x08, 0x64, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x0b, 0x32, 0x1c, 0x2e, 0x6c, 0x6f, 0x61, 0x6e, 0x2e, 0x76, 0x31, 0x2e, 0x41, 0x70,
+	0x70, 0x6c, 0x69, 0x63, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x44, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e,
+	0x74, 0x52, 0x08, 0x64, 0x6f, 0x63, 0x75, 0x6d, 0x65, 0x6e, 0x74, 0x22, 0xfd, 0x01, 0x0a, 0x0b,
 	0x42, 0x75, 0x72, 0x65, 0x61, 0x75, 0x53, 0x63, 0x6f, 0x72, 0x65, 0x12, 0x0e, 0x0a, 0x02, 0x69,
 	0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x2e, 0x0a, 0x13, 0x62,
 	0x6f, 0x72, 0x72, 0x6f, 0x77, 0x65, 0x72, 0x5f, 0x70, 0x72, 0x6f, 0x66, 0x69, 0x6c, 0x65, 0x5f,
@@ -7260,83 +7377,84 @@ var file_loan_v1_loan_proto_depIdxs = []int32{
 	11,  // 53: loan.v1.AddApplicationDocumentRequest.verification_status:type_name -> loan.v1.DocumentVerificationStatus
 	64,  // 54: loan.v1.AddApplicationDocumentResponse.document:type_name -> loan.v1.ApplicationDocument
 	11,  // 55: loan.v1.UpdateApplicationDocumentVerificationRequest.verification_status:type_name -> loan.v1.DocumentVerificationStatus
-	12,  // 56: loan.v1.BureauScore.provider:type_name -> loan.v1.BureauProvider
-	12,  // 57: loan.v1.AddBureauScoreRequest.provider:type_name -> loan.v1.BureauProvider
-	69,  // 58: loan.v1.AddBureauScoreResponse.item:type_name -> loan.v1.BureauScore
-	13,  // 59: loan.v1.Loan.status:type_name -> loan.v1.LoanStatus
-	13,  // 60: loan.v1.CreateLoanRequest.status:type_name -> loan.v1.LoanStatus
-	72,  // 61: loan.v1.CreateLoanResponse.loan:type_name -> loan.v1.Loan
-	72,  // 62: loan.v1.GetLoanResponse.loan:type_name -> loan.v1.Loan
-	72,  // 63: loan.v1.ListLoansResponse.items:type_name -> loan.v1.Loan
-	14,  // 64: loan.v1.EmiScheduleItem.status:type_name -> loan.v1.EmiStatus
-	14,  // 65: loan.v1.AddEmiScheduleItemRequest.status:type_name -> loan.v1.EmiStatus
-	79,  // 66: loan.v1.AddEmiScheduleItemResponse.item:type_name -> loan.v1.EmiScheduleItem
-	79,  // 67: loan.v1.ListEmiScheduleResponse.items:type_name -> loan.v1.EmiScheduleItem
-	15,  // 68: loan.v1.Payment.status:type_name -> loan.v1.PaymentStatus
-	15,  // 69: loan.v1.RecordPaymentRequest.status:type_name -> loan.v1.PaymentStatus
-	84,  // 70: loan.v1.RecordPaymentResponse.payment:type_name -> loan.v1.Payment
-	84,  // 71: loan.v1.ListPaymentsResponse.items:type_name -> loan.v1.Payment
-	21,  // 72: loan.v1.LoanService.CreateLoanProduct:input_type -> loan.v1.CreateLoanProductRequest
-	23,  // 73: loan.v1.LoanService.UpdateLoanProduct:input_type -> loan.v1.UpdateLoanProductRequest
-	25,  // 74: loan.v1.LoanService.DeleteLoanProduct:input_type -> loan.v1.DeleteLoanProductRequest
-	27,  // 75: loan.v1.LoanService.GetLoanProduct:input_type -> loan.v1.GetLoanProductRequest
-	29,  // 76: loan.v1.LoanService.ListLoanProducts:input_type -> loan.v1.ListLoanProductsRequest
-	31,  // 77: loan.v1.LoanService.UpsertProductEligibilityRule:input_type -> loan.v1.UpsertProductEligibilityRuleRequest
-	34,  // 78: loan.v1.LoanService.ReplaceProductFees:input_type -> loan.v1.ReplaceProductFeesRequest
-	37,  // 79: loan.v1.LoanService.ReplaceProductRequiredDocuments:input_type -> loan.v1.ReplaceProductRequiredDocumentsRequest
-	40,  // 80: loan.v1.LoanService.CreateLoanApplication:input_type -> loan.v1.CreateLoanApplicationRequest
-	42,  // 81: loan.v1.LoanService.GetLoanApplication:input_type -> loan.v1.GetLoanApplicationRequest
-	44,  // 82: loan.v1.LoanService.ListLoanApplications:input_type -> loan.v1.ListLoanApplicationsRequest
-	46,  // 83: loan.v1.LoanService.UpdateLoanApplicationStatus:input_type -> loan.v1.UpdateLoanApplicationStatusRequest
-	48,  // 84: loan.v1.LoanService.UpdateLoanApplicationTerms:input_type -> loan.v1.UpdateLoanApplicationTermsRequest
-	50,  // 85: loan.v1.LoanService.AssignLoanApplicationOfficer:input_type -> loan.v1.AssignLoanApplicationOfficerRequest
-	53,  // 86: loan.v1.LoanService.AddApplicationCoapplicant:input_type -> loan.v1.AddApplicationCoapplicantRequest
-	56,  // 87: loan.v1.LoanService.UpsertApplicationCollateral:input_type -> loan.v1.UpsertApplicationCollateralRequest
-	59,  // 88: loan.v1.LoanService.UpsertLoanVehicle:input_type -> loan.v1.UpsertLoanVehicleRequest
-	62,  // 89: loan.v1.LoanService.UpsertLoanRealEstate:input_type -> loan.v1.UpsertLoanRealEstateRequest
-	65,  // 90: loan.v1.LoanService.AddApplicationDocument:input_type -> loan.v1.AddApplicationDocumentRequest
-	67,  // 91: loan.v1.LoanService.UpdateApplicationDocumentVerification:input_type -> loan.v1.UpdateApplicationDocumentVerificationRequest
-	70,  // 92: loan.v1.LoanService.AddBureauScore:input_type -> loan.v1.AddBureauScoreRequest
-	73,  // 93: loan.v1.LoanService.CreateLoan:input_type -> loan.v1.CreateLoanRequest
-	75,  // 94: loan.v1.LoanService.GetLoan:input_type -> loan.v1.GetLoanRequest
-	77,  // 95: loan.v1.LoanService.ListLoans:input_type -> loan.v1.ListLoansRequest
-	80,  // 96: loan.v1.LoanService.AddEmiScheduleItem:input_type -> loan.v1.AddEmiScheduleItemRequest
-	82,  // 97: loan.v1.LoanService.ListEmiSchedule:input_type -> loan.v1.ListEmiScheduleRequest
-	85,  // 98: loan.v1.LoanService.RecordPayment:input_type -> loan.v1.RecordPaymentRequest
-	87,  // 99: loan.v1.LoanService.ListPayments:input_type -> loan.v1.ListPaymentsRequest
-	22,  // 100: loan.v1.LoanService.CreateLoanProduct:output_type -> loan.v1.CreateLoanProductResponse
-	24,  // 101: loan.v1.LoanService.UpdateLoanProduct:output_type -> loan.v1.UpdateLoanProductResponse
-	26,  // 102: loan.v1.LoanService.DeleteLoanProduct:output_type -> loan.v1.DeleteLoanProductResponse
-	28,  // 103: loan.v1.LoanService.GetLoanProduct:output_type -> loan.v1.GetLoanProductResponse
-	30,  // 104: loan.v1.LoanService.ListLoanProducts:output_type -> loan.v1.ListLoanProductsResponse
-	32,  // 105: loan.v1.LoanService.UpsertProductEligibilityRule:output_type -> loan.v1.UpsertProductEligibilityRuleResponse
-	35,  // 106: loan.v1.LoanService.ReplaceProductFees:output_type -> loan.v1.ReplaceProductFeesResponse
-	38,  // 107: loan.v1.LoanService.ReplaceProductRequiredDocuments:output_type -> loan.v1.ReplaceProductRequiredDocumentsResponse
-	41,  // 108: loan.v1.LoanService.CreateLoanApplication:output_type -> loan.v1.CreateLoanApplicationResponse
-	43,  // 109: loan.v1.LoanService.GetLoanApplication:output_type -> loan.v1.GetLoanApplicationResponse
-	45,  // 110: loan.v1.LoanService.ListLoanApplications:output_type -> loan.v1.ListLoanApplicationsResponse
-	47,  // 111: loan.v1.LoanService.UpdateLoanApplicationStatus:output_type -> loan.v1.UpdateLoanApplicationStatusResponse
-	49,  // 112: loan.v1.LoanService.UpdateLoanApplicationTerms:output_type -> loan.v1.UpdateLoanApplicationTermsResponse
-	51,  // 113: loan.v1.LoanService.AssignLoanApplicationOfficer:output_type -> loan.v1.AssignLoanApplicationOfficerResponse
-	54,  // 114: loan.v1.LoanService.AddApplicationCoapplicant:output_type -> loan.v1.AddApplicationCoapplicantResponse
-	57,  // 115: loan.v1.LoanService.UpsertApplicationCollateral:output_type -> loan.v1.UpsertApplicationCollateralResponse
-	60,  // 116: loan.v1.LoanService.UpsertLoanVehicle:output_type -> loan.v1.UpsertLoanVehicleResponse
-	63,  // 117: loan.v1.LoanService.UpsertLoanRealEstate:output_type -> loan.v1.UpsertLoanRealEstateResponse
-	66,  // 118: loan.v1.LoanService.AddApplicationDocument:output_type -> loan.v1.AddApplicationDocumentResponse
-	68,  // 119: loan.v1.LoanService.UpdateApplicationDocumentVerification:output_type -> loan.v1.UpdateApplicationDocumentVerificationResponse
-	71,  // 120: loan.v1.LoanService.AddBureauScore:output_type -> loan.v1.AddBureauScoreResponse
-	74,  // 121: loan.v1.LoanService.CreateLoan:output_type -> loan.v1.CreateLoanResponse
-	76,  // 122: loan.v1.LoanService.GetLoan:output_type -> loan.v1.GetLoanResponse
-	78,  // 123: loan.v1.LoanService.ListLoans:output_type -> loan.v1.ListLoansResponse
-	81,  // 124: loan.v1.LoanService.AddEmiScheduleItem:output_type -> loan.v1.AddEmiScheduleItemResponse
-	83,  // 125: loan.v1.LoanService.ListEmiSchedule:output_type -> loan.v1.ListEmiScheduleResponse
-	86,  // 126: loan.v1.LoanService.RecordPayment:output_type -> loan.v1.RecordPaymentResponse
-	88,  // 127: loan.v1.LoanService.ListPayments:output_type -> loan.v1.ListPaymentsResponse
-	100, // [100:128] is the sub-list for method output_type
-	72,  // [72:100] is the sub-list for method input_type
-	72,  // [72:72] is the sub-list for extension type_name
-	72,  // [72:72] is the sub-list for extension extendee
-	0,   // [0:72] is the sub-list for field type_name
+	64,  // 56: loan.v1.UpdateApplicationDocumentVerificationResponse.document:type_name -> loan.v1.ApplicationDocument
+	12,  // 57: loan.v1.BureauScore.provider:type_name -> loan.v1.BureauProvider
+	12,  // 58: loan.v1.AddBureauScoreRequest.provider:type_name -> loan.v1.BureauProvider
+	69,  // 59: loan.v1.AddBureauScoreResponse.item:type_name -> loan.v1.BureauScore
+	13,  // 60: loan.v1.Loan.status:type_name -> loan.v1.LoanStatus
+	13,  // 61: loan.v1.CreateLoanRequest.status:type_name -> loan.v1.LoanStatus
+	72,  // 62: loan.v1.CreateLoanResponse.loan:type_name -> loan.v1.Loan
+	72,  // 63: loan.v1.GetLoanResponse.loan:type_name -> loan.v1.Loan
+	72,  // 64: loan.v1.ListLoansResponse.items:type_name -> loan.v1.Loan
+	14,  // 65: loan.v1.EmiScheduleItem.status:type_name -> loan.v1.EmiStatus
+	14,  // 66: loan.v1.AddEmiScheduleItemRequest.status:type_name -> loan.v1.EmiStatus
+	79,  // 67: loan.v1.AddEmiScheduleItemResponse.item:type_name -> loan.v1.EmiScheduleItem
+	79,  // 68: loan.v1.ListEmiScheduleResponse.items:type_name -> loan.v1.EmiScheduleItem
+	15,  // 69: loan.v1.Payment.status:type_name -> loan.v1.PaymentStatus
+	15,  // 70: loan.v1.RecordPaymentRequest.status:type_name -> loan.v1.PaymentStatus
+	84,  // 71: loan.v1.RecordPaymentResponse.payment:type_name -> loan.v1.Payment
+	84,  // 72: loan.v1.ListPaymentsResponse.items:type_name -> loan.v1.Payment
+	21,  // 73: loan.v1.LoanService.CreateLoanProduct:input_type -> loan.v1.CreateLoanProductRequest
+	23,  // 74: loan.v1.LoanService.UpdateLoanProduct:input_type -> loan.v1.UpdateLoanProductRequest
+	25,  // 75: loan.v1.LoanService.DeleteLoanProduct:input_type -> loan.v1.DeleteLoanProductRequest
+	27,  // 76: loan.v1.LoanService.GetLoanProduct:input_type -> loan.v1.GetLoanProductRequest
+	29,  // 77: loan.v1.LoanService.ListLoanProducts:input_type -> loan.v1.ListLoanProductsRequest
+	31,  // 78: loan.v1.LoanService.UpsertProductEligibilityRule:input_type -> loan.v1.UpsertProductEligibilityRuleRequest
+	34,  // 79: loan.v1.LoanService.ReplaceProductFees:input_type -> loan.v1.ReplaceProductFeesRequest
+	37,  // 80: loan.v1.LoanService.ReplaceProductRequiredDocuments:input_type -> loan.v1.ReplaceProductRequiredDocumentsRequest
+	40,  // 81: loan.v1.LoanService.CreateLoanApplication:input_type -> loan.v1.CreateLoanApplicationRequest
+	42,  // 82: loan.v1.LoanService.GetLoanApplication:input_type -> loan.v1.GetLoanApplicationRequest
+	44,  // 83: loan.v1.LoanService.ListLoanApplications:input_type -> loan.v1.ListLoanApplicationsRequest
+	46,  // 84: loan.v1.LoanService.UpdateLoanApplicationStatus:input_type -> loan.v1.UpdateLoanApplicationStatusRequest
+	48,  // 85: loan.v1.LoanService.UpdateLoanApplicationTerms:input_type -> loan.v1.UpdateLoanApplicationTermsRequest
+	50,  // 86: loan.v1.LoanService.AssignLoanApplicationOfficer:input_type -> loan.v1.AssignLoanApplicationOfficerRequest
+	53,  // 87: loan.v1.LoanService.AddApplicationCoapplicant:input_type -> loan.v1.AddApplicationCoapplicantRequest
+	56,  // 88: loan.v1.LoanService.UpsertApplicationCollateral:input_type -> loan.v1.UpsertApplicationCollateralRequest
+	59,  // 89: loan.v1.LoanService.UpsertLoanVehicle:input_type -> loan.v1.UpsertLoanVehicleRequest
+	62,  // 90: loan.v1.LoanService.UpsertLoanRealEstate:input_type -> loan.v1.UpsertLoanRealEstateRequest
+	65,  // 91: loan.v1.LoanService.AddApplicationDocument:input_type -> loan.v1.AddApplicationDocumentRequest
+	67,  // 92: loan.v1.LoanService.UpdateApplicationDocumentVerification:input_type -> loan.v1.UpdateApplicationDocumentVerificationRequest
+	70,  // 93: loan.v1.LoanService.AddBureauScore:input_type -> loan.v1.AddBureauScoreRequest
+	73,  // 94: loan.v1.LoanService.CreateLoan:input_type -> loan.v1.CreateLoanRequest
+	75,  // 95: loan.v1.LoanService.GetLoan:input_type -> loan.v1.GetLoanRequest
+	77,  // 96: loan.v1.LoanService.ListLoans:input_type -> loan.v1.ListLoansRequest
+	80,  // 97: loan.v1.LoanService.AddEmiScheduleItem:input_type -> loan.v1.AddEmiScheduleItemRequest
+	82,  // 98: loan.v1.LoanService.ListEmiSchedule:input_type -> loan.v1.ListEmiScheduleRequest
+	85,  // 99: loan.v1.LoanService.RecordPayment:input_type -> loan.v1.RecordPaymentRequest
+	87,  // 100: loan.v1.LoanService.ListPayments:input_type -> loan.v1.ListPaymentsRequest
+	22,  // 101: loan.v1.LoanService.CreateLoanProduct:output_type -> loan.v1.CreateLoanProductResponse
+	24,  // 102: loan.v1.LoanService.UpdateLoanProduct:output_type -> loan.v1.UpdateLoanProductResponse
+	26,  // 103: loan.v1.LoanService.DeleteLoanProduct:output_type -> loan.v1.DeleteLoanProductResponse
+	28,  // 104: loan.v1.LoanService.GetLoanProduct:output_type -> loan.v1.GetLoanProductResponse
+	30,  // 105: loan.v1.LoanService.ListLoanProducts:output_type -> loan.v1.ListLoanProductsResponse
+	32,  // 106: loan.v1.LoanService.UpsertProductEligibilityRule:output_type -> loan.v1.UpsertProductEligibilityRuleResponse
+	35,  // 107: loan.v1.LoanService.ReplaceProductFees:output_type -> loan.v1.ReplaceProductFeesResponse
+	38,  // 108: loan.v1.LoanService.ReplaceProductRequiredDocuments:output_type -> loan.v1.ReplaceProductRequiredDocumentsResponse
+	41,  // 109: loan.v1.LoanService.CreateLoanApplication:output_type -> loan.v1.CreateLoanApplicationResponse
+	43,  // 110: loan.v1.LoanService.GetLoanApplication:output_type -> loan.v1.GetLoanApplicationResponse
+	45,  // 111: loan.v1.LoanService.ListLoanApplications:output_type -> loan.v1.ListLoanApplicationsResponse
+	47,  // 112: loan.v1.LoanService.UpdateLoanApplicationStatus:output_type -> loan.v1.UpdateLoanApplicationStatusResponse
+	49,  // 113: loan.v1.LoanService.UpdateLoanApplicationTerms:output_type -> loan.v1.UpdateLoanApplicationTermsResponse
+	51,  // 114: loan.v1.LoanService.AssignLoanApplicationOfficer:output_type -> loan.v1.AssignLoanApplicationOfficerResponse
+	54,  // 115: loan.v1.LoanService.AddApplicationCoapplicant:output_type -> loan.v1.AddApplicationCoapplicantResponse
+	57,  // 116: loan.v1.LoanService.UpsertApplicationCollateral:output_type -> loan.v1.UpsertApplicationCollateralResponse
+	60,  // 117: loan.v1.LoanService.UpsertLoanVehicle:output_type -> loan.v1.UpsertLoanVehicleResponse
+	63,  // 118: loan.v1.LoanService.UpsertLoanRealEstate:output_type -> loan.v1.UpsertLoanRealEstateResponse
+	66,  // 119: loan.v1.LoanService.AddApplicationDocument:output_type -> loan.v1.AddApplicationDocumentResponse
+	68,  // 120: loan.v1.LoanService.UpdateApplicationDocumentVerification:output_type -> loan.v1.UpdateApplicationDocumentVerificationResponse
+	71,  // 121: loan.v1.LoanService.AddBureauScore:output_type -> loan.v1.AddBureauScoreResponse
+	74,  // 122: loan.v1.LoanService.CreateLoan:output_type -> loan.v1.CreateLoanResponse
+	76,  // 123: loan.v1.LoanService.GetLoan:output_type -> loan.v1.GetLoanResponse
+	78,  // 124: loan.v1.LoanService.ListLoans:output_type -> loan.v1.ListLoansResponse
+	81,  // 125: loan.v1.LoanService.AddEmiScheduleItem:output_type -> loan.v1.AddEmiScheduleItemResponse
+	83,  // 126: loan.v1.LoanService.ListEmiSchedule:output_type -> loan.v1.ListEmiScheduleResponse
+	86,  // 127: loan.v1.LoanService.RecordPayment:output_type -> loan.v1.RecordPaymentResponse
+	88,  // 128: loan.v1.LoanService.ListPayments:output_type -> loan.v1.ListPaymentsResponse
+	101, // [101:129] is the sub-list for method output_type
+	73,  // [73:101] is the sub-list for method input_type
+	73,  // [73:73] is the sub-list for extension type_name
+	73,  // [73:73] is the sub-list for extension extendee
+	0,   // [0:73] is the sub-list for field type_name
 }
 
 func init() { file_loan_v1_loan_proto_init() }

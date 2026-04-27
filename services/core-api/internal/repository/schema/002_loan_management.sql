@@ -152,6 +152,8 @@ CREATE TABLE application_documents (
     quality_flags TEXT[] NOT NULL DEFAULT ARRAY[]::TEXT[],
     verification_status document_verification_status NOT NULL DEFAULT 'PENDING',
     rejection_reason TEXT,
+    reviewed_by_user_id UUID REFERENCES users(id),
+    reviewed_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

@@ -14,6 +14,8 @@ type Querier interface {
 	ActivateUser(ctx context.Context, id pgtype.UUID) error
 	AssignLoanApplicationOfficer(ctx context.Context, arg AssignLoanApplicationOfficerParams) error
 	ChangeUserPassword(ctx context.Context, arg ChangeUserPasswordParams) error
+	CountApprovedRequiredDocsByApplication(ctx context.Context, id pgtype.UUID) (int64, error)
+	CountMandatoryRequiredDocsByApplication(ctx context.Context, id pgtype.UUID) (int64, error)
 	CreateAdminProfile(ctx context.Context, userID pgtype.UUID) (AdminProfile, error)
 	CreateAdminUser(ctx context.Context, arg CreateAdminUserParams) (User, error)
 	CreateApplicationCoapplicant(ctx context.Context, arg CreateApplicationCoapplicantParams) (ApplicationCoapplicant, error)
@@ -47,6 +49,7 @@ type Querier interface {
 	GetActiveMediaFileByIDAndUser(ctx context.Context, arg GetActiveMediaFileByIDAndUserParams) (MediaFile, error)
 	GetAdminProfileByUserID(ctx context.Context, userID pgtype.UUID) (AdminProfile, error)
 	GetApplicationCollateralByApplicationID(ctx context.Context, applicationID pgtype.UUID) (ApplicationCollateral, error)
+	GetApplicationDocumentByID(ctx context.Context, id pgtype.UUID) (ApplicationDocument, error)
 	GetBankBranchByID(ctx context.Context, id pgtype.UUID) (BankBranch, error)
 	GetBorrowerProfileByID(ctx context.Context, id pgtype.UUID) (BorrowerProfile, error)
 	GetBorrowerProfileByUserID(ctx context.Context, userID pgtype.UUID) (BorrowerProfile, error)
@@ -122,7 +125,7 @@ type Querier interface {
 	SoftDeleteBankBranch(ctx context.Context, id pgtype.UUID) error
 	SoftDeleteLoanProduct(ctx context.Context, id pgtype.UUID) error
 	SoftDeleteUserByID(ctx context.Context, id pgtype.UUID) error
-	UpdateApplicationDocumentVerification(ctx context.Context, arg UpdateApplicationDocumentVerificationParams) error
+	UpdateApplicationDocumentVerification(ctx context.Context, arg UpdateApplicationDocumentVerificationParams) (ApplicationDocument, error)
 	UpdateBankBranch(ctx context.Context, arg UpdateBankBranchParams) error
 	UpdateBorrowerProfile(ctx context.Context, arg UpdateBorrowerProfileParams) error
 	UpdateBranchDstCommissionByID(ctx context.Context, arg UpdateBranchDstCommissionByIDParams) error

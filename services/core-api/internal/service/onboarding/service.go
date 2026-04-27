@@ -2,9 +2,6 @@ package onboarding
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"fmt"
 	"math/rand"
 	"strings"
 	"time"
@@ -13,7 +10,7 @@ import (
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/repository/generated"
 	onboardingv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/onboardingv1"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/interceptors"
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/util"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
@@ -123,65 +120,16 @@ func (s *service) CompleteBorrowerOnboarding(ctx context.Context, req *onboardin
 		deviceID = "onboarding"
 	}
 
-	tokens, err := s.mintTokens(ctx, targetUserID, string(user.Role), deviceID)
+	tokens, err := util.MintTokens(ctx, s.queries, s.redis, s.cfg.JWTKey, targetUserID, string(user.Role), deviceID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "onboarding completed but failed to issue tokens: %v", err)
 	}
 
 	return &onboardingv1.CompleteBorrowerOnboardingResponse{
 		Success:      true,
-		AccessToken:  tokens.accessToken,
-		RefreshToken: tokens.refreshToken,
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
 	}, nil
-}
-
-type tokenPair struct {
-	accessToken  string
-	refreshToken string
-}
-
-func (s *service) mintTokens(ctx context.Context, userID uuid.UUID, role, deviceID string) (*tokenPair, error) {
-	jti := uuid.New().String()
-
-	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
-	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to fetch user for token minting")
-	}
-
-	claims := interceptors.AuthClaims{
-		Role:                      role,
-		IsActive:                  user.IsActive.Bool,
-		IsRequiringPasswordChange: user.IsRequiringPasswordChange.Bool,
-		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   userID.String(),
-			ID:        jti,
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
-		},
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	accessToken, _ := token.SignedString([]byte(s.cfg.JWTKey))
-
-	refreshToken := uuid.New().String()
-	hash := sha256.Sum256([]byte(refreshToken))
-	hashedToken := hex.EncodeToString(hash[:])
-
-	expiresAt := time.Now().Add(7 * 24 * time.Hour)
-	_, err = s.queries.CreateRefreshToken(ctx, generated.CreateRefreshTokenParams{
-		UserID:      pgtype.UUID{Bytes: userID, Valid: true},
-		DeviceID:    deviceID,
-		HashedToken: hashedToken,
-		ExpiresAt:   pgtype.Timestamptz{Time: expiresAt, Valid: true},
-	})
-	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to persist refresh token")
-	}
-
-	err = s.redis.Set(ctx, fmt.Sprintf("active_token:%s", userID.String()), jti, 15*time.Minute).Err()
-	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to set active session")
-	}
-
-	return &tokenPair{accessToken: accessToken, refreshToken: refreshToken}, nil
 }
 
 // UpdateBorrowerProfile updates an existing borrower profile.

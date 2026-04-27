@@ -19,6 +19,7 @@ import (
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/security/argon2"
 	authv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/authv1"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/interceptors"
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/util"
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/golang-jwt/jwt/v5"
@@ -603,7 +604,7 @@ func (s *service) ChangePassword(ctx context.Context, req *authv1.ChangePassword
 		return nil, status.Error(codes.InvalidArgument, "current_password and new_password are required")
 	}
 
-	if err := validatePasswordStrength(newPassword); err != nil {
+	if err := util.ValidatePasswordStrength(newPassword); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -735,7 +736,7 @@ func (s *service) ResetForgotPassword(ctx context.Context, req *authv1.ResetForg
 		return nil, status.Error(codes.InvalidArgument, "reset_session_id and new_password are required")
 	}
 
-	if err := validatePasswordStrength(newPassword); err != nil {
+	if err := util.ValidatePasswordStrength(newPassword); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -1448,49 +1449,13 @@ func (s *service) validateReopenAndRevoke(ctx context.Context, session *mfaSessi
 }
 
 func (s *service) mintTokens(ctx context.Context, userID uuid.UUID, role, deviceID string) (*authv1.AuthTokens, error) {
-	jti := uuid.New().String()
-
-	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: userID, Valid: true})
+	pair, err := util.MintTokens(ctx, s.queries, s.redis, s.cfg.JWTKey, userID, role, deviceID)
 	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to fetch user for token minting")
+		return nil, err
 	}
-
-	claims := interceptors.AuthClaims{
-		Role:                      role,
-		IsActive:                  user.IsActive.Bool,
-		IsRequiringPasswordChange: user.IsRequiringPasswordChange.Bool,
-		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   userID.String(),
-			ID:        jti,
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
-		},
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	accessToken, _ := token.SignedString([]byte(s.cfg.JWTKey))
-
-	refreshToken := uuid.New().String()
-	hash := sha256.Sum256([]byte(refreshToken))
-	hashedToken := hex.EncodeToString(hash[:])
-
-	expiresAt := time.Now().Add(7 * 24 * time.Hour)
-	_, err = s.queries.CreateRefreshToken(ctx, generated.CreateRefreshTokenParams{
-		UserID:      pgtype.UUID{Bytes: userID, Valid: true},
-		DeviceID:    deviceID,
-		HashedToken: hashedToken,
-		ExpiresAt:   pgtype.Timestamptz{Time: expiresAt, Valid: true},
-	})
-	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to persist refresh token")
-	}
-
-	err = s.redis.Set(ctx, fmt.Sprintf("active_token:%s", userID.String()), jti, 15*time.Minute).Err()
-	if err != nil {
-		return nil, status.Error(codes.Internal, "failed to set active session")
-	}
-
 	return &authv1.AuthTokens{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
+		AccessToken:  pair.AccessToken,
+		RefreshToken: pair.RefreshToken,
 	}, nil
 }
 
@@ -1623,31 +1588,4 @@ func nullableUUIDToString(v pgtype.UUID) string {
 		return ""
 	}
 	return uuid.UUID(v.Bytes).String()
-}
-
-// validatePasswordStrength enforces minimum complexity for new user passwords.
-func validatePasswordStrength(password string) error {
-	if len(password) < 8 {
-		return fmt.Errorf("new password must be at least 8 characters long")
-	}
-
-	var hasUpper, hasLower, hasDigit, hasSpecial bool
-	for _, r := range password {
-		switch {
-		case r >= 'A' && r <= 'Z':
-			hasUpper = true
-		case r >= 'a' && r <= 'z':
-			hasLower = true
-		case r >= '0' && r <= '9':
-			hasDigit = true
-		case strings.ContainsRune("!@#$%^&*()-_=+[]{}|;:'\",.<>/?`~", r):
-			hasSpecial = true
-		}
-	}
-
-	if !hasUpper || !hasLower || !hasDigit || !hasSpecial {
-		return fmt.Errorf("new password must include uppercase, lowercase, number, and special character")
-	}
-
-	return nil
 }

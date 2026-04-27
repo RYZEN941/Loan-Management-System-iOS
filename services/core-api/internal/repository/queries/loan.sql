@@ -431,12 +431,40 @@ WHERE id = $1
   AND loan_product_id = $2
 LIMIT 1;
 
--- name: UpdateApplicationDocumentVerification :exec
+-- name: UpdateApplicationDocumentVerification :one
 UPDATE application_documents
 SET verification_status = $2,
     rejection_reason = $3,
+    reviewed_by_user_id = $4,
+    reviewed_at = CURRENT_TIMESTAMP,
     updated_at = CURRENT_TIMESTAMP
+WHERE id = $1
+RETURNING *;
+
+-- name: GetApplicationDocumentByID :one
+SELECT *
+FROM application_documents
 WHERE id = $1;
+
+-- name: CountApprovedRequiredDocsByApplication :one
+SELECT COUNT(DISTINCT rd.id) AS approved_count
+FROM product_required_documents rd
+JOIN loan_applications la ON la.loan_product_id = rd.loan_product_id
+WHERE la.id = $1
+  AND rd.is_mandatory = true
+  AND EXISTS (
+    SELECT 1 FROM application_documents ad
+    WHERE ad.application_id = la.id
+      AND ad.required_doc_id = rd.id
+      AND ad.verification_status = 'PASS'
+  );
+
+-- name: CountMandatoryRequiredDocsByApplication :one
+SELECT COUNT(*) AS total_count
+FROM product_required_documents rd
+JOIN loan_applications la ON la.loan_product_id = rd.loan_product_id
+WHERE la.id = $1
+  AND rd.is_mandatory = true;
 
 -- name: ListApplicationDocumentsByApplicationID :many
 SELECT *

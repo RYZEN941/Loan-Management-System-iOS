@@ -939,14 +939,56 @@ func (s *service) UpdateApplicationDocumentVerification(ctx context.Context, req
 	if err != nil {
 		return nil, err
 	}
-	if err := s.queries.UpdateApplicationDocumentVerification(ctx, generated.UpdateApplicationDocumentVerificationParams{
+	callerUserID, role, err := requireUserAndRole(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	doc, err := s.queries.GetApplicationDocumentByID(ctx, uuidToPg(documentID))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, status.Error(codes.NotFound, "document not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to fetch document")
+	}
+
+	if doc.VerificationStatus != generated.DocumentVerificationStatusPENDING {
+		return nil, status.Error(codes.FailedPrecondition, "document verification status cannot be changed once set")
+	}
+
+	appRow, err := s.queries.GetLoanApplicationByID(ctx, doc.ApplicationID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to fetch loan application")
+	}
+
+	switch role {
+	case "admin":
+	case "officer":
+		if !appRow.AssignedOfficerUserID.Valid || appRow.AssignedOfficerUserID.Bytes != callerUserID {
+			return nil, status.Error(codes.PermissionDenied, "only the assigned officer can verify documents")
+		}
+	case "manager":
+		branch, bErr := s.branchForUserRole(ctx, callerUserID, role)
+		if bErr != nil {
+			return nil, bErr
+		}
+		if branch != uuid.UUID(appRow.BranchID.Bytes) {
+			return nil, status.Error(codes.PermissionDenied, "manager can only verify documents in their branch")
+		}
+	default:
+		return nil, status.Error(codes.PermissionDenied, "only officers and managers can verify documents")
+	}
+
+	updated, err := s.queries.UpdateApplicationDocumentVerification(ctx, generated.UpdateApplicationDocumentVerificationParams{
 		ID:                 uuidToPg(documentID),
 		VerificationStatus: toDBDocumentVerificationStatus(req.GetVerificationStatus()),
 		RejectionReason:    pgText(req.GetRejectionReason()),
-	}); err != nil {
+		ReviewedByUserID:   uuidToPg(callerUserID),
+	})
+	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to update document verification")
 	}
-	return &loanv1.UpdateApplicationDocumentVerificationResponse{Success: true}, nil
+	return &loanv1.UpdateApplicationDocumentVerificationResponse{Document: mapDocument(updated)}, nil
 }
 
 func (s *service) AddBureauScore(ctx context.Context, req *loanv1.AddBureauScoreRequest) (*loanv1.AddBureauScoreResponse, error) {
@@ -1009,6 +1051,17 @@ func (s *service) CreateLoan(ctx context.Context, req *loanv1.CreateLoanRequest)
 	}
 	if appRow.Status != generated.LoanApplicationStatusMANAGERAPPROVED {
 		return nil, status.Error(codes.FailedPrecondition, "loan can be created only after manager approval")
+	}
+	approvedCount, err := s.queries.CountApprovedRequiredDocsByApplication(ctx, appRow.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to check document approvals")
+	}
+	totalCount, err := s.queries.CountMandatoryRequiredDocsByApplication(ctx, appRow.ID)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to check required documents")
+	}
+	if approvedCount < totalCount {
+		return nil, status.Errorf(codes.FailedPrecondition, "all mandatory documents must be approved before creating a loan (%d/%d approved)", approvedCount, totalCount)
 	}
 	if _, err := s.queries.GetLoanByApplicationID(ctx, appRow.ID); err == nil {
 		return nil, status.Error(codes.FailedPrecondition, "loan already exists for this application")
@@ -1852,6 +1905,8 @@ func mapDocument(row generated.ApplicationDocument) *loanv1.ApplicationDocument 
 		RejectionReason:    textToString(row.RejectionReason),
 		CreatedAt:          timeToString(row.CreatedAt),
 		UpdatedAt:          timeToString(row.UpdatedAt),
+		ReviewedByUserId:   nullableUUIDToString(row.ReviewedByUserID),
+		ReviewedAt:         timeToString(row.ReviewedAt),
 	}
 }
 
@@ -2071,6 +2126,13 @@ func pgText(v string) pgtype.Text {
 		return pgtype.Text{}
 	}
 	return pgtype.Text{String: value, Valid: true}
+}
+
+func nullableUUIDToString(v pgtype.UUID) string {
+	if !v.Valid {
+		return ""
+	}
+	return uuid.UUID(v.Bytes).String()
 }
 
 func pgTimestamptz(t time.Time) pgtype.Timestamptz {

@@ -150,7 +150,8 @@ func (q *Queries) GetChatRoomByID(ctx context.Context, id pgtype.UUID) (ChatRoom
 const getChatRoomByUserPair = `-- name: GetChatRoomByUserPair :one
 SELECT id, room_type, user_a_id, user_b_id, created_by_user_id, context_application_id, created_at, updated_at
 FROM chat_rooms
-WHERE user_a_id = $1 AND user_b_id = $2
+WHERE (user_a_id = $1 AND user_b_id = $2)
+   OR (user_a_id = $2 AND user_b_id = $1)
 LIMIT 1
 `
 

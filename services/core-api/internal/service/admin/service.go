@@ -10,6 +10,7 @@ import (
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/security/argon2"
 	adminv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/adminv1"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/interceptors"
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/util"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"google.golang.org/grpc/codes"
@@ -49,7 +50,7 @@ func (s *service) CreateAdminAccount(ctx context.Context, req *adminv1.CreateAdm
 		return nil, status.Error(codes.InvalidArgument, "email, phone_number, and password are required")
 	}
 
-	if err := validatePasswordStrength(password); err != nil {
+	if err := util.ValidatePasswordStrength(password); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -105,7 +106,7 @@ func (s *service) CreateEmployeeAccount(ctx context.Context, req *adminv1.Create
 		return nil, err
 	}
 
-	if err := validatePasswordStrength(password); err != nil {
+	if err := util.ValidatePasswordStrength(password); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -213,7 +214,7 @@ func (s *service) CreateDstAccount(ctx context.Context, req *adminv1.CreateDstAc
 		return nil, status.Error(codes.InvalidArgument, "name, email, phone_number, and password are required")
 	}
 
-	if err := validatePasswordStrength(password); err != nil {
+	if err := util.ValidatePasswordStrength(password); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -333,7 +334,7 @@ func (s *service) UpdateDstAccount(ctx context.Context, req *adminv1.UpdateDstAc
 
 	// Reset password if provided.
 	if newPassword := req.GetNewPassword(); strings.TrimSpace(newPassword) != "" {
-		if err := validatePasswordStrength(newPassword); err != nil {
+		if err := util.ValidatePasswordStrength(newPassword); err != nil {
 			return nil, err
 		}
 		hash, err := argon2.HashPassword(newPassword, argon2.DefaultConfig())
@@ -601,7 +602,7 @@ func (s *service) UpdateEmployeeAccount(ctx context.Context, req *adminv1.Update
 
 	newPassword := req.GetNewPassword()
 	if strings.TrimSpace(newPassword) != "" {
-		if err := validatePasswordStrength(newPassword); err != nil {
+		if err := util.ValidatePasswordStrength(newPassword); err != nil {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
 
@@ -754,32 +755,6 @@ func mapEmployeeTypeToRole(employeeType adminv1.EmployeeType) (generated.UserRol
 	default:
 		return "", status.Error(codes.InvalidArgument, "employee_type must be manager or officer")
 	}
-}
-
-func validatePasswordStrength(password string) error {
-	if len(password) < 8 {
-		return status.Error(codes.InvalidArgument, "password must be at least 8 characters long")
-	}
-
-	var hasUpper, hasLower, hasDigit, hasSpecial bool
-	for _, r := range password {
-		switch {
-		case r >= 'A' && r <= 'Z':
-			hasUpper = true
-		case r >= 'a' && r <= 'z':
-			hasLower = true
-		case r >= '0' && r <= '9':
-			hasDigit = true
-		case strings.ContainsRune("!@#$%^&*()-_=+[]{}|;:'\",.<>/?`~", r):
-			hasSpecial = true
-		}
-	}
-
-	if !hasUpper || !hasLower || !hasDigit || !hasSpecial {
-		return status.Error(codes.InvalidArgument, "password must include uppercase, lowercase, number, and special character")
-	}
-
-	return nil
 }
 
 func mapUserRoleToStaffRole(role generated.UserRole) adminv1.StaffRole {

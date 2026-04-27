@@ -1041,6 +1041,8 @@ type ApplicationDocument struct {
 	QualityFlags       []string                   `json:"quality_flags"`
 	VerificationStatus DocumentVerificationStatus `json:"verification_status"`
 	RejectionReason    pgtype.Text                `json:"rejection_reason"`
+	ReviewedByUserID   pgtype.UUID                `json:"reviewed_by_user_id"`
+	ReviewedAt         pgtype.Timestamptz         `json:"reviewed_at"`
 	CreatedAt          pgtype.Timestamptz         `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz         `json:"updated_at"`
 }

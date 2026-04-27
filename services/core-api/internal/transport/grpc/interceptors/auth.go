@@ -197,10 +197,14 @@ func JWTStreamInterceptor(cfg JWTConfig) grpc.StreamServerInterceptor {
 			switch info.FullMethod {
 			case "/auth.v1.AuthService/Logout",
 				"/auth.v1.AuthService/GetMyProfile",
+				"/auth.v1.AuthService/GetBorrowerProfile",
 				"/onboarding.v1.OnboardingService/CompleteBorrowerOnboarding",
+				"/onboarding.v1.OnboardingService/UpdateBorrowerProfile",
 				"/auth.v1.AuthService/ChangePassword",
 				"/auth.v1.AuthService/SetupTOTP",
-				"/auth.v1.AuthService/VerifyTOTPSetup":
+				"/auth.v1.AuthService/VerifyTOTPSetup",
+				"/kyc.v1.KycService/GetBorrowerKycStatus",
+				"/kyc.v1.KycService/ListBorrowerKycHistory":
 				// Allowed
 			default:
 				return status.Error(codes.PermissionDenied, "user account is inactive. please complete onboarding.")

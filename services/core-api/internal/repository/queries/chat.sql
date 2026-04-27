@@ -16,7 +16,8 @@ INSERT INTO chat_rooms (
 -- name: GetChatRoomByUserPair :one
 SELECT *
 FROM chat_rooms
-WHERE user_a_id = $1 AND user_b_id = $2
+WHERE (user_a_id = $1 AND user_b_id = $2)
+   OR (user_a_id = $2 AND user_b_id = $1)
 LIMIT 1;
 
 -- name: GetChatRoomByID :one

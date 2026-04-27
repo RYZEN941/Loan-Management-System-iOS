@@ -52,34 +52,64 @@ const (
 // LoanServiceClient is the client API for LoanService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// LoanService manages loan products, applications, and loan lifecycle.
 type LoanServiceClient interface {
+	// Create a new loan product. Admin only.
 	CreateLoanProduct(ctx context.Context, in *CreateLoanProductRequest, opts ...grpc.CallOption) (*CreateLoanProductResponse, error)
+	// Update an existing loan product. Admin only.
 	UpdateLoanProduct(ctx context.Context, in *UpdateLoanProductRequest, opts ...grpc.CallOption) (*UpdateLoanProductResponse, error)
+	// Soft-delete a loan product. Admin only.
 	DeleteLoanProduct(ctx context.Context, in *DeleteLoanProductRequest, opts ...grpc.CallOption) (*DeleteLoanProductResponse, error)
+	// Get a single loan product by ID.
 	GetLoanProduct(ctx context.Context, in *GetLoanProductRequest, opts ...grpc.CallOption) (*GetLoanProductResponse, error)
+	// List loan products with pagination.
 	ListLoanProducts(ctx context.Context, in *ListLoanProductsRequest, opts ...grpc.CallOption) (*ListLoanProductsResponse, error)
+	// Upsert (create or replace) eligibility rules for a product. Admin only.
 	UpsertProductEligibilityRule(ctx context.Context, in *UpsertProductEligibilityRuleRequest, opts ...grpc.CallOption) (*UpsertProductEligibilityRuleResponse, error)
+	// Replace all fees for a product. Admin only.
 	ReplaceProductFees(ctx context.Context, in *ReplaceProductFeesRequest, opts ...grpc.CallOption) (*ReplaceProductFeesResponse, error)
+	// Replace all required documents for a product. Admin only.
 	ReplaceProductRequiredDocuments(ctx context.Context, in *ReplaceProductRequiredDocumentsRequest, opts ...grpc.CallOption) (*ReplaceProductRequiredDocumentsResponse, error)
+	// Create a loan application. Borrower/officer/DST can create.
 	CreateLoanApplication(ctx context.Context, in *CreateLoanApplicationRequest, opts ...grpc.CallOption) (*CreateLoanApplicationResponse, error)
+	// Get a loan application with all sub-resources (coapplicants, collateral, documents, bureau scores).
 	GetLoanApplication(ctx context.Context, in *GetLoanApplicationRequest, opts ...grpc.CallOption) (*GetLoanApplicationResponse, error)
+	// List loan applications with optional branch filter.
 	ListLoanApplications(ctx context.Context, in *ListLoanApplicationsRequest, opts ...grpc.CallOption) (*ListLoanApplicationsResponse, error)
+	// Advance the application status through the approval workflow.
 	UpdateLoanApplicationStatus(ctx context.Context, in *UpdateLoanApplicationStatusRequest, opts ...grpc.CallOption) (*UpdateLoanApplicationStatusResponse, error)
+	// Update offered terms (tenure, interest rate) on an application.
 	UpdateLoanApplicationTerms(ctx context.Context, in *UpdateLoanApplicationTermsRequest, opts ...grpc.CallOption) (*UpdateLoanApplicationTermsResponse, error)
+	// Assign a loan officer to an application. Manager/admin only.
 	AssignLoanApplicationOfficer(ctx context.Context, in *AssignLoanApplicationOfficerRequest, opts ...grpc.CallOption) (*AssignLoanApplicationOfficerResponse, error)
+	// Add a coapplicant to an application.
 	AddApplicationCoapplicant(ctx context.Context, in *AddApplicationCoapplicantRequest, opts ...grpc.CallOption) (*AddApplicationCoapplicantResponse, error)
+	// Upsert (create or update) collateral details for an application.
 	UpsertApplicationCollateral(ctx context.Context, in *UpsertApplicationCollateralRequest, opts ...grpc.CallOption) (*UpsertApplicationCollateralResponse, error)
+	// Upsert (create or update) vehicle details for an application.
 	UpsertLoanVehicle(ctx context.Context, in *UpsertLoanVehicleRequest, opts ...grpc.CallOption) (*UpsertLoanVehicleResponse, error)
+	// Upsert (create or update) real-estate details for an application.
 	UpsertLoanRealEstate(ctx context.Context, in *UpsertLoanRealEstateRequest, opts ...grpc.CallOption) (*UpsertLoanRealEstateResponse, error)
+	// Upload a document against an application's required document slot.
 	AddApplicationDocument(ctx context.Context, in *AddApplicationDocumentRequest, opts ...grpc.CallOption) (*AddApplicationDocumentResponse, error)
+	// Verify (pass/fail) an application document. Officer/manager/admin only. Immutable once set.
 	UpdateApplicationDocumentVerification(ctx context.Context, in *UpdateApplicationDocumentVerificationRequest, opts ...grpc.CallOption) (*UpdateApplicationDocumentVerificationResponse, error)
+	// Add a bureau score for a borrower on an application.
 	AddBureauScore(ctx context.Context, in *AddBureauScoreRequest, opts ...grpc.CallOption) (*AddBureauScoreResponse, error)
+	// Create a loan from a fully-approved application. Manager/admin only.
 	CreateLoan(ctx context.Context, in *CreateLoanRequest, opts ...grpc.CallOption) (*CreateLoanResponse, error)
+	// Get a loan by ID or application ID.
 	GetLoan(ctx context.Context, in *GetLoanRequest, opts ...grpc.CallOption) (*GetLoanResponse, error)
+	// List all loans with pagination.
 	ListLoans(ctx context.Context, in *ListLoansRequest, opts ...grpc.CallOption) (*ListLoansResponse, error)
+	// Add a single EMI schedule entry to a loan. Manager/admin only.
 	AddEmiScheduleItem(ctx context.Context, in *AddEmiScheduleItemRequest, opts ...grpc.CallOption) (*AddEmiScheduleItemResponse, error)
+	// List the EMI schedule for a loan.
 	ListEmiSchedule(ctx context.Context, in *ListEmiScheduleRequest, opts ...grpc.CallOption) (*ListEmiScheduleResponse, error)
+	// Record a payment against a specific EMI. Officer/manager/admin.
 	RecordPayment(ctx context.Context, in *RecordPaymentRequest, opts ...grpc.CallOption) (*RecordPaymentResponse, error)
+	// List payments for a loan.
 	ListPayments(ctx context.Context, in *ListPaymentsRequest, opts ...grpc.CallOption) (*ListPaymentsResponse, error)
 }
 
@@ -374,34 +404,64 @@ func (c *loanServiceClient) ListPayments(ctx context.Context, in *ListPaymentsRe
 // LoanServiceServer is the server API for LoanService service.
 // All implementations must embed UnimplementedLoanServiceServer
 // for forward compatibility.
+//
+// LoanService manages loan products, applications, and loan lifecycle.
 type LoanServiceServer interface {
+	// Create a new loan product. Admin only.
 	CreateLoanProduct(context.Context, *CreateLoanProductRequest) (*CreateLoanProductResponse, error)
+	// Update an existing loan product. Admin only.
 	UpdateLoanProduct(context.Context, *UpdateLoanProductRequest) (*UpdateLoanProductResponse, error)
+	// Soft-delete a loan product. Admin only.
 	DeleteLoanProduct(context.Context, *DeleteLoanProductRequest) (*DeleteLoanProductResponse, error)
+	// Get a single loan product by ID.
 	GetLoanProduct(context.Context, *GetLoanProductRequest) (*GetLoanProductResponse, error)
+	// List loan products with pagination.
 	ListLoanProducts(context.Context, *ListLoanProductsRequest) (*ListLoanProductsResponse, error)
+	// Upsert (create or replace) eligibility rules for a product. Admin only.
 	UpsertProductEligibilityRule(context.Context, *UpsertProductEligibilityRuleRequest) (*UpsertProductEligibilityRuleResponse, error)
+	// Replace all fees for a product. Admin only.
 	ReplaceProductFees(context.Context, *ReplaceProductFeesRequest) (*ReplaceProductFeesResponse, error)
+	// Replace all required documents for a product. Admin only.
 	ReplaceProductRequiredDocuments(context.Context, *ReplaceProductRequiredDocumentsRequest) (*ReplaceProductRequiredDocumentsResponse, error)
+	// Create a loan application. Borrower/officer/DST can create.
 	CreateLoanApplication(context.Context, *CreateLoanApplicationRequest) (*CreateLoanApplicationResponse, error)
+	// Get a loan application with all sub-resources (coapplicants, collateral, documents, bureau scores).
 	GetLoanApplication(context.Context, *GetLoanApplicationRequest) (*GetLoanApplicationResponse, error)
+	// List loan applications with optional branch filter.
 	ListLoanApplications(context.Context, *ListLoanApplicationsRequest) (*ListLoanApplicationsResponse, error)
+	// Advance the application status through the approval workflow.
 	UpdateLoanApplicationStatus(context.Context, *UpdateLoanApplicationStatusRequest) (*UpdateLoanApplicationStatusResponse, error)
+	// Update offered terms (tenure, interest rate) on an application.
 	UpdateLoanApplicationTerms(context.Context, *UpdateLoanApplicationTermsRequest) (*UpdateLoanApplicationTermsResponse, error)
+	// Assign a loan officer to an application. Manager/admin only.
 	AssignLoanApplicationOfficer(context.Context, *AssignLoanApplicationOfficerRequest) (*AssignLoanApplicationOfficerResponse, error)
+	// Add a coapplicant to an application.
 	AddApplicationCoapplicant(context.Context, *AddApplicationCoapplicantRequest) (*AddApplicationCoapplicantResponse, error)
+	// Upsert (create or update) collateral details for an application.
 	UpsertApplicationCollateral(context.Context, *UpsertApplicationCollateralRequest) (*UpsertApplicationCollateralResponse, error)
+	// Upsert (create or update) vehicle details for an application.
 	UpsertLoanVehicle(context.Context, *UpsertLoanVehicleRequest) (*UpsertLoanVehicleResponse, error)
+	// Upsert (create or update) real-estate details for an application.
 	UpsertLoanRealEstate(context.Context, *UpsertLoanRealEstateRequest) (*UpsertLoanRealEstateResponse, error)
+	// Upload a document against an application's required document slot.
 	AddApplicationDocument(context.Context, *AddApplicationDocumentRequest) (*AddApplicationDocumentResponse, error)
+	// Verify (pass/fail) an application document. Officer/manager/admin only. Immutable once set.
 	UpdateApplicationDocumentVerification(context.Context, *UpdateApplicationDocumentVerificationRequest) (*UpdateApplicationDocumentVerificationResponse, error)
+	// Add a bureau score for a borrower on an application.
 	AddBureauScore(context.Context, *AddBureauScoreRequest) (*AddBureauScoreResponse, error)
+	// Create a loan from a fully-approved application. Manager/admin only.
 	CreateLoan(context.Context, *CreateLoanRequest) (*CreateLoanResponse, error)
+	// Get a loan by ID or application ID.
 	GetLoan(context.Context, *GetLoanRequest) (*GetLoanResponse, error)
+	// List all loans with pagination.
 	ListLoans(context.Context, *ListLoansRequest) (*ListLoansResponse, error)
+	// Add a single EMI schedule entry to a loan. Manager/admin only.
 	AddEmiScheduleItem(context.Context, *AddEmiScheduleItemRequest) (*AddEmiScheduleItemResponse, error)
+	// List the EMI schedule for a loan.
 	ListEmiSchedule(context.Context, *ListEmiScheduleRequest) (*ListEmiScheduleResponse, error)
+	// Record a payment against a specific EMI. Officer/manager/admin.
 	RecordPayment(context.Context, *RecordPaymentRequest) (*RecordPaymentResponse, error)
+	// List payments for a loan.
 	ListPayments(context.Context, *ListPaymentsRequest) (*ListPaymentsResponse, error)
 	mustEmbedUnimplementedLoanServiceServer()
 }

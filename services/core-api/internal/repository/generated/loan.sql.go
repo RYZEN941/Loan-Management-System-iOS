@@ -28,6 +28,42 @@ func (q *Queries) AssignLoanApplicationOfficer(ctx context.Context, arg AssignLo
 	return err
 }
 
+const countApprovedRequiredDocsByApplication = `-- name: CountApprovedRequiredDocsByApplication :one
+SELECT COUNT(DISTINCT rd.id) AS approved_count
+FROM product_required_documents rd
+JOIN loan_applications la ON la.loan_product_id = rd.loan_product_id
+WHERE la.id = $1
+  AND rd.is_mandatory = true
+  AND EXISTS (
+    SELECT 1 FROM application_documents ad
+    WHERE ad.application_id = la.id
+      AND ad.required_doc_id = rd.id
+      AND ad.verification_status = 'PASS'
+  )
+`
+
+func (q *Queries) CountApprovedRequiredDocsByApplication(ctx context.Context, id pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countApprovedRequiredDocsByApplication, id)
+	var approved_count int64
+	err := row.Scan(&approved_count)
+	return approved_count, err
+}
+
+const countMandatoryRequiredDocsByApplication = `-- name: CountMandatoryRequiredDocsByApplication :one
+SELECT COUNT(*) AS total_count
+FROM product_required_documents rd
+JOIN loan_applications la ON la.loan_product_id = rd.loan_product_id
+WHERE la.id = $1
+  AND rd.is_mandatory = true
+`
+
+func (q *Queries) CountMandatoryRequiredDocsByApplication(ctx context.Context, id pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countMandatoryRequiredDocsByApplication, id)
+	var total_count int64
+	err := row.Scan(&total_count)
+	return total_count, err
+}
+
 const createApplicationCoapplicant = `-- name: CreateApplicationCoapplicant :one
 INSERT INTO application_coapplicants (
     application_id,
@@ -85,7 +121,7 @@ INSERT INTO application_documents (
     $5,
     $6,
     $7
-) RETURNING id, application_id, borrower_profile_id, required_doc_id, media_file_id, quality_flags, verification_status, rejection_reason, created_at, updated_at
+) RETURNING id, application_id, borrower_profile_id, required_doc_id, media_file_id, quality_flags, verification_status, rejection_reason, reviewed_by_user_id, reviewed_at, created_at, updated_at
 `
 
 type CreateApplicationDocumentParams struct {
@@ -118,6 +154,8 @@ func (q *Queries) CreateApplicationDocument(ctx context.Context, arg CreateAppli
 		&i.QualityFlags,
 		&i.VerificationStatus,
 		&i.RejectionReason,
+		&i.ReviewedByUserID,
+		&i.ReviewedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -612,6 +650,32 @@ func (q *Queries) GetApplicationCollateralByApplicationID(ctx context.Context, a
 		&i.EstimatedValue,
 		&i.VerificationStatus,
 		&i.CollateralDetails,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getApplicationDocumentByID = `-- name: GetApplicationDocumentByID :one
+SELECT id, application_id, borrower_profile_id, required_doc_id, media_file_id, quality_flags, verification_status, rejection_reason, reviewed_by_user_id, reviewed_at, created_at, updated_at
+FROM application_documents
+WHERE id = $1
+`
+
+func (q *Queries) GetApplicationDocumentByID(ctx context.Context, id pgtype.UUID) (ApplicationDocument, error) {
+	row := q.db.QueryRow(ctx, getApplicationDocumentByID, id)
+	var i ApplicationDocument
+	err := row.Scan(
+		&i.ID,
+		&i.ApplicationID,
+		&i.BorrowerProfileID,
+		&i.RequiredDocID,
+		&i.MediaFileID,
+		&i.QualityFlags,
+		&i.VerificationStatus,
+		&i.RejectionReason,
+		&i.ReviewedByUserID,
+		&i.ReviewedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -1241,7 +1305,7 @@ func (q *Queries) ListApplicationCoapplicants(ctx context.Context, applicationID
 }
 
 const listApplicationDocumentsByApplicationID = `-- name: ListApplicationDocumentsByApplicationID :many
-SELECT id, application_id, borrower_profile_id, required_doc_id, media_file_id, quality_flags, verification_status, rejection_reason, created_at, updated_at
+SELECT id, application_id, borrower_profile_id, required_doc_id, media_file_id, quality_flags, verification_status, rejection_reason, reviewed_by_user_id, reviewed_at, created_at, updated_at
 FROM application_documents
 WHERE application_id = $1
 ORDER BY created_at DESC
@@ -1265,6 +1329,8 @@ func (q *Queries) ListApplicationDocumentsByApplicationID(ctx context.Context, a
 			&i.QualityFlags,
 			&i.VerificationStatus,
 			&i.RejectionReason,
+			&i.ReviewedByUserID,
+			&i.ReviewedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -1969,23 +2035,47 @@ func (q *Queries) SoftDeleteLoanProduct(ctx context.Context, id pgtype.UUID) err
 	return err
 }
 
-const updateApplicationDocumentVerification = `-- name: UpdateApplicationDocumentVerification :exec
+const updateApplicationDocumentVerification = `-- name: UpdateApplicationDocumentVerification :one
 UPDATE application_documents
 SET verification_status = $2,
     rejection_reason = $3,
+    reviewed_by_user_id = $4,
+    reviewed_at = CURRENT_TIMESTAMP,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = $1
+RETURNING id, application_id, borrower_profile_id, required_doc_id, media_file_id, quality_flags, verification_status, rejection_reason, reviewed_by_user_id, reviewed_at, created_at, updated_at
 `
 
 type UpdateApplicationDocumentVerificationParams struct {
 	ID                 pgtype.UUID                `json:"id"`
 	VerificationStatus DocumentVerificationStatus `json:"verification_status"`
 	RejectionReason    pgtype.Text                `json:"rejection_reason"`
+	ReviewedByUserID   pgtype.UUID                `json:"reviewed_by_user_id"`
 }
 
-func (q *Queries) UpdateApplicationDocumentVerification(ctx context.Context, arg UpdateApplicationDocumentVerificationParams) error {
-	_, err := q.db.Exec(ctx, updateApplicationDocumentVerification, arg.ID, arg.VerificationStatus, arg.RejectionReason)
-	return err
+func (q *Queries) UpdateApplicationDocumentVerification(ctx context.Context, arg UpdateApplicationDocumentVerificationParams) (ApplicationDocument, error) {
+	row := q.db.QueryRow(ctx, updateApplicationDocumentVerification,
+		arg.ID,
+		arg.VerificationStatus,
+		arg.RejectionReason,
+		arg.ReviewedByUserID,
+	)
+	var i ApplicationDocument
+	err := row.Scan(
+		&i.ID,
+		&i.ApplicationID,
+		&i.BorrowerProfileID,
+		&i.RequiredDocID,
+		&i.MediaFileID,
+		&i.QualityFlags,
+		&i.VerificationStatus,
+		&i.RejectionReason,
+		&i.ReviewedByUserID,
+		&i.ReviewedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const updateEmiScheduleStatus = `-- name: UpdateEmiScheduleStatus :exec

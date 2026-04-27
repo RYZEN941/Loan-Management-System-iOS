@@ -1063,18 +1063,31 @@ func (s *service) CreateLoan(ctx context.Context, req *loanv1.CreateLoanRequest)
 		}
 		return nil, status.Error(codes.Internal, "failed to fetch application")
 	}
-	if err := s.ensureCanAccessApplication(ctx, appRow.PrimaryBorrowerProfileID, appRow.BranchID, appRow.ID); err != nil {
-		return nil, err
-	}
-	if role == "manager" {
+
+	// Permission checks
+	switch role {
+	case "admin":
+		// Admins can do anything
+	case "manager":
 		branchID, err := s.branchForUserRole(ctx, callerUserID, role)
 		if err != nil {
 			return nil, err
 		}
 		if branchID != uuid.UUID(appRow.BranchID.Bytes) {
-			return nil, status.Error(codes.PermissionDenied, "manager can only create loans for own branch")
+			return nil, status.Error(codes.PermissionDenied, "manager can only create loans for their own branch")
 		}
+	case "borrower":
+		profile, err := s.queries.GetBorrowerProfileByUserID(ctx, uuidToPg(callerUserID))
+		if err != nil {
+			return nil, status.Error(codes.PermissionDenied, "borrower profile not found")
+		}
+		if profile.ID.Bytes != appRow.PrimaryBorrowerProfileID.Bytes {
+			return nil, status.Error(codes.PermissionDenied, "only the primary borrower can accept and disburse the loan")
+		}
+	default:
+		return nil, status.Error(codes.PermissionDenied, "unauthorized to create loan")
 	}
+
 	if appRow.Status != generated.LoanApplicationStatusMANAGERAPPROVED {
 		return nil, status.Error(codes.FailedPrecondition, "loan can be created only after manager approval")
 	}
@@ -1097,6 +1110,14 @@ func (s *service) CreateLoan(ctx context.Context, req *loanv1.CreateLoanRequest)
 	principal, err := parseNumeric(req.GetPrincipalAmount(), "principal_amount")
 	if err != nil {
 		return nil, err
+	}
+	if principal.Exp != appRow.RequestedAmount.Exp || string(principal.Int.Bytes()) != string(appRow.RequestedAmount.Int.Bytes()) {
+		// Better way to compare pgtype.Numeric is via float conversion or using a helper
+		pf, _ := numericToFloat64(principal)
+		af, _ := numericToFloat64(appRow.RequestedAmount)
+		if math.Abs(pf-af) > 0.01 {
+			return nil, status.Errorf(codes.InvalidArgument, "principal_amount (%s) does not match the approved amount (%s)", req.GetPrincipalAmount(), numericToString(appRow.RequestedAmount))
+		}
 	}
 	if !appRow.OfferedInterestRate.Valid {
 		return nil, status.Error(codes.FailedPrecondition, "offered_interest_rate is not set on application")

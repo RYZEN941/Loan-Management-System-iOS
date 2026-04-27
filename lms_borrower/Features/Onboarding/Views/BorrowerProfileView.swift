@@ -168,8 +168,8 @@ struct BorrowerProfileView: View {
 
                 Task {
                     if await viewModel.submitBorrowerProfile() {
-                        session.setOnboardingComplete(true)
-                        path.append(OnboardingRoute.complete)
+                        await session.completeSessionFromBackend()
+                        session.lockForReauth()
                     }
                 }
             }

@@ -219,103 +219,83 @@ struct AdminSystemControlView: View {
     }
 
     // MARK: - Content Panel
-    private var contentPanel: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                requestBanner
-                Text(adminVM.selectedSystemSection).font(Theme.Typography.titleLarge)
-                if let section = SystemSection(rawValue: adminVM.selectedSystemSection) {
-                    switch section {
-                    case .userManagement: userManagementContent
-                    case .branchManagement: branchManagementContent
-                    case .policyConfig: policyConfigContent
-                    case .verificationSettings: verificationContent
-                    case .notifications: notificationsContent
-                    case .auditCompliance: auditContent
-                    case .integrations: integrationsContent
+        private var contentPanel: some View {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                    requestBanner
+                    Text(adminVM.selectedSystemSection).font(Theme.Typography.titleLarge)
+                    if let section = SystemSection(rawValue: adminVM.selectedSystemSection) {
+                        switch section {
+                        case .userManagement: userManagementContent
+                        case .branchManagement: branchManagementContent
+                        case .policyConfig: policyConfigContent
+                        case .verificationSettings: verificationContent
+                        case .notifications: notificationsContent
+                        case .auditCompliance: auditContent
+                        case .integrations: integrationsContent
+                        }
                     }
                 }
+                .padding(Theme.Spacing.lg)
             }
-            .padding(Theme.Spacing.lg)
+            .background(Theme.Colors.adaptiveBackground(colorScheme))
         }
-        .background(Theme.Colors.adaptiveBackground(colorScheme))
-    }
 
-    @ViewBuilder
-    private var requestBanner: some View {
-        if let error = adminVM.requestError {
-            Label(error, systemImage: "exclamationmark.triangle.fill")
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Colors.critical)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, Theme.Spacing.md)
-                .padding(.vertical, Theme.Spacing.sm)
-                .background(Theme.Colors.critical.opacity(0.10))
-                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
-        } else if let success = adminVM.requestSuccess {
-            Label(success, systemImage: "checkmark.circle.fill")
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Colors.success)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, Theme.Spacing.md)
-                .padding(.vertical, Theme.Spacing.sm)
-                .background(Theme.Colors.success.opacity(0.10))
-                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
-        }
-    }
-
-    // MARK: - 1. User Management
-    private var userManagementContent: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            HStack {
-                Text("\(managedActiveCount) active · \(managedUsers.count) shown")
-                    .font(Theme.Typography.caption).foregroundStyle(.secondary)
-                Spacer()
-                Button {
-                    if userManagementSegment == .employees {
-                        showCreateUser = true
-                    } else {
-                        showCreateDst = true
-                    }
-                } label: {
-                    Label(userManagementSegment == .employees ? "Add Employee" : "Add DST", systemImage: "plus.circle.fill")
-                        .font(Theme.Typography.subheadline).fontWeight(.medium)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 16).padding(.vertical, 8)
-                        .background(Theme.Colors.primary)
-                        .clipShape(Capsule())
-                }.buttonStyle(.plain)
+        @ViewBuilder
+        private var requestBanner: some View {
+            if let error = adminVM.requestError {
+                Label(error, systemImage: "exclamationmark.triangle.fill")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Colors.critical)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, Theme.Spacing.md)
+                    .padding(.vertical, Theme.Spacing.sm)
+                    .background(Theme.Colors.critical.opacity(0.10))
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
+            } else if let success = adminVM.requestSuccess {
+                Label(success, systemImage: "checkmark.circle.fill")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Colors.success)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, Theme.Spacing.md)
+                    .padding(.vertical, Theme.Spacing.sm)
+                    .background(Theme.Colors.success.opacity(0.10))
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
             }
+        }
 
+        // MARK: - 1. User Management (Employees Only)
+        private var userManagementContent: some View {
             VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-                Picker("Manage", selection: $userManagementSegment) {
-                    ForEach(UserManagementSegment.allCases) { segment in
-                        Text(segment.rawValue).tag(segment)
+                HStack {
+                    Text("\(managedActiveCount) active · \(managedUsers.count) shown")
+                        .font(Theme.Typography.caption).foregroundStyle(.secondary)
+                    Spacer()
+                    Button {
+                        showCreateUser = true
+                    } label: {
+                        Label("Add Employee", systemImage: "plus.circle.fill")
+                            .font(Theme.Typography.subheadline).fontWeight(.medium)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 16).padding(.vertical, 8)
+                            .background(Theme.Colors.primary)
+                            .clipShape(Capsule())
+                    }.buttonStyle(.plain)
+                }
+
+                VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                    // Segmented picker removed
+                    
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.secondary)
+                        TextField("Search employees by name, email or branch...", text: $userManagementSearchText)
+                        .font(Theme.Typography.subheadline)
                     }
-                }
-                .pickerStyle(.segmented)
-                .onChange(of: userManagementSegment) { _, _ in
-                    userManagementSearchText = ""
-                    selectedEmployeeBranch = "All Banks"
-                    selectedEmployeeRoleFilter = .all
-                }
+                    .padding(10)
+                    .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
 
-                HStack(spacing: Theme.Spacing.sm) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.secondary)
-                    TextField(
-                        userManagementSegment == .employees
-                        ? "Search employees by name, email or branch..."
-                        : "Search DSTs by name, email, branch or ID...",
-                        text: $userManagementSearchText
-                    )
-                    .font(Theme.Typography.subheadline)
-                }
-                .padding(10)
-                .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
-                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
-
-                if userManagementSegment == .employees {
                     HStack(spacing: Theme.Spacing.md) {
                         Menu {
                             Button("All Banks") { selectedEmployeeBranch = "All Banks" }
@@ -345,173 +325,130 @@ struct AdminSystemControlView: View {
                         Spacer()
                     }
                 }
-            }
 
-            VStack(spacing: 0) {
-                if managedUsers.isEmpty {
-                    VStack(spacing: Theme.Spacing.sm) {
-                        Image(systemName: userManagementSegment == .employees ? "person.2.slash" : "person.badge.key")
-                            .font(.system(size: 32))
-                            .foregroundStyle(.tertiary)
-                        Text(userManagementSegment == .employees
-                            ? "No employees found in backend."
-                            : "No DST accounts found in backend.")
-                            .font(Theme.Typography.subheadline)
-                            .foregroundStyle(.secondary)
-                        Text("All data is loaded live from the server. If the list is empty, there are currently no records on the backend.")
-                            .font(Theme.Typography.caption)
-                            .foregroundStyle(.tertiary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Theme.Spacing.xl)
-                    .padding(.horizontal, Theme.Spacing.lg)
-                } else {
-                    ForEach(Array(managedUsers.enumerated()), id: \.element.id) { index, user in
-                        userManagementRow(for: user)
-                        if index != managedUsers.count - 1 {
-                            Divider().padding(.leading, 56)
+                VStack(spacing: 0) {
+                    if managedUsers.isEmpty {
+                        VStack(spacing: Theme.Spacing.sm) {
+                            Image(systemName: "person.2.slash")
+                                .font(.system(size: 32))
+                                .foregroundStyle(.tertiary)
+                            Text("No employees found in backend.")
+                                .font(Theme.Typography.subheadline)
+                                .foregroundStyle(.secondary)
+                            Text("All data is loaded live from the server.")
+                                .font(Theme.Typography.caption)
+                                .foregroundStyle(.tertiary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Theme.Spacing.xl)
+                        .padding(.horizontal, Theme.Spacing.lg)
+                    } else {
+                        ForEach(Array(managedUsers.enumerated()), id: \.element.id) { index, user in
+                            userManagementRow(for: user)
+                            if index != managedUsers.count - 1 {
+                                Divider().padding(.leading, 56)
+                            }
                         }
                     }
                 }
+                .cardStyle(colorScheme: colorScheme)
             }
-            .cardStyle(colorScheme: colorScheme)
         }
-    }
 
-    private var manageableEmployeeUsers: [User] {
-        // Show ALL employee roles from backend (admin, manager, officer).
-        // The role filter picker lets the admin narrow down to a specific role.
-        adminVM.users
-    }
-
-    private var employeeBranchOptions: [String] {
-        Set(
-            manageableEmployeeUsers
-                .map(\.branch)
-                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty && $0 != "Unassigned" }
-        )
-        .sorted()
-    }
-
-    private var filteredEmployeeUsers: [User] {
-        manageableEmployeeUsers.filter { user in
-            let matchesBranch = selectedEmployeeBranch == "All Banks" || user.branch == selectedEmployeeBranch
-            let matchesRole = selectedEmployeeRoleFilter.matches(user.role)
-            let matchesSearch = userManagementSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-                user.name.localizedCaseInsensitiveContains(userManagementSearchText) ||
-                user.email.localizedCaseInsensitiveContains(userManagementSearchText) ||
-                user.branch.localizedCaseInsensitiveContains(userManagementSearchText) ||
-                user.id.localizedCaseInsensitiveContains(userManagementSearchText)
-            return matchesBranch && matchesRole && matchesSearch
-        }
-    }
-
-    private var filteredDstUsers: [User] {
-        adminVM.dstUsers.filter { user in
-            userManagementSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-            user.name.localizedCaseInsensitiveContains(userManagementSearchText) ||
-            user.email.localizedCaseInsensitiveContains(userManagementSearchText) ||
-            user.branch.localizedCaseInsensitiveContains(userManagementSearchText) ||
-            user.id.localizedCaseInsensitiveContains(userManagementSearchText)
-        }
-    }
-
-    private var managedUsers: [User] {
-        switch userManagementSegment {
-        case .employees:
-            return filteredEmployeeUsers
-        case .dsts:
-            return filteredDstUsers
-        }
-    }
-
-    private var managedActiveCount: Int {
-        managedUsers.filter { $0.isActive }.count
-    }
-
-    private func userManagementFilterPill(title: String, systemImage: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: systemImage)
-                .font(.system(size: 12, weight: .semibold))
-            Text(title)
-                .font(Theme.Typography.caption)
-                .lineLimit(1)
-            Image(systemName: "chevron.down")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(.secondary)
-        }
-        .foregroundStyle(.primary)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
-        .clipShape(Capsule())
-    }
-
-    private func userManagementRow(for user: User) -> some View {
-        HStack(spacing: Theme.Spacing.md) {
-            ZStack {
-                Circle()
-                    .fill(user.isActive ? Theme.Colors.primary.opacity(0.12) : Theme.Colors.neutral.opacity(0.12))
-                    .frame(width: 36, height: 36)
-                Text(user.initials)
-                    .font(Theme.Typography.caption2)
-                    .foregroundStyle(user.isActive ? Theme.Colors.primary : Theme.Colors.neutral)
+        private var managedUsers: [User] {
+            adminVM.users.filter { user in
+                let matchesBranch = selectedEmployeeBranch == "All Banks" || user.branch == selectedEmployeeBranch
+                let matchesRole = selectedEmployeeRoleFilter.matches(user.role)
+                let matchesSearch = userManagementSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+                    user.name.localizedCaseInsensitiveContains(userManagementSearchText) ||
+                    user.email.localizedCaseInsensitiveContains(userManagementSearchText) ||
+                    user.branch.localizedCaseInsensitiveContains(userManagementSearchText) ||
+                    user.id.localizedCaseInsensitiveContains(userManagementSearchText)
+                return matchesBranch && matchesRole && matchesSearch
             }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(user.name)
-                    .font(Theme.Typography.subheadline)
-                    .fontWeight(.medium)
-                Text("\(user.role.displayName) · \(user.branch)")
+        }
+
+        private var employeeBranchOptions: [String] {
+            Set(
+                adminVM.users
+                    .map(\.branch)
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                    .filter { !$0.isEmpty && $0 != "Unassigned" }
+            )
+            .sorted()
+        }
+
+        private var managedActiveCount: Int {
+            managedUsers.filter { $0.isActive }.count
+        }
+
+        private func userManagementFilterPill(title: String, systemImage: String) -> some View {
+            HStack(spacing: 8) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 12, weight: .semibold))
+                Text(title)
                     .font(Theme.Typography.caption)
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .bold))
                     .foregroundStyle(.secondary)
-                Text(user.email)
-                    .font(Theme.Typography.caption2)
-                    .foregroundStyle(.tertiary)
             }
-            Spacer()
-            Button {
-                if userManagementSegment == .employees {
-                    editingUser = user
-                } else {
-                    editingDstUser = user
+            .foregroundStyle(.primary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+            .clipShape(Capsule())
+        }
+
+        private func userManagementRow(for user: User) -> some View {
+            HStack(spacing: Theme.Spacing.md) {
+                ZStack {
+                    Circle()
+                        .fill(user.isActive ? Theme.Colors.primary.opacity(0.12) : Theme.Colors.neutral.opacity(0.12))
+                        .frame(width: 36, height: 36)
+                    Text(user.initials)
+                        .font(Theme.Typography.caption2)
+                        .foregroundStyle(user.isActive ? Theme.Colors.primary : Theme.Colors.neutral)
                 }
-            } label: {
-                Image(systemName: "pencil")
-                    .font(.system(size: 16))
-                    .foregroundStyle(Theme.Colors.primary)
-            }
-            .buttonStyle(.plain)
-
-            Button {
-                adminVM.toggleUserStatus(user)
-            } label: {
-                Image(systemName: user.isActive ? "person.slash" : "person.badge.plus")
-                    .font(.system(size: 16))
-                    .foregroundStyle(user.isActive ? Theme.Colors.critical : Theme.Colors.success)
-            }
-            .buttonStyle(.plain)
-
-            if userManagementSegment == .dsts {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(user.name)
+                        .font(Theme.Typography.subheadline)
+                        .fontWeight(.medium)
+                    Text("\(user.role.displayName) · \(user.branch)")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(.secondary)
+                    Text(user.email)
+                        .font(Theme.Typography.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                Spacer()
                 Button {
-                    dstUserPendingRemoval = user
+                    editingUser = user
                 } label: {
-                    Image(systemName: "trash")
+                    Image(systemName: "pencil")
                         .font(.system(size: 16))
-                        .foregroundStyle(Theme.Colors.critical)
+                        .foregroundStyle(Theme.Colors.primary)
                 }
                 .buttonStyle(.plain)
-            }
 
-            GenericBadge(
-                text: user.isActive ? "Active" : "Inactive",
-                color: user.isActive ? Theme.Colors.success : Theme.Colors.neutral
-            )
+                Button {
+                    adminVM.toggleUserStatus(user)
+                } label: {
+                    Image(systemName: user.isActive ? "person.slash" : "person.badge.plus")
+                        .font(.system(size: 16))
+                        .foregroundStyle(user.isActive ? Theme.Colors.critical : Theme.Colors.success)
+                }
+                .buttonStyle(.plain)
+
+                GenericBadge(
+                    text: user.isActive ? "Active" : "Inactive",
+                    color: user.isActive ? Theme.Colors.success : Theme.Colors.neutral
+                )
+            }
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.vertical, 10)
         }
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, 10)
-    }
 
     // MARK: - 2. Policy Configuration
     private var policyConfigContent: some View {

@@ -100,6 +100,8 @@ struct ManagerDstView: View {
 
         return VStack(alignment: .leading, spacing: 10) {
             sectionHeader(title: "Overview", icon: "person.2.fill")
+                .opacity(0.7)
+                .scaleEffect(0.95, anchor: .leading)
 
             HStack(spacing: 10) {
                 statCard(
@@ -130,33 +132,36 @@ struct ManagerDstView: View {
     }
 
     private func statCard(label: String, value: String, icon: String, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(color.opacity(0.10))
-                    .frame(width: 32, height: 32)
+        VStack(alignment: .leading, spacing: 6) { // Reduced spacing
+            HStack(alignment: .top) {
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(color)
+                    .font(.system(size: 12, weight: .semibold)) // Smaller icon
+                    .foregroundStyle(color.opacity(0.8))
+                Spacer()
             }
-            Text(value)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
-                .foregroundStyle(color)
-                .minimumScaleFactor(0.6)
-                .lineLimit(1)
-            Text(label)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .tracking(0.3)
+            
+            VStack(alignment: .leading, spacing: 1) {
+                Text(value)
+                    .font(.system(size: 18, weight: .semibold, design: .rounded)) // Reduced from 22 & Bold to 18 & Semibold
+                    .foregroundStyle(.primary) // Use primary text color for a "lighter" look than the accent color
+                    .minimumScaleFactor(0.8)
+                    .lineLimit(1)
+                
+                Text(label)
+                    .font(.system(size: 10, weight: .medium)) // Smaller label
+                    .foregroundStyle(.tertiary) // Lighter gray
+                    .textCase(.uppercase)
+                    .tracking(0.2)
+            }
         }
-        .padding(12)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10) // Tighter vertical padding
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(surface)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
+        .background(surface.opacity(0.5)) // Lighter surface appearance
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md)) // Smaller radius for smaller cards
         .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(border, lineWidth: 1)
+            RoundedRectangle(cornerRadius: Theme.Radius.md)
+                .stroke(border.opacity(0.5), lineWidth: 0.5) // Thinner, lighter border
         )
     }
 
@@ -258,11 +263,13 @@ struct ManagerDstView: View {
 
     // MARK: — Section Header (matches Dashboard)
 
-    private func sectionHeader(title: String, icon: String) -> some View {
+    private func sectionHeader(title: String, icon: String?) -> some View {
         HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(primary)
+            if icon! == nil {
+                Image(systemName: icon ?? "person.2.fill")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(primary)
+            }
             Text(title.uppercased())
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(.secondary)

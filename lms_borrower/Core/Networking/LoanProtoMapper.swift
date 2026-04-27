@@ -70,6 +70,7 @@ extension BorrowerLoanApplication {
             requestedAmount: p.requestedAmount,
             tenureMonths: Int(p.tenureMonths),
             status: .from(proto: p.status),
+            escalationReason: p.escalationReason,
             offeredInterestRate: p.offeredInterestRate,
             createdAt: p.createdAt,
             updatedAt: p.updatedAt,
@@ -205,7 +206,7 @@ fileprivate extension DocumentRequirementType {
 }
 
 @available(iOS 18.0, *)
-fileprivate extension LoanApplicationStatus {
+extension LoanApplicationStatus {
     static func from(proto value: Loan_V1_LoanApplicationStatus) -> LoanApplicationStatus {
         switch value {
         case .draft: return .draft

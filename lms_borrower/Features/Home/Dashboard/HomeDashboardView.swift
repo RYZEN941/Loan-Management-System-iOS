@@ -782,7 +782,6 @@ final class HomeDashboardViewModel: ObservableObject {
             let applicationsById = Dictionary(uniqueKeysWithValues: applications.map { ($0.id, $0) })
             let schedules = try await loadSchedules(for: loans)
             let activeApplicationIDs = Set(loans.map(\.applicationId))
-            hasAnyLoanRecord = !loans.isEmpty
             credibilityScore = profile.cibilScore
 
             inProgressApplications = applications
@@ -806,6 +805,7 @@ final class HomeDashboardViewModel: ObservableObject {
             .sorted { lhs, rhs in
                 parseDate(lhs.application?.updatedAt ?? "") > parseDate(rhs.application?.updatedAt ?? "")
             }
+            hasAnyLoanRecord = !activeLoans.isEmpty
 
             nextEMI = buildNextEMI(
                 loans: loans,

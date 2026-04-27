@@ -20,7 +20,7 @@ enum AppRoute: Hashable {
     
     // Tracking
     case detailedTracking(BorrowerLoanApplication)
-    case rejectionReason
+    case rejectionReason(BorrowerLoanApplication)
     
     // Feature 7: EMI & Loan Management
     case emiCalculator

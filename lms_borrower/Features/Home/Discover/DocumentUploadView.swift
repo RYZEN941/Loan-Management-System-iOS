@@ -392,6 +392,7 @@ struct DocumentUploadView: View {
                 requestedAmount: "250000",
                 tenureMonths: 24,
                 status: .submitted,
+                escalationReason: "",
                 offeredInterestRate: "10.5",
                 createdAt: "",
                 updatedAt: "",

@@ -171,6 +171,29 @@ final class LoanGRPCClient: LoanServiceProtocol {
         }
     }
 
+    func updateLoanApplicationStatus(
+        applicationId: String,
+        status: LoanApplicationStatus,
+        escalationReason: String?
+    ) async throws {
+        var request = Loan_V1_UpdateLoanApplicationStatusRequest()
+        request.applicationID = applicationId
+        request.status = status.proto
+        if let escalationReason, !escalationReason.isEmpty {
+            request.escalationReason = escalationReason
+        }
+
+        do {
+            let (options, metadata) = try authContext()
+            _ = try await client.updateLoanApplicationStatus(
+                request: .init(message: request, metadata: metadata),
+                options: options
+            )
+        } catch {
+            throw LoanError.from(error)
+        }
+    }
+
     func addApplicationDocument(
         applicationId: String,
         borrowerProfileId: String,
@@ -191,6 +214,24 @@ final class LoanGRPCClient: LoanServiceProtocol {
                 options: options
             )
             return BorrowerApplicationDocument.from(proto: response.document)
+        } catch {
+            throw LoanError.from(error)
+        }
+    }
+
+    func createLoan(applicationId: String, principalAmount: String) async throws -> ActiveLoan {
+        var request = Loan_V1_CreateLoanRequest()
+        request.applicationID = applicationId
+        request.principalAmount = principalAmount
+        request.status = .active
+
+        do {
+            let (options, metadata) = try authContext()
+            let response = try await client.createLoan(
+                request: .init(message: request, metadata: metadata),
+                options: options
+            )
+            return ActiveLoan.from(proto: response.loan)
         } catch {
             throw LoanError.from(error)
         }

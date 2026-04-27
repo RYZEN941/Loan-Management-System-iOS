@@ -84,7 +84,7 @@ struct MainTabView: View {
         case .submitConfirmation(let application): SubmitConfirmationView(application: application)
         case .draftApplications: DraftApplicationsView()
         case .detailedTracking(let application): ApplicationTrackingView(application: application)
-        case .rejectionReason: RejectionStatusView()
+        case .rejectionReason(let application): RejectionStatusView(application: application)
         case .emiCalculator: EMICalculatorView()
         case .activeLoanDetails(let application): ActiveLoanDetailsView(application: application)
         case .amortisationSchedule: AmortisationScheduleView()

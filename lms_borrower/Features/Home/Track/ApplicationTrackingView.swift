@@ -20,6 +20,7 @@ struct ApplicationTrackingView: View {
 
     @StateObject private var viewModel = TrackViewModel()
     @State private var currentApplication: BorrowerLoanApplication
+    @State private var showSanctionLetter = false
 
     init(application: BorrowerLoanApplication) {
         self.application = application
@@ -44,8 +45,13 @@ struct ApplicationTrackingView: View {
                 state: managerState
             ),
             TimelineStepItem(
+                title: "Sanction Letter",
+                detail: "Review the sanction letter in the borrower app and accept the offered terms.",
+                state: sanctionLetterState
+            ),
+            TimelineStepItem(
                 title: "Disbursement",
-                detail: "Loan ledger is created and funds are ready to be released.",
+                detail: "Disbursal is completed after the sanction letter is accepted.",
                 state: disbursementState
             )
         ]
@@ -61,6 +67,10 @@ struct ApplicationTrackingView: View {
                         .font(.footnote)
                         .foregroundColor(.red)
                         .padding(.horizontal, 20)
+                }
+
+                if currentApplication.status == .managerApproved {
+                    sanctionLetterCallout
                 }
 
                 VStack(alignment: .leading, spacing: 0) {
@@ -81,6 +91,12 @@ struct ApplicationTrackingView: View {
         .task {
             viewModel.fetchApplicationDetail(applicationId: currentApplication.id)
         }
+        .sheet(isPresented: $showSanctionLetter) {
+            SanctionLetterReviewView(application: currentApplication) {
+                let updated = try await viewModel.acceptSanctionLetter(for: currentApplication)
+                currentApplication = updated
+            }
+        }
         .onReceive(viewModel.$selectedApplication.compactMap { $0 }) { detailed in
             if detailed.id == currentApplication.id {
                 currentApplication = detailed
@@ -96,6 +112,9 @@ struct ApplicationTrackingView: View {
                     .foregroundColor(.secondary)
                 Text(currentApplication.referenceNumber)
                     .font(.headline)
+                Text(BorrowerSanctionLetterSupport.statusTitle(for: currentApplication))
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(currentApplication.status == .managerApproved ? .orange : .green)
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 6) {
@@ -116,6 +135,33 @@ struct ApplicationTrackingView: View {
         )
         .padding(.horizontal, 20)
         .padding(.top, 20)
+    }
+
+    private var sanctionLetterCallout: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Sanction letter ready")
+                .font(.headline)
+            Text("Your manager has approved this application. Review the sanction letter and accept it to trigger real loan creation and disbursal.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button {
+                showSanctionLetter = true
+            } label: {
+                Text("Review Sanction Letter")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(DS.primary)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+        }
+        .padding(20)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .padding(.horizontal, 20)
     }
 
     private var submissionState: TrackingStepState {
@@ -146,10 +192,18 @@ struct ApplicationTrackingView: View {
         }
     }
 
+    private var sanctionLetterState: TrackingStepState {
+        if currentApplication.status == .managerApproved {
+            return .current
+        }
+        if currentApplication.status == .disbursed {
+            return .completed
+        }
+        return .pending
+    }
+
     private var disbursementState: TrackingStepState {
         switch currentApplication.status {
-        case .managerApproved:
-            return .current
         case .disbursed:
             return .completed
         default:

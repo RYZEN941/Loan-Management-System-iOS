@@ -732,8 +732,17 @@ class ApplicationsViewModel: ObservableObject {
                     status: nextStatus,
                     escalationReason: nil
                 )
+                // If officerReview succeeded, silently chain officerApproved immediately
+                // so both backend steps happen in a single user action.
+                if nextStatus == .officerReview {
+                    try? await LoanAPI().updateLoanApplicationStatus(
+                        applicationID: applicationID,
+                        status: .officerApproved,
+                        escalationReason: nil
+                    )
+                }
                 try await refreshApplications(selectApplicationID: applicationID, autoSelectFirst: true)
-                actionMessage = successMessage
+                actionMessage = "Application sent to Manager for review"
                 showActionAlert = true
                 return
             } catch {

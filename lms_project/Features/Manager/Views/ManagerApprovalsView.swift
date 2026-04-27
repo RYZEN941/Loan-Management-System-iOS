@@ -316,7 +316,6 @@ struct ManagerApprovalsView: View {
                         editTermsSummarySection(app)   // ← Manager can edit terms
                         documentsSummarySection(app)
                         sanctionLetterSection(app)
-                        verificationSection(app)
                         internalRemarksSection(app)
                         conversationSection(app)
                     }
@@ -997,19 +996,6 @@ struct ManagerApprovalsView: View {
     }
 
     // MARK: - Verification
-    private func verificationSection(_ app: LoanApplication) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "Identity & Fraud Checks", icon: "checkmark.shield.fill")
-                .description("AI-powered verification results for identity and financial documents.")
-            ForEach(app.verification) { item in VerificationRow(item: item) }
-        }
-        .padding(18)
-        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(ManagerTheme.Colors.surface(colorScheme)))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(Theme.Colors.primary.opacity(0.20), lineWidth: 1.5)
-        )
-    }
 
     // MARK: - Conversation
     private func conversationSection(_ app: LoanApplication) -> some View {

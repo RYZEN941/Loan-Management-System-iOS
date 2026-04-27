@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/app"
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/audit"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/config"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/db"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/integrations/r2"
@@ -55,6 +56,8 @@ func Run() error {
 
 	queries := generated.New(pgPool)
 
+	auditService := audit.NewService(queries)
+
 	lis, err := net.Listen("tcp", ":"+cfg.GRPCPort)
 	if err != nil {
 		return fmt.Errorf("listen on grpc port %s: %w", cfg.GRPCPort, err)
@@ -66,7 +69,7 @@ func Run() error {
 	dstService := dst.NewService(queries)
 	sandboxKYCClient := sandbox.NewKYCClient(cfg.SandboxBaseURL, cfg.SandboxAPIKey, cfg.SandboxSecret)
 	kycService := kyc.NewService(pgPool, queries, sandboxKYCClient)
-	loanService := loan.NewService(queries)
+	loanService := loan.NewService(queries, auditService)
 	r2Client, err := r2.NewClient(context.Background(), cfg.R2AccountID, cfg.R2AccessKeyID, cfg.R2SecretAccessKey, cfg.R2BucketName, cfg.R2PublicBaseURL)
 	if err != nil {
 		return fmt.Errorf("failed to initialize r2 client: %w", err)
@@ -111,8 +114,8 @@ func Run() error {
 		"/admin.v1.AdminService/UpdateEmployeeAccount":                {"admin"},
 		"/admin.v1.AdminService/DeleteEmployeeAccount":                {"admin"},
 		"/admin.v1.AdminService/AssignEmployeeBranch":                 {"admin"},
-"/auth.v1.AuthService/GetBorrowerProfile":          {"borrower", "officer", "manager", "admin", "dst"},
-	"/auth.v1.AuthService/GetUser":                    {"borrower", "officer", "manager", "admin", "dst"},
+		"/auth.v1.AuthService/GetBorrowerProfile":                      {"borrower", "officer", "manager", "admin", "dst"},
+		"/auth.v1.AuthService/GetUser":                                 {"borrower", "officer", "manager", "admin", "dst"},
 		"/dst.v1.DstService/GetDstAccount":                            {"manager", "admin"},
 		"/dst.v1.DstService/ListDstAccounts":                          {"manager", "admin"},
 		"/auth.v1.AuthService/SetupTOTP":                              {"borrower", "officer", "manager", "admin", "dst"},
@@ -167,13 +170,11 @@ func Run() error {
 		"/chat.v1.ChatService/ListRoomMessages":                       {"borrower", "officer", "manager", "admin", "dst"},
 		"/chat.v1.ChatService/SendMessage":                            {"borrower", "officer", "manager", "admin", "dst"},
 		"/chat.v1.ChatService/SubscribeRoomMessages":                  {"borrower", "officer", "manager", "admin", "dst"},
-		// Example future loan roles
-		// "/loan.v1.LoanService/ApproveLoan": {"officer", "manager", "admin"},
 	}
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			grpcinterceptors.LoggingUnaryInterceptor(),
+			grpcinterceptors.LoggingUnaryInterceptor(auditService),
 			grpcinterceptors.JWTUnaryInterceptor(grpcinterceptors.JWTConfig{
 				SigningKey:    []byte(cfg.JWTKey),
 				RedisClient:   redisClient,

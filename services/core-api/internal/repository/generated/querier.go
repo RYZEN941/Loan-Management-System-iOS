@@ -20,6 +20,8 @@ type Querier interface {
 	CreateAdminUser(ctx context.Context, arg CreateAdminUserParams) (User, error)
 	CreateApplicationCoapplicant(ctx context.Context, arg CreateApplicationCoapplicantParams) (ApplicationCoapplicant, error)
 	CreateApplicationDocument(ctx context.Context, arg CreateApplicationDocumentParams) (ApplicationDocument, error)
+	// audit.sql
+	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) (AuditLog, error)
 	CreateBankBranch(ctx context.Context, arg CreateBankBranchParams) (BankBranch, error)
 	CreateBorrowerAadhaarKycHistory(ctx context.Context, arg CreateBorrowerAadhaarKycHistoryParams) (BorrowerAadhaarKycHistory, error)
 	CreateBorrowerPanKycHistory(ctx context.Context, arg CreateBorrowerPanKycHistoryParams) (BorrowerPanKycHistory, error)
@@ -50,6 +52,7 @@ type Querier interface {
 	GetAdminProfileByUserID(ctx context.Context, userID pgtype.UUID) (AdminProfile, error)
 	GetApplicationCollateralByApplicationID(ctx context.Context, applicationID pgtype.UUID) (ApplicationCollateral, error)
 	GetApplicationDocumentByID(ctx context.Context, id pgtype.UUID) (ApplicationDocument, error)
+	GetAuditLogsByResource(ctx context.Context, arg GetAuditLogsByResourceParams) ([]AuditLog, error)
 	GetBankBranchByID(ctx context.Context, id pgtype.UUID) (BankBranch, error)
 	GetBorrowerProfileByID(ctx context.Context, id pgtype.UUID) (BorrowerProfile, error)
 	GetBorrowerProfileByUserID(ctx context.Context, userID pgtype.UUID) (BorrowerProfile, error)
@@ -88,6 +91,7 @@ type Querier interface {
 	ListAllLoans(ctx context.Context, arg ListAllLoansParams) ([]Loan, error)
 	ListApplicationCoapplicants(ctx context.Context, applicationID pgtype.UUID) ([]ApplicationCoapplicant, error)
 	ListApplicationDocumentsByApplicationID(ctx context.Context, applicationID pgtype.UUID) ([]ApplicationDocument, error)
+	ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error)
 	ListBankBranches(ctx context.Context, arg ListBankBranchesParams) ([]BankBranch, error)
 	ListBorrowerAadhaarKycHistory(ctx context.Context, arg ListBorrowerAadhaarKycHistoryParams) ([]BorrowerAadhaarKycHistory, error)
 	// Eligibility queries by role

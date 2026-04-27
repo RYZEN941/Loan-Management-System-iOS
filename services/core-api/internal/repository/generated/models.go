@@ -1047,6 +1047,21 @@ type ApplicationDocument struct {
 	UpdatedAt          pgtype.Timestamptz         `json:"updated_at"`
 }
 
+type AuditLog struct {
+	ID           pgtype.UUID        `json:"id"`
+	ActorID      pgtype.UUID        `json:"actor_id"`
+	ActorRole    NullUserRole       `json:"actor_role"`
+	Action       string             `json:"action"`
+	ResourceType pgtype.Text        `json:"resource_type"`
+	ResourceID   pgtype.UUID        `json:"resource_id"`
+	Payload      []byte             `json:"payload"`
+	Changes      []byte             `json:"changes"`
+	StatusCode   pgtype.Text        `json:"status_code"`
+	IpAddress    pgtype.Text        `json:"ip_address"`
+	UserAgent    pgtype.Text        `json:"user_agent"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
 type BankBranch struct {
 	ID            pgtype.UUID        `json:"id"`
 	Name          string             `json:"name"`

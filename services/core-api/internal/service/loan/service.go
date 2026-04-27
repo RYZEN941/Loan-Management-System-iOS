@@ -54,10 +54,11 @@ type Service interface {
 
 type service struct {
 	queries generated.Querier
+	audit   interceptors.AuditService
 }
 
-func NewService(queries generated.Querier) Service {
-	return &service{queries: queries}
+func NewService(queries generated.Querier, audit interceptors.AuditService) Service {
+	return &service{queries: queries, audit: audit}
 }
 
 func (s *service) CreateLoanProduct(ctx context.Context, req *loanv1.CreateLoanProductRequest) (*loanv1.CreateLoanProductResponse, error) {
@@ -596,6 +597,24 @@ case generated.LoanProductCategoryVEHICLE:
 	}); err != nil {
 		return nil, status.Error(codes.Internal, "failed to update application status")
 	}
+
+	// Audit Log for status change
+	if s.audit != nil {
+		s.audit.Record(ctx, interceptors.AuditEntry{
+			ActorID:      callerUserID,
+			ActorRole:    role,
+			Action:       "LOAN_APPLICATION_STATUS_CHANGED",
+			ResourceType: "LOAN_APPLICATION",
+			ResourceID:   uuid.UUID(appRow.ID.Bytes),
+			Changes: map[string]any{
+				"status": map[string]string{
+					"old": string(appRow.Status),
+					"new": string(statusValue),
+				},
+			},
+		})
+	}
+
 	if strings.TrimSpace(req.GetEscalationReason()) != "" {
 		if err := s.queries.UpdateLoanApplicationEscalation(ctx, generated.UpdateLoanApplicationEscalationParams{
 			ID:               appRow.ID,

@@ -1272,34 +1272,155 @@ struct ManagerApprovalsView: View {
 
     private var assignOfficerSheet: some View {
         NavigationStack {
-            Form {
+            Group {
                 if let app = applicationsVM.selectedApplication {
-                    Section("Application") {
-                        LabeledContent("Application ID", value: app.id)
-                        LabeledContent("Branch", value: app.branch)
-                    }
+                    VStack(spacing: 0) {
 
-                    Section("Assign to Loan Officer") {
+                        // ── Application context banner ──────────────────
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(spacing: 10) {
+                                ZStack {
+                                    Circle().fill(primary.opacity(0.12)).frame(width: 36, height: 36)
+                                    Text(app.borrower.name.prefix(1))
+                                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        .foregroundStyle(primary)
+                                }
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(app.borrower.name)
+                                        .font(.system(size: 14, weight: .semibold))
+                                    Text("ID: \(app.id) · \(app.branch)")
+                                        .font(.system(size: 11, design: .monospaced))
+                                        .foregroundStyle(.tertiary)
+                                }
+                                Spacer()
+                                Text("Currently: \(applicationsVM.officerDisplayName(for: app.assignedTo))")
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 14)
+                        .background(ManagerTheme.Colors.surface(colorScheme))
+
+                        Divider()
+
+                        // ── Officer list ────────────────────────────────
                         if applicationsVM.availableBranchOfficers.isEmpty {
-                            Text(applicationsVM.officerDirectoryUnavailableMessage ?? "Loan officer options are currently unavailable.")
-                                .foregroundStyle(.secondary)
+                            VStack(spacing: 14) {
+                                Image(systemName: "person.slash")
+                                    .font(.system(size: 36, weight: .thin))
+                                    .foregroundStyle(primary.opacity(0.35))
+                                Text(applicationsVM.officerDirectoryUnavailableMessage
+                                     ?? "No loan officers found for this branch.")
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 30)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background(ManagerTheme.Colors.background(colorScheme))
                         } else {
-                            Picker("Loan Officer", selection: $selectedOfficerID) {
-                                ForEach(applicationsVM.availableBranchOfficers) { officer in
-                                    Text(officer.name).tag(officer.id)
+                            ScrollView {
+                                LazyVStack(spacing: 0) {
+                                    ForEach(applicationsVM.availableBranchOfficers) { officer in
+                                        let isSelected = selectedOfficerID == officer.id
+                                        let isCurrent  = app.assignedTo == officer.id
+
+                                        Button {
+                                            withAnimation(.spring(response: 0.25)) {
+                                                selectedOfficerID = officer.id
+                                            }
+                                        } label: {
+                                            HStack(spacing: 14) {
+                                                // Avatar
+                                                ZStack {
+                                                    Circle()
+                                                        .fill(isSelected ? primary : primary.opacity(0.08))
+                                                        .frame(width: 40, height: 40)
+                                                    Text(officer.name.prefix(1))
+                                                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                                                        .foregroundStyle(isSelected ? .white : primary)
+                                                }
+
+                                                // Name & branch
+                                                VStack(alignment: .leading, spacing: 3) {
+                                                    HStack(spacing: 6) {
+                                                        Text(officer.name)
+                                                            .font(.system(size: 14, weight: .semibold))
+                                                            .foregroundStyle(.primary)
+                                                        if isCurrent {
+                                                            Text("Current")
+                                                                .font(.system(size: 9, weight: .bold))
+                                                                .foregroundStyle(primary)
+                                                                .padding(.horizontal, 6)
+                                                                .padding(.vertical, 2)
+                                                                .background(primary.opacity(0.1))
+                                                                .clipShape(Capsule())
+                                                        }
+                                                    }
+                                                    if !officer.branchName.isEmpty {
+                                                        Text(officer.branchName)
+                                                            .font(.system(size: 11))
+                                                            .foregroundStyle(.secondary)
+                                                    }
+                                                }
+
+                                                Spacer()
+
+                                                // Checkmark
+                                                if isSelected {
+                                                    Image(systemName: "checkmark.circle.fill")
+                                                        .foregroundStyle(primary)
+                                                        .font(.system(size: 18))
+                                                        .transition(.scale.combined(with: .opacity))
+                                                }
+                                            }
+                                            .padding(.horizontal, 18)
+                                            .padding(.vertical, 12)
+                                            .background(
+                                                isSelected
+                                                    ? primary.opacity(0.06)
+                                                    : ManagerTheme.Colors.background(colorScheme)
+                                            )
+                                        }
+                                        .buttonStyle(.plain)
+
+                                        Divider().padding(.leading, 72)
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    Section {
-                        Button("Reassign") {
-                            let targetOfficerID = selectedOfficerID.trimmingCharacters(in: .whitespacesAndNewlines)
-                            guard !targetOfficerID.isEmpty else { return }
-                            applicationsVM.assignOfficer(applicationId: app.id, officerUserId: targetOfficerID)
-                            showAssignOfficerSheet = false
+                        // ── Confirm button ──────────────────────────────
+                        VStack(spacing: 0) {
+                            Divider()
+                            Button {
+                                let targetID = selectedOfficerID.trimmingCharacters(in: .whitespacesAndNewlines)
+                                guard !targetID.isEmpty else { return }
+                                applicationsVM.assignOfficer(applicationId: app.id, officerUserId: targetID)
+                                showAssignOfficerSheet = false
+                            } label: {
+                                Label("Confirm Reassignment", systemImage: "person.badge.plus")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 50)
+                                    .background(
+                                        selectedOfficerID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                            || applicationsVM.availableBranchOfficers.isEmpty
+                                            ? Color.secondary.opacity(0.3)
+                                            : primary
+                                    )
+                                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(selectedOfficerID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                      || applicationsVM.availableBranchOfficers.isEmpty)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 14)
                         }
-                        .disabled(selectedOfficerID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || applicationsVM.availableBranchOfficers.isEmpty)
+                        .background(ManagerTheme.Colors.surface(colorScheme))
                     }
                 }
             }
@@ -1311,7 +1432,7 @@ struct ManagerApprovalsView: View {
                 }
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
     }
 }
 

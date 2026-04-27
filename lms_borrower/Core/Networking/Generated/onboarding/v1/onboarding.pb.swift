@@ -135,6 +135,9 @@ public struct Onboarding_V1_CompleteBorrowerOnboardingRequest: Sendable {
 
   public var profileCompletenessPercent: Int32 = 0
 
+  /// Device ID for the refresh token minted on activation.
+  public var deviceID: String = String()
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -146,6 +149,13 @@ public struct Onboarding_V1_CompleteBorrowerOnboardingResponse: Sendable {
   // methods supported on all messages.
 
   public var success: Bool = false
+
+  /// Fresh token pair issued after activation.
+  /// The new access token has is_active=true, replacing the stale
+  /// is_active=false token the borrower held during onboarding.
+  public var accessToken: String = String()
+
+  public var refreshToken: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -182,6 +192,8 @@ public struct Onboarding_V1_UpdateBorrowerProfileRequest: Sendable {
 
   public var profileCompletenessPercent: Int32 = 0
 
+  public var cibilScore: Int32 = 0
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -213,7 +225,7 @@ extension Onboarding_V1_BorrowerEmploymentType: SwiftProtobuf._ProtoNameProvidin
 
 extension Onboarding_V1_CompleteBorrowerOnboardingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CompleteBorrowerOnboardingRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}first_name\0\u{3}last_name\0\u{3}date_of_birth\0\u{1}gender\0\u{3}address_line1\0\u{1}city\0\u{1}state\0\u{1}pincode\0\u{3}employment_type\0\u{3}monthly_income\0\u{3}profile_completeness_percent\0\u{3}borrower_user_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}first_name\0\u{3}last_name\0\u{3}date_of_birth\0\u{1}gender\0\u{3}address_line1\0\u{1}city\0\u{1}state\0\u{1}pincode\0\u{3}employment_type\0\u{3}monthly_income\0\u{3}profile_completeness_percent\0\u{3}borrower_user_id\0\u{4}\u{2}device_id\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -233,6 +245,7 @@ extension Onboarding_V1_CompleteBorrowerOnboardingRequest: SwiftProtobuf.Message
       case 10: try { try decoder.decodeSingularStringField(value: &self.monthlyIncome) }()
       case 11: try { try decoder.decodeSingularInt32Field(value: &self.profileCompletenessPercent) }()
       case 12: try { try decoder.decodeSingularStringField(value: &self.borrowerUserID) }()
+      case 14: try { try decoder.decodeSingularStringField(value: &self.deviceID) }()
       default: break
       }
     }
@@ -274,6 +287,9 @@ extension Onboarding_V1_CompleteBorrowerOnboardingRequest: SwiftProtobuf.Message
     }
     if !self.borrowerUserID.isEmpty {
       try visitor.visitSingularStringField(value: self.borrowerUserID, fieldNumber: 12)
+    }
+    if !self.deviceID.isEmpty {
+      try visitor.visitSingularStringField(value: self.deviceID, fieldNumber: 14)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -291,6 +307,7 @@ extension Onboarding_V1_CompleteBorrowerOnboardingRequest: SwiftProtobuf.Message
     if lhs.employmentType != rhs.employmentType {return false}
     if lhs.monthlyIncome != rhs.monthlyIncome {return false}
     if lhs.profileCompletenessPercent != rhs.profileCompletenessPercent {return false}
+    if lhs.deviceID != rhs.deviceID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -298,7 +315,7 @@ extension Onboarding_V1_CompleteBorrowerOnboardingRequest: SwiftProtobuf.Message
 
 extension Onboarding_V1_CompleteBorrowerOnboardingResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CompleteBorrowerOnboardingResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}success\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}success\0\u{3}access_token\0\u{3}refresh_token\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -307,6 +324,8 @@ extension Onboarding_V1_CompleteBorrowerOnboardingResponse: SwiftProtobuf.Messag
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularBoolField(value: &self.success) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.accessToken) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.refreshToken) }()
       default: break
       }
     }
@@ -316,11 +335,19 @@ extension Onboarding_V1_CompleteBorrowerOnboardingResponse: SwiftProtobuf.Messag
     if self.success != false {
       try visitor.visitSingularBoolField(value: self.success, fieldNumber: 1)
     }
+    if !self.accessToken.isEmpty {
+      try visitor.visitSingularStringField(value: self.accessToken, fieldNumber: 2)
+    }
+    if !self.refreshToken.isEmpty {
+      try visitor.visitSingularStringField(value: self.refreshToken, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Onboarding_V1_CompleteBorrowerOnboardingResponse, rhs: Onboarding_V1_CompleteBorrowerOnboardingResponse) -> Bool {
     if lhs.success != rhs.success {return false}
+    if lhs.accessToken != rhs.accessToken {return false}
+    if lhs.refreshToken != rhs.refreshToken {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -328,7 +355,7 @@ extension Onboarding_V1_CompleteBorrowerOnboardingResponse: SwiftProtobuf.Messag
 
 extension Onboarding_V1_UpdateBorrowerProfileRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UpdateBorrowerProfileRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}first_name\0\u{3}last_name\0\u{3}date_of_birth\0\u{1}gender\0\u{3}address_line1\0\u{1}city\0\u{1}state\0\u{1}pincode\0\u{3}employment_type\0\u{3}monthly_income\0\u{3}profile_completeness_percent\0\u{3}borrower_user_id\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}first_name\0\u{3}last_name\0\u{3}date_of_birth\0\u{1}gender\0\u{3}address_line1\0\u{1}city\0\u{1}state\0\u{1}pincode\0\u{3}employment_type\0\u{3}monthly_income\0\u{3}profile_completeness_percent\0\u{3}borrower_user_id\0\u{3}cibil_score\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -348,6 +375,7 @@ extension Onboarding_V1_UpdateBorrowerProfileRequest: SwiftProtobuf.Message, Swi
       case 10: try { try decoder.decodeSingularStringField(value: &self.monthlyIncome) }()
       case 11: try { try decoder.decodeSingularInt32Field(value: &self.profileCompletenessPercent) }()
       case 12: try { try decoder.decodeSingularStringField(value: &self.borrowerUserID) }()
+      case 13: try { try decoder.decodeSingularInt32Field(value: &self.cibilScore) }()
       default: break
       }
     }
@@ -390,6 +418,9 @@ extension Onboarding_V1_UpdateBorrowerProfileRequest: SwiftProtobuf.Message, Swi
     if !self.borrowerUserID.isEmpty {
       try visitor.visitSingularStringField(value: self.borrowerUserID, fieldNumber: 12)
     }
+    if self.cibilScore != 0 {
+      try visitor.visitSingularInt32Field(value: self.cibilScore, fieldNumber: 13)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -406,6 +437,7 @@ extension Onboarding_V1_UpdateBorrowerProfileRequest: SwiftProtobuf.Message, Swi
     if lhs.employmentType != rhs.employmentType {return false}
     if lhs.monthlyIncome != rhs.monthlyIncome {return false}
     if lhs.profileCompletenessPercent != rhs.profileCompletenessPercent {return false}
+    if lhs.cibilScore != rhs.cibilScore {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

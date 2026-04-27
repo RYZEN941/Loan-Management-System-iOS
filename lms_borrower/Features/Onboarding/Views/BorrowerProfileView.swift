@@ -168,8 +168,16 @@ struct BorrowerProfileView: View {
 
                 Task {
                     if await viewModel.submitBorrowerProfile() {
+                        if let accessToken = viewModel.newAccessToken,
+                           let refreshToken = viewModel.newRefreshToken,
+                           !accessToken.isEmpty, !refreshToken.isEmpty {
+                            var tokens = Auth_V1_AuthTokens()
+                            tokens.accessToken = accessToken
+                            tokens.refreshToken = refreshToken
+                            try? SessionManager.shared.startSession(tokens: tokens)
+                        }
                         await session.completeSessionFromBackend()
-                        session.lockForReauth()
+                        path.append(OnboardingRoute.complete)
                     }
                 }
             }

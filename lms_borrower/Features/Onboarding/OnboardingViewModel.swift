@@ -4,15 +4,18 @@ import Combine
 @available(iOS 18.0, *)
 @MainActor
 final class OnboardingViewModel: ObservableObject {
-    enum State {
+
+    public enum State {
         case idle
         case loading(String)
         case error(String)
         case success
     }
 
-    @Published var state: State = .idle
-    @Published var errorMessage: String?
+    @Published public var state: State = .idle
+    @Published public var errorMessage: String?
+
+    private let client = OnboardingGRPCClient()
 
     var firstName = ""
     var lastName = ""
@@ -25,7 +28,8 @@ final class OnboardingViewModel: ObservableObject {
     var employmentType: Onboarding_V1_BorrowerEmploymentType = .salaried
     var monthlyIncome = ""
 
-    private let client = OnboardingGRPCClient()
+    var newAccessToken: String?
+    var newRefreshToken: String?
 
     func submitBorrowerProfile() async -> Bool {
         state = .loading("Saving profile...")
@@ -44,6 +48,7 @@ final class OnboardingViewModel: ObservableObject {
             req.employmentType = employmentType
             req.monthlyIncome = monthlyIncome
             req.profileCompletenessPercent = 100
+            req.deviceID = try DeviceIDStore.shared.getOrCreate()
 
             let token = try TokenStore.shared.accessToken() ?? ""
             let (options, metadata) = AuthCallOptionsFactory.authenticated(accessToken: token)
@@ -55,6 +60,10 @@ final class OnboardingViewModel: ObservableObject {
             )
 
             if response.success {
+                if !response.accessToken.isEmpty && !response.refreshToken.isEmpty {
+                    newAccessToken = response.accessToken
+                    newRefreshToken = response.refreshToken
+                }
                 state = .success
                 return true
             }

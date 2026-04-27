@@ -93,14 +93,6 @@ final class SessionStore: ObservableObject {
         isAppUnlocked = true
     }
 
-    /// Locks the app for re-authentication without ending the session.
-    /// Used after onboarding to force an MFA step-up, which produces
-    /// fresh access tokens that reflect the updated `is_active` state.
-    func lockForReauth() {
-        isAppUnlocked = false
-        justLoggedIn = false
-    }
-
     func completeSessionFromBackend(contactIdentifier: String? = nil) async {
         if #available(iOS 18.0, *) {
             do {

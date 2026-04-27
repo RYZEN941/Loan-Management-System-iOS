@@ -150,7 +150,7 @@ func Run() error {
 		"/loan.v1.LoanService/AddApplicationDocument":                 {"borrower", "officer", "manager", "admin", "dst"},
 		"/loan.v1.LoanService/UpdateApplicationDocumentVerification":  {"officer", "manager", "admin"},
 		"/loan.v1.LoanService/AddBureauScore":                         {"officer", "manager", "admin"},
-		"/loan.v1.LoanService/CreateLoan":                             {"borrower", "manager", "admin"},
+		"/loan.v1.LoanService/CreateLoan":                             {"borrower", "officer", "manager", "admin", "dst"},
 		"/loan.v1.LoanService/GetLoan":                                {"borrower", "officer", "manager", "admin", "dst"},
 		"/loan.v1.LoanService/ListLoans":                              {"borrower", "officer", "manager", "admin", "dst"},
 		"/loan.v1.LoanService/AddEmiScheduleItem":                     {"manager", "admin"},

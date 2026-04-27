@@ -75,6 +75,10 @@ services:
       R2_SECRET_ACCESS_KEY: "ca0daffd428bb437e51cead338261ca3a9cac29bc7205a09af3f0bf932df973c"
       R2_BUCKET_NAME: "lms"
       R2_PUBLIC_BASE_URL: "https://lmscdn.chirag.codes"
+      RAZORPAY_KEY_ID: "rzp_test_84roUUOEPkHVpe"
+      RAZORPAY_KEY_SECRET: "piqd8Coc9LsERsVSYomDb03b"
+      RAZORPAY_WEBHOOK_SECRET: "secret"
+      HTTP_PORT: "8081"
     ports:
       - "18080:8080"
     depends_on:

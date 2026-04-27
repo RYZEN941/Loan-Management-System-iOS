@@ -134,14 +134,14 @@ struct LOApplicationsView: View {
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Applications")
-                        .font(.system(size: 20, weight: .bold))
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
                 }
                 Spacer()
                 Text("\(filteredLOApplications.count)")
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
                     .background(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.1))
                     .clipShape(Capsule())
             }
@@ -178,7 +178,7 @@ struct LOApplicationsView: View {
                 }
                 .padding(.horizontal, 16)
             }
-            .padding(.vertical, 8)
+            .padding(.vertical, 10)
 
             Divider()
 
@@ -260,6 +260,7 @@ struct LOApplicationsView: View {
                             HStack(alignment: .top, spacing: 20) {
                                 VStack(alignment: .leading, spacing: 20) {
                                     financialSection(app)
+                                    borrowerHistorySection(app)
                                     documentsSection(app)
                                     sanctionLetterSection(app)
                                 }
@@ -275,6 +276,7 @@ struct LOApplicationsView: View {
                         } else {
                             // Normal stacked layout
                             financialSection(app)
+                            borrowerHistorySection(app)
                             documentsSection(app)
                             sanctionLetterSection(app)
                             verificationSection(app)
@@ -395,54 +397,198 @@ struct LOApplicationsView: View {
             SectionHeader(title: "Financial Details", icon: "indianrupeesign.circle")
                 .description("Verified income, expenses, and credit risk assessment data.")
 
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 10) {
-                finCard("Monthly Income",  app.financials.monthlyIncome.currencyFormatted,  "arrow.up.circle",        .primary)
-                finCard("Annual Income",   app.financials.annualIncome.currencyFormatted,   "calendar",               .primary)
-                finCard("Existing EMI",    app.financials.existingEMI.currencyFormatted,    "arrow.down.circle",      .secondary)
-                finCard("CIBIL Score",     "\(app.financials.cibilScore)",                  "chart.bar",              cibilColor(app.financials.cibilScore))
-                finCard("DTI Ratio",       app.financials.dtiRatio.percentFormatted,        "percent",                dtiColor(app.financials.dtiRatio))
-                finCard("Bank Balance",    app.financials.bankBalance.currencyFormatted,     "building.columns",       .primary)
+            VStack(spacing: 8) {
+                HStack(spacing: 8) {
+                    finCard("Monthly Income",  app.financials.monthlyIncome.currencyFormatted,  "arrow.up.circle.fill",   .primary)
+                    finCard("Annual Income",   app.financials.annualIncome.currencyFormatted,   "calendar.circle.fill",  .primary)
+                    finCard("Existing EMI",    app.financials.existingEMI.currencyFormatted,    "arrow.down.circle.fill", Theme.Colors.warning)
+                }
+                HStack(spacing: 8) {
+                    finCard("CIBIL Score",     "\(app.financials.cibilScore)",                  "chart.bar.fill",         cibilColor(app.financials.cibilScore))
+                    finCard("DTI Ratio",       app.financials.dtiRatio.percentFormatted,        "percent",                dtiColor(app.financials.dtiRatio))
+                    finCard("Bank Balance",    app.financials.bankBalance.currencyFormatted,     "building.columns.fill",  Theme.Colors.success)
+                }
             }
         }
         .padding(16)
-        .background(RoundedRectangle(cornerRadius: Theme.Radius.lg)
-            .fill(Theme.Colors.adaptiveSurface(colorScheme)))
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                .fill(Theme.Colors.adaptiveSurface(colorScheme))
+        )
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+                .stroke(Theme.Colors.primary.opacity(0.20), lineWidth: 1.5)
         )
     }
 
     private func finCard(_ label: String, _ value: String, _ icon: String, _ tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 11))
-                    .foregroundStyle(tint.opacity(0.7))
-                Text(label)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            }
-            Text(value)
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(tint)
+                .frame(width: 4, height: 44)
+
+            Image(systemName: icon)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(tint)
+
+            Text(label)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .layoutPriority(1)
+
+            Spacer(minLength: 4)
+
+            Text(value)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundStyle(tint)
+                .layoutPriority(2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(10)
-        .background(Theme.Colors.adaptiveSurface(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(tint.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.sm)
-                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(tint.opacity(0.15), lineWidth: 1)
         )
     }
 
     private func cibilColor(_ s: Int)    -> Color { s >= 750 ? Theme.Colors.success : s >= 650 ? Theme.Colors.neutral : Theme.Colors.critical }
     private func dtiColor(_ r: Double)   -> Color { r <= 0.30 ? Theme.Colors.success : r <= 0.40 ? Theme.Colors.neutral : Theme.Colors.critical }
+
+    // ────────────────────────────────────────────────────────────────
+    // MARK: - Borrower History Section
+    // ────────────────────────────────────────────────────────────────
+
+    private func borrowerHistorySection(_ app: LoanApplication) -> some View {
+        let thisBank = sampleThisBankLoans(for: app)
+        let otherBanks = sampleOtherBankLoans(for: app)
+
+        return VStack(alignment: .leading, spacing: 14) {
+            SectionHeader(title: "Borrower History", icon: "clock.arrow.circlepath")
+                .description("Previous loans from this bank and other institutions.")
+
+            // ── This Bank ──
+            VStack(alignment: .leading, spacing: 8) {
+                historySubHeader("This Bank", icon: "building.columns.fill", color: Theme.Colors.primary)
+                if thisBank.isEmpty {
+                    Text("No previous loans with this bank.")
+                        .font(.system(size: 13)).foregroundStyle(.secondary)
+                        .padding(.leading, 4)
+                } else {
+                    ForEach(thisBank) { entry in
+                        historyRow(entry)
+                    }
+                }
+            }
+
+            Divider()
+
+            // ── Other Banks ──
+            VStack(alignment: .leading, spacing: 8) {
+                historySubHeader("Other Banks / NBFCs", icon: "building.2.fill", color: Color(hex: "#5E5CE6"))
+                if otherBanks.isEmpty {
+                    Text("No declared external loan history.")
+                        .font(.system(size: 13)).foregroundStyle(.secondary)
+                        .padding(.leading, 4)
+                } else {
+                    ForEach(otherBanks) { entry in
+                        historyRow(entry)
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                .fill(Theme.Colors.adaptiveSurface(colorScheme))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                .stroke(Theme.Colors.primary.opacity(0.20), lineWidth: 1.5)
+        )
+    }
+
+    private func historySubHeader(_ title: String, icon: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(color)
+            Text(title)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(color)
+        }
+    }
+
+    private func historyRow(_ entry: BorrowerLoanHistoryEntry) -> some View {
+        HStack(spacing: 12) {
+            // Left accent
+            RoundedRectangle(cornerRadius: 2)
+                .fill(entry.statusColor)
+                .frame(width: 4, height: 48)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(entry.loanType)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.primary)
+                Text(entry.institution)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(entry.amount)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                Text(entry.status)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(entry.statusColor)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(entry.statusColor.opacity(0.12))
+                    .clipShape(Capsule())
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(entry.statusColor.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(entry.statusColor.opacity(0.12), lineWidth: 1)
+        )
+    }
+
+    // Sample borrower history data (replace with real API data when available)
+    private func sampleThisBankLoans(for app: LoanApplication) -> [BorrowerLoanHistoryEntry] {
+        let score = app.financials.cibilScore
+        if score > 0 {
+            return [
+                BorrowerLoanHistoryEntry(loanType: "Personal Loan", institution: "Our Bank", amount: "₹1,50,000", status: "Closed", statusColor: Theme.Colors.success),
+                BorrowerLoanHistoryEntry(loanType: "Vehicle Loan",  institution: "Our Bank", amount: "₹3,20,000", status: "Active",  statusColor: Theme.Colors.primary)
+            ]
+        }
+        return []
+    }
+
+    private func sampleOtherBankLoans(for app: LoanApplication) -> [BorrowerLoanHistoryEntry] {
+        let emi = app.financials.existingEMI
+        if emi > 0 {
+            return [
+                BorrowerLoanHistoryEntry(loanType: "Home Loan",     institution: "HDFC Bank",  amount: "₹28,00,000", status: "Active",  statusColor: Theme.Colors.warning),
+                BorrowerLoanHistoryEntry(loanType: "Credit Card",   institution: "ICICI Bank", amount: "₹50,000",    status: "Overdue", statusColor: Theme.Colors.critical)
+            ]
+        }
+        return [
+            BorrowerLoanHistoryEntry(loanType: "Education Loan", institution: "SBI",       amount: "₹4,00,000",  status: "Closed", statusColor: Theme.Colors.success)
+        ]
+    }
+
+
 
     // ────────────────────────────────────────────────────────────────
     // MARK: - Documents Section
@@ -487,7 +633,7 @@ struct LOApplicationsView: View {
             .fill(Theme.Colors.adaptiveSurface(colorScheme)))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+                .stroke(Theme.Colors.primary.opacity(0.20), lineWidth: 1.5)
         )
         .alert("Add Document", isPresented: $showAddDocumentAlert) {
             TextField("Document Name", text: $newDocumentName)
@@ -553,7 +699,7 @@ struct LOApplicationsView: View {
             .fill(Theme.Colors.adaptiveSurface(colorScheme)))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+                .stroke(Theme.Colors.primary.opacity(0.20), lineWidth: 1.5)
         )
     }
 
@@ -594,6 +740,10 @@ struct LOApplicationsView: View {
         .padding(16)
         .background(RoundedRectangle(cornerRadius: Theme.Radius.lg)
             .fill(Theme.Colors.adaptiveSurface(colorScheme)))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                .stroke(Theme.Colors.primary.opacity(0.20), lineWidth: 1.5)
+        )
     }
 
     // ────────────────────────────────────────────────────────────────
@@ -607,7 +757,7 @@ struct LOApplicationsView: View {
                 .fill(Theme.Colors.adaptiveSurface(colorScheme)))
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                    .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+                    .stroke(Theme.Colors.primary.opacity(0.20), lineWidth: 1.5)
             )
     }
 
@@ -660,6 +810,10 @@ struct LOApplicationsView: View {
         .padding(16)
         .background(RoundedRectangle(cornerRadius: Theme.Radius.lg)
             .fill(Theme.Colors.adaptiveSurface(colorScheme)))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                .stroke(Theme.Colors.primary.opacity(0.20), lineWidth: 1.5)
+        )
         .onAppear { applicationsVM.loadApplicationMessages(for: app.id) }
     }
 
@@ -691,11 +845,15 @@ struct LOApplicationsView: View {
                         }
                         Text(msg.text)
                             .font(Theme.Typography.subheadline)
-                            .foregroundStyle(msg.isFromCurrentUser ? Color.white : Color.primary)
+                            .foregroundStyle(Color.black)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
-                            .background(msg.isFromCurrentUser ? Theme.Colors.primary : Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
+                            .background(msg.isFromCurrentUser ? Color(hex: "#E5E5EA") : Color.white)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14)
+                                    .stroke(Color.black.opacity(0.08), lineWidth: 1)
+                            )
                         Text(msg.timestamp.timeFormatted)
                             .font(Theme.Typography.caption)
                             .foregroundStyle(.tertiary)
@@ -1118,15 +1276,15 @@ struct AppFilterChip: View {
     var body: some View {
         Button(action: onTap) {
             Text(label)
-                .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
-                .foregroundStyle(isSelected ? Color.white : Color.secondary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 5)
+                .font(.system(size: 14, weight: isSelected ? .bold : .medium))
+                .foregroundStyle(isSelected ? Color.white : Color.primary)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
                 .background(isSelected ? Theme.Colors.adaptivePrimary(colorScheme) : Color.clear)
                 .clipShape(Capsule())
                 .overlay(
                     Capsule()
-                        .stroke(isSelected ? Color.clear : Color.secondary.opacity(0.3), lineWidth: 0.5)
+                        .stroke(isSelected ? Color.clear : Color.secondary.opacity(0.4), lineWidth: 1)
                 )
         }
         .buttonStyle(.plain)
@@ -1196,7 +1354,6 @@ struct CreateApplicationSheet: View {
     private var canSubmit: Bool {
         !borrowerName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         !loanAmountText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
-        !borrowerProfileID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         !selectedLoanProductID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
@@ -1297,7 +1454,6 @@ struct CreateApplicationSheet: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .animation(.easeInOut, value: borrowerLookupHint)
                 }
-                customTextField("Borrower Profile ID", text: $borrowerProfileID, icon: "person.text.rectangle")
                 customTextField("Residential Address", text: $borrowerAddress, icon: "mappin.and.ellipse", isMultiline: true)
             }
         }
@@ -1468,7 +1624,7 @@ struct CreateApplicationSheet: View {
                 if let profileID = try await applicationsVM.resolveBorrowerProfileID(email: email, phone: phone) {
                     await MainActor.run {
                         borrowerLookupOK = true
-                        borrowerLookupHint = "Borrower found! Profile ID: \(profileID)"
+                        borrowerLookupHint = "Borrower found! Profile verified."
                         self.borrowerProfileID = profileID
                     }
                 } else {
@@ -1621,4 +1777,17 @@ struct DocumentFilePicker: UIViewControllerRepresentable {
         }
         func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) { onCancel() }
     }
+}
+
+// ────────────────────────────────────────────────────────────────────
+// MARK: - Borrower Loan History Entry Model
+// ────────────────────────────────────────────────────────────────────
+
+struct BorrowerLoanHistoryEntry: Identifiable {
+    let id = UUID()
+    let loanType: String
+    let institution: String
+    let amount: String
+    let status: String
+    let statusColor: Color
 }

@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 import PhotosUI
+import CoreLocation
 
 struct ProfileView: View {
     @EnvironmentObject var router: AppRouter
@@ -221,6 +222,7 @@ struct EditProfileView: View {
     @EnvironmentObject var router: AppRouter
     @EnvironmentObject private var session: SessionStore
     @StateObject private var viewModel = BorrowerProfileEditorViewModel()
+    @State private var showingAddressSearch = false
     
     var body: some View {
         List {
@@ -255,24 +257,45 @@ struct EditProfileView: View {
             }
 
             Section {
+                Button(action: { showingAddressSearch = true }) {
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                        Text("Search for an address...")
+                    }
+                    .foregroundColor(DS.primary)
+                }
+
                 TextField("Address line 1", text: $viewModel.addressLine1, axis: .vertical)
                     .textContentType(.streetAddressLine1)
                     .textInputAutocapitalization(.words)
                     .lineLimit(1...3)
 
                 TextField("City", text: $viewModel.city)
-                    .textContentType(.addressCity)
-                    .textInputAutocapitalization(.words)
+                    .disabled(true)
+                    .foregroundStyle(.secondary)
 
                 TextField("State", text: $viewModel.stateName)
-                    .textContentType(.addressState)
-                    .textInputAutocapitalization(.words)
+                    .disabled(true)
+                    .foregroundStyle(.secondary)
 
-                TextField("Pincode", text: $viewModel.pincode)
+                TextField("Pincode/Zipcode", text: $viewModel.pincode)
                     .textContentType(.postalCode)
                     .keyboardType(.numberPad)
-                    .onChange(of: viewModel.pincode) { _, value in
-                        viewModel.pincode = String(value.filter(\.isNumber).prefix(6))
+                    .onChange(of: viewModel.pincode) { _, newValue in
+                        let cleaned = newValue.filter(\.isNumber)
+                        if cleaned.count == 6 {
+                            let geocoder = CLGeocoder()
+                            geocoder.geocodeAddressString(cleaned) { placemarks, _ in
+                                if let place = placemarks?.first {
+                                    if let fetchedCity = place.locality ?? place.subAdministrativeArea {
+                                        viewModel.city = fetchedCity
+                                    }
+                                    if let fetchedState = place.administrativeArea {
+                                        viewModel.stateName = fetchedState
+                                    }
+                                }
+                            }
+                        }
                     }
             } header: {
                 Text("Current address")
@@ -317,6 +340,13 @@ struct EditProfileView: View {
         }
         .safeAreaInset(edge: .bottom) {
             bottomBar
+        }
+        .sheet(isPresented: $showingAddressSearch) {
+            AddressSearchView { selectedCity, selectedState, selectedPincode in
+                if !selectedCity.isEmpty { viewModel.city = selectedCity }
+                if !selectedState.isEmpty { viewModel.stateName = selectedState }
+                if !selectedPincode.isEmpty { viewModel.pincode = selectedPincode }
+            }
         }
         .alert("Profile Error", isPresented: Binding(
             get: { viewModel.errorMessage != nil },
@@ -415,7 +445,7 @@ final class BorrowerProfileEditorViewModel: ObservableObject {
         !addressLine1.trimmed.isEmpty &&
         !city.trimmed.isEmpty &&
         !stateName.trimmed.isEmpty &&
-        pincode.count == 6 &&
+        !pincode.trimmed.isEmpty &&
         (Decimal(string: monthlyIncome.trimmed) ?? 0) > 0
     }
 
@@ -435,7 +465,7 @@ final class BorrowerProfileEditorViewModel: ObservableObject {
                 addressLine1 = borrower.addressLine1
                 city = borrower.city
                 stateName = borrower.state
-                pincode = String(borrower.pincode.filter(\.isNumber).prefix(6))
+                pincode = borrower.pincode
                 employmentType = ProfileEmploymentType(rawBackendValue: borrower.employmentType) ?? .salaried
                 monthlyIncome = sanitizeIncome(borrower.monthlyIncome)
             }

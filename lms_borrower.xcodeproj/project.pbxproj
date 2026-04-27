@@ -291,7 +291,7 @@
 				CODE_SIGN_ENTITLEMENTS = lms_borrower/lms_borrower.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 5Y3N4YMYYV;
+				DEVELOPMENT_TEAM = 9YW76R6Q5C;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "lms-borrower-Info.plist";
@@ -308,7 +308,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "chirag-poojari-codes";
+				PRODUCT_BUNDLE_IDENTIFIER = "chirag-poojari-codes12";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -327,7 +327,7 @@
 				CODE_SIGN_ENTITLEMENTS = lms_borrower/lms_borrower.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 5Y3N4YMYYV;
+				DEVELOPMENT_TEAM = 9YW76R6Q5C;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "lms-borrower-Info.plist";
@@ -344,7 +344,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "chirag-poojari-codes";
+				PRODUCT_BUNDLE_IDENTIFIER = "chirag-poojari-codes12";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

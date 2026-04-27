@@ -57,6 +57,7 @@ struct BorrowerLoanApplication: Identifiable, Hashable {
     let requestedAmount: String           // proto: requested_amount
     let tenureMonths: Int                 // proto: tenure_months
     let status: LoanApplicationStatus     // proto: status (enum)
+    let escalationReason: String          // proto: escalation_reason
     let offeredInterestRate: String       // proto: offered_interest_rate
     let createdAt: String                 // proto: created_at
     let updatedAt: String                 // proto: updated_at

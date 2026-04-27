@@ -72,7 +72,11 @@ struct ApplicationStatusListView: View {
                             applications: pastApplications,
                             accent: .alertRed
                         ) { app in
-                            router.push(.detailedTracking(app))
+                            if app.status == .rejected || app.status == .officerRejected || app.status == .managerRejected {
+                                router.push(.rejectionReason(app))
+                            } else {
+                                router.push(.detailedTracking(app))
+                            }
                         }
                     }
 
@@ -138,7 +142,7 @@ struct ApplicationStatusListView: View {
                         Spacer()
 
                         VStack(alignment: .trailing, spacing: 4) {
-                            Text(application.status.displayName)
+                            Text(BorrowerSanctionLetterSupport.statusTitle(for: application))
                                 .font(.caption).bold()
                                 .foregroundColor(accent)
                                 .lineLimit(1)

@@ -32,6 +32,13 @@ protocol LoanServiceProtocol {
     // Backend: LoanService.ListLoanApplications (loan.proto line 19)
     func listLoanApplications(limit: Int, offset: Int) async throws -> [BorrowerLoanApplication]
 
+    // Backend: LoanService.UpdateLoanApplicationStatus
+    func updateLoanApplicationStatus(
+        applicationId: String,
+        status: LoanApplicationStatus,
+        escalationReason: String?
+    ) async throws
+
     // MARK: - Documents
     // Backend: LoanService.AddApplicationDocument (loan.proto line 27)
     // NOTE: media_file_id comes from MediaGRPCClient upload — pass it here
@@ -43,6 +50,9 @@ protocol LoanServiceProtocol {
     ) async throws -> BorrowerApplicationDocument
 
     // MARK: - Active Loan (Post-Disbursement)
+    // Backend: LoanService.CreateLoan
+    func createLoan(applicationId: String, principalAmount: String) async throws -> ActiveLoan
+
     // Backend: LoanService.GetLoan (loan.proto line 32)
     // Either loan_id or application_id can be passed
     func getLoan(loanId: String?, applicationId: String?) async throws -> ActiveLoan

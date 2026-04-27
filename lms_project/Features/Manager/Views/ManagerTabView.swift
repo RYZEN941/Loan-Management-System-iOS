@@ -35,7 +35,7 @@ struct ManagerTabView: View {
             
             ManagerDstView(showProfile: $showProfile)
                 .tabItem {
-                    Label("Dst", systemImage: "person.2.badge.gearshape.fill")
+                    Label("DST", systemImage: "person.2.badge.gearshape.fill")
                 }
                 .tag(3)
             

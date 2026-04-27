@@ -48,6 +48,15 @@ enum LoanApplicationStatus: String, CaseIterable, Codable {
         default: return .gray
         }
     }
+
+    var isInProgressForDashboard: Bool {
+        switch self {
+        case .draft, .submitted, .underReview, .officerReview, .officerApproved, .managerReview, .managerApproved:
+            return true
+        default:
+            return false
+        }
+    }
 }
 
 // MARK: - LoanProductCategory

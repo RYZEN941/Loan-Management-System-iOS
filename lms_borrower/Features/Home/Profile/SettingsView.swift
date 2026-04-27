@@ -6,8 +6,6 @@ struct SettingsView: View {
     @EnvironmentObject private var session: SessionStore
     @State private var notificationsEnabled = true
     @State private var activeSheet: SecuritySheet?
-    @State private var hasLocalPasskey = false
-    @State private var isBiometricQuickLoginEnabled = false
     @State private var isAuthenticatorQuickLoginEnabled = false
     @State private var didCompleteAuthenticatorSetup = false
     @State private var alertContext: SettingsAlertContext?
@@ -34,16 +32,6 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Security").font(.caption).foregroundColor(.secondary).padding(.horizontal, 20)
                     VStack(spacing: 0) {
-                        SettingsNavRow(icon: "faceid", title: "Passkey", value: hasLocalPasskey ? "Configured" : "Set Up") {
-                            activeSheet = .passkey
-                        }
-                        Divider().padding(.leading, 56)
-                        SettingsToggleRow(
-                            icon: "faceid",
-                            title: "Face ID",
-                            isOn: biometricToggleBinding
-                        )
-                        Divider().padding(.leading, 56)
                         SettingsToggleRow(
                             icon: "checkmark.shield.fill",
                             title: "Authenticator App",
@@ -86,8 +74,6 @@ struct SettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(item: $activeSheet, onDismiss: handleSheetDismiss) { sheet in
             switch sheet {
-            case .passkey:
-                SetupPasskeyView()
             case .authenticator:
                 SetupTOTPView {
                     didCompleteAuthenticatorSetup = true
@@ -121,13 +107,6 @@ struct SettingsView: View {
         }
     }
 
-    private var biometricToggleBinding: Binding<Bool> {
-        Binding(
-            get: { isBiometricQuickLoginEnabled },
-            set: handleBiometricToggleChange
-        )
-    }
-
     private var authenticatorToggleBinding: Binding<Bool> {
         Binding(
             get: { isAuthenticatorQuickLoginEnabled },
@@ -136,25 +115,12 @@ struct SettingsView: View {
     }
 
     private func refreshState() {
-        refreshPasskeyStatus()
         guard let userID = currentUserID else {
-            isBiometricQuickLoginEnabled = false
             isAuthenticatorQuickLoginEnabled = false
             return
         }
 
-        isBiometricQuickLoginEnabled = QuickLoginPreferencesStore.shared.isBiometricEnabled(for: userID)
         isAuthenticatorQuickLoginEnabled = QuickLoginPreferencesStore.shared.isAuthenticatorEnabled(for: userID)
-    }
-
-    private func refreshPasskeyStatus() {
-        guard let accessToken = try? TokenStore.shared.accessToken(),
-              let userID = JWTClaimsDecoder.subject(from: accessToken) else {
-            hasLocalPasskey = false
-            return
-        }
-
-        hasLocalPasskey = PasskeyStatusStore.shared.isPasskeyRegistered(for: userID)
     }
 
     private var currentUserID: String? {
@@ -163,35 +129,10 @@ struct SettingsView: View {
     }
 
     private func handleSheetDismiss() {
-        refreshPasskeyStatus()
         if activeSheet == nil, !didCompleteAuthenticatorSetup {
             refreshAuthenticatorPreference()
         }
         didCompleteAuthenticatorSetup = false
-    }
-
-    private func handleBiometricToggleChange(_ newValue: Bool) {
-        let previousValue = isBiometricQuickLoginEnabled
-
-        guard let userID = currentUserID else {
-            isBiometricQuickLoginEnabled = previousValue
-            alertContext = .message("We couldn't verify the active user for this setting.")
-            return
-        }
-
-        BiometricAuth.authenticate(
-            reason: newValue
-                ? "Verify your identity to enable Face ID quick login."
-                : "Verify your identity to disable Face ID quick login."
-        ) { ok, err in
-            if ok {
-                isBiometricQuickLoginEnabled = newValue
-                QuickLoginPreferencesStore.shared.setBiometricEnabled(newValue, for: userID)
-            } else {
-                isBiometricQuickLoginEnabled = previousValue
-                alertContext = .message(BiometricAuth.humanMessage(for: err))
-            }
-        }
     }
 
     private func handleAuthenticatorToggleChange(_ newValue: Bool) {
@@ -221,7 +162,6 @@ struct SettingsView: View {
 }
 
 private enum SecuritySheet: String, Identifiable {
-    case passkey
     case authenticator
 
     var id: String { rawValue }

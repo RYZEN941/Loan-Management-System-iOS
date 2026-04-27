@@ -27,10 +27,10 @@ public final class SetupTOTPViewModel: ObservableObject {
     @MainActor
     public init(
         authRepository: AuthRepository? = nil,
-        sessionManager: SessionManager = .shared
+        sessionManager: SessionManager? = nil
     ) {
         self.authRepository = authRepository ?? AuthRepository()
-        self.sessionManager = sessionManager
+        self.sessionManager = sessionManager ?? .shared
     }
 
     /// Step 1: Request the backend to generate a new TOTP secret.

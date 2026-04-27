@@ -14,6 +14,7 @@ struct QuickLoginView: View {
     @FocusState private var codeFocused: Bool
     @State private var retryCount = 0
     @State private var quickMethod: QuickMethod = .totp
+    @Namespace private var animation
     @State private var otpMFASessionID: String?
     @State private var otpChallengeTarget: String?
 
@@ -48,8 +49,8 @@ struct QuickLoginView: View {
             Spacer(minLength: 28)
 
             methodPicker
-                .padding(.horizontal, 20)
-                .padding(.bottom, 14)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 24)
 
             quickLoginSection
                 .padding(.horizontal, 20)
@@ -107,12 +108,40 @@ struct QuickLoginView: View {
     }
 
     private var methodPicker: some View {
-        Picker("Quick login method", selection: $quickMethod) {
+        VStack(spacing: 10) {
             ForEach(QuickMethod.allCases) { method in
-                Text(method.rawValue).tag(method)
+                let isSelected = quickMethod == method
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        quickMethod = method
+                    }
+                } label: {
+                    HStack {
+                        Text(method.rawValue)
+                            .font(.system(size: 16, weight: isSelected ? .semibold : .medium))
+                            .foregroundColor(isSelected ? DS.primary : DS.textPrimary)
+                        
+                        Spacer()
+                        
+                        if isSelected {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(DS.primary)
+                                .font(.system(size: 14))
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(isSelected ? DS.primary.opacity(0.06) : Color.white)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(isSelected ? DS.primary : DS.border, lineWidth: isSelected ? 1.5 : 1)
+                    )
+                }
             }
         }
-        .pickerStyle(.segmented)
     }
 
     private var quickLoginSection: some View {
@@ -126,18 +155,20 @@ struct QuickLoginView: View {
 
     private var totpSection: some View {
         VStack(spacing: 24) {
-            VStack(alignment: .leading, spacing: 18) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Authenticator code")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(DS.textSecondary)
+            VStack(spacing: 24) {
+                VStack(spacing: 8) {
+                    Text("Enter 6-digit \(quickMethod.rawValue) Code")
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .foregroundColor(DS.textPrimary)
 
-                    Text("Enter the 6-digit code from your app.")
+                    Text("Check your authenticator app for the verification code.")
                         .font(.system(size: 14))
                         .foregroundColor(DS.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 10)
                 }
 
-                OTPBoxRow(otp: $totpCode, focused: $codeFocused)
+                OTPBoxRow(otp: $totpCode, focused: $codeFocused, isSecure: true)
             }
             .padding(20)
             .background(.white.opacity(0.84))
@@ -164,7 +195,7 @@ struct QuickLoginView: View {
             ) {
                 codeFocused = false
                 isAuthenticating = true
-                bioError = "" // Re-using bioError as a generic alert if needed
+                bioError = "" 
                 
                 Task {
                     guard #available(iOS 18, *) else {
@@ -203,25 +234,40 @@ struct QuickLoginView: View {
     }
 
     private var otpSection: some View {
-        VStack(spacing: 18) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("One-time code")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(DS.textSecondary)
+        VStack(spacing: 24) {
+            VStack(spacing: 24) {
+                VStack(spacing: 8) {
+                    Text("Enter 6-digit \(quickMethod.rawValue) Code")
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .foregroundColor(DS.textPrimary)
 
-                if let target = otpChallengeTarget, !target.isEmpty {
-                    Text("Code sent to \(target).")
-                        .font(.system(size: 14))
-                        .foregroundColor(DS.textSecondary)
-                } else {
-                    Text("Tap Send code, then enter the 6-digit OTP.")
-                        .font(.system(size: 14))
-                        .foregroundColor(DS.textSecondary)
+                    if let target = otpChallengeTarget, !target.isEmpty {
+                        Text("Check your registered \(quickMethod == .phoneOTP ? "phone" : "email") for the verification code sent to \(target).")
+                            .font(.system(size: 14))
+                            .foregroundColor(DS.textSecondary)
+                            .multilineTextAlignment(.center)
+                    } else {
+                        Text("Tap Send code, then enter the 6-digit OTP.")
+                            .font(.system(size: 14))
+                            .foregroundColor(DS.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
                 }
-            }
 
-            OTPBoxRow(otp: $otpCode, focused: $codeFocused)
-                .padding(.vertical, 6)
+                OTPBoxRow(otp: $otpCode, focused: $codeFocused, isSecure: true)
+                    .padding(.vertical, 6)
+                    .disabled(otpMFASessionID == nil)
+                    .opacity(otpMFASessionID == nil ? 0.5 : 1)
+            }
+            .padding(20)
+            .background(.white.opacity(0.84))
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(.white.opacity(0.92), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.04), radius: 14, x: 0, y: 6)
 
             if !bioError.isEmpty {
                 Text(bioError)
@@ -293,15 +339,6 @@ struct QuickLoginView: View {
                 }
             }
         }
-        .padding(20)
-        .background(.white.opacity(0.84))
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(.white.opacity(0.92), lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.04), radius: 14, x: 0, y: 6)
     }
 
     private var passwordFallbackSection: some View {

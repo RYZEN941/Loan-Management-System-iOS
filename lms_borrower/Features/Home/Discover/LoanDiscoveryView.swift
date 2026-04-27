@@ -173,6 +173,22 @@ struct LoanDetailScreen: View {
         return String(format: "%.2f%%", rate)
     }
 
+    private var eligibilityTitle: String {
+        loan.isActive ? "Eligible" : "Not Eligible"
+    }
+
+    private var eligibilityIcon: String {
+        loan.isActive ? "checkmark.shield.fill" : "xmark.shield.fill"
+    }
+
+    private var eligibilityBackground: Color {
+        loan.isActive ? Color(hex: "#00C48C").opacity(0.14) : DS.danger.opacity(0.12)
+    }
+
+    private var eligibilityForeground: Color {
+        loan.isActive ? Color(hex: "#00A86B") : DS.danger
+    }
+
     var body: some View {
         ZStack(alignment: .bottom) {
             ScrollView {
@@ -213,20 +229,16 @@ struct LoanDetailScreen: View {
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
 
-                        Button {
-                            router.push(.eligibilityChecker(loan))
-                        } label: {
-                            HStack {
-                                Image(systemName: "checkmark.shield")
-                                Text("Check Eligibility")
-                            }
-                            .font(.subheadline).bold()
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(DS.primary)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        HStack(spacing: 8) {
+                            Image(systemName: eligibilityIcon)
+                            Text(eligibilityTitle)
                         }
+                        .font(.subheadline).bold()
+                        .foregroundColor(eligibilityForeground)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(eligibilityBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                     .padding(.horizontal, 20)
 

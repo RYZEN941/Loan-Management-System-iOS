@@ -13,7 +13,8 @@ final class ChatListViewModel: ObservableObject {
     @Published var eligibleUsers: [ChatUser] = []
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
-    @Published var searchQuery: String = ""
+    @Published var conversationSearchQuery: String = ""
+    @Published var userSearchQuery: String = ""
     @Published var participantNames: [String: String] = [:]
 
     private let chatService: ChatServiceProtocol
@@ -82,7 +83,8 @@ final class ChatListViewModel: ObservableObject {
 
     func searchEligibleUsers() {
         searchDebounceTask?.cancel()
-        guard !searchQuery.isEmpty else {
+        let trimmedQuery = userSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedQuery.isEmpty else {
             eligibleUsers = []
             return
         }
@@ -92,7 +94,7 @@ final class ChatListViewModel: ObservableObject {
             guard !Task.isCancelled else { return }
             do {
                 let users = try await chatService.listEligibleUsers(
-                    query: searchQuery,
+                    query: trimmedQuery,
                     limit: 20,
                     offset: 0
                 )
@@ -135,6 +137,18 @@ final class ChatListViewModel: ObservableObject {
             let otherUserID = room.otherUserID(currentUserID: currentUserID)
             let participantName = participantNames[otherUserID] ?? "User"
             return ChatPreviewModel(from: room, participantName: participantName, hasUnread: false)
+        }
+    }
+
+    func filteredChatRooms(currentUserID: String) -> [ChatRoom] {
+        let trimmedQuery = conversationSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedQuery.isEmpty else { return chatRooms }
+
+        return chatRooms.filter { room in
+            let otherUserID = room.otherUserID(currentUserID: currentUserID)
+            let participantName = participantNames[otherUserID] ?? "User"
+            return participantName.localizedCaseInsensitiveContains(trimmedQuery)
+                || room.lastMessageText.localizedCaseInsensitiveContains(trimmedQuery)
         }
     }
 

@@ -47,45 +47,69 @@ struct KPICard: View {
     }
     
     private var cardContent: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            HStack(alignment: .top) {
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(color)
-                    .frame(width: 32, height: 32)
-                    .background(color.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                
-                Spacer()
-                
-                if let subtitle = subtitle {
-                    Text(subtitle)
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(Theme.Colors.mainBlue) // Primary blue from app theme
-                        .padding(.top, 4)
+        VStack(alignment: .leading, spacing: 0) {
+            // Coloured accent bar at top
+            LinearGradient(
+                colors: [color, color.opacity(0.7)],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(height: 5)
+
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                // Icon + trend badge row
+                HStack(alignment: .top) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(color.opacity(0.12))
+                            .frame(width: 40, height: 40)
+                        Image(systemName: icon)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(color)
+                    }
+
+                    Spacer()
+
+                    if let subtitle = subtitle {
+                        HStack(spacing: 3) {
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 10, weight: .bold))
+                            Text(subtitle)
+                                .font(.system(size: 12, weight: .bold))
+                        }
+                        .foregroundStyle(color)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(color.opacity(0.12))
+                        .clipShape(Capsule())
+                    }
                 }
+                .padding(.top, Theme.Spacing.md)
+
+                Spacer()
+
+                // Value + title
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(value)
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+
+                    Text(title)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.bottom, Theme.Spacing.md)
             }
-            
-            Spacer()
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(value)
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
-                
-                Text(title)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.secondary)
-            }
+            .padding(.horizontal, Theme.Spacing.md)
         }
-        .padding(Theme.Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: 140)
+        .frame(height: 165)
         .background(Theme.Colors.adaptiveSurface(colorScheme))
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
+                .stroke(color.opacity(0.2), lineWidth: 1.5)
         )
+        .shadow(color: color.opacity(colorScheme == .dark ? 0.0 : 0.10), radius: 8, x: 0, y: 4)
     }
 }

@@ -10,38 +10,62 @@ struct ManagerDstView: View {
     @EnvironmentObject var authVM: AuthViewModel
     @Environment(\.colorScheme) private var colorScheme
     @Binding var showProfile: Bool
-    
-    @State private var showAddDst = false
-    @State private var editingAgent: User? = nil
-    @State private var searchText = ""
-    @State private var agentToDelete: User? = nil
-    
+
+    @State private var showAddDst    = false
+    @State private var editingAgent  : User? = nil
+    @State private var searchText    = ""
+    @State private var agentToDelete : User? = nil
+    @State private var isAnimating   = false
+
+    private var primary:  Color { Theme.Colors.adaptivePrimary(colorScheme) }
+    private var critical: Color { Theme.Colors.adaptiveCritical(colorScheme) }
+    private var surface:  Color { Theme.Colors.adaptiveSurface(colorScheme) }
+    private var bg:       Color { Theme.Colors.adaptiveBackground(colorScheme) }
+    private var border:   Color { Theme.Colors.adaptiveBorder(colorScheme) }
+
     var body: some View {
         NavigationStack {
             ZStack {
-                ManagerTheme.Colors.background(colorScheme).ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    header
-                    
-                    ScrollView {
-                        VStack(spacing: Theme.Spacing.xl) {
-                            dstStatsStrip
-                            searchBar
-                            dstList
+                bg.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 20) {
+                        statsStrip
+                        searchBar
+                        dstList
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 28)
+                }
+            }
+            .navigationTitle("Direct Sales Team")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    HStack(spacing: 10) {
+                        Button {
+                            showAddDst = true
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 13, weight: .bold))
+                                Text("Add Agent")
+                                    .font(.system(size: 14, weight: .semibold))
+                            }
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(primary)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
-                        .padding(Theme.Spacing.lg)
+                        .buttonStyle(.plain)
+
+                        ProfileNavButton(showProfile: $showProfile)
                     }
                 }
             }
-            .navigationTitle("DST Management")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    ProfileNavButton(showProfile: $showProfile)
-                }
-            }
-            .tint(ManagerTheme.Colors.primary(colorScheme))
+            .tint(primary)
             .sheet(isPresented: $showAddDst) {
                 AddDstSheet(adminVM: adminVM, authVM: authVM)
             }
@@ -54,123 +78,151 @@ struct ManagerDstView: View {
             )) {
                 Button("Cancel", role: .cancel) {}
                 Button("Remove", role: .destructive) {
-                    if let agent = agentToDelete {
-                        adminVM.removeDstLocally(agent)
-                    }
+                    if let agent = agentToDelete { adminVM.removeDstLocally(agent) }
                 }
             } message: {
                 Text("Remove \(agentToDelete?.name ?? "this agent") from this list? This is a frontend-only action.")
             }
-            .overlay(alignment: .top) {
-                feedbackBanner
-                    .padding(.top, 8)
-            }
             .onAppear {
                 adminVM.loadData()
-                Task {
-                    await adminVM.loadDstDataForManagerScope()
-                }
+                Task { await adminVM.loadDstDataForManagerScope() }
+                withAnimation(.easeOut(duration: 0.5)) { isAnimating = true }
             }
         }
     }
-    
-    private var header: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Direct Sales Team")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                Text("Manage and monitor your branch's field agents")
-                    .font(Theme.Typography.subheadline)
-                    .foregroundStyle(.secondary)
+
+    // MARK: — Stats Strip
+
+    private var statsStrip: some View {
+        let branchDst = adminVM.dstUsers
+        let activeCount = branchDst.filter { $0.isActive }.count
+        let activeRatio = branchDst.isEmpty ? 0 : Int(Double(activeCount) / Double(branchDst.count) * 100)
+
+        return VStack(alignment: .leading, spacing: 10) {
+            sectionHeader(title: "Overview", icon: "person.2.fill")
+                .opacity(0.7)
+                .scaleEffect(0.95, anchor: .leading)
+
+            HStack(spacing: 10) {
+                statCard(
+                    label: "Total Agents",
+                    value: "\(branchDst.count)",
+                    icon: "person.2.fill",
+                    color: primary
+                )
+                statCard(
+                    label: "Portfolio",
+                    value: "₹\(branchDst.count * 14)L",
+                    icon: "indianrupeesign.circle.fill",
+                    color: primary
+                )
+                statCard(
+                    label: "Active Ratio",
+                    value: "\(activeRatio)%",
+                    icon: "chart.bar.fill",
+                    color: activeRatio >= 70
+                        ? Theme.Colors.adaptiveSuccess(colorScheme)
+                        : activeRatio >= 40 ? Theme.Colors.adaptiveWarning(colorScheme)
+                        : critical
+                )
             }
-            Spacer()
-            
-            Button {
-                showAddDst = true
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 14, weight: .bold))
-                    Text("Add Agent")
-                        .font(.system(size: 14, weight: .semibold))
-                }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(ManagerTheme.Colors.primary(colorScheme))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .opacity(isAnimating ? 1 : 0)
+        .offset(y: isAnimating ? 0 : 14)
+    }
+
+    private func statCard(label: String, value: String, icon: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 6) { // Reduced spacing
+            HStack(alignment: .top) {
+                Image(systemName: icon)
+                    .font(.system(size: 12, weight: .semibold)) // Smaller icon
+                    .foregroundStyle(color.opacity(0.8))
+                Spacer()
             }
-            .buttonStyle(.plain)
+            
+            VStack(alignment: .leading, spacing: 1) {
+                Text(value)
+                    .font(.system(size: 18, weight: .semibold, design: .rounded)) // Reduced from 22 & Bold to 18 & Semibold
+                    .foregroundStyle(.primary) // Use primary text color for a "lighter" look than the accent color
+                    .minimumScaleFactor(0.8)
+                    .lineLimit(1)
+                
+                Text(label)
+                    .font(.system(size: 10, weight: .medium)) // Smaller label
+                    .foregroundStyle(.tertiary) // Lighter gray
+                    .textCase(.uppercase)
+                    .tracking(0.2)
+            }
         }
-        .padding(.horizontal, Theme.Spacing.lg)
-        .padding(.top, Theme.Spacing.lg)
-    }
-    
-    private var dstStatsStrip: some View {
-        HStack(spacing: Theme.Spacing.lg) {
-            let branchDst = adminVM.dstUsers
-            
-            DstKPICard(title: "Total Agents", 
-                        value: "\(branchDst.count)", 
-                        icon: "person.2.fill", 
-                        color: ManagerTheme.Colors.primary(colorScheme))
-            
-            DstKPICard(title: "Active Portfolio", 
-                        value: "₹\((branchDst.count * 14))L",
-                        icon: "indianrupeesign.circle.fill", 
-                        color: ManagerTheme.Colors.secondary(colorScheme))
-            
-            DstKPICard(title: "Active Ratio", 
-                        value: branchDst.isEmpty ? "0%" : "\(Int(Double(branchDst.filter { $0.isActive }.count) / Double(branchDst.count) * 100))%", 
-                        icon: "chart.bar.fill", 
-                        color: Theme.Colors.adaptiveSuccess(colorScheme))
-        }
-    }
-    
-    private var searchBar: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 14))
-                .foregroundStyle(.secondary)
-            
-            TextField("Search agents by name, email or ID...", text: $searchText)
-                .font(.system(size: 15))
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(ManagerTheme.Colors.surface(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10) // Tighter vertical padding
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(surface.opacity(0.5)) // Lighter surface appearance
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md)) // Smaller radius for smaller cards
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.md)
-                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 0.5)
+                .stroke(border.opacity(0.5), lineWidth: 0.5) // Thinner, lighter border
         )
     }
-    
-    private var dstList: some View {
-        VStack(spacing: Theme.Spacing.lg) {
-            let branchDst = adminVM.dstUsers
-            let filteredDst = branchDst.filter {
-                searchText.isEmpty || 
-                $0.name.localizedCaseInsensitiveContains(searchText) ||
-                $0.email.localizedCaseInsensitiveContains(searchText) ||
-                $0.id.localizedCaseInsensitiveContains(searchText)
-            }
-            
-            if filteredDst.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "person.2.slash")
-                        .font(.system(size: 48, weight: .thin))
+
+    // MARK: — Search Bar
+
+    private var searchBar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.tertiary)
+            TextField("Search by name, email or ID…", text: $searchText)
+                .font(.system(size: 15))
+            if !searchText.isEmpty {
+                Button { searchText = "" } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
                         .foregroundStyle(.tertiary)
-                    Text("No agents found in this branch")
-                        .font(Theme.Typography.subheadline)
-                        .foregroundStyle(.secondary)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 80)
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
+        .background(surface)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                .stroke(border, lineWidth: 1)
+        )
+        .opacity(isAnimating ? 1 : 0)
+        .offset(y: isAnimating ? 0 : 10)
+    }
+
+    // MARK: — DST List
+
+    private var dstList: some View {
+        let branchDst = adminVM.dstUsers
+        let filteredDst = branchDst.filter {
+            searchText.isEmpty ||
+            $0.name.localizedCaseInsensitiveContains(searchText) ||
+            $0.email.localizedCaseInsensitiveContains(searchText) ||
+            $0.id.localizedCaseInsensitiveContains(searchText)
+        }
+
+        return VStack(alignment: .leading, spacing: 10) {
+            if !filteredDst.isEmpty {
+                sectionHeader(
+                    title: searchText.isEmpty ? "All Agents" : "Results",
+                    icon: "list.bullet"
+                )
+            }
+
+            if filteredDst.isEmpty {
+                emptyState
             } else {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 350), spacing: Theme.Spacing.lg)], spacing: Theme.Spacing.lg) {
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 340), spacing: 10)],
+                    spacing: 10
+                ) {
                     ForEach(filteredDst) { agent in
-                        DstCard(agent: agent) {
+                        DstCard(agent: agent, colorScheme: colorScheme) {
                             editingAgent = agent
                         } onToggle: {
                             adminVM.toggleUserStatus(agent)
@@ -181,189 +233,173 @@ struct ManagerDstView: View {
                 }
             }
         }
+        .opacity(isAnimating ? 1 : 0)
+        .offset(y: isAnimating ? 0 : 18)
     }
-    
-    private var feedbackBanner: some View {
-        Group {
-            if let error = adminVM.requestError, !error.isEmpty {
-                banner(text: error, color: Theme.Colors.adaptiveCritical(colorScheme))
-            } else if let success = adminVM.requestSuccess, !success.isEmpty {
-                banner(text: success, color: Theme.Colors.adaptiveSuccess(colorScheme))
-            }
-        }
-    }
-    
-    private func banner(text: String, color: Color) -> some View {
-        Text(text)
-            .font(Theme.Typography.caption)
-            .foregroundStyle(.primary)
-            .padding(.horizontal, Theme.Spacing.md)
-            .padding(.vertical, 10)
-            .background(ManagerTheme.Colors.surface(colorScheme))
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.Radius.md)
-                    .stroke(color.opacity(0.45), lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
-            .padding(.horizontal, Theme.Spacing.lg)
-    }
-}
 
-// MARK: - Local Components for DST View
-
-private struct DstKPICard: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-    @Environment(\.colorScheme) private var colorScheme
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                ZStack {
-                    Circle()
-                        .fill(color.opacity(0.1))
-                        .frame(width: 36, height: 36)
-                    Image(systemName: icon)
-                        .font(.system(size: 16))
-                        .foregroundStyle(color)
-                }
-                Spacer()
+    private var emptyState: some View {
+        VStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(primary.opacity(0.06))
+                    .frame(width: 72, height: 72)
+                Image(systemName: "person.2.slash")
+                    .font(.system(size: 30, weight: .light))
+                    .foregroundStyle(primary.opacity(0.4))
             }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(value)
-                    .font(.system(size: 26, weight: .bold, design: .rounded))
+            VStack(spacing: 4) {
+                Text(searchText.isEmpty ? "No agents in this branch" : "No results found")
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.primary)
-                Text(title)
-                    .font(.system(size: 13, weight: .medium))
+                Text(searchText.isEmpty ? "Add your first DST agent to get started." : "Try a different name, email or ID.")
+                    .font(.system(size: 13))
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
         }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(ManagerTheme.Colors.surface(colorScheme))
-        .cornerRadius(Theme.Radius.lg)
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 0.5)
-        )
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 60)
+    }
+
+    // MARK: — Section Header (matches Dashboard)
+
+    private func sectionHeader(title: String, icon: String?) -> some View {
+        HStack(spacing: 6) {
+            if icon! == nil {
+                Image(systemName: icon ?? "person.2.fill")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(primary)
+            }
+            Text(title.uppercased())
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.secondary)
+                .tracking(0.7)
+        }
     }
 }
+
+// MARK: — DST Card
 
 private struct DstCard: View {
-    let agent: User
-    let onEdit: () -> Void
-    let onToggle: () -> Void
-    let onDelete: () -> Void
-    @Environment(\.colorScheme) private var colorScheme
-    
+    let agent      : User
+    let colorScheme: ColorScheme
+    let onEdit     : () -> Void
+    let onToggle   : () -> Void
+    let onDelete   : () -> Void
+
+    private var primary:  Color { Theme.Colors.adaptivePrimary(colorScheme) }
+    private var surface:  Color { Theme.Colors.adaptiveSurface(colorScheme) }
+    private var border:   Color { Theme.Colors.adaptiveBorder(colorScheme) }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 16) {
+            // Top: avatar + info + status
+            HStack(spacing: 14) {
                 ZStack {
                     Circle()
-                        .fill(ManagerTheme.Colors.primary(colorScheme).opacity(0.1))
+                        .fill(primary.opacity(0.08))
                         .frame(width: 52, height: 52)
                     Text(agent.initials)
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(ManagerTheme.Colors.primary(colorScheme))
+                        .foregroundStyle(primary)
                 }
-                
-                VStack(alignment: .leading, spacing: 2) {
+
+                VStack(alignment: .leading, spacing: 3) {
                     Text(agent.name)
-                        .font(.system(size: 17, weight: .semibold))
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.primary)
                     Text(agent.email)
                         .font(.system(size: 13))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
-                
+
                 Spacer()
-                
-                DstStatusBadge(isActive: agent.isActive)
+
+                statusBadge
             }
             .padding(16)
-            
+
             Divider()
-            
-            HStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Contact")
-                        .font(.system(size: 10, weight: .bold))
+                .padding(.horizontal, 16)
+
+            // Bottom: phone + actions
+            HStack {
+                HStack(spacing: 6) {
+                    Image(systemName: "phone.fill")
+                        .font(.system(size: 11))
                         .foregroundStyle(.tertiary)
-                        .textCase(.uppercase)
                     Text(agent.phone)
                         .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.secondary)
                 }
-                .padding(16)
-                
+
                 Spacer()
-                
+
                 HStack(spacing: 8) {
-                    actionButton(icon: agent.isActive ? "person.fill.xmark" : "person.fill.checkmark", color: agent.isActive ? .orange : Theme.Colors.adaptiveSuccess(colorScheme), action: onToggle)
-                    actionButton(icon: "pencil", color: ManagerTheme.Colors.primary(colorScheme), action: onEdit)
-                    actionButton(icon: "trash", color: Theme.Colors.adaptiveCritical(colorScheme), action: onDelete)
+                    iconButton(
+                        icon: agent.isActive ? "person.fill.xmark" : "person.fill.checkmark",
+                        color: agent.isActive ? Theme.Colors.adaptiveWarning(colorScheme) : Theme.Colors.adaptiveSuccess(colorScheme),
+                        action: onToggle
+                    )
+                    iconButton(icon: "pencil",    color: primary,  action: onEdit)
+                    iconButton(icon: "trash",     color: Theme.Colors.adaptiveCritical(colorScheme), action: onDelete)
                 }
-                .padding(.trailing, 16)
             }
-            .background(ManagerTheme.Colors.surfaceSecondary(colorScheme).opacity(0.3))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color(.tertiarySystemFill).opacity(0.4))
         }
-        .background(ManagerTheme.Colors.surface(colorScheme))
-        .cornerRadius(Theme.Radius.md)
+        .background(surface)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
         .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.md)
-                .stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                .stroke(border, lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.02), radius: 8, y: 4)
     }
-    
-    private func actionButton(icon: String, color: Color, action: @escaping () -> Void) -> some View {
+
+    private var statusBadge: some View {
+        let color: Color = agent.isActive ? Theme.Colors.adaptiveSuccess(colorScheme) : .gray
+        return HStack(spacing: 4) {
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+            Text(agent.isActive ? "Active" : "Inactive")
+                .font(.system(size: 11, weight: .bold))
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(color.opacity(0.10))
+        .clipShape(Capsule())
+    }
+
+    private func iconButton(icon: String, color: Color, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(color)
-                .frame(width: 38, height: 38)
-                .background(ManagerTheme.Colors.surface(colorScheme))
-                .clipShape(Circle())
-                .shadow(color: Color.black.opacity(0.05), radius: 2, y: 1)
+                .frame(width: 36, height: 36)
+                .background(color.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 9))
         }
         .buttonStyle(.plain)
     }
 }
 
-private struct DstStatusBadge: View {
-    let isActive: Bool
-    @Environment(\.colorScheme) private var colorScheme
-    
-    var body: some View {
-        HStack(spacing: 4) {
-            Circle()
-                .fill(isActive ? Theme.Colors.adaptiveSuccess(colorScheme) : Color.gray)
-                .frame(width: 6, height: 6)
-            Text(isActive ? "Active" : "Inactive")
-                .font(.system(size: 11, weight: .bold, design: .rounded))
-        }
-        .foregroundStyle(isActive ? Theme.Colors.adaptiveSuccess(colorScheme) : .gray)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background((isActive ? Theme.Colors.adaptiveSuccess(colorScheme) : Color.gray).opacity(0.08))
-        .clipShape(Capsule())
-    }
-}
+// MARK: — Add DST Sheet
 
 private struct AddDstSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @ObservedObject var adminVM: AdminViewModel
-    @ObservedObject var authVM: AuthViewModel
-    
-    @State private var name = ""
-    @State private var email = ""
-    @State private var phone = ""
+    @ObservedObject var adminVM : AdminViewModel
+    @ObservedObject var authVM  : AuthViewModel
+
+    @State private var name     = ""
+    @State private var email    = ""
+    @State private var phone    = ""
     @State private var password = ""
     @State private var isSaving = false
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -377,7 +413,7 @@ private struct AddDstSheet: View {
                 } header: {
                     Text("Personal Details")
                 }
-                
+
                 Section {
                     SecureField("Assign Password", text: $password)
                 } header: {
@@ -393,56 +429,50 @@ private struct AddDstSheet: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(isSaving ? "Creating..." : "Create Account") {
-                        saveAgent()
-                    }
-                    .disabled(name.isEmpty || email.isEmpty || password.isEmpty || isSaving)
-                    .fontWeight(.bold)
+                    Button(isSaving ? "Creating…" : "Create Account") { saveAgent() }
+                        .disabled(name.isEmpty || email.isEmpty || password.isEmpty || isSaving)
+                        .fontWeight(.bold)
                 }
             }
         }
     }
-    
+
     private func saveAgent() {
         isSaving = true
         Task {
             let success = await adminVM.createDstAccount(
-                name: name,
-                email: email,
-                phone: phone,
-                password: password
+                name: name, email: email, phone: phone, password: password
             )
-            
             await MainActor.run {
                 isSaving = false
-                if success {
-                    dismiss()
-                }
+                if success { dismiss() }
             }
         }
     }
 }
 
+// MARK: — Edit DST Sheet
+
 private struct EditDstSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var adminVM: AdminViewModel
-    @ObservedObject var authVM: AuthViewModel
-    
+    @ObservedObject var authVM:  AuthViewModel
+
     let agent: User
-    @State private var name: String
-    @State private var email: String
-    @State private var phone: String
+    @State private var name:     String
+    @State private var email:    String
+    @State private var phone:    String
     @State private var isSaving = false
-    
+
     init(agent: User, adminVM: AdminViewModel, authVM: AuthViewModel) {
-        self.agent = agent
+        self.agent   = agent
         self.adminVM = adminVM
-        self.authVM = authVM
-        _name = State(initialValue: agent.name)
+        self.authVM  = authVM
+        _name  = State(initialValue: agent.name)
         _email = State(initialValue: agent.email)
         _phone = State(initialValue: agent.phone)
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -456,13 +486,12 @@ private struct EditDstSheet: View {
                 } header: {
                     Text("Update Agent Details")
                 }
-                
+
                 Section {
                     HStack {
                         Text("Branch")
                         Spacer()
-                        Text(agent.branch)
-                            .foregroundStyle(.secondary)
+                        Text(agent.branch).foregroundStyle(.secondary)
                     }
                     HStack {
                         Text("Account ID")
@@ -482,30 +511,23 @@ private struct EditDstSheet: View {
                     Button("Cancel") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(isSaving ? "Saving..." : "Update") {
-                        updateAgent()
-                    }
-                    .disabled(name.isEmpty || email.isEmpty || isSaving)
-                    .fontWeight(.bold)
+                    Button(isSaving ? "Saving…" : "Update") { updateAgent() }
+                        .disabled(name.isEmpty || email.isEmpty || isSaving)
+                        .fontWeight(.bold)
                 }
             }
         }
     }
-    
+
     private func updateAgent() {
         isSaving = true
         Task {
             let success = await adminVM.updateDstAccount(
-                userID: agent.id,
-                name: name,
-                email: email,
-                phone: phone
+                userID: agent.id, name: name, email: email, phone: phone
             )
             await MainActor.run {
                 isSaving = false
-                if success {
-                    dismiss()
-                }
+                if success { dismiss() }
             }
         }
     }

@@ -26,7 +26,7 @@ struct MessageBubble: View {
                     if !message.text.isEmpty {
                         Text(message.text)
                             .font(Theme.Typography.subheadline)
-                            .foregroundStyle(message.isFromCurrentUser ? Color.white : Color.primary)
+                            .foregroundStyle(Color.black)
                     }
                     
                     // Attachment
@@ -38,36 +38,25 @@ struct MessageBubble: View {
                                 .font(Theme.Typography.caption)
                                 .lineLimit(1)
                         }
-                        .foregroundStyle(message.isFromCurrentUser ? .white.opacity(0.9) : Theme.Colors.primary)
+                        .foregroundStyle(Color.blue)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .background(
-                            message.isFromCurrentUser
-                            ? Color.white.opacity(0.12)
-                            : Theme.Colors.primary.opacity(0.08)
-                        )
+                        .background(Color.blue.opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
                 .background(
-                    Group {
-                        if message.isFromCurrentUser {
-                            Theme.Colors.primary
-                        } else {
-                            Theme.Colors.adaptiveSurface(colorScheme)
-                        }
-                    }
+                    // sent = grey, received = white
+                    message.isFromCurrentUser
+                        ? Color(hex: "#E5E5EA")
+                        : Color.white
                 )
                 .clipShape(ChatBubbleShape(isFromCurrentUser: message.isFromCurrentUser))
                 .overlay(
-                    Group {
-                        if !message.isFromCurrentUser {
-                            ChatBubbleShape(isFromCurrentUser: message.isFromCurrentUser)
-                                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
-                        }
-                    }
+                    ChatBubbleShape(isFromCurrentUser: message.isFromCurrentUser)
+                        .stroke(Color.black.opacity(0.08), lineWidth: 1)
                 )
                 
                 Text(message.timestamp.timeFormatted)

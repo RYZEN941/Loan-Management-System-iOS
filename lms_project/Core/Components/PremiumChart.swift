@@ -23,21 +23,61 @@ struct PremiumLineChart: View {
             let points = calculatePoints(in: geo.size)
             
             ZStack {
-                // Interaction Surface
+                // Background Area
+                let topPadding: CGFloat = 25
+                let bottomPadding: CGFloat = 25
+                let paddingLeft: CGFloat = 35
+                let paddingRight: CGFloat = 20
+                let drawHeight = geo.size.height - topPadding - bottomPadding
+                
+                // Grid Lines & Y-Axis Labels
+                let maxVal = data.max() ?? 1.0
+                let minVal = data.min() ?? 0.0
+                let drawRange = (maxVal - minVal) == 0 ? 1.0 : (maxVal - minVal)
+                
+                ForEach(0..<5) { i in
+                    let y = topPadding + drawHeight - (CGFloat(i) / 4) * drawHeight
+                    let val = minVal + (Double(i) / 4.0) * drawRange
+                    
+                    Path { path in
+                        path.move(to: CGPoint(x: paddingLeft, y: y))
+                        path.addLine(to: CGPoint(x: geo.size.width - paddingRight, y: y))
+                    }
+                    .stroke(Color.secondary.opacity(0.15), style: StrokeStyle(lineWidth: 1, dash: [4]))
+                    
+                    Text(String(format: "%.0f", val))
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .position(x: paddingLeft - 15, y: y)
+                }
+                
+                // X & Y Axis Lines
+                Path { path in
+                    path.move(to: CGPoint(x: paddingLeft, y: topPadding))
+                    path.addLine(to: CGPoint(x: paddingLeft, y: geo.size.height - bottomPadding))
+                    path.addLine(to: CGPoint(x: geo.size.width - paddingRight, y: geo.size.height - bottomPadding))
+                }
+                .stroke(Color.secondary.opacity(0.5), lineWidth: 1)
+
+                // Interaction Surface — responds to tap & drag anywhere on the chart
                 Color.clear
                     .contentShape(Rectangle())
                     .gesture(
                         DragGesture(minimumDistance: 0)
                             .onChanged { value in
-                                isDragging = true
-                                dragLocation = value.location
-                                updateHoveredIndex(at: value.location, in: geo.size)
+                                withAnimation(.interactiveSpring(response: 0.2, dampingFraction: 0.85)) {
+                                    updateHoveredIndex(at: value.location, in: geo.size, toggle: false)
+                                }
                             }
-                            .onEnded { _ in
-                                isDragging = false
-                                hoveredIndex = nil
+                            .onEnded { value in
+                                // keep tooltip visible after lift; second tap dismisses
                             }
                     )
+                    .onTapGesture { location in
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                            updateHoveredIndex(at: location, in: geo.size, toggle: true)
+                        }
+                    }
                 
                 // Background Area
                 let baselineY = geo.size.height - 25 // Tighter baseline for compact layout
@@ -60,8 +100,10 @@ struct PremiumLineChart: View {
                 
                 ZStack {
                     ForEach(labels.indices, id: \.self) { i in
-                        let stepX = (geo.size.width - 40) / CGFloat(labels.count - 1)
-                        let x = 20 + CGFloat(i) * stepX
+                        let paddingLeft: CGFloat = 35
+                        let paddingRight: CGFloat = 20
+                        let stepX = (geo.size.width - paddingLeft - paddingRight) / CGFloat(labels.count - 1)
+                        let x = paddingLeft + CGFloat(i) * stepX
                         Text(labels[i])
                             .font(.system(size: 9, weight: .bold)) // Finer font for compact view
                             .foregroundStyle(.secondary.opacity(0.8))
@@ -115,16 +157,24 @@ struct PremiumLineChart: View {
         }
     }
     
-    private func updateHoveredIndex(at location: CGPoint, in size: CGSize) {
-        let stepX = (size.width - 40) / CGFloat(data.count - 1)
-        let index = Int(((location.x - 20) / stepX).rounded())
+    private func updateHoveredIndex(at location: CGPoint, in size: CGSize, toggle: Bool) {
+        guard data.count > 1 else { return }
+        let paddingLeft: CGFloat = 35
+        let paddingRight: CGFloat = 20
+        let stepX = (size.width - paddingLeft - paddingRight) / CGFloat(data.count - 1)
+        let index = Int(((location.x - paddingLeft) / stepX).rounded())
         if index >= 0 && index < data.count {
-            if hoveredIndex != index {
-                // Optional Haptic Feedback
-                let impact = UIImpactFeedbackGenerator(style: .light)
-                impact.impactOccurred()
+            if toggle && hoveredIndex == index {
+                hoveredIndex = nil // tap same point again → dismiss
+            } else {
+                if hoveredIndex != index {
+                    let impact = UIImpactFeedbackGenerator(style: .light)
+                    impact.impactOccurred()
+                }
                 hoveredIndex = index
             }
+        } else {
+            if toggle { hoveredIndex = nil }
         }
     }
     
@@ -136,15 +186,16 @@ struct PremiumLineChart: View {
         let range = maxVal - minVal
         let drawRange = range == 0 ? 1.0 : range
         
-        let horizontalPadding: CGFloat = 20
+        let paddingLeft: CGFloat = 35
+        let paddingRight: CGFloat = 20
         let topPadding: CGFloat = 25    // Reduced for compact view
         let bottomPadding: CGFloat = 25 // Reduced for compact view
         
         let drawHeight = size.height - topPadding - bottomPadding
-        let stepX = (size.width - horizontalPadding * 2) / CGFloat(data.count - 1)
+        let stepX = (size.width - paddingLeft - paddingRight) / CGFloat(data.count - 1)
         
         return data.enumerated().map { index, value in
-            let x = horizontalPadding + CGFloat(index) * stepX
+            let x = paddingLeft + CGFloat(index) * stepX
             let normalizedY = CGFloat((value - minVal) / drawRange)
             let y = topPadding + drawHeight - (normalizedY * drawHeight)
             return CGPoint(x: x, y: y)

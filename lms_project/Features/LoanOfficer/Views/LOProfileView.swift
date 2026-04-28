@@ -216,10 +216,13 @@ struct ProfileNavButton: View {
         } label: {
             ZStack {
                 Circle()
-                    .fill(Theme.Colors.primary.opacity(0.12))
-                    .frame(width: 32, height: 32)
+                    .fill(Theme.Colors.primary.opacity(0.14))
+                    .frame(width: 36, height: 36)
+                Circle()
+                    .strokeBorder(Theme.Colors.primary.opacity(0.3), lineWidth: 1.5)
+                    .frame(width: 36, height: 36)
                 Text(authVM.currentUser?.initials ?? "U")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 14, weight: .bold))
                     .foregroundStyle(Theme.Colors.primary)
             }
         }

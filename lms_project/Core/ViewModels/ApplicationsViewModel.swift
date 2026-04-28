@@ -58,48 +58,89 @@ class ApplicationsViewModel: ObservableObject {
     @Published var pendingSendBackApp: LoanApplication? = nil
     @Published var sendBackReason = ""
     @Published var sendBackCustomRemark = ""
+    
+    @Published var minAmount: Double = 0
+    @Published var maxAmount: Double = 100_000_000 // 10 Cr
+    @Published var startDate: Date = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
+    
+    // MARK: - Dashboard Context State
+    enum DashboardFilterType {
+        case none, pending, nearSLA, risky, overdue
+    }
 
+    @Published var activeDashboardFilter: DashboardFilterType = .none
+    
     private let dataService = MockDataService.shared
     private let xmlService = XMLParserService.shared
     // TODO: Replace with UserStore.shared.branchID once auth session exposes it
     private let defaultBranchID = ""
+    
+    // MARK: - Sorting State
+        @Published var currentSort: SortOption = .newestFirst
 
+        enum SortOption {
+            case newestFirst
+            case longestInQueue // FIFO
+            case highestAmount
+        }
     // MARK: - Filtered Applications
 
     var filteredApplications: [LoanApplication] {
         var result = applications
 
-        if let status = filterStatus {
-            result = result.filter { $0.status == status }
-        }
+                // Update this block to strictly filter for all categories
+                switch activeDashboardFilter {
+                case .pending:
+                    result = result.filter { $0.status == .managerReview || $0.status == .officerApproved || $0.status == .underReview }
+                case .risky:
+                    result = result.filter { $0.riskLevel == .high }
+                case .nearSLA:
+                    // Strictly show ONLY urgent items (e.g., <= 2 days remaining)
+                    result = result.filter { $0.slaStatus == .urgent }
+                case .overdue:
+                    // Strictly show ONLY overdue items
+                    result = result.filter { $0.slaStatus == .overdue }
+                case .none:
+                    if let status = filterStatus { result = result.filter { $0.status == status } }
+                    if let risk = filterRisk { result = result.filter { $0.riskLevel == risk } }
+                }
+            // 2. LOAN OFFICER ADVANCED FILTERS (KEEP UNTOUCHED)
+            // Common search filter
+            if !searchText.isEmpty {
+                result = result.filter {
+                    $0.borrower.name.localizedCaseInsensitiveContains(searchText) ||
+                    $0.id.localizedCaseInsensitiveContains(searchText) ||
+                    $0.borrower.employer.localizedCaseInsensitiveContains(searchText)
+                }
+            }
 
-        if let risk = filterRisk {
-            result = result.filter { $0.riskLevel == risk }
-        }
+            // Range filters (Amount & Date)
+            result = result.filter { $0.loan.amount >= minAmount && $0.loan.amount <= maxAmount }
+            result = result.filter { $0.createdAt >= startDate }
 
-        if let sla = filterSLA {
-            result = result.filter { $0.slaStatus == sla }
-        }
+            // 3. FINAL SORTING (UNIFIED)
+            return result.sorted {
+                // DASHBOARD OVERRIDE: If Manager clicked "Overdue" or "Near SLA", force those to top
+                if activeDashboardFilter == .overdue {
+                    if $0.slaStatus != $1.slaStatus { return $0.slaStatus == .overdue }
+                }
+                if activeDashboardFilter == .nearSLA {
+                    if $0.slaStatus != $1.slaStatus { return $0.slaStatus == .urgent }
+                }
 
-        if filterHighValue {
-            // Define High Value as > 50 Lakhs (5,000,000)
-            result = result.filter { $0.loan.amount >= 5000000 }
-        }
-
-        if let type = filterLoanType {
-            result = result.filter { $0.loan.type == type }
-        }
-
-        if !searchText.isEmpty {
-            result = result.filter {
-                $0.borrower.name.localizedCaseInsensitiveContains(searchText) ||
-                $0.id.localizedCaseInsensitiveContains(searchText) ||
-                $0.borrower.employer.localizedCaseInsensitiveContains(searchText)
+                // LOAN OFFICER PRIORITY: Always keep SLA Overdue at the very top
+                if $0.slaStatus != $1.slaStatus {
+                    return $0.slaStatus == .overdue
+                }
+                
+                // USER SORT: Respect the "Highest Amount" or "Newest" selection
+                switch currentSort {
+                case .newestFirst:     return $0.createdAt > $1.createdAt
+                case .longestInQueue:  return $0.createdAt < $1.createdAt
+                case .highestAmount:   return $0.loan.amount > $1.loan.amount
+                }
             }
         }
-
-        return result
-    }
 
     func resetFiltersToAll() {
         filterStatus = nil
@@ -107,7 +148,16 @@ class ApplicationsViewModel: ObservableObject {
         filterSLA = nil
         filterHighValue = false
         filterLoanType = nil
+        minAmount = 0
+                maxAmount = 10_000_000
+                startDate = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
     }
+    
+    func updateSort(_ option: SortOption) {
+            withAnimation {
+                currentSort = option
+            }
+        }
 
     // MARK: - Load Data
 
@@ -761,8 +811,17 @@ class ApplicationsViewModel: ObservableObject {
                     status: nextStatus,
                     escalationReason: nil
                 )
+                // If officerReview succeeded, silently chain officerApproved immediately
+                // so both backend steps happen in a single user action.
+                if nextStatus == .officerReview {
+                    try? await LoanAPI().updateLoanApplicationStatus(
+                        applicationID: applicationID,
+                        status: .officerApproved,
+                        escalationReason: nil
+                    )
+                }
                 try await refreshApplications(selectApplicationID: applicationID, autoSelectFirst: true)
-                actionMessage = successMessage
+                actionMessage = "Application sent to Manager for review"
                 showActionAlert = true
                 return
             } catch {

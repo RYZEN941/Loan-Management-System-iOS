@@ -27,23 +27,17 @@ struct ManagerTabView: View {
                 }
                 .tag(1)
             
-            ManagerPortfolioView(selectedTab: $selectedTab, showProfile: $showProfile)
-                .tabItem {
-                    Label("Portfolio", systemImage: "chart.pie.fill")
-                }
-                .tag(2)
-            
             ManagerDstView(showProfile: $showProfile)
                 .tabItem {
                     Label("DST", systemImage: "person.2.badge.gearshape.fill")
                 }
-                .tag(3)
+                .tag(2)
             
             ManagerMessagesView(showProfile: $showProfile)
                 .tabItem {
                     Label("Messages", systemImage: "message.fill")
                 }
-                .tag(4)
+                .tag(3)
         }
         .tint(ManagerTheme.Colors.primary(colorScheme))
         .sheet(isPresented: $showProfile) {

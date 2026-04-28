@@ -161,7 +161,7 @@ private struct LoginBrandPanel: View {
 
                 // Feature pills
                 VStack(alignment: .leading, spacing: 10) {
-                    BrandFeaturePill(icon: "shield.checkmark.fill", text: "Secure Role-Based Access")
+                    BrandFeaturePill(icon: "checkmark.shield.fill", text: "Secure Role-Based Access")
                     BrandFeaturePill(icon: "lock.iphone",           text: "Two-Factor Authentication")
                     BrandFeaturePill(icon: "chart.bar.fill",        text: "Real-Time Loan Dashboard")
                 }

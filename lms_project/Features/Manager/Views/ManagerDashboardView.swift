@@ -93,46 +93,50 @@ struct ManagerDashboardView: View {
     // MARK: — SECTION 1 · Action Required
 
     private var actionRequiredSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            sectionHeader(title: "Action Required", icon: "exclamationmark.circle.fill")
+            VStack(alignment: .leading, spacing: 12) {
+                sectionHeader(title: "Action Required", icon: "exclamationmark.circle.fill")
 
-            LazyVGrid(columns: fourColGrid, spacing: 10) {
-                actionCard(
-                    title:   "Pending",
-                    count:   pendingCount,
-                    icon:    "clock.fill",
-                    caption: pendingCount == 0 ? "Queue clear" : "Awaiting review",
-                    accent:  primary
-                ) { navigateToApprovals(filter: .pending) }
+                LazyVGrid(columns: fourColGrid, spacing: 10) {
+                    // Pending: Blue if 0, Brand Primary if > 0
+                    actionCard(
+                        title:   "Pending",
+                        count:   pendingCount,
+                        icon:    "clock.fill",
+                        caption: pendingCount == 0 ? "Queue clear" : "Awaiting review",
+                        accent:  pendingCount > 0 ? primary : Theme.Colors.adaptivePrimary(colorScheme)
+                    ) { navigateToApprovals(filter: .pending) }
 
-                actionCard(
-                    title:   "Near SLA",
-                    count:   nearSLACount,
-                    icon: "clock.badge.exclamationmark.fill",
-                    caption: nearSLACount == 0 ? "All within SLA" : "Nearing deadline",
-                    accent:  primary
-                ) { navigateToApprovals(filter: .nearSLA) }
+                    // Near SLA: Blue if 0, Brand Primary if > 0
+                    actionCard(
+                        title:   "Near SLA",
+                        count:   nearSLACount,
+                        icon:    "clock.badge.exclamationmark.fill",
+                        caption: nearSLACount == 0 ? "All within SLA" : "Nearing deadline",
+                        accent:  nearSLACount > 0 ? primary : Theme.Colors.adaptivePrimary(colorScheme)
+                    ) { navigateToApprovals(filter: .nearSLA) }
 
-                actionCard(
-                    title:   "Risky",
-                    count:   highRiskCount,
-                    icon:    "shield.fill",
-                    caption: highRiskCount == 0 ? "No flags" : "Needs scrutiny",
-                    accent:  critical
-                ) { navigateToApprovals(filter: .risky) }
+                    // Risky: Blue if 0, Critical Red if > 0
+                    actionCard(
+                        title:   "Risky",
+                        count:   highRiskCount,
+                        icon:    "shield.fill",
+                        caption: highRiskCount == 0 ? "No flags" : "Needs scrutiny",
+                        accent:  highRiskCount > 0 ? critical : Theme.Colors.adaptivePrimary(colorScheme)
+                    ) { navigateToApprovals(filter: .risky) }
 
-                actionCard(
-                    title:   "Overdue",
-                    count:   overdueCount,
-                    icon:    "calendar.badge.exclamationmark",
-                    caption: overdueCount == 0 ? "None overdue" : "Past due date",
-                    accent:  critical
-                ) { navigateToApprovals(filter: .overdue) }
+                    // Overdue: Blue if 0, Critical Red if > 0
+                    actionCard(
+                        title:   "Overdue",
+                        count:   overdueCount,
+                        icon:    "calendar.badge.exclamationmark",
+                        caption: overdueCount == 0 ? "None overdue" : "Past due date",
+                        accent:  overdueCount > 0 ? critical : Theme.Colors.adaptivePrimary(colorScheme)
+                    ) { navigateToApprovals(filter: .overdue) }
+                }
             }
+            .opacity(isAnimating ? 1 : 0)
+            .offset(y: isAnimating ? 0 : 14)
         }
-        .opacity(isAnimating ? 1 : 0)
-        .offset(y: isAnimating ? 0 : 14)
-    }
 
     @ViewBuilder
     private func actionCard(

@@ -95,7 +95,7 @@ struct ApplicationStatusListView: View {
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("My Applications")
+            Text("Track")
                 .font(.largeTitle).bold()
                 .frame(maxWidth: .infinity, alignment: .leading)
             Text("Track and manage your live loan requests.")

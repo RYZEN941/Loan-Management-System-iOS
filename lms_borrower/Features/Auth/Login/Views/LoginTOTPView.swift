@@ -99,7 +99,7 @@ struct LoginTOTPView: View {
                     .foregroundColor(DS.textSecondary)
             }
 
-            OTPBoxRow(otp: $code, focused: $focused)
+            OTPBoxRow(otp: $code, focused: $focused, isSecure: true)
                 .disabled(viewModel.isLoading)
         }
         .padding(20)

@@ -186,34 +186,58 @@ struct AdminSystemControlView: View {
 
     // MARK: - Sidebar
     private var sidebar: some View {
-        ScrollView {
-            VStack(spacing: 0) {
-                ForEach(SystemSection.allCases) { section in
-                    let isSelected = adminVM.selectedSystemSection == section.rawValue
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) { adminVM.selectedSystemSection = section.rawValue }
-                    } label: {
-                        HStack(spacing: Theme.Spacing.sm) {
-                            Image(systemName: section.icon)
-                                .font(.system(size: 15))
-                                .foregroundStyle(isSelected ? Theme.Colors.adaptivePrimary(colorScheme) : Color.secondary)
-                                .frame(width: 22)
-                            Text(section.rawValue)
-                                .font(Theme.Typography.caption)
-                                .fontWeight(isSelected ? .semibold : .regular)
-                                .foregroundStyle(isSelected ? .primary : .secondary)
-                                .lineLimit(1)
-                            Spacer()
-                        }
-                        .padding(.horizontal, Theme.Spacing.md)
-                        .padding(.vertical, 14)
-                        .background(isSelected ? Theme.Colors.adaptivePrimary(colorScheme).opacity(colorScheme == .dark ? 0.22 : 0.10) : Color.clear)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
+        VStack(spacing: 0) {
+            // Sidebar Header — matches LO Applications style
+            HStack(alignment: .bottom) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("System Control")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
                 }
+                Spacer()
+                Text("\(SystemSection.allCases.count)")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.10))
+                    .clipShape(Capsule())
             }
-            .padding(.top, Theme.Spacing.md)
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
+
+            Divider()
+
+            ScrollView {
+                VStack(spacing: 0) {
+                    ForEach(SystemSection.allCases) { section in
+                        let isSelected = adminVM.selectedSystemSection == section.rawValue
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) { adminVM.selectedSystemSection = section.rawValue }
+                        } label: {
+                            HStack(spacing: Theme.Spacing.sm) {
+                                Image(systemName: section.icon)
+                                    .font(.system(size: 15))
+                                    .foregroundStyle(isSelected ? Theme.Colors.adaptivePrimary(colorScheme) : Color.secondary)
+                                    .frame(width: 22)
+                                Text(section.rawValue)
+                                    .font(Theme.Typography.caption)
+                                    .fontWeight(isSelected ? .semibold : .regular)
+                                    .foregroundStyle(isSelected ? .primary : .secondary)
+                                    .lineLimit(1)
+                                Spacer()
+                            }
+                            .padding(.horizontal, Theme.Spacing.md)
+                            .padding(.vertical, 14)
+                            .background(isSelected ? Theme.Colors.adaptivePrimary(colorScheme).opacity(colorScheme == .dark ? 0.22 : 0.10) : Color.clear)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.top, Theme.Spacing.sm)
+            }
         }
         .background(Theme.Colors.adaptiveSurface(colorScheme))
     }
@@ -423,24 +447,17 @@ struct AdminSystemControlView: View {
                         .foregroundStyle(.tertiary)
                 }
                 Spacer()
-                Button {
-                    editingUser = user
-                } label: {
-                    Image(systemName: "pencil")
-                        .font(.system(size: 16))
-                        .foregroundStyle(Theme.Colors.primary)
+                HStack(spacing: 8) {
+                    sysIconButton(icon: "pencil", color: Theme.Colors.primary) {
+                        editingUser = user
+                    }
+                    sysIconButton(
+                        icon: user.isActive ? "person.slash" : "person.badge.plus",
+                        color: user.isActive ? Theme.Colors.critical : Theme.Colors.success
+                    ) {
+                        adminVM.toggleUserStatus(user)
+                    }
                 }
-                .buttonStyle(.plain)
-
-                Button {
-                    adminVM.toggleUserStatus(user)
-                } label: {
-                    Image(systemName: user.isActive ? "person.slash" : "person.badge.plus")
-                        .font(.system(size: 16))
-                        .foregroundStyle(user.isActive ? Theme.Colors.critical : Theme.Colors.success)
-                }
-                .buttonStyle(.plain)
-
                 GenericBadge(
                     text: user.isActive ? "Active" : "Inactive",
                     color: user.isActive ? Theme.Colors.success : Theme.Colors.neutral
@@ -484,21 +501,15 @@ struct AdminSystemControlView: View {
                     HStack {
                         Text(adminVM.eligibilityRules[index]).font(Theme.Typography.subheadline)
                         Spacer()
-                        
-                        Button {
-                            selectedRuleIndex = index
-                            ruleTextInput = adminVM.eligibilityRules[index]
-                            showRuleModal = true
-                        } label: {
-                            Image(systemName: "pencil.line").foregroundStyle(Theme.Colors.primary)
-                        }
-                        
-                        Button {
-                            withAnimation {
-                                adminVM.deleteEligibilityRule(at: index)
+                        HStack(spacing: 8) {
+                            sysIconButton(icon: "pencil", color: Theme.Colors.primary) {
+                                selectedRuleIndex = index
+                                ruleTextInput = adminVM.eligibilityRules[index]
+                                showRuleModal = true
                             }
-                        } label: {
-                            Image(systemName: "trash").foregroundStyle(Theme.Colors.critical)
+                            sysIconButton(icon: "trash", color: Theme.Colors.critical) {
+                                withAnimation { adminVM.deleteEligibilityRule(at: index) }
+                            }
                         }
                     }
                     .padding(.horizontal, Theme.Spacing.md).padding(.vertical, 12)
@@ -585,24 +596,18 @@ struct AdminSystemControlView: View {
                     HStack {
                         Text(item.name).font(Theme.Typography.subheadline)
                         Spacer()
-                        GenericBadge(text: item.isRequired ? "Required" : "Optional", 
+                        GenericBadge(text: item.isRequired ? "Required" : "Optional",
                                      color: item.isRequired ? Theme.Colors.primary : .secondary)
-                        
-                        Button {
-                            selectedDocument = item
-                            documentNameInput = item.name
-                            documentRequiredInput = item.isRequired
-                            showDocumentModal = true
-                        } label: {
-                            Image(systemName: "pencil.line").foregroundStyle(Theme.Colors.primary)
-                        }
-                        
-                        Button {
-                            withAnimation {
-                                adminVM.documentChecklist.removeAll(where: { $0.id == item.id })
+                        HStack(spacing: 8) {
+                            sysIconButton(icon: "pencil", color: Theme.Colors.primary) {
+                                selectedDocument = item
+                                documentNameInput = item.name
+                                documentRequiredInput = item.isRequired
+                                showDocumentModal = true
                             }
-                        } label: {
-                            Image(systemName: "trash").foregroundStyle(Theme.Colors.critical)
+                            sysIconButton(icon: "trash", color: Theme.Colors.critical) {
+                                withAnimation { adminVM.documentChecklist.removeAll(where: { $0.id == item.id }) }
+                            }
                         }
                     }
                     .padding(.horizontal, Theme.Spacing.md).padding(.vertical, 12)
@@ -833,9 +838,9 @@ struct AdminSystemControlView: View {
                             Text(branch.location.isEmpty ? "Location: Not specified" : "Location: \(branch.location)").font(Theme.Typography.caption).foregroundStyle(.secondary)
                         }
                         Spacer()
-                        Button { editingBranch = branch } label: {
-                            Image(systemName: "pencil").font(.system(size: 16)).foregroundStyle(Theme.Colors.primary)
-                        }.buttonStyle(.plain)
+                        sysIconButton(icon: "pencil", color: Theme.Colors.primary) {
+                            editingBranch = branch
+                        }
                     }
                     .padding(.horizontal, Theme.Spacing.md).padding(.vertical, 10)
                     if branch.id != filteredBranches.last?.id { Divider().padding(.leading, 56) }
@@ -846,6 +851,19 @@ struct AdminSystemControlView: View {
     }
 
     // MARK: - Shared Helpers
+
+    private func sysIconButton(icon: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(color)
+                .frame(width: 36, height: 36)
+                .background(color.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 9))
+        }
+        .buttonStyle(.plain)
+    }
+
     private var ruleFormModal: some View {
         NavigationStack {
             Form {

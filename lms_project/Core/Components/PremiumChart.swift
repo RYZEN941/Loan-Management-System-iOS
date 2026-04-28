@@ -59,11 +59,24 @@ struct PremiumLineChart: View {
                 }
                 .stroke(Color.secondary.opacity(0.5), lineWidth: 1)
 
-                // Interaction Surface
+                // Interaction Surface — responds to tap & drag anywhere on the chart
                 Color.clear
                     .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { value in
+                                withAnimation(.interactiveSpring(response: 0.2, dampingFraction: 0.85)) {
+                                    updateHoveredIndex(at: value.location, in: geo.size, toggle: false)
+                                }
+                            }
+                            .onEnded { value in
+                                // keep tooltip visible after lift; second tap dismisses
+                            }
+                    )
                     .onTapGesture { location in
-                        updateHoveredIndex(at: location, in: geo.size)
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                            updateHoveredIndex(at: location, in: geo.size, toggle: true)
+                        }
                     }
                 
                 // Background Area
@@ -144,21 +157,24 @@ struct PremiumLineChart: View {
         }
     }
     
-    private func updateHoveredIndex(at location: CGPoint, in size: CGSize) {
+    private func updateHoveredIndex(at location: CGPoint, in size: CGSize, toggle: Bool) {
+        guard data.count > 1 else { return }
         let paddingLeft: CGFloat = 35
         let paddingRight: CGFloat = 20
         let stepX = (size.width - paddingLeft - paddingRight) / CGFloat(data.count - 1)
         let index = Int(((location.x - paddingLeft) / stepX).rounded())
         if index >= 0 && index < data.count {
-            if hoveredIndex == index {
-                hoveredIndex = nil // Toggle off if tapped again
+            if toggle && hoveredIndex == index {
+                hoveredIndex = nil // tap same point again → dismiss
             } else {
-                let impact = UIImpactFeedbackGenerator(style: .light)
-                impact.impactOccurred()
+                if hoveredIndex != index {
+                    let impact = UIImpactFeedbackGenerator(style: .light)
+                    impact.impactOccurred()
+                }
                 hoveredIndex = index
             }
         } else {
-            hoveredIndex = nil
+            if toggle { hoveredIndex = nil }
         }
     }
     

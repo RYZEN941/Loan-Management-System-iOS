@@ -82,30 +82,31 @@ struct AdminDashboardView: View {
         }
     }
     
+    private var greetingText: String {
+        let name   = authVM.currentUser?.name.split(separator: " ").first.map(String.init) ?? "Manager"
+        let hour   = Calendar.current.component(.hour, from: Date())
+        let prefix = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening"
+        return "\(prefix), \(name)"
+    }
+    
     // MARK: - Greeting Bar
     
     private var greetingBar: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Command Center")
-                    .font(Theme.Typography.titleLarge)
-                Text("Operational Insights & Controls")
-                    .font(Theme.Typography.subheadline)
-                    .foregroundStyle(.secondary)
-            }
+        HStack(alignment: .center) {
+            Text(greetingText)
+                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
             Spacer()
-            VStack(alignment: .trailing, spacing: 4) {
-                HStack(spacing: 6) {
-                    Circle().fill(Color.green).frame(width: 6, height: 6)
-                    Text("LIVE")
-                        .font(Theme.Typography.caption2)
-                        .foregroundStyle(Color.green)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Color.green.opacity(0.1))
-                .clipShape(Capsule())
+            HStack(spacing: 6) {
+                Circle().fill(Color.green).frame(width: 6, height: 6)
+                Text("LIVE")
+                    .font(Theme.Typography.caption2)
+                    .foregroundStyle(Color.green)
             }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.green.opacity(0.1))
+            .clipShape(Capsule())
         }
         .padding(.top, Theme.Spacing.sm)
         .opacity(isAnimating ? 1 : 0)
@@ -113,15 +114,40 @@ struct AdminDashboardView: View {
     
     // MARK: - 1. ACTIONS REQUIRED
     
+    // MARK: - 1. ACTIONS REQUIRED
+
     private var actionRequiredSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            MinimalHeader(title: "ACTION REQUIRED")
+            sectionHeader(title: "Action Required", icon: "exclamationmark.circle.fill")
             
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: Theme.Spacing.md)], spacing: Theme.Spacing.md) {
-                statusCard(title: "SLA Breaches", count: slaBreachesCount, color: .red, icon: "timer", subtext: slaBreachesCount == 0 ? "No overdue SLA" : "Requires attention")
-                statusCard(title: "Fraud Alerts", count: riskVM.fraudFlagCount, color: .orange, icon: "shield.righthalf.filled", subtext: riskVM.fraudFlagCount == 0 ? "No derived flags" : "Review signals")
-                statusCard(title: "Policy Violations", count: policyViolationCount, color: .orange, icon: "doc.on.doc.fill", subtext: policyViolationCount == 0 ? "Within policy thresholds" : "FOIR/LTV threshold breach")
-                statusCard(title: "Stuck Applications", count: stuckApplicationsCount, color: .yellow, icon: "hourglass.badge.plus", subtext: stuckApplicationsCount == 0 ? "No stuck apps" : "Under review > 3 days")
+                // SLA Breaches: Blue if 0, Red if > 0
+                statusCard(title: "SLA Breaches",
+                           count: slaBreachesCount,
+                           color: slaBreachesCount > 0 ? .red : Theme.Colors.adaptivePrimary(colorScheme),
+                           icon: "timer",
+                           subtext: slaBreachesCount == 0 ? "No overdue SLA" : "Requires attention")
+                
+                // Fraud Alerts: Blue if 0, Orange if > 0
+                statusCard(title: "Fraud Alerts",
+                           count: riskVM.fraudFlagCount,
+                           color: riskVM.fraudFlagCount > 0 ? .orange : Theme.Colors.adaptivePrimary(colorScheme),
+                           icon: "shield.righthalf.filled",
+                           subtext: riskVM.fraudFlagCount == 0 ? "No derived flags" : "Review signals")
+                
+                // Policy Violations: Blue if 0, Orange if > 0
+                statusCard(title: "Policy Violations",
+                           count: policyViolationCount,
+                           color: policyViolationCount > 0 ? .orange : Theme.Colors.adaptivePrimary(colorScheme),
+                           icon: "doc.on.doc.fill",
+                           subtext: policyViolationCount == 0 ? "Within policy thresholds" : "FOIR/LTV threshold breach")
+                
+                // Stuck Applications: Blue if 0, Yellow if > 0
+                statusCard(title: "Stuck Applications",
+                           count: stuckApplicationsCount,
+                           color: stuckApplicationsCount > 0 ? .yellow : Theme.Colors.adaptivePrimary(colorScheme),
+                           icon: "hourglass.badge.plus",
+                           subtext: stuckApplicationsCount == 0 ? "No stuck apps" : "Under review > 3 days")
             }
         }
         .opacity(isAnimating ? 1 : 0)
@@ -132,12 +158,12 @@ struct AdminDashboardView: View {
     
     private var systemHealthSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            MinimalHeader(title: "SYSTEM HEALTH")
+            sectionHeader(title: "System Health", icon: "cpu.fill")
             
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: Theme.Spacing.md)], spacing: Theme.Spacing.md) {
                 statusCard(title: "Processing Time", value: "4.2h", color: Theme.Colors.adaptivePrimary(colorScheme), icon: "clock.fill", trend: "↓ 8%", trendPositive: true, subtext: "Limit: 12h")
-                statusCard(title: "Applications Today", value: "\(applicationsTodayCount)", color: .purple, icon: "doc.text.fill", subtext: "From backend feed")
-                statusCard(title: "Active Users", value: "\(adminVM.activeUsersCount)", color: .green, icon: "person.2.fill", subtext: "From admin directory")
+                statusCard(title: "Applications Today", value: "\(applicationsTodayCount)", color: Theme.Colors.adaptivePrimary(colorScheme), icon: "doc.text.fill", subtext: "From backend feed")
+                statusCard(title: "Active Users", value: "\(adminVM.activeUsersCount)", color: Theme.Colors.adaptivePrimary(colorScheme), icon: "person.2.fill", subtext: "From admin directory")
                 statusCard(title: "SLA Compliance", value: "\(slaCompliancePercent)%", color: Theme.Colors.adaptivePrimary(colorScheme), icon: "checkmark.shield.fill", subtext: "Target: 95%")
             }
         }
@@ -145,21 +171,21 @@ struct AdminDashboardView: View {
         .offset(y: isAnimating ? 0 : 25)
     }
     
-    private func statusCard(title: String, 
-                            count: Int? = nil, 
-                            value: String? = nil, 
-                            color: Color = Theme.Colors.primary, 
-                            icon: String, 
-                            trend: String? = nil, 
-                            trendPositive: Bool? = nil, 
+    private func statusCard(title: String,
+                            count: Int? = nil,
+                            value: String? = nil,
+                            color: Color = Theme.Colors.primary,
+                            icon: String,
+                            trend: String? = nil,
+                            trendPositive: Bool? = nil,
                             subtext: String? = nil) -> some View {
-        Button(action: {
-            // Mapping titles to actions
+        let accent = color
+        return Button(action: {
             switch title {
             case "SLA Breaches":
                 adminVM.selectedRiskSection = .actionRequired
                 adminVM.selectedRiskFilter = .slaBreach
-                selectedTab = 2 // Risk Tab index
+                selectedTab = 2
             case "Fraud Alerts":
                 adminVM.selectedRiskSection = .actionRequired
                 adminVM.selectedRiskFilter = .fraudAlert
@@ -178,11 +204,13 @@ struct AdminDashboardView: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top) {
                     ZStack {
-                        Circle().fill(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.10)).frame(width: 32, height: 32)
-                        Image(systemName: icon).font(.system(size: 14, weight: .bold))
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(accent.opacity(0.18))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: icon)
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundStyle(accent)
                     }
-                    .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
-                    
                     Spacer()
                     if let trend = trend {
                         HStack(spacing: 4) {
@@ -194,47 +222,37 @@ struct AdminDashboardView: View {
                         .foregroundStyle(trendPositive == true ? Color.green : Color.red)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
+                    } else {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color(.tertiaryLabel))
                     }
                 }
-                
                 VStack(alignment: .leading, spacing: 4) {
                     Text(value ?? "\(count ?? 0)")
-                        .font(Theme.Typography.titleLarge)
-                        .foregroundStyle(.primary)
-                    
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
+                        .foregroundStyle(accent)
+                        .contentTransition(.numericText())
                     Text(title)
-                        .font(Theme.Typography.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                    
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.primary)
                     if let subtext = subtext {
                         Text(subtext)
-                            .font(Theme.Typography.caption2)
-                            .foregroundStyle(.tertiary)
-                            .padding(.top, 2)
+                            .font(.system(size: 13))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background {
-                ZStack {
-                    Theme.Colors.adaptiveSurface(colorScheme)
-                    
-                    // Neutral Mini Sparkline
-                    GeometryReader { geo in
-                        MiniSparkline(color: Theme.Colors.adaptivePrimary(colorScheme).opacity(0.10))
-                            .frame(width: geo.size.width * 0.6)
-                            .offset(x: geo.size.width * 0.4, y: geo.size.height * 0.5)
-                    }
-                }
-            }
-            .cornerRadius(16)
+            .background(Theme.Colors.adaptiveSurface(colorScheme))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.primary.opacity(0.04), lineWidth: 1)
+                    .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 1)
             )
-            .shadow(color: Color.black.opacity(0.02), radius: 8, x: 0, y: 4)
         }
         .buttonStyle(ScaleButtonStyle())
     }
@@ -257,7 +275,7 @@ struct AdminDashboardView: View {
     private var operationalPerformanceSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             HStack {
-                MinimalHeader(title: "OPERATIONAL HEALTH")
+                sectionHeader(title: "Operational Health", icon: "chart.line.uptrend.xyaxis")
                 Spacer()
                 HStack(spacing: 4) {
                     Circle().fill(Color.red).frame(width: 6, height: 6)
@@ -306,7 +324,7 @@ struct AdminDashboardView: View {
     
     private var policyEngineCard: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            MinimalHeader(title: "POLICY ENGINE")
+            sectionHeader(title: "Policy Engine", icon: "shield.righthalf.filled")
             
             VStack(spacing: 1) {
                 policyRow(label: "FOIR Threshold", value: "50%", icon: "percent")
@@ -353,7 +371,7 @@ struct AdminDashboardView: View {
     
     private var riskComplianceSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            MinimalHeader(title: "RISK ANALYSIS")
+            sectionHeader(title: "Risk Analysis", icon: "exclamationmark.shield.fill")
             
             RiskIndexCard(fraud: 3, alerts: 2)
                 .frame(maxHeight: .infinity)
@@ -478,7 +496,7 @@ struct AdminDashboardView: View {
     
     private var outcomeMetricsSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            MinimalHeader(title: "FINAL OUTCOMES")
+            sectionHeader(title: "Final Outcomes", icon: "checkmark.seal.fill")
             
             HStack(spacing: Theme.Spacing.md) {
                 outcomeCard(label: "NPA RATIO", value: "2.4%", status: "Good", color: Theme.Colors.adaptivePrimary(colorScheme))
@@ -519,7 +537,7 @@ struct AdminDashboardView: View {
     
     private var recentActivitySection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            MinimalHeader(title: "RECENT ACTIVITIES")
+            sectionHeader(title: "Recent Activity", icon: "clock.arrow.circlepath")
             
             VStack(spacing: 0) {
                 activityItem(title: "APP-2024-006 approved", actor: "Deepak Mehta", time: "12m ago", color: .green)
@@ -600,17 +618,18 @@ struct AdminDashboardView: View {
     }
 }
 
-// MARK: - Components
+// MARK: - Section Header Helper
 
-struct MinimalHeader: View {
-    let title: String
-    
-    var body: some View {
-        HStack(spacing: 0) {
-            Text(title)
-                .font(Theme.Typography.title)
-                .foregroundStyle(.primary)
-                .tracking(1.2)
+extension AdminDashboardView {
+    func sectionHeader(title: String, icon: String) -> some View {
+        HStack(spacing: 6) {
+//            Image(systemName: icon)
+//                .font(.system(size: 14, weight: .bold))
+//                .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
+            Text(title.uppercased())
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(.secondary)
+                .tracking(0.7)
         }
     }
 }

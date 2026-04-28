@@ -122,13 +122,22 @@ struct AdminLoansView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text("Loan Catalog")
-                .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(.primary)
-            
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Image(systemName: "banknote")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
+                    Text("LOAN CATALOG")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .tracking(0.7)
+                }
+                Text("Loan Products")
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+            }
             Spacer()
-            
             Text("\(loansVM.filteredProducts.count) Products")
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
@@ -159,68 +168,106 @@ struct LoanProductCard: View {
     @EnvironmentObject var loansVM: AdminLoansViewModel
     @Environment(\.colorScheme) private var colorScheme
 
+    private var primary: Color { Theme.Colors.adaptivePrimary(colorScheme) }
+    private var surface: Color { Theme.Colors.adaptiveSurface(colorScheme) }
+    private var border: Color { Theme.Colors.adaptiveBorder(colorScheme) }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            HStack(alignment: .center, spacing: 16) {
-                // Symbol
+        VStack(alignment: .leading, spacing: 0) {
+            // Top section: icon + product info + actions
+            HStack(spacing: 14) {
                 ZStack {
                     RoundedRectangle(cornerRadius: Theme.Radius.md)
-                        .fill(Theme.Colors.adaptivePrimary(colorScheme).opacity(0.10))
-                        .frame(width: 44, height: 44)
+                        .fill(primary.opacity(0.08))
+                        .frame(width: 52, height: 52)
                     Image(systemName: product.icon)
-                        .font(.system(size: 18))
-                        .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(primary)
                 }
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(product.name)
                         .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.primary)
                     HStack(spacing: 6) {
-                        pill(product.categoryLabel, color: Theme.Colors.adaptivePrimary(colorScheme))
+                        pill(product.categoryLabel, color: primary)
                         if !product.isActive { pill("Inactive", color: .secondary) }
                     }
                 }
 
                 Spacer()
 
-                HStack(spacing: 12) {
-                    Button { loansVM.editingLoan = product } label: {
-                        Image(systemName: "pencil")
-                            .font(.system(size: 14))
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
+                statusBadge
+            }
+            .padding(16)
 
-                    Button { loansVM.deleteLoanProduct(product) } label: {
-                        Image(systemName: "trash")
-                            .font(.system(size: 14))
-                            .foregroundStyle(Theme.Colors.critical)
-                    }
-                    .buttonStyle(.plain)
+            Divider()
+                .padding(.horizontal, 16)
+
+            // Bottom section: key metrics + edit/delete
+            HStack(spacing: 0) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(product.amountRangeDisplay)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.primary)
+                    Text(product.rateDisplay)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                HStack(spacing: 16) {
+                    miniKPI(label: "Fees", value: "\(product.fees.count)")
+                    if product.isRequiringCollateral { miniKPI(label: "Collateral", value: "Yes") }
+                    miniKPI(label: "Docs", value: "\(product.requiredDocuments.count)")
+                }
+
+                Spacer()
+
+                HStack(spacing: 8) {
+                    iconButton(icon: "pencil", color: primary) { loansVM.editingLoan = product }
+                    iconButton(icon: "trash", color: Theme.Colors.critical) { loansVM.deleteLoanProduct(product) }
                 }
             }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(product.amountRangeDisplay)
-                    .font(.system(size: 14, weight: .medium))
-                Text(product.rateDisplay)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-            }
-
-            HStack(spacing: 12) {
-                miniKPI(label: "Fees", value: "\(product.fees.count)")
-                miniKPI(label: "Docs", value: "\(product.requiredDocuments.count)")
-                if product.isRequiringCollateral { miniKPI(label: "Collateral", value: "Yes") }
-            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color(.tertiarySystemFill).opacity(0.4))
         }
-        .padding(16)
-        .background(Theme.Colors.adaptiveSurface(colorScheme))
-        .cornerRadius(Theme.Radius.lg)
+        .background(surface)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 0.5)
+                .stroke(border, lineWidth: 1)
         )
+    }
+
+    private var statusBadge: some View {
+        let color: Color = product.isActive ? Theme.Colors.adaptiveSuccess(colorScheme) : .gray
+        return HStack(spacing: 4) {
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+            Text(product.isActive ? "Active" : "Inactive")
+                .font(.system(size: 11, weight: .bold))
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(color.opacity(0.10))
+        .clipShape(Capsule())
+    }
+
+    private func iconButton(icon: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(color)
+                .frame(width: 36, height: 36)
+                .background(color.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 9))
+        }
+        .buttonStyle(.plain)
     }
 
     private func miniKPI(label: String, value: String) -> some View {

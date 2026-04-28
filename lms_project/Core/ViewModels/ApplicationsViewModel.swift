@@ -12,6 +12,13 @@ struct OfficerDirectoryItem: Identifiable, Hashable {
     let branchName: String
 }
 
+struct CachedMediaPreview: Sendable {
+    let mediaFileID: String
+    let fileName: String
+    let contentType: String
+    let fileURL: URL?
+}
+
 @MainActor
 class ApplicationsViewModel: ObservableObject {
     @Published var applications: [LoanApplication] = []
@@ -40,6 +47,7 @@ class ApplicationsViewModel: ObservableObject {
     @Published var availableLoanProducts: [LoanProduct] = []
     @Published var availableBranchOfficers: [OfficerDirectoryItem] = []
     @Published var officerDirectoryUnavailableMessage: String? = nil
+    @Published private(set) var mediaPreviewCache: [String: CachedMediaPreview] = [:]
 
     // Auth API for fetching profile
     private let authAPI = AuthAPI()
@@ -50,48 +58,89 @@ class ApplicationsViewModel: ObservableObject {
     @Published var pendingSendBackApp: LoanApplication? = nil
     @Published var sendBackReason = ""
     @Published var sendBackCustomRemark = ""
+    
+    @Published var minAmount: Double = 0
+    @Published var maxAmount: Double = 100_000_000 // 10 Cr
+    @Published var startDate: Date = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
+    
+    // MARK: - Dashboard Context State
+    enum DashboardFilterType {
+        case none, pending, nearSLA, risky, overdue
+    }
 
+    @Published var activeDashboardFilter: DashboardFilterType = .none
+    
     private let dataService = MockDataService.shared
     private let xmlService = XMLParserService.shared
     // TODO: Replace with UserStore.shared.branchID once auth session exposes it
     private let defaultBranchID = ""
+    
+    // MARK: - Sorting State
+        @Published var currentSort: SortOption = .newestFirst
 
+        enum SortOption {
+            case newestFirst
+            case longestInQueue // FIFO
+            case highestAmount
+        }
     // MARK: - Filtered Applications
 
     var filteredApplications: [LoanApplication] {
         var result = applications
 
-        if let status = filterStatus {
-            result = result.filter { $0.status == status }
-        }
+                // Update this block to strictly filter for all categories
+                switch activeDashboardFilter {
+                case .pending:
+                    result = result.filter { $0.status == .managerReview || $0.status == .officerApproved || $0.status == .underReview }
+                case .risky:
+                    result = result.filter { $0.riskLevel == .high }
+                case .nearSLA:
+                    // Strictly show ONLY urgent items (e.g., <= 2 days remaining)
+                    result = result.filter { $0.slaStatus == .urgent }
+                case .overdue:
+                    // Strictly show ONLY overdue items
+                    result = result.filter { $0.slaStatus == .overdue }
+                case .none:
+                    if let status = filterStatus { result = result.filter { $0.status == status } }
+                    if let risk = filterRisk { result = result.filter { $0.riskLevel == risk } }
+                }
+            // 2. LOAN OFFICER ADVANCED FILTERS (KEEP UNTOUCHED)
+            // Common search filter
+            if !searchText.isEmpty {
+                result = result.filter {
+                    $0.borrower.name.localizedCaseInsensitiveContains(searchText) ||
+                    $0.id.localizedCaseInsensitiveContains(searchText) ||
+                    $0.borrower.employer.localizedCaseInsensitiveContains(searchText)
+                }
+            }
 
-        if let risk = filterRisk {
-            result = result.filter { $0.riskLevel == risk }
-        }
+            // Range filters (Amount & Date)
+            result = result.filter { $0.loan.amount >= minAmount && $0.loan.amount <= maxAmount }
+            result = result.filter { $0.createdAt >= startDate }
 
-        if let sla = filterSLA {
-            result = result.filter { $0.slaStatus == sla }
-        }
+            // 3. FINAL SORTING (UNIFIED)
+            return result.sorted {
+                // DASHBOARD OVERRIDE: If Manager clicked "Overdue" or "Near SLA", force those to top
+                if activeDashboardFilter == .overdue {
+                    if $0.slaStatus != $1.slaStatus { return $0.slaStatus == .overdue }
+                }
+                if activeDashboardFilter == .nearSLA {
+                    if $0.slaStatus != $1.slaStatus { return $0.slaStatus == .urgent }
+                }
 
-        if filterHighValue {
-            // Define High Value as > 50 Lakhs (5,000,000)
-            result = result.filter { $0.loan.amount >= 5000000 }
-        }
-
-        if let type = filterLoanType {
-            result = result.filter { $0.loan.type == type }
-        }
-
-        if !searchText.isEmpty {
-            result = result.filter {
-                $0.borrower.name.localizedCaseInsensitiveContains(searchText) ||
-                $0.id.localizedCaseInsensitiveContains(searchText) ||
-                $0.borrower.employer.localizedCaseInsensitiveContains(searchText)
+                // LOAN OFFICER PRIORITY: Always keep SLA Overdue at the very top
+                if $0.slaStatus != $1.slaStatus {
+                    return $0.slaStatus == .overdue
+                }
+                
+                // USER SORT: Respect the "Highest Amount" or "Newest" selection
+                switch currentSort {
+                case .newestFirst:     return $0.createdAt > $1.createdAt
+                case .longestInQueue:  return $0.createdAt < $1.createdAt
+                case .highestAmount:   return $0.loan.amount > $1.loan.amount
+                }
             }
         }
-
-        return result
-    }
 
     func resetFiltersToAll() {
         filterStatus = nil
@@ -99,7 +148,16 @@ class ApplicationsViewModel: ObservableObject {
         filterSLA = nil
         filterHighValue = false
         filterLoanType = nil
+        minAmount = 0
+                maxAmount = 10_000_000
+                startDate = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
     }
+    
+    func updateSort(_ option: SortOption) {
+            withAnimation {
+                currentSort = option
+            }
+        }
 
     // MARK: - Load Data
 
@@ -135,6 +193,32 @@ class ApplicationsViewModel: ObservableObject {
             selectedApplication = app
         }
         Task { await refreshSelectedApplicationDetail(applicationID: app.id) }
+    }
+
+    func refreshDocumentPreview(documentID: String, applicationID: String) async -> LoanDocument? {
+        let selectedDoc = selectedApplication?.documents.first(where: { $0.id == documentID })
+        let hasInMemoryUpload = !((uploadedFiles[documentID] ?? []).isEmpty)
+
+        if var selectedDoc {
+            if selectedDoc.fileURL == nil {
+                selectedDoc = applyCachedPreview(to: selectedDoc)
+            }
+            if selectedDoc.fileURL != nil || hasInMemoryUpload {
+                return selectedDoc
+            }
+        }
+
+        await refreshSelectedApplicationDetail(applicationID: applicationID)
+
+        if let refreshedSelectedDoc = selectedApplication?.documents.first(where: { $0.id == documentID }) {
+            return applyCachedPreview(to: refreshedSelectedDoc)
+        }
+
+        return applications
+            .first(where: { $0.id == applicationID })?
+            .documents
+            .first(where: { $0.id == documentID })
+            .map(applyCachedPreview)
     }
 
     // MARK: - LO Actions
@@ -574,12 +658,13 @@ class ApplicationsViewModel: ObservableObject {
             }
 
             do {
-                let mediaID = try await MediaAPI().uploadFile(data: data, fileName: fileName, contentType: contentType)
+                let uploadedMedia = try await MediaAPI().uploadFile(data: data, fileName: fileName, contentType: contentType)
+                cacheMediaPreview(uploadedMedia)
                 _ = try await LoanAPI().addApplicationDocument(
                     applicationID: application.id,
                     borrowerProfileID: borrowerProfileID,
                     requiredDocID: "sanction_letter_manual",
-                    mediaFileID: mediaID
+                    mediaFileID: uploadedMedia.mediaID
                 )
                 try await refreshApplications(selectApplicationID: application.id, autoSelectFirst: true)
                 actionMessage = "Sanction letter uploaded successfully."
@@ -655,7 +740,7 @@ class ApplicationsViewModel: ObservableObject {
 
     // MARK: - Private Backend Helpers
 
-    /// Manager approval: updates status to MANAGER_APPROVED then creates the loan ledger via CreateLoan.
+    /// Manager approval: updates status to MANAGER_APPROVED and leaves final disbursal pending borrower acceptance.
     private func approveAndCreateLoan(_ app: LoanApplication) async {
         guard #available(iOS 18.0, *) else {
             actionMessage = "Approval requires iOS 18 or later"
@@ -668,14 +753,8 @@ class ApplicationsViewModel: ObservableObject {
                 status: .managerApproved,
                 escalationReason: nil
             )
-            // Create the loan ledger so repayment/EMI schedule is generated
-            let principalAmount = String(format: "%.0f", app.loan.amount)
-            _ = try? await LoanAPI().createLoan(
-                applicationID: app.id,
-                principalAmount: principalAmount
-            )
             try await refreshApplications(selectApplicationID: app.id, autoSelectFirst: true)
-            actionMessage = "Application approved and loan disbursement initiated"
+            actionMessage = "Application approved. Borrower must accept the sanction letter before disbursal."
             showActionAlert = true
         } catch {
             actionMessage = (error as? LocalizedError)?.errorDescription ?? "Unable to approve application"
@@ -794,6 +873,7 @@ class ApplicationsViewModel: ObservableObject {
         }
     }
 
+    
     private func enrichDocumentsWithMedia(_ application: LoanApplication) async throws -> LoanApplication {
         let mediaIDs: Set<String> = Set(application.documents.compactMap { doc in
             guard let mediaFileID = doc.mediaFileID?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -806,34 +886,40 @@ class ApplicationsViewModel: ObservableObject {
         guard !mediaIDs.isEmpty else { return application }
 
         var matchedMedia: [String: Media_V1_MediaItem] = [:]
-        var offset: Int32 = 0
-        let pageSize: Int32 = 100
-        let maxPages = 20
+        let unresolvedMediaIDs = mediaIDs.filter { mediaPreviewCache[$0] == nil }
 
-        for _ in 0..<maxPages {
-            let page = try await MediaAPI().listMedia(limit: pageSize, offset: offset)
-            if page.isEmpty { break }
+        if !unresolvedMediaIDs.isEmpty {
+            do {
+                var offset: Int32 = 0
+                let pageSize: Int32 = 100
+                let maxPages = 20
 
-            for item in page where mediaIDs.contains(item.mediaID) {
-                matchedMedia[item.mediaID] = item
+                for _ in 0..<maxPages {
+                    let page = try await MediaAPI().listMedia(limit: pageSize, offset: offset)
+                    if page.isEmpty { break }
+
+                    for item in page where unresolvedMediaIDs.contains(item.mediaID) {
+                        matchedMedia[item.mediaID] = item
+                    }
+
+                    if matchedMedia.count == unresolvedMediaIDs.count || page.count < Int(pageSize) {
+                        break
+                    }
+                    offset += pageSize
+                }
+            } catch {
+                // Preserve any locally cached preview URLs even when media listing is not allowed.
             }
-
-            if matchedMedia.count == mediaIDs.count || page.count < Int(pageSize) {
-                break
-            }
-            offset += pageSize
         }
-
-        guard !matchedMedia.isEmpty else { return application }
 
         var enriched = application
         enriched.documents = application.documents.map { document in
-            guard let mediaFileID = document.mediaFileID,
+            var updated = applyCachedPreview(to: document)
+            guard let mediaFileID = updated.mediaFileID,
                   let media = matchedMedia[mediaFileID] else {
-                return document
+                return updated
             }
 
-            var updated = document
             updated.fileName = media.fileName.isEmpty ? document.fileName : media.fileName
             updated.contentType = media.contentType.isEmpty ? document.contentType : media.contentType
             if !media.fileUrl.isEmpty {
@@ -843,6 +929,34 @@ class ApplicationsViewModel: ObservableObject {
         }
         return enriched
     }
+
+    func cacheMediaPreview(_ uploadedMedia: UploadedMedia) {
+        mediaPreviewCache[uploadedMedia.mediaID] = CachedMediaPreview(
+            mediaFileID: uploadedMedia.mediaID,
+            fileName: uploadedMedia.fileName,
+            contentType: uploadedMedia.contentType,
+            fileURL: uploadedMedia.fileURL
+        )
+    }
+
+    private func applyCachedPreview(to document: LoanDocument) -> LoanDocument {
+        guard let mediaFileID = document.mediaFileID,
+              let cachedPreview = mediaPreviewCache[mediaFileID] else {
+            return document
+        }
+
+        var updated = document
+        if updated.fileName?.isEmpty != false {
+            updated.fileName = cachedPreview.fileName
+        }
+        if updated.contentType?.isEmpty != false {
+            updated.contentType = cachedPreview.contentType
+        }
+        if updated.fileURL == nil {
+            updated.fileURL = cachedPreview.fileURL
+        }
+        return updated
+    }
 }
 
 // MARK: - Uploaded Doc File
@@ -851,9 +965,58 @@ struct UploadedDocFile: Identifiable {
     let id = UUID()
     let name: String
     let url: URL?
+    var data: Data? = nil
+    let contentType: String?
     let isImage: Bool
     let uploadedAt: Date
 }
+
+
+// MARK: - 1. Add the Data Model here
+struct NPADataPoint: Identifiable {
+    let id = UUID()
+    let category: String
+    let npaCount: Int
+    let totalCount: Int
+    var npaRatio: Double {
+        totalCount > 0 ? (Double(npaCount) / Double(totalCount)) * 100 : 0
+    }
+}
+
+// MARK: - 2. Add the Extension here
+extension ApplicationsViewModel {
+    /// Identify NPA Loans (Overdue > 90 days)
+    var npaLoans: [LoanApplication] {
+        applications.filter { $0.slaDeadline.daysRemaining < -90 }
+    }
+
+    /// Group by Loan Type
+    var npaByLoanType: [NPADataPoint] {
+        let groups = Dictionary(grouping: applications, by: { $0.loan.type.displayName })
+        return groups.map { (key, apps) in
+            NPADataPoint(category: key,
+                         npaCount: apps.filter { $0.slaDeadline.daysRemaining < -90 }.count,
+                         totalCount: apps.count)
+        }.sorted { $0.npaCount > $1.npaCount }
+    }
+
+    /// Group by Tenure Buckets
+    var npaByTenure: [NPADataPoint] {
+        func getBucket(_ months: Int) -> String {
+            if months <= 12 { return "0-1 yr" }
+            if months <= 36 { return "1-3 yr" }
+            return "3+ yr"
+        }
+        let groups = Dictionary(grouping: applications, by: { getBucket($0.loan.tenure) })
+        return groups.map { (key, apps) in
+            NPADataPoint(category: key,
+                         npaCount: apps.filter { $0.slaDeadline.daysRemaining < -90 }.count,
+                         totalCount: apps.count)
+        }
+    }
+}
+
+
 
 private extension LoanProduct {
     var loanTypeForUI: LoanType {

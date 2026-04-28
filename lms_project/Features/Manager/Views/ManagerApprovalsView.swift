@@ -81,21 +81,37 @@ struct ManagerApprovalsView: View {
                 }
             }
             .onAppear {
-                applicationsVM.resetFiltersToAll()
-                applicationsVM.loadData(autoSelectFirst: true)
-                selectedManagerChip = .all
-                if let app = applicationsVM.selectedApplication {
-                    applicationsVM.loadBranchOfficers(branchName: app.branch)
-                }
-            }
-            .alert("Action", isPresented: $applicationsVM.showActionAlert) {
+                            // Load latest data without auto-selecting to handle the "No match" case correctly
+                            applicationsVM.loadData(autoSelectFirst: false)
+                            
+                            // Only reset if navigating normally (not via Dashboard card)
+                            if applicationsVM.activeDashboardFilter == .none {
+                                applicationsVM.resetFiltersToAll()
+                                selectedManagerChip = .all
+                            } else {
+                                // Sync the UI chips to visually match the dashboard category
+                                switch applicationsVM.activeDashboardFilter {
+                                case .pending: selectedManagerChip = .pendingReview
+                                case .risky:   selectedManagerChip = .highRisk
+                                default:       selectedManagerChip = .all
+                                }
+                            }
+                            
+                            // Handle Selection logic for empty filter results
+                            if applicationsVM.filteredApplications.isEmpty {
+                                applicationsVM.selectedApplication = nil
+                            } else {
+                                // Only auto-select if something actually matches the dashboard shortcut
+                                applicationsVM.selectedApplication = applicationsVM.filteredApplications.first
+                            }
+                        }           .alert("Action", isPresented: $applicationsVM.showActionAlert) {
                 Button("OK") {}
             } message: { Text(applicationsVM.actionMessage ?? "") }
             .sheet(isPresented: $applicationsVM.showRejectionRemarksSheet) { rejectionSheet }
             .sheet(isPresented: $applicationsVM.showSendBackSheet) { sendBackSheet }
             .sheet(item: $previewLetter) { version in sanctionLetterPreview(version) }
             .sheet(item: $previewDocument) { document in
-                documentPreviewSheet(document)
+                DocumentPreviewSheet(file: currentPreviewDocument(for: document))
             }
             .sheet(isPresented: $showEditTerms) {
                 if let app = applicationsVM.selectedApplication {
@@ -109,7 +125,7 @@ struct ManagerApprovalsView: View {
                         applicationsVM.approveApplication(app)
                     }
                 }
-            } message: { Text("This will update the application status to Approved and create the loan ledger.") }
+            } message: { Text("This will update the application to Manager Approved. The borrower must accept the sanction letter before the loan is disbursed.") }
             .alert("Regenerate sanction letter?", isPresented: $showRegenerateConfirmation) {
                 Button("Cancel", role: .cancel) {}
                 Button("Regenerate") {
@@ -172,7 +188,9 @@ struct ManagerApprovalsView: View {
                 HStack(spacing: 10) {
                     ForEach(ManagerChip.allCases, id: \.self) { chip in
                         AppFilterChip(label: chip.rawValue, isSelected: selectedManagerChip == chip) {
-                            withAnimation { selectedManagerChip = chip }
+                            withAnimation {
+                                applicationsVM.activeDashboardFilter = .none
+                                selectedManagerChip = chip }
                         }
                     }
                 }
@@ -302,7 +320,7 @@ struct ManagerApprovalsView: View {
             .overlay(Divider().padding(.horizontal, 10), alignment: .bottom)
         }
 
-    // MARK: - Detail Panel
+   // MARK: - Detail Panel
     private var applicationDetailPanel: some View {
         Group {
             if let app = applicationsVM.selectedApplication {
@@ -325,7 +343,7 @@ struct ManagerApprovalsView: View {
                 .safeAreaInset(edge: .bottom) {
                     if app.status == .officerApproved || app.status == .managerReview ||
                        app.status == .underReview || app.status == .pending {
-                        ManagerActionPanel(
+                         ManagerActionPanel(
                             onApprove: { showApprovalConfirmation = true },
                             onRejectWithRemarks: { applicationsVM.beginRejectWithRemarks(app) },
                             onSendBack: { applicationsVM.beginSendBack(app) },
@@ -353,7 +371,20 @@ struct ManagerApprovalsView: View {
                         selectedOfficerID = ""
                     }
                 }
-            } else {
+            }
+            // 2. Filter Result Empty Case: Explicitly show "No applications found"
+                        else if applicationsVM.filteredApplications.isEmpty {
+                            VStack(spacing: 16) {
+                                Image(systemName: "exclamationmark.magnifyingglass")
+                                    .font(.system(size: 48, weight: .thin))
+                                    .foregroundStyle(.secondary)
+                                Text("No applications found for this category")
+                                    .font(Theme.Typography.headline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
+            else {
                 VStack(spacing: 16) {
                     Image(systemName: "checkmark.circle.badge.questionmark").font(.system(size: 48, weight: .thin)).foregroundStyle(ManagerTheme.Colors.primary(colorScheme).opacity(0.4))
                     Text("Select an application to review").font(Theme.Typography.subheadline).foregroundStyle(.secondary)
@@ -364,27 +395,8 @@ struct ManagerApprovalsView: View {
     }
 
     private var displayedApplications: [LoanApplication] {
-        let base: [LoanApplication]
-        switch selectedManagerChip {
-        case .all:
-            base = applicationsVM.applications
-        case .pendingReview:
-            base = applicationsVM.applications.filter { $0.status == .managerReview || $0.status == .officerApproved || $0.status == .underReview }
-        case .approved:
-            base = applicationsVM.applications.filter { $0.status == .approved || $0.status == .managerApproved }
-        case .rejected:
-            base = applicationsVM.applications.filter { $0.status == .rejected || $0.status == .officerRejected || $0.status == .managerRejected }
-        case .highRisk:
-            base = applicationsVM.applications.filter { $0.riskLevel == .high }
-        }
-
-        let query = applicationsVM.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return base }
-        return base.filter {
-            $0.borrower.name.localizedCaseInsensitiveContains(query) ||
-            $0.id.localizedCaseInsensitiveContains(query) ||
-            $0.borrower.employer.localizedCaseInsensitiveContains(query)
-        }
+        // Let the ViewModel handle the contextual filtering
+        return applicationsVM.filteredApplications
     }
 
     private func selectedApplicationHint(_ app: LoanApplication) -> some View {
@@ -728,9 +740,12 @@ struct ManagerApprovalsView: View {
 
                             Spacer()
 
-                            if doc.fileURL != nil {
+                            let hasInMemoryFile = !(applicationsVM.uploadedFiles[doc.id] ?? []).isEmpty
+                            if doc.fileURL != nil || hasInMemoryFile || doc.mediaFileID != nil {
                                 Button {
-                                    previewDocument = doc
+                                    Task {
+                                        await openPreview(for: doc, applicationID: app.id)
+                                    }
                                 } label: {
                                     Label("Preview", systemImage: "eye")
                                         .font(.system(size: 11, weight: .semibold))
@@ -942,6 +957,30 @@ struct ManagerApprovalsView: View {
         }
         .padding(12)
         .overlay(Divider(), alignment: .bottom)
+    }
+
+    private func currentPreviewDocument(for document: LoanDocument) -> UploadedDocFile {
+        if let local = applicationsVM.uploadedFiles[document.id]?.last {
+            return local
+        }
+
+        let isImage = (document.contentType ?? "").hasPrefix("image/")
+        return UploadedDocFile(
+            name: document.fileName ?? document.label,
+            url: document.fileURL,
+            data: nil,
+            contentType: document.contentType,
+            isImage: isImage,
+            uploadedAt: document.uploadedAt ?? Date()
+        )
+    }
+
+    private func openPreview(for document: LoanDocument, applicationID: String) async {
+        if let refreshed = await applicationsVM.refreshDocumentPreview(documentID: document.id, applicationID: applicationID) {
+            previewDocument = refreshed
+        } else {
+            previewDocument = document
+        }
     }
 
     private func documentPreviewSheet(_ document: LoanDocument) -> some View {

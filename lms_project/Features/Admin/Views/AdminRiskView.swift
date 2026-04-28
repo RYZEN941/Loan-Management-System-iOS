@@ -74,15 +74,9 @@ struct AdminRiskView: View {
                         rightPanelContent
                             .frame(maxWidth: .infinity)
                     }
-                    .onAppear {
-                        // Set initial state based on orientation/width
-                        if geo.size.width < 800 { // Simple portrait check
-                            sidebarCollapsed = true
-                        }
-                    }
                 }
             }
-            .navigationTitle("Risk & Collections")
+            .navigationTitle("Risk Analytics")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -155,6 +149,31 @@ struct AdminRiskView: View {
     
     private var riskSidebar: some View {
         VStack(spacing: 0) {
+            // Sidebar Header — matches LO Applications style
+            HStack(alignment: .bottom) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Risk Analytics")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                }
+                Spacer()
+                let totalActions = slaBreaches.count + fraudAlerts.count + policyViolations.count + stuckApps.count
+                if totalActions > 0 {
+                    Text("\(totalActions)")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(Theme.Colors.critical)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Theme.Colors.critical.opacity(0.12))
+                        .clipShape(Capsule())
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 12)
+
+            Divider()
+
             ScrollView {
                 VStack(spacing: Theme.Spacing.xs) {
                     ForEach(RiskSection.allCases) { section in

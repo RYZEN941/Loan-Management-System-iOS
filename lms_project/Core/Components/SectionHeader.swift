@@ -19,13 +19,13 @@ struct SectionHeader: View {
                 HStack(spacing: 8) {
                     if let icon = icon {
                         Image(systemName: icon)
-                            .font(.system(size: 14, weight: .bold))
+                            .font(.system(size: 16, weight: .bold))
                             .foregroundStyle(Theme.Colors.primary)
                     }
                     
                     HStack(spacing: 4) {
                         Text(title)
-                            .font(.system(size: 17, weight: .bold))
+                            .font(.system(size: 20, weight: .bold))
                             .foregroundStyle(.primary)
                         
                         if let infoAction = infoAction {

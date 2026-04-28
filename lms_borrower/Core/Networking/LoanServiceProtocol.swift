@@ -65,6 +65,20 @@ protocol LoanServiceProtocol {
     func listEmiSchedule(loanId: String) async throws -> [EmiScheduleItem]
 
     // MARK: - Payments
+    // Backend: LoanService.InitiatePayment
+    func initiatePayment(
+        loanId: String,
+        emiScheduleId: String,
+        amount: String
+    ) async throws -> RazorpayPaymentOrder
+
+    // Backend: LoanService.VerifyPayment
+    func verifyPayment(
+        razorpayOrderId: String,
+        razorpayPaymentId: String,
+        razorpaySignature: String
+    ) async throws -> RazorpayPaymentVerificationResult
+
     // Backend: LoanService.ListPayments (loan.proto line 37)
     func listPayments(loanId: String) async throws -> [LoanPayment]
 

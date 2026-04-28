@@ -307,6 +307,57 @@ final class LoanGRPCClient: LoanServiceProtocol {
         }
     }
 
+    func initiatePayment(
+        loanId: String,
+        emiScheduleId: String,
+        amount: String
+    ) async throws -> RazorpayPaymentOrder {
+        var request = Loan_V1_InitiatePaymentRequest()
+        request.loanID = loanId
+        request.emiScheduleID = emiScheduleId
+        request.amount = amount
+
+        do {
+            let (options, metadata) = try authContext()
+            let response = try await client.initiatePayment(
+                request: .init(message: request, metadata: metadata),
+                options: options
+            )
+            return RazorpayPaymentOrder(
+                loanId: loanId,
+                emiScheduleId: emiScheduleId,
+                orderId: response.razorpayOrderID,
+                amount: response.amount,
+                currency: response.currency
+            )
+        } catch {
+            throw LoanError.from(error)
+        }
+    }
+
+    func verifyPayment(
+        razorpayOrderId: String,
+        razorpayPaymentId: String,
+        razorpaySignature: String
+    ) async throws -> RazorpayPaymentVerificationResult {
+        var request = Loan_V1_VerifyPaymentRequest()
+        request.razorpayOrderID = razorpayOrderId
+        request.razorpayPaymentID = razorpayPaymentId
+        request.razorpaySignature = razorpaySignature
+
+        do {
+            let (options, metadata) = try authContext()
+            let response = try await client.verifyPayment(
+                request: .init(message: request, metadata: metadata),
+                options: options
+            )
+            let payment = response.hasPayment ? LoanPayment.from(proto: response.payment) : nil
+            return RazorpayPaymentVerificationResult(success: response.success, payment: payment)
+        } catch {
+            throw LoanError.from(error)
+        }
+    }
+
     func recordPayment(
         loanId: String,
         emiScheduleId: String,

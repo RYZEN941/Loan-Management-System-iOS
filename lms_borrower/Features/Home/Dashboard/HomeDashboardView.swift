@@ -571,15 +571,25 @@ struct QuickActionItemView: View {
             case .autoPay:
                 router.push(.autoPaySetup)
             case .payEMI:
-                let appId = viewModel.activeLoans.first?.application?.id ?? ""
-                router.push(.repaymentDashboard(applicationId: appId))
+                if let nextEMI = viewModel.nextEMI {
+                    router.push(.paymentCheckout(
+                        loanId: nextEMI.loanId,
+                        emiScheduleId: nextEMI.emiScheduleId,
+                        amount: nextEMI.amount
+                    ))
+                } else if let appId = viewModel.activeLoans.first?.application?.id, !appId.isEmpty {
+                    router.push(.repaymentDashboard(applicationId: appId))
+                }
             case .history:
-                let loanId = viewModel.activeLoans.first?.id ?? ""
-                router.push(.repaymentsList(loanId: loanId, initialTab: 1))
+                if let loanId = viewModel.activeLoans.first?.id, !loanId.isEmpty {
+                    router.push(.repaymentsList(loanId: loanId, initialTab: 1))
+                }
             case .support:
                 router.push(.chatList)
             case .schedule:
-                router.push(.amortisationSchedule(loanId: viewModel.activeLoans.first?.id))
+                if let loanId = viewModel.activeLoans.first?.id, !loanId.isEmpty {
+                    router.push(.amortisationSchedule(loanId: loanId))
+                }
             case .foreclose:
                 router.push(.outstandingBalance)
             case .statement:

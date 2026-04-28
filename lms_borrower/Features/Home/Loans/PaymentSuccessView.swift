@@ -25,7 +25,7 @@ struct PaymentSuccessView: View {
                     .font(.largeTitle).bold()
                     .multilineTextAlignment(.center)
                 
-                Text("Your EMI payment has been processed and your loan account will be updated shortly.")
+                Text("Your Razorpay payment was verified successfully and your EMI has been recorded against the loan.")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)

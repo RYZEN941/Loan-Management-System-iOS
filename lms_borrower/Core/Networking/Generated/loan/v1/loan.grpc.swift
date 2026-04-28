@@ -15,377 +15,416 @@ import GRPCProtobuf
 
 /// Namespace containing generated types for the "loan.v1.LoanService" service.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
-public enum Loan_V1_LoanService: Sendable {
+internal enum Loan_V1_LoanService: Sendable {
     /// Service descriptor for the "loan.v1.LoanService" service.
-    public static let descriptor = GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService")
+    internal static let descriptor = GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService")
     /// Namespace for method metadata.
-    public enum Method: Sendable {
+    internal enum Method: Sendable {
         /// Namespace for "CreateLoanProduct" metadata.
-        public enum CreateLoanProduct: Sendable {
+        internal enum CreateLoanProduct: Sendable {
             /// Request type for "CreateLoanProduct".
-            public typealias Input = Loan_V1_CreateLoanProductRequest
+            internal typealias Input = Loan_V1_CreateLoanProductRequest
             /// Response type for "CreateLoanProduct".
-            public typealias Output = Loan_V1_CreateLoanProductResponse
+            internal typealias Output = Loan_V1_CreateLoanProductResponse
             /// Descriptor for "CreateLoanProduct".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "CreateLoanProduct",
                 type: .unary
             )
         }
         /// Namespace for "UpdateLoanProduct" metadata.
-        public enum UpdateLoanProduct: Sendable {
+        internal enum UpdateLoanProduct: Sendable {
             /// Request type for "UpdateLoanProduct".
-            public typealias Input = Loan_V1_UpdateLoanProductRequest
+            internal typealias Input = Loan_V1_UpdateLoanProductRequest
             /// Response type for "UpdateLoanProduct".
-            public typealias Output = Loan_V1_UpdateLoanProductResponse
+            internal typealias Output = Loan_V1_UpdateLoanProductResponse
             /// Descriptor for "UpdateLoanProduct".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "UpdateLoanProduct",
                 type: .unary
             )
         }
         /// Namespace for "DeleteLoanProduct" metadata.
-        public enum DeleteLoanProduct: Sendable {
+        internal enum DeleteLoanProduct: Sendable {
             /// Request type for "DeleteLoanProduct".
-            public typealias Input = Loan_V1_DeleteLoanProductRequest
+            internal typealias Input = Loan_V1_DeleteLoanProductRequest
             /// Response type for "DeleteLoanProduct".
-            public typealias Output = Loan_V1_DeleteLoanProductResponse
+            internal typealias Output = Loan_V1_DeleteLoanProductResponse
             /// Descriptor for "DeleteLoanProduct".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "DeleteLoanProduct",
                 type: .unary
             )
         }
         /// Namespace for "GetLoanProduct" metadata.
-        public enum GetLoanProduct: Sendable {
+        internal enum GetLoanProduct: Sendable {
             /// Request type for "GetLoanProduct".
-            public typealias Input = Loan_V1_GetLoanProductRequest
+            internal typealias Input = Loan_V1_GetLoanProductRequest
             /// Response type for "GetLoanProduct".
-            public typealias Output = Loan_V1_GetLoanProductResponse
+            internal typealias Output = Loan_V1_GetLoanProductResponse
             /// Descriptor for "GetLoanProduct".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "GetLoanProduct",
                 type: .unary
             )
         }
         /// Namespace for "ListLoanProducts" metadata.
-        public enum ListLoanProducts: Sendable {
+        internal enum ListLoanProducts: Sendable {
             /// Request type for "ListLoanProducts".
-            public typealias Input = Loan_V1_ListLoanProductsRequest
+            internal typealias Input = Loan_V1_ListLoanProductsRequest
             /// Response type for "ListLoanProducts".
-            public typealias Output = Loan_V1_ListLoanProductsResponse
+            internal typealias Output = Loan_V1_ListLoanProductsResponse
             /// Descriptor for "ListLoanProducts".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "ListLoanProducts",
                 type: .unary
             )
         }
         /// Namespace for "UpsertProductEligibilityRule" metadata.
-        public enum UpsertProductEligibilityRule: Sendable {
+        internal enum UpsertProductEligibilityRule: Sendable {
             /// Request type for "UpsertProductEligibilityRule".
-            public typealias Input = Loan_V1_UpsertProductEligibilityRuleRequest
+            internal typealias Input = Loan_V1_UpsertProductEligibilityRuleRequest
             /// Response type for "UpsertProductEligibilityRule".
-            public typealias Output = Loan_V1_UpsertProductEligibilityRuleResponse
+            internal typealias Output = Loan_V1_UpsertProductEligibilityRuleResponse
             /// Descriptor for "UpsertProductEligibilityRule".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "UpsertProductEligibilityRule",
                 type: .unary
             )
         }
         /// Namespace for "ReplaceProductFees" metadata.
-        public enum ReplaceProductFees: Sendable {
+        internal enum ReplaceProductFees: Sendable {
             /// Request type for "ReplaceProductFees".
-            public typealias Input = Loan_V1_ReplaceProductFeesRequest
+            internal typealias Input = Loan_V1_ReplaceProductFeesRequest
             /// Response type for "ReplaceProductFees".
-            public typealias Output = Loan_V1_ReplaceProductFeesResponse
+            internal typealias Output = Loan_V1_ReplaceProductFeesResponse
             /// Descriptor for "ReplaceProductFees".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "ReplaceProductFees",
                 type: .unary
             )
         }
         /// Namespace for "ReplaceProductRequiredDocuments" metadata.
-        public enum ReplaceProductRequiredDocuments: Sendable {
+        internal enum ReplaceProductRequiredDocuments: Sendable {
             /// Request type for "ReplaceProductRequiredDocuments".
-            public typealias Input = Loan_V1_ReplaceProductRequiredDocumentsRequest
+            internal typealias Input = Loan_V1_ReplaceProductRequiredDocumentsRequest
             /// Response type for "ReplaceProductRequiredDocuments".
-            public typealias Output = Loan_V1_ReplaceProductRequiredDocumentsResponse
+            internal typealias Output = Loan_V1_ReplaceProductRequiredDocumentsResponse
             /// Descriptor for "ReplaceProductRequiredDocuments".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "ReplaceProductRequiredDocuments",
                 type: .unary
             )
         }
         /// Namespace for "CreateLoanApplication" metadata.
-        public enum CreateLoanApplication: Sendable {
+        internal enum CreateLoanApplication: Sendable {
             /// Request type for "CreateLoanApplication".
-            public typealias Input = Loan_V1_CreateLoanApplicationRequest
+            internal typealias Input = Loan_V1_CreateLoanApplicationRequest
             /// Response type for "CreateLoanApplication".
-            public typealias Output = Loan_V1_CreateLoanApplicationResponse
+            internal typealias Output = Loan_V1_CreateLoanApplicationResponse
             /// Descriptor for "CreateLoanApplication".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "CreateLoanApplication",
                 type: .unary
             )
         }
         /// Namespace for "GetLoanApplication" metadata.
-        public enum GetLoanApplication: Sendable {
+        internal enum GetLoanApplication: Sendable {
             /// Request type for "GetLoanApplication".
-            public typealias Input = Loan_V1_GetLoanApplicationRequest
+            internal typealias Input = Loan_V1_GetLoanApplicationRequest
             /// Response type for "GetLoanApplication".
-            public typealias Output = Loan_V1_GetLoanApplicationResponse
+            internal typealias Output = Loan_V1_GetLoanApplicationResponse
             /// Descriptor for "GetLoanApplication".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "GetLoanApplication",
                 type: .unary
             )
         }
         /// Namespace for "ListLoanApplications" metadata.
-        public enum ListLoanApplications: Sendable {
+        internal enum ListLoanApplications: Sendable {
             /// Request type for "ListLoanApplications".
-            public typealias Input = Loan_V1_ListLoanApplicationsRequest
+            internal typealias Input = Loan_V1_ListLoanApplicationsRequest
             /// Response type for "ListLoanApplications".
-            public typealias Output = Loan_V1_ListLoanApplicationsResponse
+            internal typealias Output = Loan_V1_ListLoanApplicationsResponse
             /// Descriptor for "ListLoanApplications".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "ListLoanApplications",
                 type: .unary
             )
         }
         /// Namespace for "UpdateLoanApplicationStatus" metadata.
-        public enum UpdateLoanApplicationStatus: Sendable {
+        internal enum UpdateLoanApplicationStatus: Sendable {
             /// Request type for "UpdateLoanApplicationStatus".
-            public typealias Input = Loan_V1_UpdateLoanApplicationStatusRequest
+            internal typealias Input = Loan_V1_UpdateLoanApplicationStatusRequest
             /// Response type for "UpdateLoanApplicationStatus".
-            public typealias Output = Loan_V1_UpdateLoanApplicationStatusResponse
+            internal typealias Output = Loan_V1_UpdateLoanApplicationStatusResponse
             /// Descriptor for "UpdateLoanApplicationStatus".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "UpdateLoanApplicationStatus",
                 type: .unary
             )
         }
         /// Namespace for "UpdateLoanApplicationTerms" metadata.
-        public enum UpdateLoanApplicationTerms: Sendable {
+        internal enum UpdateLoanApplicationTerms: Sendable {
             /// Request type for "UpdateLoanApplicationTerms".
-            public typealias Input = Loan_V1_UpdateLoanApplicationTermsRequest
+            internal typealias Input = Loan_V1_UpdateLoanApplicationTermsRequest
             /// Response type for "UpdateLoanApplicationTerms".
-            public typealias Output = Loan_V1_UpdateLoanApplicationTermsResponse
+            internal typealias Output = Loan_V1_UpdateLoanApplicationTermsResponse
             /// Descriptor for "UpdateLoanApplicationTerms".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "UpdateLoanApplicationTerms",
                 type: .unary
             )
         }
         /// Namespace for "AssignLoanApplicationOfficer" metadata.
-        public enum AssignLoanApplicationOfficer: Sendable {
+        internal enum AssignLoanApplicationOfficer: Sendable {
             /// Request type for "AssignLoanApplicationOfficer".
-            public typealias Input = Loan_V1_AssignLoanApplicationOfficerRequest
+            internal typealias Input = Loan_V1_AssignLoanApplicationOfficerRequest
             /// Response type for "AssignLoanApplicationOfficer".
-            public typealias Output = Loan_V1_AssignLoanApplicationOfficerResponse
+            internal typealias Output = Loan_V1_AssignLoanApplicationOfficerResponse
             /// Descriptor for "AssignLoanApplicationOfficer".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "AssignLoanApplicationOfficer",
                 type: .unary
             )
         }
         /// Namespace for "AddApplicationCoapplicant" metadata.
-        public enum AddApplicationCoapplicant: Sendable {
+        internal enum AddApplicationCoapplicant: Sendable {
             /// Request type for "AddApplicationCoapplicant".
-            public typealias Input = Loan_V1_AddApplicationCoapplicantRequest
+            internal typealias Input = Loan_V1_AddApplicationCoapplicantRequest
             /// Response type for "AddApplicationCoapplicant".
-            public typealias Output = Loan_V1_AddApplicationCoapplicantResponse
+            internal typealias Output = Loan_V1_AddApplicationCoapplicantResponse
             /// Descriptor for "AddApplicationCoapplicant".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "AddApplicationCoapplicant",
                 type: .unary
             )
         }
         /// Namespace for "UpsertApplicationCollateral" metadata.
-        public enum UpsertApplicationCollateral: Sendable {
+        internal enum UpsertApplicationCollateral: Sendable {
             /// Request type for "UpsertApplicationCollateral".
-            public typealias Input = Loan_V1_UpsertApplicationCollateralRequest
+            internal typealias Input = Loan_V1_UpsertApplicationCollateralRequest
             /// Response type for "UpsertApplicationCollateral".
-            public typealias Output = Loan_V1_UpsertApplicationCollateralResponse
+            internal typealias Output = Loan_V1_UpsertApplicationCollateralResponse
             /// Descriptor for "UpsertApplicationCollateral".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "UpsertApplicationCollateral",
                 type: .unary
             )
         }
         /// Namespace for "UpsertLoanVehicle" metadata.
-        public enum UpsertLoanVehicle: Sendable {
+        internal enum UpsertLoanVehicle: Sendable {
             /// Request type for "UpsertLoanVehicle".
-            public typealias Input = Loan_V1_UpsertLoanVehicleRequest
+            internal typealias Input = Loan_V1_UpsertLoanVehicleRequest
             /// Response type for "UpsertLoanVehicle".
-            public typealias Output = Loan_V1_UpsertLoanVehicleResponse
+            internal typealias Output = Loan_V1_UpsertLoanVehicleResponse
             /// Descriptor for "UpsertLoanVehicle".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "UpsertLoanVehicle",
                 type: .unary
             )
         }
         /// Namespace for "UpsertLoanRealEstate" metadata.
-        public enum UpsertLoanRealEstate: Sendable {
+        internal enum UpsertLoanRealEstate: Sendable {
             /// Request type for "UpsertLoanRealEstate".
-            public typealias Input = Loan_V1_UpsertLoanRealEstateRequest
+            internal typealias Input = Loan_V1_UpsertLoanRealEstateRequest
             /// Response type for "UpsertLoanRealEstate".
-            public typealias Output = Loan_V1_UpsertLoanRealEstateResponse
+            internal typealias Output = Loan_V1_UpsertLoanRealEstateResponse
             /// Descriptor for "UpsertLoanRealEstate".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "UpsertLoanRealEstate",
                 type: .unary
             )
         }
         /// Namespace for "AddApplicationDocument" metadata.
-        public enum AddApplicationDocument: Sendable {
+        internal enum AddApplicationDocument: Sendable {
             /// Request type for "AddApplicationDocument".
-            public typealias Input = Loan_V1_AddApplicationDocumentRequest
+            internal typealias Input = Loan_V1_AddApplicationDocumentRequest
             /// Response type for "AddApplicationDocument".
-            public typealias Output = Loan_V1_AddApplicationDocumentResponse
+            internal typealias Output = Loan_V1_AddApplicationDocumentResponse
             /// Descriptor for "AddApplicationDocument".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "AddApplicationDocument",
                 type: .unary
             )
         }
         /// Namespace for "UpdateApplicationDocumentVerification" metadata.
-        public enum UpdateApplicationDocumentVerification: Sendable {
+        internal enum UpdateApplicationDocumentVerification: Sendable {
             /// Request type for "UpdateApplicationDocumentVerification".
-            public typealias Input = Loan_V1_UpdateApplicationDocumentVerificationRequest
+            internal typealias Input = Loan_V1_UpdateApplicationDocumentVerificationRequest
             /// Response type for "UpdateApplicationDocumentVerification".
-            public typealias Output = Loan_V1_UpdateApplicationDocumentVerificationResponse
+            internal typealias Output = Loan_V1_UpdateApplicationDocumentVerificationResponse
             /// Descriptor for "UpdateApplicationDocumentVerification".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "UpdateApplicationDocumentVerification",
                 type: .unary
             )
         }
         /// Namespace for "AddBureauScore" metadata.
-        public enum AddBureauScore: Sendable {
+        internal enum AddBureauScore: Sendable {
             /// Request type for "AddBureauScore".
-            public typealias Input = Loan_V1_AddBureauScoreRequest
+            internal typealias Input = Loan_V1_AddBureauScoreRequest
             /// Response type for "AddBureauScore".
-            public typealias Output = Loan_V1_AddBureauScoreResponse
+            internal typealias Output = Loan_V1_AddBureauScoreResponse
             /// Descriptor for "AddBureauScore".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "AddBureauScore",
                 type: .unary
             )
         }
         /// Namespace for "CreateLoan" metadata.
-        public enum CreateLoan: Sendable {
+        internal enum CreateLoan: Sendable {
             /// Request type for "CreateLoan".
-            public typealias Input = Loan_V1_CreateLoanRequest
+            internal typealias Input = Loan_V1_CreateLoanRequest
             /// Response type for "CreateLoan".
-            public typealias Output = Loan_V1_CreateLoanResponse
+            internal typealias Output = Loan_V1_CreateLoanResponse
             /// Descriptor for "CreateLoan".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "CreateLoan",
                 type: .unary
             )
         }
         /// Namespace for "GetLoan" metadata.
-        public enum GetLoan: Sendable {
+        internal enum GetLoan: Sendable {
             /// Request type for "GetLoan".
-            public typealias Input = Loan_V1_GetLoanRequest
+            internal typealias Input = Loan_V1_GetLoanRequest
             /// Response type for "GetLoan".
-            public typealias Output = Loan_V1_GetLoanResponse
+            internal typealias Output = Loan_V1_GetLoanResponse
             /// Descriptor for "GetLoan".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "GetLoan",
                 type: .unary
             )
         }
         /// Namespace for "ListLoans" metadata.
-        public enum ListLoans: Sendable {
+        internal enum ListLoans: Sendable {
             /// Request type for "ListLoans".
-            public typealias Input = Loan_V1_ListLoansRequest
+            internal typealias Input = Loan_V1_ListLoansRequest
             /// Response type for "ListLoans".
-            public typealias Output = Loan_V1_ListLoansResponse
+            internal typealias Output = Loan_V1_ListLoansResponse
             /// Descriptor for "ListLoans".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "ListLoans",
                 type: .unary
             )
         }
         /// Namespace for "AddEmiScheduleItem" metadata.
-        public enum AddEmiScheduleItem: Sendable {
+        internal enum AddEmiScheduleItem: Sendable {
             /// Request type for "AddEmiScheduleItem".
-            public typealias Input = Loan_V1_AddEmiScheduleItemRequest
+            internal typealias Input = Loan_V1_AddEmiScheduleItemRequest
             /// Response type for "AddEmiScheduleItem".
-            public typealias Output = Loan_V1_AddEmiScheduleItemResponse
+            internal typealias Output = Loan_V1_AddEmiScheduleItemResponse
             /// Descriptor for "AddEmiScheduleItem".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "AddEmiScheduleItem",
                 type: .unary
             )
         }
         /// Namespace for "ListEmiSchedule" metadata.
-        public enum ListEmiSchedule: Sendable {
+        internal enum ListEmiSchedule: Sendable {
             /// Request type for "ListEmiSchedule".
-            public typealias Input = Loan_V1_ListEmiScheduleRequest
+            internal typealias Input = Loan_V1_ListEmiScheduleRequest
             /// Response type for "ListEmiSchedule".
-            public typealias Output = Loan_V1_ListEmiScheduleResponse
+            internal typealias Output = Loan_V1_ListEmiScheduleResponse
             /// Descriptor for "ListEmiSchedule".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "ListEmiSchedule",
                 type: .unary
             )
         }
         /// Namespace for "RecordPayment" metadata.
-        public enum RecordPayment: Sendable {
+        internal enum RecordPayment: Sendable {
             /// Request type for "RecordPayment".
-            public typealias Input = Loan_V1_RecordPaymentRequest
+            internal typealias Input = Loan_V1_RecordPaymentRequest
             /// Response type for "RecordPayment".
-            public typealias Output = Loan_V1_RecordPaymentResponse
+            internal typealias Output = Loan_V1_RecordPaymentResponse
             /// Descriptor for "RecordPayment".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "RecordPayment",
                 type: .unary
             )
         }
         /// Namespace for "ListPayments" metadata.
-        public enum ListPayments: Sendable {
+        internal enum ListPayments: Sendable {
             /// Request type for "ListPayments".
-            public typealias Input = Loan_V1_ListPaymentsRequest
+            internal typealias Input = Loan_V1_ListPaymentsRequest
             /// Response type for "ListPayments".
-            public typealias Output = Loan_V1_ListPaymentsResponse
+            internal typealias Output = Loan_V1_ListPaymentsResponse
             /// Descriptor for "ListPayments".
-            public static let descriptor = GRPCCore.MethodDescriptor(
+            internal static let descriptor = GRPCCore.MethodDescriptor(
                 service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
                 method: "ListPayments",
                 type: .unary
             )
         }
+        /// Namespace for "RescheduleLoan" metadata.
+        internal enum RescheduleLoan: Sendable {
+            /// Request type for "RescheduleLoan".
+            internal typealias Input = Loan_V1_RescheduleLoanRequest
+            /// Response type for "RescheduleLoan".
+            internal typealias Output = Loan_V1_RescheduleLoanResponse
+            /// Descriptor for "RescheduleLoan".
+            internal static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
+                method: "RescheduleLoan",
+                type: .unary
+            )
+        }
+        /// Namespace for "InitiatePayment" metadata.
+        internal enum InitiatePayment: Sendable {
+            /// Request type for "InitiatePayment".
+            internal typealias Input = Loan_V1_InitiatePaymentRequest
+            /// Response type for "InitiatePayment".
+            internal typealias Output = Loan_V1_InitiatePaymentResponse
+            /// Descriptor for "InitiatePayment".
+            internal static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
+                method: "InitiatePayment",
+                type: .unary
+            )
+        }
+        /// Namespace for "VerifyPayment" metadata.
+        internal enum VerifyPayment: Sendable {
+            /// Request type for "VerifyPayment".
+            internal typealias Input = Loan_V1_VerifyPaymentRequest
+            /// Response type for "VerifyPayment".
+            internal typealias Output = Loan_V1_VerifyPaymentResponse
+            /// Descriptor for "VerifyPayment".
+            internal static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService"),
+                method: "VerifyPayment",
+                type: .unary
+            )
+        }
         /// Descriptors for all methods in the "loan.v1.LoanService" service.
-        public static let descriptors: [GRPCCore.MethodDescriptor] = [
+        internal static let descriptors: [GRPCCore.MethodDescriptor] = [
             CreateLoanProduct.descriptor,
             UpdateLoanProduct.descriptor,
             DeleteLoanProduct.descriptor,
@@ -413,7 +452,10 @@ public enum Loan_V1_LoanService: Sendable {
             AddEmiScheduleItem.descriptor,
             ListEmiSchedule.descriptor,
             RecordPayment.descriptor,
-            ListPayments.descriptor
+            ListPayments.descriptor,
+            RescheduleLoan.descriptor,
+            InitiatePayment.descriptor,
+            VerifyPayment.descriptor
         ]
     }
 }
@@ -421,7 +463,7 @@ public enum Loan_V1_LoanService: Sendable {
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 extension GRPCCore.ServiceDescriptor {
     /// Service descriptor for the "loan.v1.LoanService" service.
-    public static let loan_v1_LoanService = GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService")
+    internal static let loan_v1_LoanService = GRPCCore.ServiceDescriptor(fullyQualifiedService: "loan.v1.LoanService")
 }
 
 // MARK: loan.v1.LoanService (server)
@@ -438,8 +480,16 @@ extension Loan_V1_LoanService {
     ///
     /// Where possible, prefer using the stricter, less-verbose ``ServiceProtocol``
     /// or ``SimpleServiceProtocol`` instead.
-    public protocol StreamingServiceProtocol: GRPCCore.RegistrableRPCService {
+    ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > LoanService manages loan products, applications, and loan lifecycle.
+    internal protocol StreamingServiceProtocol: GRPCCore.RegistrableRPCService {
         /// Handle the "CreateLoanProduct" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Create a new loan product. Admin only.
         ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_CreateLoanProductRequest` messages.
@@ -455,6 +505,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "UpdateLoanProduct" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Update an existing loan product. Admin only.
+        ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_UpdateLoanProductRequest` messages.
         ///   - context: Context providing information about the RPC.
@@ -468,6 +522,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_UpdateLoanProductResponse>
 
         /// Handle the "DeleteLoanProduct" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Soft-delete a loan product. Admin only.
         ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_DeleteLoanProductRequest` messages.
@@ -483,6 +541,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "GetLoanProduct" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Get a single loan product by ID.
+        ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_GetLoanProductRequest` messages.
         ///   - context: Context providing information about the RPC.
@@ -496,6 +558,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_GetLoanProductResponse>
 
         /// Handle the "ListLoanProducts" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List loan products with pagination.
         ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_ListLoanProductsRequest` messages.
@@ -511,6 +577,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "UpsertProductEligibilityRule" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upsert (create or replace) eligibility rules for a product. Admin only.
+        ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_UpsertProductEligibilityRuleRequest` messages.
         ///   - context: Context providing information about the RPC.
@@ -524,6 +594,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_UpsertProductEligibilityRuleResponse>
 
         /// Handle the "ReplaceProductFees" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Replace all fees for a product. Admin only.
         ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_ReplaceProductFeesRequest` messages.
@@ -539,6 +613,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "ReplaceProductRequiredDocuments" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Replace all required documents for a product. Admin only.
+        ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_ReplaceProductRequiredDocumentsRequest` messages.
         ///   - context: Context providing information about the RPC.
@@ -552,6 +630,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_ReplaceProductRequiredDocumentsResponse>
 
         /// Handle the "CreateLoanApplication" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Create a loan application. Borrower/officer/DST can create.
         ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_CreateLoanApplicationRequest` messages.
@@ -567,6 +649,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "GetLoanApplication" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Get a loan application with all sub-resources (coapplicants, collateral, documents, bureau scores).
+        ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_GetLoanApplicationRequest` messages.
         ///   - context: Context providing information about the RPC.
@@ -580,6 +666,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_GetLoanApplicationResponse>
 
         /// Handle the "ListLoanApplications" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List loan applications with optional branch filter.
         ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_ListLoanApplicationsRequest` messages.
@@ -595,6 +685,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "UpdateLoanApplicationStatus" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Advance the application status through the approval workflow.
+        ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_UpdateLoanApplicationStatusRequest` messages.
         ///   - context: Context providing information about the RPC.
@@ -608,6 +702,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_UpdateLoanApplicationStatusResponse>
 
         /// Handle the "UpdateLoanApplicationTerms" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Update offered terms (tenure, interest rate) on an application.
         ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_UpdateLoanApplicationTermsRequest` messages.
@@ -623,6 +721,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "AssignLoanApplicationOfficer" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Assign a loan officer to an application. Manager/admin only.
+        ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_AssignLoanApplicationOfficerRequest` messages.
         ///   - context: Context providing information about the RPC.
@@ -636,6 +738,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_AssignLoanApplicationOfficerResponse>
 
         /// Handle the "AddApplicationCoapplicant" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Add a coapplicant to an application.
         ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_AddApplicationCoapplicantRequest` messages.
@@ -651,6 +757,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "UpsertApplicationCollateral" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upsert (create or update) collateral details for an application.
+        ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_UpsertApplicationCollateralRequest` messages.
         ///   - context: Context providing information about the RPC.
@@ -664,6 +774,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_UpsertApplicationCollateralResponse>
 
         /// Handle the "UpsertLoanVehicle" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upsert (create or update) vehicle details for an application.
         ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_UpsertLoanVehicleRequest` messages.
@@ -679,6 +793,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "UpsertLoanRealEstate" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upsert (create or update) real-estate details for an application.
+        ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_UpsertLoanRealEstateRequest` messages.
         ///   - context: Context providing information about the RPC.
@@ -692,6 +810,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_UpsertLoanRealEstateResponse>
 
         /// Handle the "AddApplicationDocument" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upload a document against an application's required document slot.
         ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_AddApplicationDocumentRequest` messages.
@@ -707,6 +829,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "UpdateApplicationDocumentVerification" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Verify (pass/fail) an application document. Officer/manager/admin only. Immutable once set.
+        ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_UpdateApplicationDocumentVerificationRequest` messages.
         ///   - context: Context providing information about the RPC.
@@ -720,6 +846,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_UpdateApplicationDocumentVerificationResponse>
 
         /// Handle the "AddBureauScore" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Add a bureau score for a borrower on an application.
         ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_AddBureauScoreRequest` messages.
@@ -735,6 +865,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "CreateLoan" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Create a loan from a fully-approved application. Manager/admin only.
+        ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_CreateLoanRequest` messages.
         ///   - context: Context providing information about the RPC.
@@ -748,6 +882,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_CreateLoanResponse>
 
         /// Handle the "GetLoan" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Get a loan by ID or application ID.
         ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_GetLoanRequest` messages.
@@ -763,6 +901,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "ListLoans" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List all loans with pagination.
+        ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_ListLoansRequest` messages.
         ///   - context: Context providing information about the RPC.
@@ -776,6 +918,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_ListLoansResponse>
 
         /// Handle the "AddEmiScheduleItem" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Add a single EMI schedule entry to a loan. Manager/admin only.
         ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_AddEmiScheduleItemRequest` messages.
@@ -791,6 +937,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "ListEmiSchedule" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List the EMI schedule for a loan.
+        ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_ListEmiScheduleRequest` messages.
         ///   - context: Context providing information about the RPC.
@@ -804,6 +954,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_ListEmiScheduleResponse>
 
         /// Handle the "RecordPayment" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Record a payment against a specific EMI. Officer/manager/admin.
         ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_RecordPaymentRequest` messages.
@@ -819,6 +973,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "ListPayments" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List payments for a loan.
+        ///
         /// - Parameters:
         ///   - request: A streaming request of `Loan_V1_ListPaymentsRequest` messages.
         ///   - context: Context providing information about the RPC.
@@ -830,6 +988,60 @@ extension Loan_V1_LoanService {
             request: GRPCCore.StreamingServerRequest<Loan_V1_ListPaymentsRequest>,
             context: GRPCCore.ServerContext
         ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_ListPaymentsResponse>
+
+        /// Handle the "RescheduleLoan" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Reschedule an active loan by changing its tenure. Manager/admin only.
+        ///
+        /// - Parameters:
+        ///   - request: A streaming request of `Loan_V1_RescheduleLoanRequest` messages.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A streaming response of `Loan_V1_RescheduleLoanResponse` messages.
+        func rescheduleLoan(
+            request: GRPCCore.StreamingServerRequest<Loan_V1_RescheduleLoanRequest>,
+            context: GRPCCore.ServerContext
+        ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_RescheduleLoanResponse>
+
+        /// Handle the "InitiatePayment" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Initiate a Razorpay payment for a loan/EMI.
+        ///
+        /// - Parameters:
+        ///   - request: A streaming request of `Loan_V1_InitiatePaymentRequest` messages.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A streaming response of `Loan_V1_InitiatePaymentResponse` messages.
+        func initiatePayment(
+            request: GRPCCore.StreamingServerRequest<Loan_V1_InitiatePaymentRequest>,
+            context: GRPCCore.ServerContext
+        ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_InitiatePaymentResponse>
+
+        /// Handle the "VerifyPayment" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Verify a completed Razorpay payment.
+        ///
+        /// - Parameters:
+        ///   - request: A streaming request of `Loan_V1_VerifyPaymentRequest` messages.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A streaming response of `Loan_V1_VerifyPaymentResponse` messages.
+        func verifyPayment(
+            request: GRPCCore.StreamingServerRequest<Loan_V1_VerifyPaymentRequest>,
+            context: GRPCCore.ServerContext
+        ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_VerifyPaymentResponse>
     }
 
     /// Service protocol for the "loan.v1.LoanService" service.
@@ -839,8 +1051,16 @@ extension Loan_V1_LoanService {
     /// trailing response metadata. If you don't need these then consider using
     /// the ``SimpleServiceProtocol``. If you need fine grained control over your RPCs then
     /// use ``StreamingServiceProtocol``.
-    public protocol ServiceProtocol: Loan_V1_LoanService.StreamingServiceProtocol {
+    ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > LoanService manages loan products, applications, and loan lifecycle.
+    internal protocol ServiceProtocol: Loan_V1_LoanService.StreamingServiceProtocol {
         /// Handle the "CreateLoanProduct" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Create a new loan product. Admin only.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_CreateLoanProductRequest` message.
@@ -856,6 +1076,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "UpdateLoanProduct" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Update an existing loan product. Admin only.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpdateLoanProductRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -869,6 +1093,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.ServerResponse<Loan_V1_UpdateLoanProductResponse>
 
         /// Handle the "DeleteLoanProduct" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Soft-delete a loan product. Admin only.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_DeleteLoanProductRequest` message.
@@ -884,6 +1112,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "GetLoanProduct" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Get a single loan product by ID.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_GetLoanProductRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -897,6 +1129,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.ServerResponse<Loan_V1_GetLoanProductResponse>
 
         /// Handle the "ListLoanProducts" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List loan products with pagination.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_ListLoanProductsRequest` message.
@@ -912,6 +1148,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "UpsertProductEligibilityRule" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upsert (create or replace) eligibility rules for a product. Admin only.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpsertProductEligibilityRuleRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -925,6 +1165,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.ServerResponse<Loan_V1_UpsertProductEligibilityRuleResponse>
 
         /// Handle the "ReplaceProductFees" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Replace all fees for a product. Admin only.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_ReplaceProductFeesRequest` message.
@@ -940,6 +1184,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "ReplaceProductRequiredDocuments" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Replace all required documents for a product. Admin only.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_ReplaceProductRequiredDocumentsRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -953,6 +1201,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.ServerResponse<Loan_V1_ReplaceProductRequiredDocumentsResponse>
 
         /// Handle the "CreateLoanApplication" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Create a loan application. Borrower/officer/DST can create.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_CreateLoanApplicationRequest` message.
@@ -968,6 +1220,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "GetLoanApplication" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Get a loan application with all sub-resources (coapplicants, collateral, documents, bureau scores).
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_GetLoanApplicationRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -981,6 +1237,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.ServerResponse<Loan_V1_GetLoanApplicationResponse>
 
         /// Handle the "ListLoanApplications" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List loan applications with optional branch filter.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_ListLoanApplicationsRequest` message.
@@ -996,6 +1256,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "UpdateLoanApplicationStatus" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Advance the application status through the approval workflow.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpdateLoanApplicationStatusRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1009,6 +1273,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.ServerResponse<Loan_V1_UpdateLoanApplicationStatusResponse>
 
         /// Handle the "UpdateLoanApplicationTerms" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Update offered terms (tenure, interest rate) on an application.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpdateLoanApplicationTermsRequest` message.
@@ -1024,6 +1292,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "AssignLoanApplicationOfficer" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Assign a loan officer to an application. Manager/admin only.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_AssignLoanApplicationOfficerRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1037,6 +1309,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.ServerResponse<Loan_V1_AssignLoanApplicationOfficerResponse>
 
         /// Handle the "AddApplicationCoapplicant" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Add a coapplicant to an application.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_AddApplicationCoapplicantRequest` message.
@@ -1052,6 +1328,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "UpsertApplicationCollateral" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upsert (create or update) collateral details for an application.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpsertApplicationCollateralRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1065,6 +1345,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.ServerResponse<Loan_V1_UpsertApplicationCollateralResponse>
 
         /// Handle the "UpsertLoanVehicle" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upsert (create or update) vehicle details for an application.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpsertLoanVehicleRequest` message.
@@ -1080,6 +1364,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "UpsertLoanRealEstate" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upsert (create or update) real-estate details for an application.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpsertLoanRealEstateRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1093,6 +1381,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.ServerResponse<Loan_V1_UpsertLoanRealEstateResponse>
 
         /// Handle the "AddApplicationDocument" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upload a document against an application's required document slot.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_AddApplicationDocumentRequest` message.
@@ -1108,6 +1400,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "UpdateApplicationDocumentVerification" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Verify (pass/fail) an application document. Officer/manager/admin only. Immutable once set.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpdateApplicationDocumentVerificationRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1121,6 +1417,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.ServerResponse<Loan_V1_UpdateApplicationDocumentVerificationResponse>
 
         /// Handle the "AddBureauScore" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Add a bureau score for a borrower on an application.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_AddBureauScoreRequest` message.
@@ -1136,6 +1436,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "CreateLoan" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Create a loan from a fully-approved application. Manager/admin only.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_CreateLoanRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1149,6 +1453,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.ServerResponse<Loan_V1_CreateLoanResponse>
 
         /// Handle the "GetLoan" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Get a loan by ID or application ID.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_GetLoanRequest` message.
@@ -1164,6 +1472,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "ListLoans" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List all loans with pagination.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_ListLoansRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1177,6 +1489,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.ServerResponse<Loan_V1_ListLoansResponse>
 
         /// Handle the "AddEmiScheduleItem" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Add a single EMI schedule entry to a loan. Manager/admin only.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_AddEmiScheduleItemRequest` message.
@@ -1192,6 +1508,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "ListEmiSchedule" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List the EMI schedule for a loan.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_ListEmiScheduleRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1205,6 +1525,10 @@ extension Loan_V1_LoanService {
         ) async throws -> GRPCCore.ServerResponse<Loan_V1_ListEmiScheduleResponse>
 
         /// Handle the "RecordPayment" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Record a payment against a specific EMI. Officer/manager/admin.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_RecordPaymentRequest` message.
@@ -1220,6 +1544,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "ListPayments" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List payments for a loan.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_ListPaymentsRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1231,6 +1559,60 @@ extension Loan_V1_LoanService {
             request: GRPCCore.ServerRequest<Loan_V1_ListPaymentsRequest>,
             context: GRPCCore.ServerContext
         ) async throws -> GRPCCore.ServerResponse<Loan_V1_ListPaymentsResponse>
+
+        /// Handle the "RescheduleLoan" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Reschedule an active loan by changing its tenure. Manager/admin only.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Loan_V1_RescheduleLoanRequest` message.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A response containing a single `Loan_V1_RescheduleLoanResponse` message.
+        func rescheduleLoan(
+            request: GRPCCore.ServerRequest<Loan_V1_RescheduleLoanRequest>,
+            context: GRPCCore.ServerContext
+        ) async throws -> GRPCCore.ServerResponse<Loan_V1_RescheduleLoanResponse>
+
+        /// Handle the "InitiatePayment" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Initiate a Razorpay payment for a loan/EMI.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Loan_V1_InitiatePaymentRequest` message.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A response containing a single `Loan_V1_InitiatePaymentResponse` message.
+        func initiatePayment(
+            request: GRPCCore.ServerRequest<Loan_V1_InitiatePaymentRequest>,
+            context: GRPCCore.ServerContext
+        ) async throws -> GRPCCore.ServerResponse<Loan_V1_InitiatePaymentResponse>
+
+        /// Handle the "VerifyPayment" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Verify a completed Razorpay payment.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Loan_V1_VerifyPaymentRequest` message.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A response containing a single `Loan_V1_VerifyPaymentResponse` message.
+        func verifyPayment(
+            request: GRPCCore.ServerRequest<Loan_V1_VerifyPaymentRequest>,
+            context: GRPCCore.ServerContext
+        ) async throws -> GRPCCore.ServerResponse<Loan_V1_VerifyPaymentResponse>
     }
 
     /// Simple service protocol for the "loan.v1.LoanService" service.
@@ -1238,8 +1620,16 @@ extension Loan_V1_LoanService {
     /// This is the highest level protocol for the service. The API is the easiest to use but
     /// doesn't provide access to request or response metadata. If you need access to these
     /// then use ``ServiceProtocol`` instead.
-    public protocol SimpleServiceProtocol: Loan_V1_LoanService.ServiceProtocol {
+    ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > LoanService manages loan products, applications, and loan lifecycle.
+    internal protocol SimpleServiceProtocol: Loan_V1_LoanService.ServiceProtocol {
         /// Handle the "CreateLoanProduct" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Create a new loan product. Admin only.
         ///
         /// - Parameters:
         ///   - request: A `Loan_V1_CreateLoanProductRequest` message.
@@ -1255,6 +1645,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "UpdateLoanProduct" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Update an existing loan product. Admin only.
+        ///
         /// - Parameters:
         ///   - request: A `Loan_V1_UpdateLoanProductRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1268,6 +1662,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Loan_V1_UpdateLoanProductResponse
 
         /// Handle the "DeleteLoanProduct" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Soft-delete a loan product. Admin only.
         ///
         /// - Parameters:
         ///   - request: A `Loan_V1_DeleteLoanProductRequest` message.
@@ -1283,6 +1681,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "GetLoanProduct" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Get a single loan product by ID.
+        ///
         /// - Parameters:
         ///   - request: A `Loan_V1_GetLoanProductRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1296,6 +1698,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Loan_V1_GetLoanProductResponse
 
         /// Handle the "ListLoanProducts" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List loan products with pagination.
         ///
         /// - Parameters:
         ///   - request: A `Loan_V1_ListLoanProductsRequest` message.
@@ -1311,6 +1717,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "UpsertProductEligibilityRule" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upsert (create or replace) eligibility rules for a product. Admin only.
+        ///
         /// - Parameters:
         ///   - request: A `Loan_V1_UpsertProductEligibilityRuleRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1324,6 +1734,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Loan_V1_UpsertProductEligibilityRuleResponse
 
         /// Handle the "ReplaceProductFees" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Replace all fees for a product. Admin only.
         ///
         /// - Parameters:
         ///   - request: A `Loan_V1_ReplaceProductFeesRequest` message.
@@ -1339,6 +1753,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "ReplaceProductRequiredDocuments" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Replace all required documents for a product. Admin only.
+        ///
         /// - Parameters:
         ///   - request: A `Loan_V1_ReplaceProductRequiredDocumentsRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1352,6 +1770,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Loan_V1_ReplaceProductRequiredDocumentsResponse
 
         /// Handle the "CreateLoanApplication" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Create a loan application. Borrower/officer/DST can create.
         ///
         /// - Parameters:
         ///   - request: A `Loan_V1_CreateLoanApplicationRequest` message.
@@ -1367,6 +1789,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "GetLoanApplication" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Get a loan application with all sub-resources (coapplicants, collateral, documents, bureau scores).
+        ///
         /// - Parameters:
         ///   - request: A `Loan_V1_GetLoanApplicationRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1380,6 +1806,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Loan_V1_GetLoanApplicationResponse
 
         /// Handle the "ListLoanApplications" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List loan applications with optional branch filter.
         ///
         /// - Parameters:
         ///   - request: A `Loan_V1_ListLoanApplicationsRequest` message.
@@ -1395,6 +1825,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "UpdateLoanApplicationStatus" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Advance the application status through the approval workflow.
+        ///
         /// - Parameters:
         ///   - request: A `Loan_V1_UpdateLoanApplicationStatusRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1408,6 +1842,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Loan_V1_UpdateLoanApplicationStatusResponse
 
         /// Handle the "UpdateLoanApplicationTerms" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Update offered terms (tenure, interest rate) on an application.
         ///
         /// - Parameters:
         ///   - request: A `Loan_V1_UpdateLoanApplicationTermsRequest` message.
@@ -1423,6 +1861,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "AssignLoanApplicationOfficer" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Assign a loan officer to an application. Manager/admin only.
+        ///
         /// - Parameters:
         ///   - request: A `Loan_V1_AssignLoanApplicationOfficerRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1436,6 +1878,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Loan_V1_AssignLoanApplicationOfficerResponse
 
         /// Handle the "AddApplicationCoapplicant" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Add a coapplicant to an application.
         ///
         /// - Parameters:
         ///   - request: A `Loan_V1_AddApplicationCoapplicantRequest` message.
@@ -1451,6 +1897,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "UpsertApplicationCollateral" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upsert (create or update) collateral details for an application.
+        ///
         /// - Parameters:
         ///   - request: A `Loan_V1_UpsertApplicationCollateralRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1464,6 +1914,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Loan_V1_UpsertApplicationCollateralResponse
 
         /// Handle the "UpsertLoanVehicle" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upsert (create or update) vehicle details for an application.
         ///
         /// - Parameters:
         ///   - request: A `Loan_V1_UpsertLoanVehicleRequest` message.
@@ -1479,6 +1933,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "UpsertLoanRealEstate" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upsert (create or update) real-estate details for an application.
+        ///
         /// - Parameters:
         ///   - request: A `Loan_V1_UpsertLoanRealEstateRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1492,6 +1950,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Loan_V1_UpsertLoanRealEstateResponse
 
         /// Handle the "AddApplicationDocument" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upload a document against an application's required document slot.
         ///
         /// - Parameters:
         ///   - request: A `Loan_V1_AddApplicationDocumentRequest` message.
@@ -1507,6 +1969,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "UpdateApplicationDocumentVerification" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Verify (pass/fail) an application document. Officer/manager/admin only. Immutable once set.
+        ///
         /// - Parameters:
         ///   - request: A `Loan_V1_UpdateApplicationDocumentVerificationRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1520,6 +1986,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Loan_V1_UpdateApplicationDocumentVerificationResponse
 
         /// Handle the "AddBureauScore" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Add a bureau score for a borrower on an application.
         ///
         /// - Parameters:
         ///   - request: A `Loan_V1_AddBureauScoreRequest` message.
@@ -1535,6 +2005,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "CreateLoan" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Create a loan from a fully-approved application. Manager/admin only.
+        ///
         /// - Parameters:
         ///   - request: A `Loan_V1_CreateLoanRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1548,6 +2022,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Loan_V1_CreateLoanResponse
 
         /// Handle the "GetLoan" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Get a loan by ID or application ID.
         ///
         /// - Parameters:
         ///   - request: A `Loan_V1_GetLoanRequest` message.
@@ -1563,6 +2041,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "ListLoans" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List all loans with pagination.
+        ///
         /// - Parameters:
         ///   - request: A `Loan_V1_ListLoansRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1576,6 +2058,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Loan_V1_ListLoansResponse
 
         /// Handle the "AddEmiScheduleItem" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Add a single EMI schedule entry to a loan. Manager/admin only.
         ///
         /// - Parameters:
         ///   - request: A `Loan_V1_AddEmiScheduleItemRequest` message.
@@ -1591,6 +2077,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "ListEmiSchedule" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List the EMI schedule for a loan.
+        ///
         /// - Parameters:
         ///   - request: A `Loan_V1_ListEmiScheduleRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1604,6 +2094,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Loan_V1_ListEmiScheduleResponse
 
         /// Handle the "RecordPayment" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Record a payment against a specific EMI. Officer/manager/admin.
         ///
         /// - Parameters:
         ///   - request: A `Loan_V1_RecordPaymentRequest` message.
@@ -1619,6 +2113,10 @@ extension Loan_V1_LoanService {
 
         /// Handle the "ListPayments" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List payments for a loan.
+        ///
         /// - Parameters:
         ///   - request: A `Loan_V1_ListPaymentsRequest` message.
         ///   - context: Context providing information about the RPC.
@@ -1630,13 +2128,67 @@ extension Loan_V1_LoanService {
             request: Loan_V1_ListPaymentsRequest,
             context: GRPCCore.ServerContext
         ) async throws -> Loan_V1_ListPaymentsResponse
+
+        /// Handle the "RescheduleLoan" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Reschedule an active loan by changing its tenure. Manager/admin only.
+        ///
+        /// - Parameters:
+        ///   - request: A `Loan_V1_RescheduleLoanRequest` message.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A `Loan_V1_RescheduleLoanResponse` to respond with.
+        func rescheduleLoan(
+            request: Loan_V1_RescheduleLoanRequest,
+            context: GRPCCore.ServerContext
+        ) async throws -> Loan_V1_RescheduleLoanResponse
+
+        /// Handle the "InitiatePayment" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Initiate a Razorpay payment for a loan/EMI.
+        ///
+        /// - Parameters:
+        ///   - request: A `Loan_V1_InitiatePaymentRequest` message.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A `Loan_V1_InitiatePaymentResponse` to respond with.
+        func initiatePayment(
+            request: Loan_V1_InitiatePaymentRequest,
+            context: GRPCCore.ServerContext
+        ) async throws -> Loan_V1_InitiatePaymentResponse
+
+        /// Handle the "VerifyPayment" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Verify a completed Razorpay payment.
+        ///
+        /// - Parameters:
+        ///   - request: A `Loan_V1_VerifyPaymentRequest` message.
+        ///   - context: Context providing information about the RPC.
+        /// - Throws: Any error which occurred during the processing of the request. Thrown errors
+        ///     of type `RPCError` are mapped to appropriate statuses. All other errors are converted
+        ///     to an internal error.
+        /// - Returns: A `Loan_V1_VerifyPaymentResponse` to respond with.
+        func verifyPayment(
+            request: Loan_V1_VerifyPaymentRequest,
+            context: GRPCCore.ServerContext
+        ) async throws -> Loan_V1_VerifyPaymentResponse
     }
 }
 
 // Default implementation of 'registerMethods(with:)'.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 extension Loan_V1_LoanService.StreamingServiceProtocol {
-    public func registerMethods<Transport>(with router: inout GRPCCore.RPCRouter<Transport>) where Transport: GRPCCore.ServerTransport {
+    internal func registerMethods<Transport>(with router: inout GRPCCore.RPCRouter<Transport>) where Transport: GRPCCore.ServerTransport {
         router.registerHandler(
             forMethod: Loan_V1_LoanService.Method.CreateLoanProduct.descriptor,
             deserializer: GRPCProtobuf.ProtobufDeserializer<Loan_V1_CreateLoanProductRequest>(),
@@ -1945,13 +2497,46 @@ extension Loan_V1_LoanService.StreamingServiceProtocol {
                 )
             }
         )
+        router.registerHandler(
+            forMethod: Loan_V1_LoanService.Method.RescheduleLoan.descriptor,
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Loan_V1_RescheduleLoanRequest>(),
+            serializer: GRPCProtobuf.ProtobufSerializer<Loan_V1_RescheduleLoanResponse>(),
+            handler: { request, context in
+                try await self.rescheduleLoan(
+                    request: request,
+                    context: context
+                )
+            }
+        )
+        router.registerHandler(
+            forMethod: Loan_V1_LoanService.Method.InitiatePayment.descriptor,
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Loan_V1_InitiatePaymentRequest>(),
+            serializer: GRPCProtobuf.ProtobufSerializer<Loan_V1_InitiatePaymentResponse>(),
+            handler: { request, context in
+                try await self.initiatePayment(
+                    request: request,
+                    context: context
+                )
+            }
+        )
+        router.registerHandler(
+            forMethod: Loan_V1_LoanService.Method.VerifyPayment.descriptor,
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Loan_V1_VerifyPaymentRequest>(),
+            serializer: GRPCProtobuf.ProtobufSerializer<Loan_V1_VerifyPaymentResponse>(),
+            handler: { request, context in
+                try await self.verifyPayment(
+                    request: request,
+                    context: context
+                )
+            }
+        )
     }
 }
 
 // Default implementation of streaming methods from 'StreamingServiceProtocol'.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 extension Loan_V1_LoanService.ServiceProtocol {
-    public func createLoanProduct(
+    internal func createLoanProduct(
         request: GRPCCore.StreamingServerRequest<Loan_V1_CreateLoanProductRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_CreateLoanProductResponse> {
@@ -1962,7 +2547,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func updateLoanProduct(
+    internal func updateLoanProduct(
         request: GRPCCore.StreamingServerRequest<Loan_V1_UpdateLoanProductRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_UpdateLoanProductResponse> {
@@ -1973,7 +2558,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func deleteLoanProduct(
+    internal func deleteLoanProduct(
         request: GRPCCore.StreamingServerRequest<Loan_V1_DeleteLoanProductRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_DeleteLoanProductResponse> {
@@ -1984,7 +2569,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func getLoanProduct(
+    internal func getLoanProduct(
         request: GRPCCore.StreamingServerRequest<Loan_V1_GetLoanProductRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_GetLoanProductResponse> {
@@ -1995,7 +2580,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func listLoanProducts(
+    internal func listLoanProducts(
         request: GRPCCore.StreamingServerRequest<Loan_V1_ListLoanProductsRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_ListLoanProductsResponse> {
@@ -2006,7 +2591,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func upsertProductEligibilityRule(
+    internal func upsertProductEligibilityRule(
         request: GRPCCore.StreamingServerRequest<Loan_V1_UpsertProductEligibilityRuleRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_UpsertProductEligibilityRuleResponse> {
@@ -2017,7 +2602,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func replaceProductFees(
+    internal func replaceProductFees(
         request: GRPCCore.StreamingServerRequest<Loan_V1_ReplaceProductFeesRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_ReplaceProductFeesResponse> {
@@ -2028,7 +2613,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func replaceProductRequiredDocuments(
+    internal func replaceProductRequiredDocuments(
         request: GRPCCore.StreamingServerRequest<Loan_V1_ReplaceProductRequiredDocumentsRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_ReplaceProductRequiredDocumentsResponse> {
@@ -2039,7 +2624,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func createLoanApplication(
+    internal func createLoanApplication(
         request: GRPCCore.StreamingServerRequest<Loan_V1_CreateLoanApplicationRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_CreateLoanApplicationResponse> {
@@ -2050,7 +2635,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func getLoanApplication(
+    internal func getLoanApplication(
         request: GRPCCore.StreamingServerRequest<Loan_V1_GetLoanApplicationRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_GetLoanApplicationResponse> {
@@ -2061,7 +2646,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func listLoanApplications(
+    internal func listLoanApplications(
         request: GRPCCore.StreamingServerRequest<Loan_V1_ListLoanApplicationsRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_ListLoanApplicationsResponse> {
@@ -2072,7 +2657,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func updateLoanApplicationStatus(
+    internal func updateLoanApplicationStatus(
         request: GRPCCore.StreamingServerRequest<Loan_V1_UpdateLoanApplicationStatusRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_UpdateLoanApplicationStatusResponse> {
@@ -2083,7 +2668,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func updateLoanApplicationTerms(
+    internal func updateLoanApplicationTerms(
         request: GRPCCore.StreamingServerRequest<Loan_V1_UpdateLoanApplicationTermsRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_UpdateLoanApplicationTermsResponse> {
@@ -2094,7 +2679,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func assignLoanApplicationOfficer(
+    internal func assignLoanApplicationOfficer(
         request: GRPCCore.StreamingServerRequest<Loan_V1_AssignLoanApplicationOfficerRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_AssignLoanApplicationOfficerResponse> {
@@ -2105,7 +2690,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func addApplicationCoapplicant(
+    internal func addApplicationCoapplicant(
         request: GRPCCore.StreamingServerRequest<Loan_V1_AddApplicationCoapplicantRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_AddApplicationCoapplicantResponse> {
@@ -2116,7 +2701,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func upsertApplicationCollateral(
+    internal func upsertApplicationCollateral(
         request: GRPCCore.StreamingServerRequest<Loan_V1_UpsertApplicationCollateralRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_UpsertApplicationCollateralResponse> {
@@ -2127,7 +2712,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func upsertLoanVehicle(
+    internal func upsertLoanVehicle(
         request: GRPCCore.StreamingServerRequest<Loan_V1_UpsertLoanVehicleRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_UpsertLoanVehicleResponse> {
@@ -2138,7 +2723,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func upsertLoanRealEstate(
+    internal func upsertLoanRealEstate(
         request: GRPCCore.StreamingServerRequest<Loan_V1_UpsertLoanRealEstateRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_UpsertLoanRealEstateResponse> {
@@ -2149,7 +2734,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func addApplicationDocument(
+    internal func addApplicationDocument(
         request: GRPCCore.StreamingServerRequest<Loan_V1_AddApplicationDocumentRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_AddApplicationDocumentResponse> {
@@ -2160,7 +2745,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func updateApplicationDocumentVerification(
+    internal func updateApplicationDocumentVerification(
         request: GRPCCore.StreamingServerRequest<Loan_V1_UpdateApplicationDocumentVerificationRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_UpdateApplicationDocumentVerificationResponse> {
@@ -2171,7 +2756,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func addBureauScore(
+    internal func addBureauScore(
         request: GRPCCore.StreamingServerRequest<Loan_V1_AddBureauScoreRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_AddBureauScoreResponse> {
@@ -2182,7 +2767,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func createLoan(
+    internal func createLoan(
         request: GRPCCore.StreamingServerRequest<Loan_V1_CreateLoanRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_CreateLoanResponse> {
@@ -2193,7 +2778,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func getLoan(
+    internal func getLoan(
         request: GRPCCore.StreamingServerRequest<Loan_V1_GetLoanRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_GetLoanResponse> {
@@ -2204,7 +2789,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func listLoans(
+    internal func listLoans(
         request: GRPCCore.StreamingServerRequest<Loan_V1_ListLoansRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_ListLoansResponse> {
@@ -2215,7 +2800,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func addEmiScheduleItem(
+    internal func addEmiScheduleItem(
         request: GRPCCore.StreamingServerRequest<Loan_V1_AddEmiScheduleItemRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_AddEmiScheduleItemResponse> {
@@ -2226,7 +2811,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func listEmiSchedule(
+    internal func listEmiSchedule(
         request: GRPCCore.StreamingServerRequest<Loan_V1_ListEmiScheduleRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_ListEmiScheduleResponse> {
@@ -2237,7 +2822,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func recordPayment(
+    internal func recordPayment(
         request: GRPCCore.StreamingServerRequest<Loan_V1_RecordPaymentRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_RecordPaymentResponse> {
@@ -2248,11 +2833,44 @@ extension Loan_V1_LoanService.ServiceProtocol {
         return GRPCCore.StreamingServerResponse(single: response)
     }
 
-    public func listPayments(
+    internal func listPayments(
         request: GRPCCore.StreamingServerRequest<Loan_V1_ListPaymentsRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_ListPaymentsResponse> {
         let response = try await self.listPayments(
+            request: GRPCCore.ServerRequest(stream: request),
+            context: context
+        )
+        return GRPCCore.StreamingServerResponse(single: response)
+    }
+
+    internal func rescheduleLoan(
+        request: GRPCCore.StreamingServerRequest<Loan_V1_RescheduleLoanRequest>,
+        context: GRPCCore.ServerContext
+    ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_RescheduleLoanResponse> {
+        let response = try await self.rescheduleLoan(
+            request: GRPCCore.ServerRequest(stream: request),
+            context: context
+        )
+        return GRPCCore.StreamingServerResponse(single: response)
+    }
+
+    internal func initiatePayment(
+        request: GRPCCore.StreamingServerRequest<Loan_V1_InitiatePaymentRequest>,
+        context: GRPCCore.ServerContext
+    ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_InitiatePaymentResponse> {
+        let response = try await self.initiatePayment(
+            request: GRPCCore.ServerRequest(stream: request),
+            context: context
+        )
+        return GRPCCore.StreamingServerResponse(single: response)
+    }
+
+    internal func verifyPayment(
+        request: GRPCCore.StreamingServerRequest<Loan_V1_VerifyPaymentRequest>,
+        context: GRPCCore.ServerContext
+    ) async throws -> GRPCCore.StreamingServerResponse<Loan_V1_VerifyPaymentResponse> {
+        let response = try await self.verifyPayment(
             request: GRPCCore.ServerRequest(stream: request),
             context: context
         )
@@ -2263,7 +2881,7 @@ extension Loan_V1_LoanService.ServiceProtocol {
 // Default implementation of methods from 'ServiceProtocol'.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 extension Loan_V1_LoanService.SimpleServiceProtocol {
-    public func createLoanProduct(
+    internal func createLoanProduct(
         request: GRPCCore.ServerRequest<Loan_V1_CreateLoanProductRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_CreateLoanProductResponse> {
@@ -2276,7 +2894,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func updateLoanProduct(
+    internal func updateLoanProduct(
         request: GRPCCore.ServerRequest<Loan_V1_UpdateLoanProductRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_UpdateLoanProductResponse> {
@@ -2289,7 +2907,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func deleteLoanProduct(
+    internal func deleteLoanProduct(
         request: GRPCCore.ServerRequest<Loan_V1_DeleteLoanProductRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_DeleteLoanProductResponse> {
@@ -2302,7 +2920,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func getLoanProduct(
+    internal func getLoanProduct(
         request: GRPCCore.ServerRequest<Loan_V1_GetLoanProductRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_GetLoanProductResponse> {
@@ -2315,7 +2933,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func listLoanProducts(
+    internal func listLoanProducts(
         request: GRPCCore.ServerRequest<Loan_V1_ListLoanProductsRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_ListLoanProductsResponse> {
@@ -2328,7 +2946,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func upsertProductEligibilityRule(
+    internal func upsertProductEligibilityRule(
         request: GRPCCore.ServerRequest<Loan_V1_UpsertProductEligibilityRuleRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_UpsertProductEligibilityRuleResponse> {
@@ -2341,7 +2959,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func replaceProductFees(
+    internal func replaceProductFees(
         request: GRPCCore.ServerRequest<Loan_V1_ReplaceProductFeesRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_ReplaceProductFeesResponse> {
@@ -2354,7 +2972,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func replaceProductRequiredDocuments(
+    internal func replaceProductRequiredDocuments(
         request: GRPCCore.ServerRequest<Loan_V1_ReplaceProductRequiredDocumentsRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_ReplaceProductRequiredDocumentsResponse> {
@@ -2367,7 +2985,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func createLoanApplication(
+    internal func createLoanApplication(
         request: GRPCCore.ServerRequest<Loan_V1_CreateLoanApplicationRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_CreateLoanApplicationResponse> {
@@ -2380,7 +2998,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func getLoanApplication(
+    internal func getLoanApplication(
         request: GRPCCore.ServerRequest<Loan_V1_GetLoanApplicationRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_GetLoanApplicationResponse> {
@@ -2393,7 +3011,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func listLoanApplications(
+    internal func listLoanApplications(
         request: GRPCCore.ServerRequest<Loan_V1_ListLoanApplicationsRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_ListLoanApplicationsResponse> {
@@ -2406,7 +3024,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func updateLoanApplicationStatus(
+    internal func updateLoanApplicationStatus(
         request: GRPCCore.ServerRequest<Loan_V1_UpdateLoanApplicationStatusRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_UpdateLoanApplicationStatusResponse> {
@@ -2419,7 +3037,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func updateLoanApplicationTerms(
+    internal func updateLoanApplicationTerms(
         request: GRPCCore.ServerRequest<Loan_V1_UpdateLoanApplicationTermsRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_UpdateLoanApplicationTermsResponse> {
@@ -2432,7 +3050,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func assignLoanApplicationOfficer(
+    internal func assignLoanApplicationOfficer(
         request: GRPCCore.ServerRequest<Loan_V1_AssignLoanApplicationOfficerRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_AssignLoanApplicationOfficerResponse> {
@@ -2445,7 +3063,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func addApplicationCoapplicant(
+    internal func addApplicationCoapplicant(
         request: GRPCCore.ServerRequest<Loan_V1_AddApplicationCoapplicantRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_AddApplicationCoapplicantResponse> {
@@ -2458,7 +3076,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func upsertApplicationCollateral(
+    internal func upsertApplicationCollateral(
         request: GRPCCore.ServerRequest<Loan_V1_UpsertApplicationCollateralRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_UpsertApplicationCollateralResponse> {
@@ -2471,7 +3089,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func upsertLoanVehicle(
+    internal func upsertLoanVehicle(
         request: GRPCCore.ServerRequest<Loan_V1_UpsertLoanVehicleRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_UpsertLoanVehicleResponse> {
@@ -2484,7 +3102,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func upsertLoanRealEstate(
+    internal func upsertLoanRealEstate(
         request: GRPCCore.ServerRequest<Loan_V1_UpsertLoanRealEstateRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_UpsertLoanRealEstateResponse> {
@@ -2497,7 +3115,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func addApplicationDocument(
+    internal func addApplicationDocument(
         request: GRPCCore.ServerRequest<Loan_V1_AddApplicationDocumentRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_AddApplicationDocumentResponse> {
@@ -2510,7 +3128,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func updateApplicationDocumentVerification(
+    internal func updateApplicationDocumentVerification(
         request: GRPCCore.ServerRequest<Loan_V1_UpdateApplicationDocumentVerificationRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_UpdateApplicationDocumentVerificationResponse> {
@@ -2523,7 +3141,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func addBureauScore(
+    internal func addBureauScore(
         request: GRPCCore.ServerRequest<Loan_V1_AddBureauScoreRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_AddBureauScoreResponse> {
@@ -2536,7 +3154,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func createLoan(
+    internal func createLoan(
         request: GRPCCore.ServerRequest<Loan_V1_CreateLoanRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_CreateLoanResponse> {
@@ -2549,7 +3167,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func getLoan(
+    internal func getLoan(
         request: GRPCCore.ServerRequest<Loan_V1_GetLoanRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_GetLoanResponse> {
@@ -2562,7 +3180,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func listLoans(
+    internal func listLoans(
         request: GRPCCore.ServerRequest<Loan_V1_ListLoansRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_ListLoansResponse> {
@@ -2575,7 +3193,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func addEmiScheduleItem(
+    internal func addEmiScheduleItem(
         request: GRPCCore.ServerRequest<Loan_V1_AddEmiScheduleItemRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_AddEmiScheduleItemResponse> {
@@ -2588,7 +3206,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func listEmiSchedule(
+    internal func listEmiSchedule(
         request: GRPCCore.ServerRequest<Loan_V1_ListEmiScheduleRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_ListEmiScheduleResponse> {
@@ -2601,7 +3219,7 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func recordPayment(
+    internal func recordPayment(
         request: GRPCCore.ServerRequest<Loan_V1_RecordPaymentRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_RecordPaymentResponse> {
@@ -2614,12 +3232,51 @@ extension Loan_V1_LoanService.SimpleServiceProtocol {
         )
     }
 
-    public func listPayments(
+    internal func listPayments(
         request: GRPCCore.ServerRequest<Loan_V1_ListPaymentsRequest>,
         context: GRPCCore.ServerContext
     ) async throws -> GRPCCore.ServerResponse<Loan_V1_ListPaymentsResponse> {
         return GRPCCore.ServerResponse<Loan_V1_ListPaymentsResponse>(
             message: try await self.listPayments(
+                request: request.message,
+                context: context
+            ),
+            metadata: [:]
+        )
+    }
+
+    internal func rescheduleLoan(
+        request: GRPCCore.ServerRequest<Loan_V1_RescheduleLoanRequest>,
+        context: GRPCCore.ServerContext
+    ) async throws -> GRPCCore.ServerResponse<Loan_V1_RescheduleLoanResponse> {
+        return GRPCCore.ServerResponse<Loan_V1_RescheduleLoanResponse>(
+            message: try await self.rescheduleLoan(
+                request: request.message,
+                context: context
+            ),
+            metadata: [:]
+        )
+    }
+
+    internal func initiatePayment(
+        request: GRPCCore.ServerRequest<Loan_V1_InitiatePaymentRequest>,
+        context: GRPCCore.ServerContext
+    ) async throws -> GRPCCore.ServerResponse<Loan_V1_InitiatePaymentResponse> {
+        return GRPCCore.ServerResponse<Loan_V1_InitiatePaymentResponse>(
+            message: try await self.initiatePayment(
+                request: request.message,
+                context: context
+            ),
+            metadata: [:]
+        )
+    }
+
+    internal func verifyPayment(
+        request: GRPCCore.ServerRequest<Loan_V1_VerifyPaymentRequest>,
+        context: GRPCCore.ServerContext
+    ) async throws -> GRPCCore.ServerResponse<Loan_V1_VerifyPaymentResponse> {
+        return GRPCCore.ServerResponse<Loan_V1_VerifyPaymentResponse>(
+            message: try await self.verifyPayment(
                 request: request.message,
                 context: context
             ),
@@ -2636,8 +3293,16 @@ extension Loan_V1_LoanService {
     ///
     /// You don't need to implement this protocol directly, use the generated
     /// implementation, ``Client``.
-    public protocol ClientProtocol: Sendable {
+    ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > LoanService manages loan products, applications, and loan lifecycle.
+    internal protocol ClientProtocol: Sendable {
         /// Call the "CreateLoanProduct" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Create a new loan product. Admin only.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_CreateLoanProductRequest` message.
@@ -2658,6 +3323,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "UpdateLoanProduct" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Update an existing loan product. Admin only.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpdateLoanProductRequest` message.
         ///   - serializer: A serializer for `Loan_V1_UpdateLoanProductRequest` messages.
@@ -2676,6 +3345,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Result where Result: Sendable
 
         /// Call the "DeleteLoanProduct" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Soft-delete a loan product. Admin only.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_DeleteLoanProductRequest` message.
@@ -2696,6 +3369,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "GetLoanProduct" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Get a single loan product by ID.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_GetLoanProductRequest` message.
         ///   - serializer: A serializer for `Loan_V1_GetLoanProductRequest` messages.
@@ -2714,6 +3391,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Result where Result: Sendable
 
         /// Call the "ListLoanProducts" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List loan products with pagination.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_ListLoanProductsRequest` message.
@@ -2734,6 +3415,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "UpsertProductEligibilityRule" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upsert (create or replace) eligibility rules for a product. Admin only.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpsertProductEligibilityRuleRequest` message.
         ///   - serializer: A serializer for `Loan_V1_UpsertProductEligibilityRuleRequest` messages.
@@ -2752,6 +3437,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Result where Result: Sendable
 
         /// Call the "ReplaceProductFees" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Replace all fees for a product. Admin only.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_ReplaceProductFeesRequest` message.
@@ -2772,6 +3461,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "ReplaceProductRequiredDocuments" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Replace all required documents for a product. Admin only.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_ReplaceProductRequiredDocumentsRequest` message.
         ///   - serializer: A serializer for `Loan_V1_ReplaceProductRequiredDocumentsRequest` messages.
@@ -2790,6 +3483,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Result where Result: Sendable
 
         /// Call the "CreateLoanApplication" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Create a loan application. Borrower/officer/DST can create.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_CreateLoanApplicationRequest` message.
@@ -2810,6 +3507,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "GetLoanApplication" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Get a loan application with all sub-resources (coapplicants, collateral, documents, bureau scores).
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_GetLoanApplicationRequest` message.
         ///   - serializer: A serializer for `Loan_V1_GetLoanApplicationRequest` messages.
@@ -2828,6 +3529,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Result where Result: Sendable
 
         /// Call the "ListLoanApplications" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List loan applications with optional branch filter.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_ListLoanApplicationsRequest` message.
@@ -2848,6 +3553,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "UpdateLoanApplicationStatus" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Advance the application status through the approval workflow.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpdateLoanApplicationStatusRequest` message.
         ///   - serializer: A serializer for `Loan_V1_UpdateLoanApplicationStatusRequest` messages.
@@ -2866,6 +3575,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Result where Result: Sendable
 
         /// Call the "UpdateLoanApplicationTerms" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Update offered terms (tenure, interest rate) on an application.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpdateLoanApplicationTermsRequest` message.
@@ -2886,6 +3599,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "AssignLoanApplicationOfficer" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Assign a loan officer to an application. Manager/admin only.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_AssignLoanApplicationOfficerRequest` message.
         ///   - serializer: A serializer for `Loan_V1_AssignLoanApplicationOfficerRequest` messages.
@@ -2904,6 +3621,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Result where Result: Sendable
 
         /// Call the "AddApplicationCoapplicant" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Add a coapplicant to an application.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_AddApplicationCoapplicantRequest` message.
@@ -2924,6 +3645,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "UpsertApplicationCollateral" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upsert (create or update) collateral details for an application.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpsertApplicationCollateralRequest` message.
         ///   - serializer: A serializer for `Loan_V1_UpsertApplicationCollateralRequest` messages.
@@ -2942,6 +3667,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Result where Result: Sendable
 
         /// Call the "UpsertLoanVehicle" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upsert (create or update) vehicle details for an application.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpsertLoanVehicleRequest` message.
@@ -2962,6 +3691,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "UpsertLoanRealEstate" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upsert (create or update) real-estate details for an application.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpsertLoanRealEstateRequest` message.
         ///   - serializer: A serializer for `Loan_V1_UpsertLoanRealEstateRequest` messages.
@@ -2980,6 +3713,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Result where Result: Sendable
 
         /// Call the "AddApplicationDocument" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upload a document against an application's required document slot.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_AddApplicationDocumentRequest` message.
@@ -3000,6 +3737,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "UpdateApplicationDocumentVerification" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Verify (pass/fail) an application document. Officer/manager/admin only. Immutable once set.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpdateApplicationDocumentVerificationRequest` message.
         ///   - serializer: A serializer for `Loan_V1_UpdateApplicationDocumentVerificationRequest` messages.
@@ -3018,6 +3759,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Result where Result: Sendable
 
         /// Call the "AddBureauScore" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Add a bureau score for a borrower on an application.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_AddBureauScoreRequest` message.
@@ -3038,6 +3783,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "CreateLoan" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Create a loan from a fully-approved application. Manager/admin only.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_CreateLoanRequest` message.
         ///   - serializer: A serializer for `Loan_V1_CreateLoanRequest` messages.
@@ -3056,6 +3805,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Result where Result: Sendable
 
         /// Call the "GetLoan" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Get a loan by ID or application ID.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_GetLoanRequest` message.
@@ -3076,6 +3829,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "ListLoans" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List all loans with pagination.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_ListLoansRequest` message.
         ///   - serializer: A serializer for `Loan_V1_ListLoansRequest` messages.
@@ -3094,6 +3851,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Result where Result: Sendable
 
         /// Call the "AddEmiScheduleItem" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Add a single EMI schedule entry to a loan. Manager/admin only.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_AddEmiScheduleItemRequest` message.
@@ -3114,6 +3875,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "ListEmiSchedule" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List the EMI schedule for a loan.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_ListEmiScheduleRequest` message.
         ///   - serializer: A serializer for `Loan_V1_ListEmiScheduleRequest` messages.
@@ -3132,6 +3897,10 @@ extension Loan_V1_LoanService {
         ) async throws -> Result where Result: Sendable
 
         /// Call the "RecordPayment" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Record a payment against a specific EMI. Officer/manager/admin.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_RecordPaymentRequest` message.
@@ -3152,6 +3921,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "ListPayments" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List payments for a loan.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_ListPaymentsRequest` message.
         ///   - serializer: A serializer for `Loan_V1_ListPaymentsRequest` messages.
@@ -3168,6 +3941,75 @@ extension Loan_V1_LoanService {
             options: GRPCCore.CallOptions,
             onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_ListPaymentsResponse>) async throws -> Result
         ) async throws -> Result where Result: Sendable
+
+        /// Call the "RescheduleLoan" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Reschedule an active loan by changing its tenure. Manager/admin only.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Loan_V1_RescheduleLoanRequest` message.
+        ///   - serializer: A serializer for `Loan_V1_RescheduleLoanRequest` messages.
+        ///   - deserializer: A deserializer for `Loan_V1_RescheduleLoanResponse` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response, the result of which is
+        ///       returned to the caller. Returning from the closure will cancel the RPC if it
+        ///       hasn't already finished.
+        /// - Returns: The result of `handleResponse`.
+        func rescheduleLoan<Result>(
+            request: GRPCCore.ClientRequest<Loan_V1_RescheduleLoanRequest>,
+            serializer: some GRPCCore.MessageSerializer<Loan_V1_RescheduleLoanRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Loan_V1_RescheduleLoanResponse>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_RescheduleLoanResponse>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
+
+        /// Call the "InitiatePayment" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Initiate a Razorpay payment for a loan/EMI.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Loan_V1_InitiatePaymentRequest` message.
+        ///   - serializer: A serializer for `Loan_V1_InitiatePaymentRequest` messages.
+        ///   - deserializer: A deserializer for `Loan_V1_InitiatePaymentResponse` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response, the result of which is
+        ///       returned to the caller. Returning from the closure will cancel the RPC if it
+        ///       hasn't already finished.
+        /// - Returns: The result of `handleResponse`.
+        func initiatePayment<Result>(
+            request: GRPCCore.ClientRequest<Loan_V1_InitiatePaymentRequest>,
+            serializer: some GRPCCore.MessageSerializer<Loan_V1_InitiatePaymentRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Loan_V1_InitiatePaymentResponse>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_InitiatePaymentResponse>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
+
+        /// Call the "VerifyPayment" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Verify a completed Razorpay payment.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Loan_V1_VerifyPaymentRequest` message.
+        ///   - serializer: A serializer for `Loan_V1_VerifyPaymentRequest` messages.
+        ///   - deserializer: A deserializer for `Loan_V1_VerifyPaymentResponse` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response, the result of which is
+        ///       returned to the caller. Returning from the closure will cancel the RPC if it
+        ///       hasn't already finished.
+        /// - Returns: The result of `handleResponse`.
+        func verifyPayment<Result>(
+            request: GRPCCore.ClientRequest<Loan_V1_VerifyPaymentRequest>,
+            serializer: some GRPCCore.MessageSerializer<Loan_V1_VerifyPaymentRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Loan_V1_VerifyPaymentResponse>,
+            options: GRPCCore.CallOptions,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_VerifyPaymentResponse>) async throws -> Result
+        ) async throws -> Result where Result: Sendable
     }
 
     /// Generated client for the "loan.v1.LoanService" service.
@@ -3175,18 +4017,26 @@ extension Loan_V1_LoanService {
     /// The ``Client`` provides an implementation of ``ClientProtocol`` which wraps
     /// a `GRPCCore.GRPCCClient`. The underlying `GRPCClient` provides the long-lived
     /// means of communication with the remote peer.
-    public struct Client<Transport>: ClientProtocol where Transport: GRPCCore.ClientTransport {
+    ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > LoanService manages loan products, applications, and loan lifecycle.
+    internal struct Client<Transport>: ClientProtocol where Transport: GRPCCore.ClientTransport {
         private let client: GRPCCore.GRPCClient<Transport>
 
         /// Creates a new client wrapping the provided `GRPCCore.GRPCClient`.
         ///
         /// - Parameters:
         ///   - client: A `GRPCCore.GRPCClient` providing a communication channel to the service.
-        public init(wrapping client: GRPCCore.GRPCClient<Transport>) {
+        internal init(wrapping client: GRPCCore.GRPCClient<Transport>) {
             self.client = client
         }
 
         /// Call the "CreateLoanProduct" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Create a new loan product. Admin only.
         ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_CreateLoanProductRequest` message.
@@ -3197,7 +4047,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func createLoanProduct<Result>(
+        internal func createLoanProduct<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_CreateLoanProductRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_CreateLoanProductRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_CreateLoanProductResponse>,
@@ -3218,6 +4068,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "UpdateLoanProduct" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Update an existing loan product. Admin only.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpdateLoanProductRequest` message.
         ///   - serializer: A serializer for `Loan_V1_UpdateLoanProductRequest` messages.
@@ -3227,7 +4081,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func updateLoanProduct<Result>(
+        internal func updateLoanProduct<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_UpdateLoanProductRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_UpdateLoanProductRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_UpdateLoanProductResponse>,
@@ -3248,6 +4102,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "DeleteLoanProduct" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Soft-delete a loan product. Admin only.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_DeleteLoanProductRequest` message.
         ///   - serializer: A serializer for `Loan_V1_DeleteLoanProductRequest` messages.
@@ -3257,7 +4115,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func deleteLoanProduct<Result>(
+        internal func deleteLoanProduct<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_DeleteLoanProductRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_DeleteLoanProductRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_DeleteLoanProductResponse>,
@@ -3278,6 +4136,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "GetLoanProduct" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Get a single loan product by ID.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_GetLoanProductRequest` message.
         ///   - serializer: A serializer for `Loan_V1_GetLoanProductRequest` messages.
@@ -3287,7 +4149,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func getLoanProduct<Result>(
+        internal func getLoanProduct<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_GetLoanProductRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_GetLoanProductRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_GetLoanProductResponse>,
@@ -3308,6 +4170,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "ListLoanProducts" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List loan products with pagination.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_ListLoanProductsRequest` message.
         ///   - serializer: A serializer for `Loan_V1_ListLoanProductsRequest` messages.
@@ -3317,7 +4183,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func listLoanProducts<Result>(
+        internal func listLoanProducts<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_ListLoanProductsRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_ListLoanProductsRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_ListLoanProductsResponse>,
@@ -3338,6 +4204,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "UpsertProductEligibilityRule" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upsert (create or replace) eligibility rules for a product. Admin only.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpsertProductEligibilityRuleRequest` message.
         ///   - serializer: A serializer for `Loan_V1_UpsertProductEligibilityRuleRequest` messages.
@@ -3347,7 +4217,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func upsertProductEligibilityRule<Result>(
+        internal func upsertProductEligibilityRule<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_UpsertProductEligibilityRuleRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_UpsertProductEligibilityRuleRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_UpsertProductEligibilityRuleResponse>,
@@ -3368,6 +4238,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "ReplaceProductFees" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Replace all fees for a product. Admin only.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_ReplaceProductFeesRequest` message.
         ///   - serializer: A serializer for `Loan_V1_ReplaceProductFeesRequest` messages.
@@ -3377,7 +4251,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func replaceProductFees<Result>(
+        internal func replaceProductFees<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_ReplaceProductFeesRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_ReplaceProductFeesRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_ReplaceProductFeesResponse>,
@@ -3398,6 +4272,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "ReplaceProductRequiredDocuments" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Replace all required documents for a product. Admin only.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_ReplaceProductRequiredDocumentsRequest` message.
         ///   - serializer: A serializer for `Loan_V1_ReplaceProductRequiredDocumentsRequest` messages.
@@ -3407,7 +4285,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func replaceProductRequiredDocuments<Result>(
+        internal func replaceProductRequiredDocuments<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_ReplaceProductRequiredDocumentsRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_ReplaceProductRequiredDocumentsRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_ReplaceProductRequiredDocumentsResponse>,
@@ -3428,6 +4306,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "CreateLoanApplication" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Create a loan application. Borrower/officer/DST can create.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_CreateLoanApplicationRequest` message.
         ///   - serializer: A serializer for `Loan_V1_CreateLoanApplicationRequest` messages.
@@ -3437,7 +4319,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func createLoanApplication<Result>(
+        internal func createLoanApplication<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_CreateLoanApplicationRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_CreateLoanApplicationRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_CreateLoanApplicationResponse>,
@@ -3458,6 +4340,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "GetLoanApplication" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Get a loan application with all sub-resources (coapplicants, collateral, documents, bureau scores).
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_GetLoanApplicationRequest` message.
         ///   - serializer: A serializer for `Loan_V1_GetLoanApplicationRequest` messages.
@@ -3467,7 +4353,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func getLoanApplication<Result>(
+        internal func getLoanApplication<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_GetLoanApplicationRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_GetLoanApplicationRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_GetLoanApplicationResponse>,
@@ -3488,6 +4374,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "ListLoanApplications" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List loan applications with optional branch filter.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_ListLoanApplicationsRequest` message.
         ///   - serializer: A serializer for `Loan_V1_ListLoanApplicationsRequest` messages.
@@ -3497,7 +4387,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func listLoanApplications<Result>(
+        internal func listLoanApplications<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_ListLoanApplicationsRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_ListLoanApplicationsRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_ListLoanApplicationsResponse>,
@@ -3518,6 +4408,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "UpdateLoanApplicationStatus" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Advance the application status through the approval workflow.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpdateLoanApplicationStatusRequest` message.
         ///   - serializer: A serializer for `Loan_V1_UpdateLoanApplicationStatusRequest` messages.
@@ -3527,7 +4421,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func updateLoanApplicationStatus<Result>(
+        internal func updateLoanApplicationStatus<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_UpdateLoanApplicationStatusRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_UpdateLoanApplicationStatusRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_UpdateLoanApplicationStatusResponse>,
@@ -3548,6 +4442,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "UpdateLoanApplicationTerms" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Update offered terms (tenure, interest rate) on an application.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpdateLoanApplicationTermsRequest` message.
         ///   - serializer: A serializer for `Loan_V1_UpdateLoanApplicationTermsRequest` messages.
@@ -3557,7 +4455,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func updateLoanApplicationTerms<Result>(
+        internal func updateLoanApplicationTerms<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_UpdateLoanApplicationTermsRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_UpdateLoanApplicationTermsRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_UpdateLoanApplicationTermsResponse>,
@@ -3578,6 +4476,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "AssignLoanApplicationOfficer" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Assign a loan officer to an application. Manager/admin only.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_AssignLoanApplicationOfficerRequest` message.
         ///   - serializer: A serializer for `Loan_V1_AssignLoanApplicationOfficerRequest` messages.
@@ -3587,7 +4489,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func assignLoanApplicationOfficer<Result>(
+        internal func assignLoanApplicationOfficer<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_AssignLoanApplicationOfficerRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_AssignLoanApplicationOfficerRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_AssignLoanApplicationOfficerResponse>,
@@ -3608,6 +4510,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "AddApplicationCoapplicant" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Add a coapplicant to an application.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_AddApplicationCoapplicantRequest` message.
         ///   - serializer: A serializer for `Loan_V1_AddApplicationCoapplicantRequest` messages.
@@ -3617,7 +4523,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func addApplicationCoapplicant<Result>(
+        internal func addApplicationCoapplicant<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_AddApplicationCoapplicantRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_AddApplicationCoapplicantRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_AddApplicationCoapplicantResponse>,
@@ -3638,6 +4544,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "UpsertApplicationCollateral" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upsert (create or update) collateral details for an application.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpsertApplicationCollateralRequest` message.
         ///   - serializer: A serializer for `Loan_V1_UpsertApplicationCollateralRequest` messages.
@@ -3647,7 +4557,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func upsertApplicationCollateral<Result>(
+        internal func upsertApplicationCollateral<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_UpsertApplicationCollateralRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_UpsertApplicationCollateralRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_UpsertApplicationCollateralResponse>,
@@ -3668,6 +4578,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "UpsertLoanVehicle" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upsert (create or update) vehicle details for an application.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpsertLoanVehicleRequest` message.
         ///   - serializer: A serializer for `Loan_V1_UpsertLoanVehicleRequest` messages.
@@ -3677,7 +4591,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func upsertLoanVehicle<Result>(
+        internal func upsertLoanVehicle<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_UpsertLoanVehicleRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_UpsertLoanVehicleRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_UpsertLoanVehicleResponse>,
@@ -3698,6 +4612,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "UpsertLoanRealEstate" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upsert (create or update) real-estate details for an application.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpsertLoanRealEstateRequest` message.
         ///   - serializer: A serializer for `Loan_V1_UpsertLoanRealEstateRequest` messages.
@@ -3707,7 +4625,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func upsertLoanRealEstate<Result>(
+        internal func upsertLoanRealEstate<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_UpsertLoanRealEstateRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_UpsertLoanRealEstateRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_UpsertLoanRealEstateResponse>,
@@ -3728,6 +4646,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "AddApplicationDocument" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Upload a document against an application's required document slot.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_AddApplicationDocumentRequest` message.
         ///   - serializer: A serializer for `Loan_V1_AddApplicationDocumentRequest` messages.
@@ -3737,7 +4659,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func addApplicationDocument<Result>(
+        internal func addApplicationDocument<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_AddApplicationDocumentRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_AddApplicationDocumentRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_AddApplicationDocumentResponse>,
@@ -3758,6 +4680,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "UpdateApplicationDocumentVerification" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Verify (pass/fail) an application document. Officer/manager/admin only. Immutable once set.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_UpdateApplicationDocumentVerificationRequest` message.
         ///   - serializer: A serializer for `Loan_V1_UpdateApplicationDocumentVerificationRequest` messages.
@@ -3767,7 +4693,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func updateApplicationDocumentVerification<Result>(
+        internal func updateApplicationDocumentVerification<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_UpdateApplicationDocumentVerificationRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_UpdateApplicationDocumentVerificationRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_UpdateApplicationDocumentVerificationResponse>,
@@ -3788,6 +4714,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "AddBureauScore" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Add a bureau score for a borrower on an application.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_AddBureauScoreRequest` message.
         ///   - serializer: A serializer for `Loan_V1_AddBureauScoreRequest` messages.
@@ -3797,7 +4727,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func addBureauScore<Result>(
+        internal func addBureauScore<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_AddBureauScoreRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_AddBureauScoreRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_AddBureauScoreResponse>,
@@ -3818,6 +4748,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "CreateLoan" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Create a loan from a fully-approved application. Manager/admin only.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_CreateLoanRequest` message.
         ///   - serializer: A serializer for `Loan_V1_CreateLoanRequest` messages.
@@ -3827,7 +4761,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func createLoan<Result>(
+        internal func createLoan<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_CreateLoanRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_CreateLoanRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_CreateLoanResponse>,
@@ -3848,6 +4782,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "GetLoan" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Get a loan by ID or application ID.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_GetLoanRequest` message.
         ///   - serializer: A serializer for `Loan_V1_GetLoanRequest` messages.
@@ -3857,7 +4795,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func getLoan<Result>(
+        internal func getLoan<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_GetLoanRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_GetLoanRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_GetLoanResponse>,
@@ -3878,6 +4816,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "ListLoans" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List all loans with pagination.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_ListLoansRequest` message.
         ///   - serializer: A serializer for `Loan_V1_ListLoansRequest` messages.
@@ -3887,7 +4829,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func listLoans<Result>(
+        internal func listLoans<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_ListLoansRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_ListLoansRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_ListLoansResponse>,
@@ -3908,6 +4850,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "AddEmiScheduleItem" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Add a single EMI schedule entry to a loan. Manager/admin only.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_AddEmiScheduleItemRequest` message.
         ///   - serializer: A serializer for `Loan_V1_AddEmiScheduleItemRequest` messages.
@@ -3917,7 +4863,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func addEmiScheduleItem<Result>(
+        internal func addEmiScheduleItem<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_AddEmiScheduleItemRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_AddEmiScheduleItemRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_AddEmiScheduleItemResponse>,
@@ -3938,6 +4884,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "ListEmiSchedule" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List the EMI schedule for a loan.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_ListEmiScheduleRequest` message.
         ///   - serializer: A serializer for `Loan_V1_ListEmiScheduleRequest` messages.
@@ -3947,7 +4897,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func listEmiSchedule<Result>(
+        internal func listEmiSchedule<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_ListEmiScheduleRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_ListEmiScheduleRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_ListEmiScheduleResponse>,
@@ -3968,6 +4918,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "RecordPayment" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Record a payment against a specific EMI. Officer/manager/admin.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_RecordPaymentRequest` message.
         ///   - serializer: A serializer for `Loan_V1_RecordPaymentRequest` messages.
@@ -3977,7 +4931,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func recordPayment<Result>(
+        internal func recordPayment<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_RecordPaymentRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_RecordPaymentRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_RecordPaymentResponse>,
@@ -3998,6 +4952,10 @@ extension Loan_V1_LoanService {
 
         /// Call the "ListPayments" method.
         ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > List payments for a loan.
+        ///
         /// - Parameters:
         ///   - request: A request containing a single `Loan_V1_ListPaymentsRequest` message.
         ///   - serializer: A serializer for `Loan_V1_ListPaymentsRequest` messages.
@@ -4007,7 +4965,7 @@ extension Loan_V1_LoanService {
         ///       returned to the caller. Returning from the closure will cancel the RPC if it
         ///       hasn't already finished.
         /// - Returns: The result of `handleResponse`.
-        public func listPayments<Result>(
+        internal func listPayments<Result>(
             request: GRPCCore.ClientRequest<Loan_V1_ListPaymentsRequest>,
             serializer: some GRPCCore.MessageSerializer<Loan_V1_ListPaymentsRequest>,
             deserializer: some GRPCCore.MessageDeserializer<Loan_V1_ListPaymentsResponse>,
@@ -4025,6 +4983,108 @@ extension Loan_V1_LoanService {
                 onResponse: handleResponse
             )
         }
+
+        /// Call the "RescheduleLoan" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Reschedule an active loan by changing its tenure. Manager/admin only.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Loan_V1_RescheduleLoanRequest` message.
+        ///   - serializer: A serializer for `Loan_V1_RescheduleLoanRequest` messages.
+        ///   - deserializer: A deserializer for `Loan_V1_RescheduleLoanResponse` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response, the result of which is
+        ///       returned to the caller. Returning from the closure will cancel the RPC if it
+        ///       hasn't already finished.
+        /// - Returns: The result of `handleResponse`.
+        internal func rescheduleLoan<Result>(
+            request: GRPCCore.ClientRequest<Loan_V1_RescheduleLoanRequest>,
+            serializer: some GRPCCore.MessageSerializer<Loan_V1_RescheduleLoanRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Loan_V1_RescheduleLoanResponse>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_RescheduleLoanResponse>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Loan_V1_LoanService.Method.RescheduleLoan.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
+
+        /// Call the "InitiatePayment" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Initiate a Razorpay payment for a loan/EMI.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Loan_V1_InitiatePaymentRequest` message.
+        ///   - serializer: A serializer for `Loan_V1_InitiatePaymentRequest` messages.
+        ///   - deserializer: A deserializer for `Loan_V1_InitiatePaymentResponse` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response, the result of which is
+        ///       returned to the caller. Returning from the closure will cancel the RPC if it
+        ///       hasn't already finished.
+        /// - Returns: The result of `handleResponse`.
+        internal func initiatePayment<Result>(
+            request: GRPCCore.ClientRequest<Loan_V1_InitiatePaymentRequest>,
+            serializer: some GRPCCore.MessageSerializer<Loan_V1_InitiatePaymentRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Loan_V1_InitiatePaymentResponse>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_InitiatePaymentResponse>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Loan_V1_LoanService.Method.InitiatePayment.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
+
+        /// Call the "VerifyPayment" method.
+        ///
+        /// > Source IDL Documentation:
+        /// >
+        /// > Verify a completed Razorpay payment.
+        ///
+        /// - Parameters:
+        ///   - request: A request containing a single `Loan_V1_VerifyPaymentRequest` message.
+        ///   - serializer: A serializer for `Loan_V1_VerifyPaymentRequest` messages.
+        ///   - deserializer: A deserializer for `Loan_V1_VerifyPaymentResponse` messages.
+        ///   - options: Options to apply to this RPC.
+        ///   - handleResponse: A closure which handles the response, the result of which is
+        ///       returned to the caller. Returning from the closure will cancel the RPC if it
+        ///       hasn't already finished.
+        /// - Returns: The result of `handleResponse`.
+        internal func verifyPayment<Result>(
+            request: GRPCCore.ClientRequest<Loan_V1_VerifyPaymentRequest>,
+            serializer: some GRPCCore.MessageSerializer<Loan_V1_VerifyPaymentRequest>,
+            deserializer: some GRPCCore.MessageDeserializer<Loan_V1_VerifyPaymentResponse>,
+            options: GRPCCore.CallOptions = .defaults,
+            onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_VerifyPaymentResponse>) async throws -> Result = { response in
+                try response.message
+            }
+        ) async throws -> Result where Result: Sendable {
+            try await self.client.unary(
+                request: request,
+                descriptor: Loan_V1_LoanService.Method.VerifyPayment.descriptor,
+                serializer: serializer,
+                deserializer: deserializer,
+                options: options,
+                onResponse: handleResponse
+            )
+        }
     }
 }
 
@@ -4033,6 +5093,10 @@ extension Loan_V1_LoanService {
 extension Loan_V1_LoanService.ClientProtocol {
     /// Call the "CreateLoanProduct" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Create a new loan product. Admin only.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_CreateLoanProductRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4040,7 +5104,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func createLoanProduct<Result>(
+    internal func createLoanProduct<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_CreateLoanProductRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_CreateLoanProductResponse>) async throws -> Result = { response in
@@ -4058,6 +5122,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "UpdateLoanProduct" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Update an existing loan product. Admin only.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_UpdateLoanProductRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4065,7 +5133,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func updateLoanProduct<Result>(
+    internal func updateLoanProduct<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_UpdateLoanProductRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_UpdateLoanProductResponse>) async throws -> Result = { response in
@@ -4083,6 +5151,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "DeleteLoanProduct" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Soft-delete a loan product. Admin only.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_DeleteLoanProductRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4090,7 +5162,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func deleteLoanProduct<Result>(
+    internal func deleteLoanProduct<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_DeleteLoanProductRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_DeleteLoanProductResponse>) async throws -> Result = { response in
@@ -4108,6 +5180,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "GetLoanProduct" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Get a single loan product by ID.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_GetLoanProductRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4115,7 +5191,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func getLoanProduct<Result>(
+    internal func getLoanProduct<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_GetLoanProductRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_GetLoanProductResponse>) async throws -> Result = { response in
@@ -4133,6 +5209,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "ListLoanProducts" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > List loan products with pagination.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_ListLoanProductsRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4140,7 +5220,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func listLoanProducts<Result>(
+    internal func listLoanProducts<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_ListLoanProductsRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_ListLoanProductsResponse>) async throws -> Result = { response in
@@ -4158,6 +5238,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "UpsertProductEligibilityRule" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Upsert (create or replace) eligibility rules for a product. Admin only.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_UpsertProductEligibilityRuleRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4165,7 +5249,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func upsertProductEligibilityRule<Result>(
+    internal func upsertProductEligibilityRule<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_UpsertProductEligibilityRuleRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_UpsertProductEligibilityRuleResponse>) async throws -> Result = { response in
@@ -4183,6 +5267,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "ReplaceProductFees" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Replace all fees for a product. Admin only.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_ReplaceProductFeesRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4190,7 +5278,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func replaceProductFees<Result>(
+    internal func replaceProductFees<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_ReplaceProductFeesRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_ReplaceProductFeesResponse>) async throws -> Result = { response in
@@ -4208,6 +5296,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "ReplaceProductRequiredDocuments" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Replace all required documents for a product. Admin only.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_ReplaceProductRequiredDocumentsRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4215,7 +5307,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func replaceProductRequiredDocuments<Result>(
+    internal func replaceProductRequiredDocuments<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_ReplaceProductRequiredDocumentsRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_ReplaceProductRequiredDocumentsResponse>) async throws -> Result = { response in
@@ -4233,6 +5325,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "CreateLoanApplication" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Create a loan application. Borrower/officer/DST can create.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_CreateLoanApplicationRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4240,7 +5336,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func createLoanApplication<Result>(
+    internal func createLoanApplication<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_CreateLoanApplicationRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_CreateLoanApplicationResponse>) async throws -> Result = { response in
@@ -4258,6 +5354,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "GetLoanApplication" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Get a loan application with all sub-resources (coapplicants, collateral, documents, bureau scores).
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_GetLoanApplicationRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4265,7 +5365,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func getLoanApplication<Result>(
+    internal func getLoanApplication<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_GetLoanApplicationRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_GetLoanApplicationResponse>) async throws -> Result = { response in
@@ -4283,6 +5383,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "ListLoanApplications" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > List loan applications with optional branch filter.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_ListLoanApplicationsRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4290,7 +5394,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func listLoanApplications<Result>(
+    internal func listLoanApplications<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_ListLoanApplicationsRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_ListLoanApplicationsResponse>) async throws -> Result = { response in
@@ -4308,6 +5412,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "UpdateLoanApplicationStatus" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Advance the application status through the approval workflow.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_UpdateLoanApplicationStatusRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4315,7 +5423,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func updateLoanApplicationStatus<Result>(
+    internal func updateLoanApplicationStatus<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_UpdateLoanApplicationStatusRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_UpdateLoanApplicationStatusResponse>) async throws -> Result = { response in
@@ -4333,6 +5441,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "UpdateLoanApplicationTerms" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Update offered terms (tenure, interest rate) on an application.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_UpdateLoanApplicationTermsRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4340,7 +5452,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func updateLoanApplicationTerms<Result>(
+    internal func updateLoanApplicationTerms<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_UpdateLoanApplicationTermsRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_UpdateLoanApplicationTermsResponse>) async throws -> Result = { response in
@@ -4358,6 +5470,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "AssignLoanApplicationOfficer" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Assign a loan officer to an application. Manager/admin only.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_AssignLoanApplicationOfficerRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4365,7 +5481,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func assignLoanApplicationOfficer<Result>(
+    internal func assignLoanApplicationOfficer<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_AssignLoanApplicationOfficerRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_AssignLoanApplicationOfficerResponse>) async throws -> Result = { response in
@@ -4383,6 +5499,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "AddApplicationCoapplicant" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Add a coapplicant to an application.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_AddApplicationCoapplicantRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4390,7 +5510,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func addApplicationCoapplicant<Result>(
+    internal func addApplicationCoapplicant<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_AddApplicationCoapplicantRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_AddApplicationCoapplicantResponse>) async throws -> Result = { response in
@@ -4408,6 +5528,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "UpsertApplicationCollateral" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Upsert (create or update) collateral details for an application.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_UpsertApplicationCollateralRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4415,7 +5539,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func upsertApplicationCollateral<Result>(
+    internal func upsertApplicationCollateral<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_UpsertApplicationCollateralRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_UpsertApplicationCollateralResponse>) async throws -> Result = { response in
@@ -4433,6 +5557,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "UpsertLoanVehicle" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Upsert (create or update) vehicle details for an application.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_UpsertLoanVehicleRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4440,7 +5568,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func upsertLoanVehicle<Result>(
+    internal func upsertLoanVehicle<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_UpsertLoanVehicleRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_UpsertLoanVehicleResponse>) async throws -> Result = { response in
@@ -4458,6 +5586,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "UpsertLoanRealEstate" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Upsert (create or update) real-estate details for an application.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_UpsertLoanRealEstateRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4465,7 +5597,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func upsertLoanRealEstate<Result>(
+    internal func upsertLoanRealEstate<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_UpsertLoanRealEstateRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_UpsertLoanRealEstateResponse>) async throws -> Result = { response in
@@ -4483,6 +5615,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "AddApplicationDocument" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Upload a document against an application's required document slot.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_AddApplicationDocumentRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4490,7 +5626,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func addApplicationDocument<Result>(
+    internal func addApplicationDocument<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_AddApplicationDocumentRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_AddApplicationDocumentResponse>) async throws -> Result = { response in
@@ -4508,6 +5644,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "UpdateApplicationDocumentVerification" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Verify (pass/fail) an application document. Officer/manager/admin only. Immutable once set.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_UpdateApplicationDocumentVerificationRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4515,7 +5655,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func updateApplicationDocumentVerification<Result>(
+    internal func updateApplicationDocumentVerification<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_UpdateApplicationDocumentVerificationRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_UpdateApplicationDocumentVerificationResponse>) async throws -> Result = { response in
@@ -4533,6 +5673,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "AddBureauScore" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Add a bureau score for a borrower on an application.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_AddBureauScoreRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4540,7 +5684,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func addBureauScore<Result>(
+    internal func addBureauScore<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_AddBureauScoreRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_AddBureauScoreResponse>) async throws -> Result = { response in
@@ -4558,6 +5702,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "CreateLoan" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Create a loan from a fully-approved application. Manager/admin only.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_CreateLoanRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4565,7 +5713,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func createLoan<Result>(
+    internal func createLoan<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_CreateLoanRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_CreateLoanResponse>) async throws -> Result = { response in
@@ -4583,6 +5731,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "GetLoan" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Get a loan by ID or application ID.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_GetLoanRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4590,7 +5742,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func getLoan<Result>(
+    internal func getLoan<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_GetLoanRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_GetLoanResponse>) async throws -> Result = { response in
@@ -4608,6 +5760,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "ListLoans" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > List all loans with pagination.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_ListLoansRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4615,7 +5771,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func listLoans<Result>(
+    internal func listLoans<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_ListLoansRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_ListLoansResponse>) async throws -> Result = { response in
@@ -4633,6 +5789,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "AddEmiScheduleItem" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Add a single EMI schedule entry to a loan. Manager/admin only.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_AddEmiScheduleItemRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4640,7 +5800,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func addEmiScheduleItem<Result>(
+    internal func addEmiScheduleItem<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_AddEmiScheduleItemRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_AddEmiScheduleItemResponse>) async throws -> Result = { response in
@@ -4658,6 +5818,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "ListEmiSchedule" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > List the EMI schedule for a loan.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_ListEmiScheduleRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4665,7 +5829,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func listEmiSchedule<Result>(
+    internal func listEmiSchedule<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_ListEmiScheduleRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_ListEmiScheduleResponse>) async throws -> Result = { response in
@@ -4683,6 +5847,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "RecordPayment" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Record a payment against a specific EMI. Officer/manager/admin.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_RecordPaymentRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4690,7 +5858,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func recordPayment<Result>(
+    internal func recordPayment<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_RecordPaymentRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_RecordPaymentResponse>) async throws -> Result = { response in
@@ -4708,6 +5876,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "ListPayments" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > List payments for a loan.
+    ///
     /// - Parameters:
     ///   - request: A request containing a single `Loan_V1_ListPaymentsRequest` message.
     ///   - options: Options to apply to this RPC.
@@ -4715,7 +5887,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func listPayments<Result>(
+    internal func listPayments<Result>(
         request: GRPCCore.ClientRequest<Loan_V1_ListPaymentsRequest>,
         options: GRPCCore.CallOptions = .defaults,
         onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_ListPaymentsResponse>) async throws -> Result = { response in
@@ -4730,12 +5902,103 @@ extension Loan_V1_LoanService.ClientProtocol {
             onResponse: handleResponse
         )
     }
+
+    /// Call the "RescheduleLoan" method.
+    ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Reschedule an active loan by changing its tenure. Manager/admin only.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `Loan_V1_RescheduleLoanRequest` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response, the result of which is
+    ///       returned to the caller. Returning from the closure will cancel the RPC if it
+    ///       hasn't already finished.
+    /// - Returns: The result of `handleResponse`.
+    internal func rescheduleLoan<Result>(
+        request: GRPCCore.ClientRequest<Loan_V1_RescheduleLoanRequest>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_RescheduleLoanResponse>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.rescheduleLoan(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<Loan_V1_RescheduleLoanRequest>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Loan_V1_RescheduleLoanResponse>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "InitiatePayment" method.
+    ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Initiate a Razorpay payment for a loan/EMI.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `Loan_V1_InitiatePaymentRequest` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response, the result of which is
+    ///       returned to the caller. Returning from the closure will cancel the RPC if it
+    ///       hasn't already finished.
+    /// - Returns: The result of `handleResponse`.
+    internal func initiatePayment<Result>(
+        request: GRPCCore.ClientRequest<Loan_V1_InitiatePaymentRequest>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_InitiatePaymentResponse>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.initiatePayment(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<Loan_V1_InitiatePaymentRequest>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Loan_V1_InitiatePaymentResponse>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "VerifyPayment" method.
+    ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Verify a completed Razorpay payment.
+    ///
+    /// - Parameters:
+    ///   - request: A request containing a single `Loan_V1_VerifyPaymentRequest` message.
+    ///   - options: Options to apply to this RPC.
+    ///   - handleResponse: A closure which handles the response, the result of which is
+    ///       returned to the caller. Returning from the closure will cancel the RPC if it
+    ///       hasn't already finished.
+    /// - Returns: The result of `handleResponse`.
+    internal func verifyPayment<Result>(
+        request: GRPCCore.ClientRequest<Loan_V1_VerifyPaymentRequest>,
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_VerifyPaymentResponse>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        try await self.verifyPayment(
+            request: request,
+            serializer: GRPCProtobuf.ProtobufSerializer<Loan_V1_VerifyPaymentRequest>(),
+            deserializer: GRPCProtobuf.ProtobufDeserializer<Loan_V1_VerifyPaymentResponse>(),
+            options: options,
+            onResponse: handleResponse
+        )
+    }
 }
 
 // Helpers providing sugared APIs for 'ClientProtocol' methods.
 @available(macOS 15.0, iOS 18.0, watchOS 11.0, tvOS 18.0, visionOS 2.0, *)
 extension Loan_V1_LoanService.ClientProtocol {
     /// Call the "CreateLoanProduct" method.
+    ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Create a new loan product. Admin only.
     ///
     /// - Parameters:
     ///   - message: request message to send.
@@ -4745,7 +6008,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func createLoanProduct<Result>(
+    internal func createLoanProduct<Result>(
         _ message: Loan_V1_CreateLoanProductRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -4766,6 +6029,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "UpdateLoanProduct" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Update an existing loan product. Admin only.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -4774,7 +6041,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func updateLoanProduct<Result>(
+    internal func updateLoanProduct<Result>(
         _ message: Loan_V1_UpdateLoanProductRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -4795,6 +6062,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "DeleteLoanProduct" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Soft-delete a loan product. Admin only.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -4803,7 +6074,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func deleteLoanProduct<Result>(
+    internal func deleteLoanProduct<Result>(
         _ message: Loan_V1_DeleteLoanProductRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -4824,6 +6095,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "GetLoanProduct" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Get a single loan product by ID.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -4832,7 +6107,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func getLoanProduct<Result>(
+    internal func getLoanProduct<Result>(
         _ message: Loan_V1_GetLoanProductRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -4853,6 +6128,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "ListLoanProducts" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > List loan products with pagination.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -4861,7 +6140,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func listLoanProducts<Result>(
+    internal func listLoanProducts<Result>(
         _ message: Loan_V1_ListLoanProductsRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -4882,6 +6161,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "UpsertProductEligibilityRule" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Upsert (create or replace) eligibility rules for a product. Admin only.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -4890,7 +6173,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func upsertProductEligibilityRule<Result>(
+    internal func upsertProductEligibilityRule<Result>(
         _ message: Loan_V1_UpsertProductEligibilityRuleRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -4911,6 +6194,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "ReplaceProductFees" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Replace all fees for a product. Admin only.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -4919,7 +6206,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func replaceProductFees<Result>(
+    internal func replaceProductFees<Result>(
         _ message: Loan_V1_ReplaceProductFeesRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -4940,6 +6227,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "ReplaceProductRequiredDocuments" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Replace all required documents for a product. Admin only.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -4948,7 +6239,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func replaceProductRequiredDocuments<Result>(
+    internal func replaceProductRequiredDocuments<Result>(
         _ message: Loan_V1_ReplaceProductRequiredDocumentsRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -4969,6 +6260,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "CreateLoanApplication" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Create a loan application. Borrower/officer/DST can create.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -4977,7 +6272,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func createLoanApplication<Result>(
+    internal func createLoanApplication<Result>(
         _ message: Loan_V1_CreateLoanApplicationRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -4998,6 +6293,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "GetLoanApplication" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Get a loan application with all sub-resources (coapplicants, collateral, documents, bureau scores).
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -5006,7 +6305,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func getLoanApplication<Result>(
+    internal func getLoanApplication<Result>(
         _ message: Loan_V1_GetLoanApplicationRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -5027,6 +6326,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "ListLoanApplications" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > List loan applications with optional branch filter.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -5035,7 +6338,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func listLoanApplications<Result>(
+    internal func listLoanApplications<Result>(
         _ message: Loan_V1_ListLoanApplicationsRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -5056,6 +6359,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "UpdateLoanApplicationStatus" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Advance the application status through the approval workflow.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -5064,7 +6371,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func updateLoanApplicationStatus<Result>(
+    internal func updateLoanApplicationStatus<Result>(
         _ message: Loan_V1_UpdateLoanApplicationStatusRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -5085,6 +6392,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "UpdateLoanApplicationTerms" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Update offered terms (tenure, interest rate) on an application.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -5093,7 +6404,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func updateLoanApplicationTerms<Result>(
+    internal func updateLoanApplicationTerms<Result>(
         _ message: Loan_V1_UpdateLoanApplicationTermsRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -5114,6 +6425,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "AssignLoanApplicationOfficer" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Assign a loan officer to an application. Manager/admin only.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -5122,7 +6437,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func assignLoanApplicationOfficer<Result>(
+    internal func assignLoanApplicationOfficer<Result>(
         _ message: Loan_V1_AssignLoanApplicationOfficerRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -5143,6 +6458,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "AddApplicationCoapplicant" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Add a coapplicant to an application.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -5151,7 +6470,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func addApplicationCoapplicant<Result>(
+    internal func addApplicationCoapplicant<Result>(
         _ message: Loan_V1_AddApplicationCoapplicantRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -5172,6 +6491,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "UpsertApplicationCollateral" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Upsert (create or update) collateral details for an application.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -5180,7 +6503,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func upsertApplicationCollateral<Result>(
+    internal func upsertApplicationCollateral<Result>(
         _ message: Loan_V1_UpsertApplicationCollateralRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -5201,6 +6524,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "UpsertLoanVehicle" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Upsert (create or update) vehicle details for an application.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -5209,7 +6536,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func upsertLoanVehicle<Result>(
+    internal func upsertLoanVehicle<Result>(
         _ message: Loan_V1_UpsertLoanVehicleRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -5230,6 +6557,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "UpsertLoanRealEstate" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Upsert (create or update) real-estate details for an application.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -5238,7 +6569,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func upsertLoanRealEstate<Result>(
+    internal func upsertLoanRealEstate<Result>(
         _ message: Loan_V1_UpsertLoanRealEstateRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -5259,6 +6590,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "AddApplicationDocument" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Upload a document against an application's required document slot.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -5267,7 +6602,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func addApplicationDocument<Result>(
+    internal func addApplicationDocument<Result>(
         _ message: Loan_V1_AddApplicationDocumentRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -5288,6 +6623,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "UpdateApplicationDocumentVerification" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Verify (pass/fail) an application document. Officer/manager/admin only. Immutable once set.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -5296,7 +6635,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func updateApplicationDocumentVerification<Result>(
+    internal func updateApplicationDocumentVerification<Result>(
         _ message: Loan_V1_UpdateApplicationDocumentVerificationRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -5317,6 +6656,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "AddBureauScore" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Add a bureau score for a borrower on an application.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -5325,7 +6668,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func addBureauScore<Result>(
+    internal func addBureauScore<Result>(
         _ message: Loan_V1_AddBureauScoreRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -5346,6 +6689,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "CreateLoan" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Create a loan from a fully-approved application. Manager/admin only.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -5354,7 +6701,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func createLoan<Result>(
+    internal func createLoan<Result>(
         _ message: Loan_V1_CreateLoanRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -5375,6 +6722,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "GetLoan" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Get a loan by ID or application ID.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -5383,7 +6734,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func getLoan<Result>(
+    internal func getLoan<Result>(
         _ message: Loan_V1_GetLoanRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -5404,6 +6755,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "ListLoans" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > List all loans with pagination.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -5412,7 +6767,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func listLoans<Result>(
+    internal func listLoans<Result>(
         _ message: Loan_V1_ListLoansRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -5433,6 +6788,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "AddEmiScheduleItem" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Add a single EMI schedule entry to a loan. Manager/admin only.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -5441,7 +6800,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func addEmiScheduleItem<Result>(
+    internal func addEmiScheduleItem<Result>(
         _ message: Loan_V1_AddEmiScheduleItemRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -5462,6 +6821,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "ListEmiSchedule" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > List the EMI schedule for a loan.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -5470,7 +6833,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func listEmiSchedule<Result>(
+    internal func listEmiSchedule<Result>(
         _ message: Loan_V1_ListEmiScheduleRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -5491,6 +6854,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "RecordPayment" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Record a payment against a specific EMI. Officer/manager/admin.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -5499,7 +6866,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func recordPayment<Result>(
+    internal func recordPayment<Result>(
         _ message: Loan_V1_RecordPaymentRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -5520,6 +6887,10 @@ extension Loan_V1_LoanService.ClientProtocol {
 
     /// Call the "ListPayments" method.
     ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > List payments for a loan.
+    ///
     /// - Parameters:
     ///   - message: request message to send.
     ///   - metadata: Additional metadata to send, defaults to empty.
@@ -5528,7 +6899,7 @@ extension Loan_V1_LoanService.ClientProtocol {
     ///       returned to the caller. Returning from the closure will cancel the RPC if it
     ///       hasn't already finished.
     /// - Returns: The result of `handleResponse`.
-    public func listPayments<Result>(
+    internal func listPayments<Result>(
         _ message: Loan_V1_ListPaymentsRequest,
         metadata: GRPCCore.Metadata = [:],
         options: GRPCCore.CallOptions = .defaults,
@@ -5541,6 +6912,105 @@ extension Loan_V1_LoanService.ClientProtocol {
             metadata: metadata
         )
         return try await self.listPayments(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "RescheduleLoan" method.
+    ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Reschedule an active loan by changing its tenure. Manager/admin only.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response, the result of which is
+    ///       returned to the caller. Returning from the closure will cancel the RPC if it
+    ///       hasn't already finished.
+    /// - Returns: The result of `handleResponse`.
+    internal func rescheduleLoan<Result>(
+        _ message: Loan_V1_RescheduleLoanRequest,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_RescheduleLoanResponse>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<Loan_V1_RescheduleLoanRequest>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.rescheduleLoan(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "InitiatePayment" method.
+    ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Initiate a Razorpay payment for a loan/EMI.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response, the result of which is
+    ///       returned to the caller. Returning from the closure will cancel the RPC if it
+    ///       hasn't already finished.
+    /// - Returns: The result of `handleResponse`.
+    internal func initiatePayment<Result>(
+        _ message: Loan_V1_InitiatePaymentRequest,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_InitiatePaymentResponse>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<Loan_V1_InitiatePaymentRequest>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.initiatePayment(
+            request: request,
+            options: options,
+            onResponse: handleResponse
+        )
+    }
+
+    /// Call the "VerifyPayment" method.
+    ///
+    /// > Source IDL Documentation:
+    /// >
+    /// > Verify a completed Razorpay payment.
+    ///
+    /// - Parameters:
+    ///   - message: request message to send.
+    ///   - metadata: Additional metadata to send, defaults to empty.
+    ///   - options: Options to apply to this RPC, defaults to `.defaults`.
+    ///   - handleResponse: A closure which handles the response, the result of which is
+    ///       returned to the caller. Returning from the closure will cancel the RPC if it
+    ///       hasn't already finished.
+    /// - Returns: The result of `handleResponse`.
+    internal func verifyPayment<Result>(
+        _ message: Loan_V1_VerifyPaymentRequest,
+        metadata: GRPCCore.Metadata = [:],
+        options: GRPCCore.CallOptions = .defaults,
+        onResponse handleResponse: @Sendable @escaping (GRPCCore.ClientResponse<Loan_V1_VerifyPaymentResponse>) async throws -> Result = { response in
+            try response.message
+        }
+    ) async throws -> Result where Result: Sendable {
+        let request = GRPCCore.ClientRequest<Loan_V1_VerifyPaymentRequest>(
+            message: message,
+            metadata: metadata
+        )
+        return try await self.verifyPayment(
             request: request,
             options: options,
             onResponse: handleResponse

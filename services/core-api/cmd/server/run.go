@@ -109,6 +109,7 @@ func Run() error {
 	rbacPolicy := grpcinterceptors.RBACPolicy{
 		"/admin.v1.AdminService/CreateEmployeeAccount":                {"admin"},
 		"/admin.v1.AdminService/ListEmployeeAccounts":                 {"admin"},
+		"/admin.v1.AdminService/ListBranchOfficers":                  {"manager", "admin"},
 		"/admin.v1.AdminService/CreateDstAccount":                     {"manager"},
 		"/admin.v1.AdminService/UpdateDstAccount":                     {"manager", "admin"},
 		"/admin.v1.AdminService/CreateBankBranch":                     {"admin"},

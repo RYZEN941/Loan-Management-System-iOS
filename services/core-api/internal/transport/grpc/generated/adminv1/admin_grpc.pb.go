@@ -22,6 +22,7 @@ const (
 	AdminService_CreateAdminAccount_FullMethodName        = "/admin.v1.AdminService/CreateAdminAccount"
 	AdminService_CreateEmployeeAccount_FullMethodName     = "/admin.v1.AdminService/CreateEmployeeAccount"
 	AdminService_ListEmployeeAccounts_FullMethodName      = "/admin.v1.AdminService/ListEmployeeAccounts"
+	AdminService_ListBranchOfficers_FullMethodName        = "/admin.v1.AdminService/ListBranchOfficers"
 	AdminService_CreateDstAccount_FullMethodName          = "/admin.v1.AdminService/CreateDstAccount"
 	AdminService_UpdateDstAccount_FullMethodName          = "/admin.v1.AdminService/UpdateDstAccount"
 	AdminService_CreateBankBranch_FullMethodName          = "/admin.v1.AdminService/CreateBankBranch"
@@ -40,6 +41,7 @@ type AdminServiceClient interface {
 	CreateAdminAccount(ctx context.Context, in *CreateAdminAccountRequest, opts ...grpc.CallOption) (*CreateAdminAccountResponse, error)
 	CreateEmployeeAccount(ctx context.Context, in *CreateEmployeeAccountRequest, opts ...grpc.CallOption) (*CreateEmployeeAccountResponse, error)
 	ListEmployeeAccounts(ctx context.Context, in *ListEmployeeAccountsRequest, opts ...grpc.CallOption) (*ListEmployeeAccountsResponse, error)
+	ListBranchOfficers(ctx context.Context, in *ListBranchOfficersRequest, opts ...grpc.CallOption) (*ListBranchOfficersResponse, error)
 	CreateDstAccount(ctx context.Context, in *CreateDstAccountRequest, opts ...grpc.CallOption) (*CreateDstAccountResponse, error)
 	UpdateDstAccount(ctx context.Context, in *UpdateDstAccountRequest, opts ...grpc.CallOption) (*UpdateDstAccountResponse, error)
 	CreateBankBranch(ctx context.Context, in *CreateBankBranchRequest, opts ...grpc.CallOption) (*CreateBankBranchResponse, error)
@@ -83,6 +85,16 @@ func (c *adminServiceClient) ListEmployeeAccounts(ctx context.Context, in *ListE
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListEmployeeAccountsResponse)
 	err := c.cc.Invoke(ctx, AdminService_ListEmployeeAccounts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *adminServiceClient) ListBranchOfficers(ctx context.Context, in *ListBranchOfficersRequest, opts ...grpc.CallOption) (*ListBranchOfficersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListBranchOfficersResponse)
+	err := c.cc.Invoke(ctx, AdminService_ListBranchOfficers_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -186,6 +198,7 @@ type AdminServiceServer interface {
 	CreateAdminAccount(context.Context, *CreateAdminAccountRequest) (*CreateAdminAccountResponse, error)
 	CreateEmployeeAccount(context.Context, *CreateEmployeeAccountRequest) (*CreateEmployeeAccountResponse, error)
 	ListEmployeeAccounts(context.Context, *ListEmployeeAccountsRequest) (*ListEmployeeAccountsResponse, error)
+	ListBranchOfficers(context.Context, *ListBranchOfficersRequest) (*ListBranchOfficersResponse, error)
 	CreateDstAccount(context.Context, *CreateDstAccountRequest) (*CreateDstAccountResponse, error)
 	UpdateDstAccount(context.Context, *UpdateDstAccountRequest) (*UpdateDstAccountResponse, error)
 	CreateBankBranch(context.Context, *CreateBankBranchRequest) (*CreateBankBranchResponse, error)
@@ -213,6 +226,9 @@ func (UnimplementedAdminServiceServer) CreateEmployeeAccount(context.Context, *C
 }
 func (UnimplementedAdminServiceServer) ListEmployeeAccounts(context.Context, *ListEmployeeAccountsRequest) (*ListEmployeeAccountsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListEmployeeAccounts not implemented")
+}
+func (UnimplementedAdminServiceServer) ListBranchOfficers(context.Context, *ListBranchOfficersRequest) (*ListBranchOfficersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListBranchOfficers not implemented")
 }
 func (UnimplementedAdminServiceServer) CreateDstAccount(context.Context, *CreateDstAccountRequest) (*CreateDstAccountResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateDstAccount not implemented")
@@ -312,6 +328,24 @@ func _AdminService_ListEmployeeAccounts_Handler(srv interface{}, ctx context.Con
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AdminServiceServer).ListEmployeeAccounts(ctx, req.(*ListEmployeeAccountsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AdminService_ListBranchOfficers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListBranchOfficersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AdminServiceServer).ListBranchOfficers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AdminService_ListBranchOfficers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AdminServiceServer).ListBranchOfficers(ctx, req.(*ListBranchOfficersRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -496,6 +530,10 @@ var AdminService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListEmployeeAccounts",
 			Handler:    _AdminService_ListEmployeeAccounts_Handler,
+		},
+		{
+			MethodName: "ListBranchOfficers",
+			Handler:    _AdminService_ListBranchOfficers_Handler,
 		},
 		{
 			MethodName: "CreateDstAccount",

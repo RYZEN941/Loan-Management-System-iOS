@@ -250,6 +250,31 @@ WHERE op.branch_id = $1
   AND u.is_active = true
   AND u.is_deleted = false;
 
+-- name: ListOfficersByBranchID :many
+SELECT
+    u.id AS user_id,
+    op.name,
+    op.employee_serial::BIGINT AS employee_serial,
+    op.employee_code,
+    u.email,
+    u.phone,
+    u.role,
+    u.is_active,
+    u.is_requiring_password_change,
+    op.branch_id,
+    b.name AS branch_name,
+    b.region AS branch_region,
+    b.city AS branch_city,
+    u.created_at
+FROM officer_profiles op
+JOIN users u ON u.id = op.user_id
+JOIN bank_branches b ON b.id = op.branch_id
+WHERE op.branch_id = $1
+  AND u.role = 'officer'
+  AND u.is_deleted = false
+ORDER BY u.created_at DESC
+LIMIT $2 OFFSET $3;
+
 -- name: SoftDeleteBankBranch :exec
 UPDATE bank_branches
 SET is_deleted = true

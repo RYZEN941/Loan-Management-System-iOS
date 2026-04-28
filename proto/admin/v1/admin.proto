@@ -8,6 +8,7 @@ service AdminService {
   rpc CreateAdminAccount(CreateAdminAccountRequest) returns (CreateAdminAccountResponse);
   rpc CreateEmployeeAccount(CreateEmployeeAccountRequest) returns (CreateEmployeeAccountResponse);
   rpc ListEmployeeAccounts(ListEmployeeAccountsRequest) returns (ListEmployeeAccountsResponse);
+  rpc ListBranchOfficers(ListBranchOfficersRequest) returns (ListBranchOfficersResponse);
   rpc CreateDstAccount(CreateDstAccountRequest) returns (CreateDstAccountResponse);
   rpc UpdateDstAccount(UpdateDstAccountRequest) returns (UpdateDstAccountResponse);
   rpc CreateBankBranch(CreateBankBranchRequest) returns (CreateBankBranchResponse);
@@ -85,6 +86,16 @@ message ListEmployeeAccountsRequest {
 
 message ListEmployeeAccountsResponse {
   repeated EmployeeAccount employees = 1;
+}
+
+message ListBranchOfficersRequest {
+  string branch_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListBranchOfficersResponse {
+  repeated EmployeeAccount officers = 1;
 }
 
 message CreateDstAccountRequest {

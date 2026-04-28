@@ -24,6 +24,7 @@ type Service interface {
 	UpdateDstAccount(ctx context.Context, req *adminv1.UpdateDstAccountRequest) (*adminv1.UpdateDstAccountResponse, error)
 	CreateBankBranch(ctx context.Context, req *adminv1.CreateBankBranchRequest) (*adminv1.CreateBankBranchResponse, error)
 	ListEmployeeAccounts(ctx context.Context, req *adminv1.ListEmployeeAccountsRequest) (*adminv1.ListEmployeeAccountsResponse, error)
+	ListBranchOfficers(ctx context.Context, req *adminv1.ListBranchOfficersRequest) (*adminv1.ListBranchOfficersResponse, error)
 	UpdateBankBranch(ctx context.Context, req *adminv1.UpdateBankBranchRequest) (*adminv1.UpdateBankBranchResponse, error)
 	DeleteBankBranch(ctx context.Context, req *adminv1.DeleteBankBranchRequest) (*adminv1.DeleteBankBranchResponse, error)
 	UpdateBranchDstCommission(ctx context.Context, req *adminv1.UpdateBranchDstCommissionRequest) (*adminv1.UpdateBranchDstCommissionResponse, error)
@@ -435,6 +436,98 @@ func (s *service) ListEmployeeAccounts(ctx context.Context, req *adminv1.ListEmp
 	}
 
 	return &adminv1.ListEmployeeAccountsResponse{Employees: employees}, nil
+}
+
+func (s *service) ListBranchOfficers(ctx context.Context, req *adminv1.ListBranchOfficersRequest) (*adminv1.ListBranchOfficersResponse, error) {
+	callerUserID, ok := interceptors.UserIDFromContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "missing user context")
+	}
+
+	role, _ := ctx.Value(interceptors.ContextRoleKey).(string)
+	if role != "manager" && role != "admin" {
+		return nil, status.Error(codes.PermissionDenied, "only manager or admin can list branch officers")
+	}
+
+	var branchID uuid.UUID
+	branchIDStr := strings.TrimSpace(req.GetBranchId())
+	if role == "manager" {
+		managerProfile, err := s.queries.GetManagerProfileByUserID(ctx, pgtype.UUID{Bytes: callerUserID, Valid: true})
+		if err != nil {
+			return nil, status.Error(codes.NotFound, "manager profile not found")
+		}
+		if !managerProfile.BranchID.Valid {
+			return nil, status.Error(codes.FailedPrecondition, "manager is not assigned to a branch")
+		}
+		branchID = managerProfile.BranchID.Bytes
+		if branchIDStr != "" {
+			requestedBranchID, err := uuid.Parse(branchIDStr)
+			if err != nil {
+				return nil, status.Error(codes.InvalidArgument, "branch_id must be a valid uuid")
+			}
+			if requestedBranchID != branchID {
+				return nil, status.Error(codes.PermissionDenied, "manager can only list officers from their own branch")
+			}
+		}
+	} else {
+		if branchIDStr == "" {
+			return nil, status.Error(codes.InvalidArgument, "branch_id is required")
+		}
+		parsed, err := uuid.Parse(branchIDStr)
+		if err != nil {
+			return nil, status.Error(codes.InvalidArgument, "branch_id must be a valid uuid")
+		}
+		branchID = parsed
+	}
+
+	if _, err := s.queries.GetBankBranchByID(ctx, pgtype.UUID{Bytes: branchID, Valid: true}); err != nil {
+		return nil, status.Error(codes.NotFound, "branch not found")
+	}
+
+	limit := req.GetLimit()
+	if limit <= 0 || limit > 500 {
+		limit = 200
+	}
+	offset := req.GetOffset()
+	if offset < 0 {
+		offset = 0
+	}
+
+	rows, err := s.queries.ListOfficersByBranchID(ctx, generated.ListOfficersByBranchIDParams{
+		BranchID: pgtype.UUID{Bytes: branchID, Valid: true},
+		Limit:    limit,
+		Offset:   offset,
+	})
+	if err != nil {
+		log.Printf("list_branch_officers query_failed role=%s branch_id=%s limit=%d offset=%d err=%v", role, branchID.String(), limit, offset, err)
+		return nil, status.Error(codes.Internal, "failed to list branch officers")
+	}
+
+	officers := make([]*adminv1.EmployeeAccount, 0, len(rows))
+	for _, row := range rows {
+		createdAt := ""
+		if row.CreatedAt.Valid {
+			createdAt = row.CreatedAt.Time.UTC().Format(time.RFC3339)
+		}
+			officers = append(officers, &adminv1.EmployeeAccount{
+			UserId:                    row.UserID.String(),
+			Name:                      row.Name,
+			Email:                     row.Email,
+			PhoneNumber:               row.Phone,
+			Role:                      mapUserRoleToStaffRole(row.Role),
+			IsActive:                  row.IsActive.Valid && row.IsActive.Bool,
+			IsRequiringPasswordChange: row.IsRequiringPasswordChange.Valid && row.IsRequiringPasswordChange.Bool,
+			BranchId:                  nullableUUIDToString(row.BranchID),
+			BranchName:                row.BranchName,
+			BranchRegion:              row.BranchRegion,
+			BranchCity:                row.BranchCity,
+			CreatedAt:                 createdAt,
+			EmployeeSerial:            row.EmployeeSerial,
+			EmployeeCode:              nullableTextToString(row.EmployeeCode),
+		})
+	}
+
+	return &adminv1.ListBranchOfficersResponse{Officers: officers}, nil
 }
 
 // UpdateBankBranch updates branch metadata.

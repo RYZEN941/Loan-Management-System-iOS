@@ -701,6 +701,90 @@ func (q *Queries) ListOfficerUserIDsByBranchID(ctx context.Context, branchID pgt
 	return items, nil
 }
 
+const listOfficersByBranchID = `-- name: ListOfficersByBranchID :many
+SELECT
+    u.id AS user_id,
+    op.name,
+    op.employee_serial::BIGINT AS employee_serial,
+    op.employee_code,
+    u.email,
+    u.phone,
+    u.role,
+    u.is_active,
+    u.is_requiring_password_change,
+    op.branch_id,
+    b.name AS branch_name,
+    b.region AS branch_region,
+    b.city AS branch_city,
+    u.created_at
+FROM officer_profiles op
+JOIN users u ON u.id = op.user_id
+JOIN bank_branches b ON b.id = op.branch_id
+WHERE op.branch_id = $1
+  AND u.role = 'officer'
+  AND u.is_deleted = false
+ORDER BY u.created_at DESC
+LIMIT $2 OFFSET $3
+`
+
+type ListOfficersByBranchIDParams struct {
+	BranchID pgtype.UUID `json:"branch_id"`
+	Limit    int32       `json:"limit"`
+	Offset   int32       `json:"offset"`
+}
+
+type ListOfficersByBranchIDRow struct {
+	UserID                    pgtype.UUID        `json:"user_id"`
+	Name                      string             `json:"name"`
+	EmployeeSerial            int64              `json:"employee_serial"`
+	EmployeeCode              pgtype.Text        `json:"employee_code"`
+	Email                     string             `json:"email"`
+	Phone                     string             `json:"phone"`
+	Role                      UserRole           `json:"role"`
+	IsActive                  pgtype.Bool        `json:"is_active"`
+	IsRequiringPasswordChange pgtype.Bool        `json:"is_requiring_password_change"`
+	BranchID                  pgtype.UUID        `json:"branch_id"`
+	BranchName                string             `json:"branch_name"`
+	BranchRegion              string             `json:"branch_region"`
+	BranchCity                string             `json:"branch_city"`
+	CreatedAt                 pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) ListOfficersByBranchID(ctx context.Context, arg ListOfficersByBranchIDParams) ([]ListOfficersByBranchIDRow, error) {
+	rows, err := q.db.Query(ctx, listOfficersByBranchID, arg.BranchID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListOfficersByBranchIDRow
+	for rows.Next() {
+		var i ListOfficersByBranchIDRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.Name,
+			&i.EmployeeSerial,
+			&i.EmployeeCode,
+			&i.Email,
+			&i.Phone,
+			&i.Role,
+			&i.IsActive,
+			&i.IsRequiringPasswordChange,
+			&i.BranchID,
+			&i.BranchName,
+			&i.BranchRegion,
+			&i.BranchCity,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const softDeleteBankBranch = `-- name: SoftDeleteBankBranch :exec
 UPDATE bank_branches
 SET is_deleted = true

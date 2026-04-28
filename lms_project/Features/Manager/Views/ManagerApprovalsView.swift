@@ -81,15 +81,15 @@ struct ManagerApprovalsView: View {
                 }
             }
             .onAppear {
-                            // 1. Load the latest data from the backend
-                            applicationsVM.loadData(autoSelectFirst: true)
+                            // Load latest data without auto-selecting to handle the "No match" case correctly
+                            applicationsVM.loadData(autoSelectFirst: false)
                             
-                            // 2. Only reset manual filters if NOT coming from a dashboard shortcut
+                            // Only reset if navigating normally (not via Dashboard card)
                             if applicationsVM.activeDashboardFilter == .none {
                                 applicationsVM.resetFiltersToAll()
                                 selectedManagerChip = .all
                             } else {
-                                // 3. Sync the UI chip to match the dashboard category
+                                // Sync the UI chips to visually match the dashboard category
                                 switch applicationsVM.activeDashboardFilter {
                                 case .pending: selectedManagerChip = .pendingReview
                                 case .risky:   selectedManagerChip = .highRisk
@@ -97,11 +97,14 @@ struct ManagerApprovalsView: View {
                                 }
                             }
                             
-                            // 4. Load directory data for the current application
-                            if let app = applicationsVM.selectedApplication {
-                                applicationsVM.loadBranchOfficers(branchName: app.branch)
+                            // Handle Selection logic for empty filter results
+                            if applicationsVM.filteredApplications.isEmpty {
+                                applicationsVM.selectedApplication = nil
+                            } else {
+                                // Only auto-select if something actually matches the dashboard shortcut
+                                applicationsVM.selectedApplication = applicationsVM.filteredApplications.first
                             }
-                        }            .alert("Action", isPresented: $applicationsVM.showActionAlert) {
+                        }           .alert("Action", isPresented: $applicationsVM.showActionAlert) {
                 Button("OK") {}
             } message: { Text(applicationsVM.actionMessage ?? "") }
             .sheet(isPresented: $applicationsVM.showRejectionRemarksSheet) { rejectionSheet }
@@ -317,7 +320,7 @@ struct ManagerApprovalsView: View {
             .overlay(Divider().padding(.horizontal, 10), alignment: .bottom)
         }
 
-    // MARK: - Detail Panel
+   // MARK: - Detail Panel
     private var applicationDetailPanel: some View {
         Group {
             if let app = applicationsVM.selectedApplication {
@@ -340,7 +343,7 @@ struct ManagerApprovalsView: View {
                 .safeAreaInset(edge: .bottom) {
                     if app.status == .officerApproved || app.status == .managerReview ||
                        app.status == .underReview || app.status == .pending {
-                        ManagerActionPanel(
+                         ManagerActionPanel(
                             onApprove: { showApprovalConfirmation = true },
                             onRejectWithRemarks: { applicationsVM.beginRejectWithRemarks(app) },
                             onSendBack: { applicationsVM.beginSendBack(app) },
@@ -368,7 +371,20 @@ struct ManagerApprovalsView: View {
                         selectedOfficerID = ""
                     }
                 }
-            } else {
+            }
+            // 2. Filter Result Empty Case: Explicitly show "No applications found"
+                        else if applicationsVM.filteredApplications.isEmpty {
+                            VStack(spacing: 16) {
+                                Image(systemName: "exclamationmark.magnifyingglass")
+                                    .font(.system(size: 48, weight: .thin))
+                                    .foregroundStyle(.secondary)
+                                Text("No applications found for this category")
+                                    .font(Theme.Typography.headline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
+            else {
                 VStack(spacing: 16) {
                     Image(systemName: "checkmark.circle.badge.questionmark").font(.system(size: 48, weight: .thin)).foregroundStyle(ManagerTheme.Colors.primary(colorScheme).opacity(0.4))
                     Text("Select an application to review").font(Theme.Typography.subheadline).foregroundStyle(.secondary)

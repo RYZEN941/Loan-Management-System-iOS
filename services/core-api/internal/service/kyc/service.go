@@ -111,6 +111,7 @@ func (s *service) RecordUserConsent(ctx context.Context, req *kycv1.RecordUserCo
 }
 
 func (s *service) InitiateAadhaarKyc(ctx context.Context, req *kycv1.InitiateAadhaarKycRequest) (*kycv1.InitiateAadhaarKycResponse, error) {
+	fmt.Println(req)
 	userID, profile, err := s.resolveBorrowerContext(ctx, req.GetBorrowerUserId())
 	if err != nil {
 		return nil, err

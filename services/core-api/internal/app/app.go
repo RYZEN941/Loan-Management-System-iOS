@@ -13,6 +13,7 @@ type Application struct {
 	DstHandler             *transportgrpc.DstHandler
 	KycHandler             *transportgrpc.KycHandler
 	LoanHandler            *transportgrpc.LoanHandler
+	QueryHandler           *transportgrpc.QueryHandler
 	MediaHandler           *transportgrpc.MediaHandler
 	OnboardingHandler      *transportgrpc.OnboardingHandler
 	BranchHandler          *transportgrpc.BranchHandler
@@ -26,6 +27,7 @@ func New(
 	dstService transportgrpc.DstService,
 	kycService transportgrpc.KycService,
 	loanService transportgrpc.LoanService,
+	queryService transportgrpc.QueryService,
 	mediaService transportgrpc.MediaService,
 	onboardingService transportgrpc.OnboardingService,
 	branchService transportgrpc.BranchService,
@@ -38,6 +40,7 @@ func New(
 		DstHandler:             transportgrpc.NewDstHandler(dstService),
 		KycHandler:             transportgrpc.NewKycHandler(kycService),
 		LoanHandler:            transportgrpc.NewLoanHandler(loanService),
+		QueryHandler:           transportgrpc.NewQueryHandler(queryService),
 		MediaHandler:           transportgrpc.NewMediaHandler(mediaService),
 		OnboardingHandler:      transportgrpc.NewOnboardingHandler(onboardingService),
 		BranchHandler:          transportgrpc.NewBranchHandler(branchService),

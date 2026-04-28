@@ -293,6 +293,9 @@ func (s *service) CreateLoanApplication(ctx context.Context, req *loanv1.CreateL
 	if product.IsDeleted || !product.IsActive {
 		return nil, status.Error(codes.FailedPrecondition, "loan product is not active")
 	}
+	if role == "borrower" && product.Category != generated.LoanProductCategoryPERSONAL {
+		return nil, status.Error(codes.FailedPrecondition, "borrower can directly create applications only for personal loan products; use loan query for other products")
+	}
 	minAmount, maxAmount, requestedAmount, err := numericTriplet(product.MinAmount, product.MaxAmount, reqAmount)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid product amount configuration")

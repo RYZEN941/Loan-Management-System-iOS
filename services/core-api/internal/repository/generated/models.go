@@ -747,6 +747,48 @@ func (ns NullLoanProductCategory) Value() (driver.Value, error) {
 	return string(ns.LoanProductCategory), nil
 }
 
+type LoanQueryStatus string
+
+const (
+	LoanQueryStatusPENDING   LoanQueryStatus = "PENDING"
+	LoanQueryStatusCOMPLETED LoanQueryStatus = "COMPLETED"
+)
+
+func (e *LoanQueryStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = LoanQueryStatus(s)
+	case string:
+		*e = LoanQueryStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for LoanQueryStatus: %T", src)
+	}
+	return nil
+}
+
+type NullLoanQueryStatus struct {
+	LoanQueryStatus LoanQueryStatus `json:"loan_query_status"`
+	Valid           bool            `json:"valid"` // Valid is true if LoanQueryStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullLoanQueryStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.LoanQueryStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.LoanQueryStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullLoanQueryStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.LoanQueryStatus), nil
+}
+
 type LoanStatus string
 
 const (
@@ -1300,6 +1342,19 @@ type LoanProduct struct {
 	IsDeleted             bool                `json:"is_deleted"`
 	CreatedAt             pgtype.Timestamptz  `json:"created_at"`
 	UpdatedAt             pgtype.Timestamptz  `json:"updated_at"`
+}
+
+type LoanQuery struct {
+	ID                    pgtype.UUID        `json:"id"`
+	BorrowerProfileID     pgtype.UUID        `json:"borrower_profile_id"`
+	LoanProductID         pgtype.UUID        `json:"loan_product_id"`
+	BranchID              pgtype.UUID        `json:"branch_id"`
+	RequestedAmount       pgtype.Numeric     `json:"requested_amount"`
+	TenureMonths          int32              `json:"tenure_months"`
+	AssignedOfficerUserID pgtype.UUID        `json:"assigned_officer_user_id"`
+	Status                LoanQueryStatus    `json:"status"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
 }
 
 type LoanRealEstate struct {

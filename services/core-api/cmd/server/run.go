@@ -26,6 +26,7 @@ import (
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/loan"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/media"
 	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/onboarding"
+	"github.com/chirag3003/lms-monorepo/services/core-api/internal/service/query"
 	adminv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/adminv1"
 	authv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/authv1"
 	branchv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/branchv1"
@@ -35,6 +36,7 @@ import (
 	loanv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/loanv1"
 	mediav1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/mediav1"
 	onboardingv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/onboardingv1"
+	queryv1 "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/queryv1"
 	grpcinterceptors "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/interceptors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -74,6 +76,7 @@ func Run() error {
 	kycService := kyc.NewService(pgPool, queries, sandboxKYCClient)
 	razorpayClient := razorpay.NewClient(cfg.RazorpayKeyID, cfg.RazorpayKeySecret)
 	loanService := loan.NewService(queries, auditService, razorpayClient)
+	queryService := query.NewService(queries)
 	r2Client, err := r2.NewClient(context.Background(), cfg.R2AccountID, cfg.R2AccessKeyID, cfg.R2SecretAccessKey, cfg.R2BucketName, cfg.R2PublicBaseURL)
 	if err != nil {
 		return fmt.Errorf("failed to initialize r2 client: %w", err)
@@ -81,7 +84,7 @@ func Run() error {
 	mediaService := media.NewService(queries, r2Client, time.Duration(cfg.R2UploadURLTTLSecs)*time.Second, cfg.MediaMaxUploadSize)
 	onboardingService := onboarding.NewService(queries, redisClient, cfg)
 	branchService := branch.NewService(queries)
-	application := app.New(adminService, authService, chatService, dstService, kycService, loanService, mediaService, onboardingService, branchService, razorpayClient)
+	application := app.New(adminService, authService, chatService, dstService, kycService, loanService, queryService, mediaService, onboardingService, branchService, razorpayClient)
 
 	publicMethods := map[string]struct{}{
 		// BOOTSTRAP ADMIN ONLY:
@@ -164,6 +167,10 @@ func Run() error {
 		"/loan.v1.LoanService/ListPayments":                           {"borrower", "officer", "manager", "admin", "dst"},
 		"/loan.v1.LoanService/InitiatePayment":                        {"borrower"},
 		"/loan.v1.LoanService/VerifyPayment":                          {"borrower"},
+		"/query.v1.QueryService/CreateLoanQuery":                      {"borrower"},
+		"/query.v1.QueryService/GetLoanQuery":                         {"borrower", "officer", "manager", "admin"},
+		"/query.v1.QueryService/ListLoanQueries":                      {"borrower", "officer", "manager", "admin"},
+		"/query.v1.QueryService/UpdateLoanQueryStatus":                {"manager", "admin"},
 		"/media.v1.MediaService/InitiateMediaUpload":                  {"borrower", "officer", "manager", "admin", "dst"},
 		"/media.v1.MediaService/CompleteMediaUpload":                  {"borrower", "officer", "manager", "admin", "dst"},
 		"/media.v1.MediaService/ListMedia":                            {"borrower", "officer", "manager", "admin", "dst"},
@@ -210,6 +217,7 @@ func Run() error {
 	dstv1.RegisterDstServiceServer(grpcServer, application.DstHandler)
 	kycv1.RegisterKycServiceServer(grpcServer, application.KycHandler)
 	loanv1.RegisterLoanServiceServer(grpcServer, application.LoanHandler)
+	queryv1.RegisterQueryServiceServer(grpcServer, application.QueryHandler)
 	mediav1.RegisterMediaServiceServer(grpcServer, application.MediaHandler)
 	onboardingv1.RegisterOnboardingServiceServer(grpcServer, application.OnboardingHandler)
 	branchv1.RegisterBranchServiceServer(grpcServer, application.BranchHandler)

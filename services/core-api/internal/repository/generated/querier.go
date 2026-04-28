@@ -13,6 +13,7 @@ import (
 type Querier interface {
 	ActivateUser(ctx context.Context, id pgtype.UUID) error
 	AssignLoanApplicationOfficer(ctx context.Context, arg AssignLoanApplicationOfficerParams) error
+	AssignLoanQueryOfficer(ctx context.Context, arg AssignLoanQueryOfficerParams) error
 	ChangeUserPassword(ctx context.Context, arg ChangeUserPasswordParams) error
 	CountApprovedRequiredDocsByApplication(ctx context.Context, id pgtype.UUID) (int64, error)
 	CountMandatoryRequiredDocsByApplication(ctx context.Context, id pgtype.UUID) (int64, error)
@@ -37,6 +38,7 @@ type Querier interface {
 	CreateLoan(ctx context.Context, arg CreateLoanParams) (Loan, error)
 	CreateLoanApplication(ctx context.Context, arg CreateLoanApplicationParams) (LoanApplication, error)
 	CreateLoanProduct(ctx context.Context, arg CreateLoanProductParams) (LoanProduct, error)
+	CreateLoanQuery(ctx context.Context, arg CreateLoanQueryParams) (LoanQuery, error)
 	CreateManagerProfile(ctx context.Context, arg CreateManagerProfileParams) (ManagerProfile, error)
 	CreateMediaFile(ctx context.Context, arg CreateMediaFileParams) (MediaFile, error)
 	CreateOfficerProfile(ctx context.Context, arg CreateOfficerProfileParams) (OfficerProfile, error)
@@ -74,6 +76,7 @@ type Querier interface {
 	GetLoanByID(ctx context.Context, id pgtype.UUID) (Loan, error)
 	GetLoanByIDWithApplication(ctx context.Context, id pgtype.UUID) (GetLoanByIDWithApplicationRow, error)
 	GetLoanProductByID(ctx context.Context, id pgtype.UUID) (LoanProduct, error)
+	GetLoanQueryByID(ctx context.Context, id pgtype.UUID) (LoanQuery, error)
 	GetLoanRealEstateByApplicationID(ctx context.Context, applicationID pgtype.UUID) (LoanRealEstate, error)
 	GetLoanVehicleByApplicationID(ctx context.Context, applicationID pgtype.UUID) (LoanVehicle, error)
 	GetManagerProfileByID(ctx context.Context, id pgtype.UUID) (ManagerProfile, error)
@@ -114,6 +117,9 @@ type Querier interface {
 	ListLoanApplicationsByCreatedByUserID(ctx context.Context, arg ListLoanApplicationsByCreatedByUserIDParams) ([]ListLoanApplicationsByCreatedByUserIDRow, error)
 	ListLoanApplicationsForBorrowerProfile(ctx context.Context, arg ListLoanApplicationsForBorrowerProfileParams) ([]ListLoanApplicationsForBorrowerProfileRow, error)
 	ListLoanProducts(ctx context.Context, arg ListLoanProductsParams) ([]LoanProduct, error)
+	ListLoanQueriesByBranchID(ctx context.Context, arg ListLoanQueriesByBranchIDParams) ([]LoanQuery, error)
+	ListLoanQueriesForAssignedOfficer(ctx context.Context, arg ListLoanQueriesForAssignedOfficerParams) ([]LoanQuery, error)
+	ListLoanQueriesForBorrower(ctx context.Context, arg ListLoanQueriesForBorrowerParams) ([]LoanQuery, error)
 	ListLoansForAssignedOfficer(ctx context.Context, arg ListLoansForAssignedOfficerParams) ([]Loan, error)
 	ListLoansForBorrowerProfile(ctx context.Context, arg ListLoansForBorrowerProfileParams) ([]Loan, error)
 	ListLoansForBranch(ctx context.Context, arg ListLoansForBranchParams) ([]Loan, error)
@@ -149,6 +155,7 @@ type Querier interface {
 	UpdateLoanApplicationTerms(ctx context.Context, arg UpdateLoanApplicationTermsParams) (LoanApplication, error)
 	UpdateLoanEmiAndOutstanding(ctx context.Context, arg UpdateLoanEmiAndOutstandingParams) (Loan, error)
 	UpdateLoanProduct(ctx context.Context, arg UpdateLoanProductParams) (LoanProduct, error)
+	UpdateLoanQueryStatus(ctx context.Context, arg UpdateLoanQueryStatusParams) error
 	UpdateLoanStatusAndOutstanding(ctx context.Context, arg UpdateLoanStatusAndOutstandingParams) error
 	UpdateManagerBranch(ctx context.Context, arg UpdateManagerBranchParams) error
 	UpdateOfficerBranch(ctx context.Context, arg UpdateOfficerBranchParams) error

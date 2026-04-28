@@ -102,6 +102,7 @@ public final class AuthRepository: Sendable {
         public let borrowerProfileId: String?
         public let cibilScore: Int?
         public let borrowerProfile: BorrowerProfileDetails?
+        public let hasTotp: Bool
     }
 
     /// Step 1 of Login. Submits identifier/password and returns allowed MFA factors.
@@ -318,7 +319,8 @@ public final class AuthRepository: Sendable {
             hasBorrowerProfile: hasBorrowerProfile,
             borrowerProfileId: borrowerProfileId,
             cibilScore: cibilScore,
-            borrowerProfile: borrowerProfile
+            borrowerProfile: borrowerProfile,
+            hasTotp: response.hasTotp_p
         )
     }
 

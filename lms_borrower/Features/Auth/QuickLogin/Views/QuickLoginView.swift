@@ -40,6 +40,16 @@ struct QuickLoginView: View {
         session.userName.isEmpty ? "Welcome back" : "Welcome back, \(session.userName)"
     }
 
+    private var availableMethods: [QuickMethod] {
+        var methods: [QuickMethod] = []
+        if session.hasTotp {
+            methods.append(.totp)
+        }
+        methods.append(.phoneOTP)
+        methods.append(.emailOTP)
+        return methods
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             Spacer(minLength: 36)
@@ -71,6 +81,16 @@ struct QuickLoginView: View {
             .ignoresSafeArea()
         )
         .navigationBarHidden(true)
+        .onAppear {
+            if !availableMethods.contains(quickMethod), let first = availableMethods.first {
+                quickMethod = first
+            }
+        }
+        .onChange(of: session.hasTotp) { _, _ in
+            if !availableMethods.contains(quickMethod), let first = availableMethods.first {
+                quickMethod = first
+            }
+        }
         .onChange(of: quickMethod) { _, _ in
             bioError = ""
             totpCode = ""
@@ -109,7 +129,7 @@ struct QuickLoginView: View {
 
     private var methodPicker: some View {
         VStack(spacing: 10) {
-            ForEach(QuickMethod.allCases) { method in
+            ForEach(availableMethods) { method in
                 let isSelected = quickMethod == method
                 Button {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {

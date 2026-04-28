@@ -89,7 +89,7 @@ struct ManagerApprovalsView: View {
             .sheet(isPresented: $applicationsVM.showSendBackSheet) { sendBackSheet }
             .sheet(item: $previewLetter) { version in sanctionLetterPreview(version) }
             .sheet(item: $previewDocument) { document in
-                documentPreviewSheet(document)
+                DocumentPreviewSheet(file: currentPreviewDocument(for: document))
             }
             .sheet(isPresented: $showEditTerms) {
                 if let app = applicationsVM.selectedApplication {
@@ -103,7 +103,7 @@ struct ManagerApprovalsView: View {
                         applicationsVM.approveApplication(app)
                     }
                 }
-            } message: { Text("This will update the application status to Approved and create the loan ledger.") }
+            } message: { Text("This will update the application to Manager Approved. The borrower must accept the sanction letter before the loan is disbursed.") }
             .alert("Regenerate sanction letter?", isPresented: $showRegenerateConfirmation) {
                 Button("Cancel", role: .cancel) {}
                 Button("Regenerate") {
@@ -522,9 +522,12 @@ struct ManagerApprovalsView: View {
 
                             Spacer()
 
-                            if doc.fileURL != nil {
+                            let hasInMemoryFile = !(applicationsVM.uploadedFiles[doc.id] ?? []).isEmpty
+                            if doc.fileURL != nil || hasInMemoryFile || doc.mediaFileID != nil {
                                 Button {
-                                    previewDocument = doc
+                                    Task {
+                                        await openPreview(for: doc, applicationID: app.id)
+                                    }
                                 } label: {
                                     Label("Preview", systemImage: "eye")
                                         .font(.system(size: 11, weight: .semibold))
@@ -736,6 +739,30 @@ struct ManagerApprovalsView: View {
         }
         .padding(12)
         .overlay(Divider(), alignment: .bottom)
+    }
+
+    private func currentPreviewDocument(for document: LoanDocument) -> UploadedDocFile {
+        if let local = applicationsVM.uploadedFiles[document.id]?.last {
+            return local
+        }
+
+        let isImage = (document.contentType ?? "").hasPrefix("image/")
+        return UploadedDocFile(
+            name: document.fileName ?? document.label,
+            url: document.fileURL,
+            data: nil,
+            contentType: document.contentType,
+            isImage: isImage,
+            uploadedAt: document.uploadedAt ?? Date()
+        )
+    }
+
+    private func openPreview(for document: LoanDocument, applicationID: String) async {
+        if let refreshed = await applicationsVM.refreshDocumentPreview(documentID: document.id, applicationID: applicationID) {
+            previewDocument = refreshed
+        } else {
+            previewDocument = document
+        }
     }
 
     private func documentPreviewSheet(_ document: LoanDocument) -> some View {

@@ -361,13 +361,22 @@ class MockDataService: LMSDataService {
             documents: [
                 LoanDocument(id: "\(id)-DOC-1", type: .panCard, label: "PAN Card",
                              status: status == .pending ? .pending : .verified,
-                             uploadedAt: status == .pending ? nil : createdAt),
+                             uploadedAt: status == .pending ? nil : createdAt,
+                             fileName: status == .pending ? nil : "pan_card.jpg",
+                             contentType: "image/jpeg",
+                             fileURL: status == .pending ? nil : URL(string: "https://picsum.photos/seed/\(id)1/800/1200")),
                 LoanDocument(id: "\(id)-DOC-2", type: .aadhaar, label: "Aadhaar Card",
                              status: status == .pending ? .pending : (risk == .high ? .pending : .verified),
-                             uploadedAt: risk == .high ? nil : createdAt),
+                             uploadedAt: risk == .high ? nil : createdAt,
+                             fileName: risk == .high ? nil : "aadhaar_card.jpg",
+                             contentType: "image/jpeg",
+                             fileURL: risk == .high ? nil : URL(string: "https://picsum.photos/seed/\(id)2/800/1200")),
                 LoanDocument(id: "\(id)-DOC-3", type: .bankStatement, label: "Bank Statement",
                              status: risk == .high ? .pending : .uploaded,
-                             uploadedAt: risk == .high ? nil : createdAt.addingTimeInterval(86400))
+                             uploadedAt: risk == .high ? nil : createdAt.addingTimeInterval(86400),
+                             fileName: risk == .high ? nil : "bank_statement.jpg",
+                             contentType: "image/jpeg",
+                             fileURL: risk == .high ? nil : URL(string: "https://picsum.photos/seed/\(id)3/800/1200"))
             ],
             verification: [
                 VerificationItem(id: "\(id)-VER-1", field: "PAN Name",

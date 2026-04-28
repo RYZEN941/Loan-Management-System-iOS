@@ -10,6 +10,8 @@
 import SwiftUI
 import PhotosUI
 import UniformTypeIdentifiers
+import PDFKit
+import WebKit
 
 // MARK: - Main View
 
@@ -456,6 +458,7 @@ struct LOApplicationsView: View {
 
             ForEach(app.documents) { doc in
                 DocumentUploadRow(
+                    applicationID: app.id,
                     doc: doc,
                     uploadedFiles: applicationsVM.uploadedFiles[doc.id] ?? [],
                     onUpload: { file in
@@ -789,20 +792,38 @@ struct LOApplicationsView: View {
 // ────────────────────────────────────────────────────────────────────
 
 struct DocumentUploadRow: View {
+    let applicationID: String
     let doc: LoanDocument
     let uploadedFiles: [UploadedDocFile]
     let onUpload: (UploadedDocFile) -> Void
     /// Callback wired to ApplicationsViewModel.verifyDocument(documentId:status:reason:)
     var onVerify: ((Bool, String?) -> Void)? = nil
 
+    @EnvironmentObject var applicationsVM: ApplicationsViewModel
     @Environment(\.colorScheme) private var colorScheme
     @State private var showPicker     = false
-    @State private var showCamera     = false
+    @State private var showFilePicker = false
     @State private var showOptions    = false
     @State private var selectedPhotos : [PhotosPickerItem] = []
     @State private var previewFile    : UploadedDocFile?   = nil
     @State private var showRejectDialog = false
     @State private var rejectReason     = ""
+
+    private var hasLinkedDocument: Bool {
+        doc.mediaFileID != nil || doc.fileURL != nil
+    }
+
+    private var linkedPreviewFile: UploadedDocFile {
+        let isImage = (doc.contentType ?? "").hasPrefix("image/")
+        return UploadedDocFile(
+            name: doc.fileName ?? "Linked Document",
+            url: doc.fileURL,
+            data: nil,
+            contentType: doc.contentType,
+            isImage: isImage,
+            uploadedAt: doc.uploadedAt ?? Date()
+        )
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -825,7 +846,7 @@ struct DocumentUploadRow: View {
                 Spacer()
 
                 // Verify / Reject actions (shown once files are uploaded)
-                if !uploadedFiles.isEmpty && doc.status != .verified {
+                if (!uploadedFiles.isEmpty || hasLinkedDocument) && doc.status != .verified {
                     HStack(spacing: 6) {
                         if doc.status != .verified {
                             Button {
@@ -885,8 +906,8 @@ struct DocumentUploadRow: View {
                 }
                 .buttonStyle(.plain)
                 .confirmationDialog("Upload Document", isPresented: $showOptions, titleVisibility: .visible) {
-                    Button("Choose from Files") { showPicker = true }
-                    Button("Take Photo")        { showCamera = true }
+                    Button("Choose from Photos") { showPicker = true }
+                    Button("Choose from Files")  { showFilePicker = true }
                     Button("Cancel", role: .cancel) {}
                 }
             }
@@ -927,6 +948,39 @@ struct DocumentUploadRow: View {
                         }
                     }
                 }
+            } else if hasLinkedDocument {
+                VStack(spacing: 0) {
+                    Divider().padding(.leading, 36)
+                    Button {
+                        Task {
+                            await openLinkedPreview()
+                        }
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: (doc.contentType ?? "").hasPrefix("image/") ? "photo" : "doc.fill")
+                                .font(.system(size: 13))
+                                .foregroundStyle(Theme.Colors.primary)
+                                .frame(width: 20)
+                            Text(doc.fileName ?? "Linked Document")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                            Spacer()
+                            if let uploadedAt = doc.uploadedAt {
+                                Text(uploadedAt.timeFormatted)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.tertiary)
+                            }
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .padding(.leading, 36)
+                        .padding(.trailing, 4)
+                        .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.plain)
+                }
             }
         }
             .background(Theme.Colors.adaptiveSurface(colorScheme))
@@ -935,14 +989,29 @@ struct DocumentUploadRow: View {
                 RoundedRectangle(cornerRadius: Theme.Radius.sm)
                     .stroke(Theme.Colors.adaptiveBorder(colorScheme), lineWidth: 0.5)
             )
-        // File picker
-        .photosPicker(isPresented: $showPicker, selection: $selectedPhotos, maxSelectionCount: 1, matching: .any(of: [.images, .videos]))
+        .sheet(isPresented: $showFilePicker) {
+            DocumentFilePicker { data, name, contentType in
+                let file = UploadedDocFile(
+                    name: name,
+                    url: nil,
+                    data: data,
+                    contentType: contentType,
+                    isImage: contentType.hasPrefix("image/"),
+                    uploadedAt: Date()
+                )
+                onUpload(file)
+                showFilePicker = false
+            } onCancel: {
+                showFilePicker = false
+            }
+        }
+        .photosPicker(isPresented: $showPicker, selection: $selectedPhotos, maxSelectionCount: 1, matching: .images)
         .onChange(of: selectedPhotos) { _, items in
             guard let item = items.first else { return }
             Task {
                 if let data = try? await item.loadTransferable(type: Data.self) {
                     let name = "Photo_\(Int(Date().timeIntervalSince1970)).jpg"
-                    let file = UploadedDocFile(name: name, url: nil, isImage: true, uploadedAt: Date())
+                    let file = UploadedDocFile(name: name, url: nil, data: data, contentType: "image/jpeg", isImage: true, uploadedAt: Date())
                     await MainActor.run { onUpload(file); selectedPhotos = [] }
                 }
             }
@@ -970,6 +1039,29 @@ struct DocumentUploadRow: View {
         case .rejected:  return Theme.Colors.critical
         }
     }
+
+    @MainActor
+    private func openLinkedPreview() async {
+        if let local = applicationsVM.uploadedFiles[doc.id]?.last {
+            previewFile = local
+            return
+        }
+
+        if let refreshed = await applicationsVM.refreshDocumentPreview(documentID: doc.id, applicationID: applicationID) {
+            let isImage = (refreshed.contentType ?? "").hasPrefix("image/")
+            previewFile = UploadedDocFile(
+                name: refreshed.fileName ?? refreshed.label,
+                url: refreshed.fileURL,
+                data: nil,
+                contentType: refreshed.contentType,
+                isImage: isImage,
+                uploadedAt: refreshed.uploadedAt ?? Date()
+            )
+            return
+        }
+
+        previewFile = linkedPreviewFile
+    }
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -979,21 +1071,49 @@ struct DocumentUploadRow: View {
 struct DocumentPreviewSheet: View {
     let file: UploadedDocFile
     @Environment(\.dismiss) private var dismiss
+    @State private var remoteDocumentData: Data? = nil
+    @State private var remotePreviewError: String? = nil
+
+    private var fileExtension: String {
+        if let pathExtension = file.url?.pathExtension, !pathExtension.isEmpty {
+            return pathExtension.lowercased()
+        }
+        return URL(fileURLWithPath: file.name).pathExtension.lowercased()
+    }
+
+    private var isImageFile: Bool {
+        if file.isImage { return true }
+        if let contentType = file.contentType?.lowercased(), contentType.hasPrefix("image/") {
+            return true
+        }
+        return ["jpg", "jpeg", "png", "heic", "heif", "gif", "webp"].contains(fileExtension)
+    }
+
+    private var isPDFFile: Bool {
+        if let contentType = file.contentType?.lowercased(), contentType.contains("pdf") {
+            return true
+        }
+        return fileExtension == "pdf"
+    }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                Spacer()
-                Image(systemName: file.isImage ? "photo.fill" : "doc.fill")
-                    .font(.system(size: 64))
-                    .foregroundStyle(Theme.Colors.primary.opacity(0.6))
-                Text(file.name)
-                    .font(Theme.Typography.headline)
-                Text("Uploaded \(file.uploadedAt.fullFormatted)")
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(.secondary)
-                Spacer()
+            VStack(spacing: 16) {
+                previewContent
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.clear)
+
+                VStack(spacing: 4) {
+                    Text(file.name)
+                        .font(Theme.Typography.headline)
+                        .multilineTextAlignment(.center)
+                    Text("Uploaded \(file.uploadedAt.fullFormatted)")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.bottom, 8)
             }
+            .padding(16)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .navigationTitle("Document")
             .navigationBarTitleDisplayMode(.inline)
@@ -1002,7 +1122,125 @@ struct DocumentPreviewSheet: View {
                     Button("Done") { dismiss() }
                 }
             }
+            .task(id: file.id) {
+                await loadRemotePreviewIfNeeded()
+            }
         }
+    }
+
+    @ViewBuilder
+    private var previewContent: some View {
+        if let data = file.data, isImageFile, let uiImage = UIImage(data: data) {
+            ScrollView([.horizontal, .vertical]) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .cornerRadius(Theme.Radius.md)
+            }
+        } else if let data = file.data, isPDFFile, let document = PDFDocument(data: data) {
+            PDFDocumentView(document: document)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
+        } else if let url = file.url, isImageFile {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .empty:
+                    ProgressView("Loading image...")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                case .success(let image):
+                    ScrollView([.horizontal, .vertical]) {
+                        image
+                            .resizable()
+                            .scaledToFit()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .cornerRadius(Theme.Radius.md)
+                    }
+                case .failure:
+                    previewUnavailable(message: "The uploaded image could not be loaded.")
+                @unknown default:
+                    previewUnavailable(message: "Preview is unavailable for this image.")
+                }
+            }
+        } else if isPDFFile {
+            if let data = file.data ?? remoteDocumentData, let document = PDFDocument(data: data) {
+                PDFDocumentView(document: document)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
+            } else if let remotePreviewError {
+                previewUnavailable(message: remotePreviewError)
+            } else if file.url != nil {
+                ProgressView("Loading document...")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                previewUnavailable(message: "This PDF could not be loaded.")
+            }
+        } else if let url = file.url {
+            RemoteDocumentWebView(url: url)
+                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
+        } else {
+            previewUnavailable(message: "Preview is unavailable for this file.")
+        }
+    }
+
+    private func previewUnavailable(message: String) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: isImageFile ? "photo.fill" : "doc.fill")
+                .font(.system(size: 52))
+                .foregroundStyle(Theme.Colors.primary.opacity(0.6))
+            Text(message)
+                .font(Theme.Typography.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(24)
+    }
+
+    private func loadRemotePreviewIfNeeded() async {
+        guard isPDFFile, file.data == nil, remoteDocumentData == nil, let url = file.url else { return }
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            let document = PDFDocument(data: data)
+            await MainActor.run {
+                remoteDocumentData = data
+                remotePreviewError = document == nil ? "The uploaded PDF could not be rendered." : nil
+            }
+        } catch {
+            await MainActor.run {
+                remotePreviewError = "Failed to load the document preview."
+            }
+        }
+    }
+}
+
+private struct PDFDocumentView: UIViewRepresentable {
+    let document: PDFDocument
+
+    func makeUIView(context: Context) -> PDFView {
+        let view = PDFView()
+        view.autoScales = true
+        view.displayMode = .singlePageContinuous
+        view.displayDirection = .vertical
+        view.backgroundColor = .clear
+        return view
+    }
+
+    func updateUIView(_ view: PDFView, context: Context) {
+        view.document = document
+    }
+}
+
+private struct RemoteDocumentWebView: UIViewRepresentable {
+    let url: URL
+
+    func makeUIView(context: Context) -> WKWebView {
+        let webView = WKWebView()
+        webView.scrollView.contentInsetAdjustmentBehavior = .never
+        return webView
+    }
+
+    func updateUIView(_ webView: WKWebView, context: Context) {
+        webView.load(URLRequest(url: url))
     }
 }
 
@@ -1531,12 +1769,13 @@ struct CreateApplicationSheet: View {
                   let contentType = docEntries[i].contentType else { continue }
             docEntries[i].isUploading = true
             do {
-                let mediaID = try await MediaAPI().uploadFile(data: data, fileName: fileName, contentType: contentType)
+                let uploadedMedia = try await MediaAPI().uploadFile(data: data, fileName: fileName, contentType: contentType)
+                applicationsVM.cacheMediaPreview(uploadedMedia)
                 _ = try await LoanAPI().addApplicationDocument(
                     applicationID: applicationID,
                     borrowerProfileID: borrowerProfileID,
                     requiredDocID: docEntries[i].requiredDocID,
-                    mediaFileID: mediaID
+                    mediaFileID: uploadedMedia.mediaID
                 )
                 docEntries[i].isUploading = false
             } catch {

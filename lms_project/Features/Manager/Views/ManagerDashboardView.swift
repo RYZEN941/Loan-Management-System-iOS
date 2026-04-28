@@ -133,7 +133,7 @@ struct ManagerDashboardView: View {
                     icon:    "clock.fill",
                     caption: pendingCount == 0 ? "Queue clear" : "Awaiting review",
                     accent:  primary
-                ) { navigateToApprovals(status: .underReview) }
+                ) { navigateToApprovals(filter: .pending) }
 
                 actionCard(
                     title:   "Near SLA",
@@ -141,7 +141,7 @@ struct ManagerDashboardView: View {
                     icon:    "clock.badge.exclamationmark.fill",
                     caption: nearSLACount == 0 ? "All within SLA" : "Nearing deadline",
                     accent:  primary
-                ) { navigateToApprovals(sla: .urgent) }
+                ) { navigateToApprovals(filter: .nearSLA) }
 
                 actionCard(
                     title:   "Risky",
@@ -149,7 +149,7 @@ struct ManagerDashboardView: View {
                     icon:    "shield.fill",
                     caption: highRiskCount == 0 ? "No flags" : "Needs scrutiny",
                     accent:  critical
-                ) { navigateToApprovals(risk: .high) }
+                ) { navigateToApprovals(filter: .risky) }
 
                 actionCard(
                     title:   "Overdue",
@@ -157,7 +157,7 @@ struct ManagerDashboardView: View {
                     icon:    "calendar.badge.exclamationmark",
                     caption: overdueCount == 0 ? "None overdue" : "Past due date",
                     accent:  critical
-                ) { navigateToApprovals(sla: .urgent) }
+                ) { navigateToApprovals(filter: .overdue) }
             }
         }
         .opacity(isAnimating ? 1 : 0)
@@ -512,15 +512,9 @@ struct ManagerDashboardView: View {
 
     // MARK: — Navigation Helpers
 
-    private func navigateToApprovals(
-        status: ApplicationStatus? = nil,
-        risk:   RiskLevel?         = nil,
-        sla:    SLAStatus?         = nil
-    ) {
-        applicationsVM.filterStatus = status
-        applicationsVM.filterRisk   = risk
-        applicationsVM.filterSLA    = sla
-        selectedTab = 1
+    private func navigateToApprovals(filter: ApplicationsViewModel.DashboardFilterType) {
+        applicationsVM.activeDashboardFilter = filter
+        selectedTab = 1 // Switch to Approvals Tab
     }
 
     // MARK: — Disbursement Chart Data

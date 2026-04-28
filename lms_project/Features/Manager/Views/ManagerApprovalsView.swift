@@ -81,14 +81,27 @@ struct ManagerApprovalsView: View {
                 }
             }
             .onAppear {
-                applicationsVM.resetFiltersToAll()
-                applicationsVM.loadData(autoSelectFirst: true)
-                selectedManagerChip = .all
-                if let app = applicationsVM.selectedApplication {
-                    applicationsVM.loadBranchOfficers(branchName: app.branch)
-                }
-            }
-            .alert("Action", isPresented: $applicationsVM.showActionAlert) {
+                            // 1. Load the latest data from the backend
+                            applicationsVM.loadData(autoSelectFirst: true)
+                            
+                            // 2. Only reset manual filters if NOT coming from a dashboard shortcut
+                            if applicationsVM.activeDashboardFilter == .none {
+                                applicationsVM.resetFiltersToAll()
+                                selectedManagerChip = .all
+                            } else {
+                                // 3. Sync the UI chip to match the dashboard category
+                                switch applicationsVM.activeDashboardFilter {
+                                case .pending: selectedManagerChip = .pendingReview
+                                case .risky:   selectedManagerChip = .highRisk
+                                default:       selectedManagerChip = .all
+                                }
+                            }
+                            
+                            // 4. Load directory data for the current application
+                            if let app = applicationsVM.selectedApplication {
+                                applicationsVM.loadBranchOfficers(branchName: app.branch)
+                            }
+                        }            .alert("Action", isPresented: $applicationsVM.showActionAlert) {
                 Button("OK") {}
             } message: { Text(applicationsVM.actionMessage ?? "") }
             .sheet(isPresented: $applicationsVM.showRejectionRemarksSheet) { rejectionSheet }
@@ -172,7 +185,9 @@ struct ManagerApprovalsView: View {
                 HStack(spacing: 10) {
                     ForEach(ManagerChip.allCases, id: \.self) { chip in
                         AppFilterChip(label: chip.rawValue, isSelected: selectedManagerChip == chip) {
-                            withAnimation { selectedManagerChip = chip }
+                            withAnimation {
+                                applicationsVM.activeDashboardFilter = .none
+                                selectedManagerChip = chip }
                         }
                     }
                 }
@@ -364,27 +379,8 @@ struct ManagerApprovalsView: View {
     }
 
     private var displayedApplications: [LoanApplication] {
-        let base: [LoanApplication]
-        switch selectedManagerChip {
-        case .all:
-            base = applicationsVM.applications
-        case .pendingReview:
-            base = applicationsVM.applications.filter { $0.status == .managerReview || $0.status == .officerApproved || $0.status == .underReview }
-        case .approved:
-            base = applicationsVM.applications.filter { $0.status == .approved || $0.status == .managerApproved }
-        case .rejected:
-            base = applicationsVM.applications.filter { $0.status == .rejected || $0.status == .officerRejected || $0.status == .managerRejected }
-        case .highRisk:
-            base = applicationsVM.applications.filter { $0.riskLevel == .high }
-        }
-
-        let query = applicationsVM.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return base }
-        return base.filter {
-            $0.borrower.name.localizedCaseInsensitiveContains(query) ||
-            $0.id.localizedCaseInsensitiveContains(query) ||
-            $0.borrower.employer.localizedCaseInsensitiveContains(query)
-        }
+        // Let the ViewModel handle the contextual filtering
+        return applicationsVM.filteredApplications
     }
 
     private func selectedApplicationHint(_ app: LoanApplication) -> some View {

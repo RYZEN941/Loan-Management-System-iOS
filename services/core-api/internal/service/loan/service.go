@@ -372,10 +372,20 @@ func (s *service) CreateLoanApplication(ctx context.Context, req *loanv1.CreateL
 		return nil, status.Error(codes.Internal, "failed to create loan application")
 	}
 
-	// Auto-assign a random active officer from the branch.
-	officerUserIDs, err := s.queries.ListOfficerUserIDsByBranchID(ctx, uuidToPg(branchID))
-	if err == nil && len(officerUserIDs) > 0 {
-		picked := officerUserIDs[rand.Intn(len(officerUserIDs))]
+	// Auto-assign an active officer: creator if they are a loan officer, else random from the branch.
+	var picked pgtype.UUID
+	var hasPick bool
+	if role == "officer" {
+		picked = uuidToPg(callerUserID)
+		hasPick = true
+	} else {
+		officerUserIDs, err := s.queries.ListOfficerUserIDsByBranchID(ctx, uuidToPg(branchID))
+		if err == nil && len(officerUserIDs) > 0 {
+			picked = officerUserIDs[rand.Intn(len(officerUserIDs))]
+			hasPick = true
+		}
+	}
+	if hasPick {
 		_ = s.queries.AssignLoanApplicationOfficer(ctx, generated.AssignLoanApplicationOfficerParams{
 			ID:                    row.ID,
 			AssignedOfficerUserID: picked,

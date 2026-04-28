@@ -32,6 +32,40 @@ struct ReportRow: Identifiable, Hashable {
     let isPositive: Bool
 }
 
+struct AdminPDFReportRow {
+    let applicationId: String
+    let borrowerName: String
+    let borrowerPhone: String
+    let borrowerEmail: String
+    let branch: String
+    let loanType: String
+    let amount: Double
+    let tenureMonths: Int
+    let interestRate: Double
+    let emi: Double
+    let status: String
+    let risk: String
+    let slaStatus: String
+    let createdAt: Date
+}
+
+struct AdminPDFReportSummary {
+    let total: Int
+    let approved: Int
+    let pending: Int
+    let rejected: Int
+    let totalValue: Double
+    let avgLoanSize: Double
+    let highRisk: Int
+}
+
+struct AdminPDFReportPayload {
+    let reportName: String
+    let filters: String
+    let rows: [AdminPDFReportRow]
+    let summary: AdminPDFReportSummary
+}
+
 // MARK: - Admin Reports View Model
 
 class AdminReportsViewModel: ObservableObject {
@@ -215,6 +249,178 @@ class AdminReportsViewModel: ObservableObject {
         let header = ["Label", "Value", "Change", "Positive"].joined(separator: ",")
         let body = rows.map { "\($0.label),\($0.value),\($0.change),\($0.isPositive)" }.joined(separator: "\n")
         return "\(header)\n\(body)\n"
+    }
+
+    // MARK: - Generate Report Data (used by ReportExportService)
+
+    func generateReportData() -> (rows: [AppReportRow], summary: AppReportSummary) {
+        let rows: [AppReportRow] = applications.map { app in
+            let risk: String = {
+                let cibil = app.financials.cibilScore
+                let dti   = app.financials.dtiRatio
+                if (cibil > 0 && cibil < 650) || dti > 0.45 { return "High" }
+                if (cibil > 0 && cibil < 700) || dti > 0.35 { return "Medium" }
+                return "Low"
+            }()
+            return AppReportRow(
+                applicationId: app.id,
+                borrowerName: app.borrower.name,
+                loanType: app.loan.type.displayName,
+                amount: app.loan.amount,
+                status: app.status.displayName,
+                risk: risk,
+                date: app.createdAt
+            )
+        }
+
+        let total    = applications.count
+        let approved = applications.filter { $0.status == .approved || $0.status == .managerApproved }.count
+        let pending  = applications.filter { $0.status == .pending  || $0.status == .underReview }.count
+        let rejected = applications.filter {
+            $0.status == .rejected || $0.status == .managerRejected || $0.status == .officerRejected
+        }.count
+        let totalValue = applications.reduce(0) { $0 + $1.loan.amount }
+        let avgLoanSize = total > 0 ? totalValue / Double(total) : 0
+        let npaRate = total > 0 ? (Double(rejected) / Double(total)) * 100.0 : 0
+
+        let summary = AppReportSummary(
+            total: total,
+            approved: approved,
+            pending: pending,
+            rejected: rejected,
+            totalValue: totalValue,
+            avgLoanSize: avgLoanSize,
+            npaRate: npaRate
+        )
+        return (rows, summary)
+    }
+
+    func activeFilterDescription(reportTitle: String) -> String {
+        [selectedBranch, selectedLoanType, dateRangeLabel]
+            .filter { $0 != "All Branches" && $0 != "All Types" }
+            .joined(separator: ", ")
+    }
+
+    func generatePDFReportData(
+        reportTitle: String,
+        dateRange: String,
+        loanType: String,
+        region: String,
+        status: String
+    ) -> AdminPDFReportPayload {
+        let filteredApplications = applications.filter { app in
+            matches(dateRange: dateRange, createdAt: app.createdAt)
+                && matches(loanType: loanType, app: app)
+                && matches(region: region, app: app)
+                && matches(status: status, app: app)
+        }
+
+        let rows = filteredApplications.map { app in
+            AdminPDFReportRow(
+                applicationId: app.id,
+                borrowerName: app.borrower.name,
+                borrowerPhone: app.borrower.phone,
+                borrowerEmail: app.borrower.email,
+                branch: app.branch,
+                loanType: app.loan.type.displayName,
+                amount: app.loan.amount,
+                tenureMonths: app.loan.tenure,
+                interestRate: app.loan.interestRate,
+                emi: app.loan.emi,
+                status: app.status.displayName,
+                risk: riskLabel(for: app),
+                slaStatus: app.slaStatus.displayName,
+                createdAt: app.createdAt
+            )
+        }
+
+        let total = filteredApplications.count
+        let approved = filteredApplications.filter { $0.status == .approved || $0.status == .managerApproved }.count
+        let pending = filteredApplications.filter { $0.status == .pending || $0.status == .underReview }.count
+        let rejected = filteredApplications.filter {
+            $0.status == .rejected || $0.status == .managerRejected || $0.status == .officerRejected
+        }.count
+        let totalValue = filteredApplications.reduce(0) { $0 + $1.loan.amount }
+        let avgLoanSize = total > 0 ? totalValue / Double(total) : 0
+        let highRisk = filteredApplications.filter { riskLabel(for: $0) == "High" }.count
+
+        let filterText = [
+            "Date Range: \(dateRange)",
+            "Loan Type: \(loanType)",
+            "Region: \(region)",
+            "Status: \(status)"
+        ].joined(separator: " | ")
+
+        return AdminPDFReportPayload(
+            reportName: reportTitle,
+            filters: filterText,
+            rows: rows,
+            summary: AdminPDFReportSummary(
+                total: total,
+                approved: approved,
+                pending: pending,
+                rejected: rejected,
+                totalValue: totalValue,
+                avgLoanSize: avgLoanSize,
+                highRisk: highRisk
+            )
+        )
+    }
+
+    private func riskLabel(for app: LoanApplication) -> String {
+        let cibil = app.financials.cibilScore
+        let dti = app.financials.dtiRatio
+        if (cibil > 0 && cibil < 650) || dti > 0.45 { return "High" }
+        if (cibil > 0 && cibil < 700) || dti > 0.35 { return "Medium" }
+        return "Low"
+    }
+
+    private func matches(dateRange: String, createdAt: Date) -> Bool {
+        let calendar = Calendar.current
+        let now = Date()
+
+        switch dateRange {
+        case "Last 7 Days":
+            guard let start = calendar.date(byAdding: .day, value: -7, to: now) else { return true }
+            return createdAt >= start
+        case "Last 30 Days":
+            guard let start = calendar.date(byAdding: .day, value: -30, to: now) else { return true }
+            return createdAt >= start
+        case "Last 90 Days":
+            guard let start = calendar.date(byAdding: .day, value: -90, to: now) else { return true }
+            return createdAt >= start
+        case "This FY":
+            let year = calendar.component(.month, from: now) >= 4
+                ? calendar.component(.year, from: now)
+                : calendar.component(.year, from: now) - 1
+            let start = calendar.date(from: DateComponents(year: year, month: 4, day: 1))
+            return start.map { createdAt >= $0 } ?? true
+        default:
+            return true
+        }
+    }
+
+    private func matches(loanType: String, app: LoanApplication) -> Bool {
+        loanType == "All Types" || app.loan.type.displayName == loanType
+    }
+
+    private func matches(region: String, app: LoanApplication) -> Bool {
+        region == "All Regions" || app.branch.localizedCaseInsensitiveContains(region)
+    }
+
+    private func matches(status: String, app: LoanApplication) -> Bool {
+        switch status {
+        case "All":
+            return true
+        case "Active":
+            return app.status == .pending || app.status == .underReview || app.status == .managerApproved
+        case "Closed":
+            return app.status == .approved
+        case "NPA":
+            return app.slaStatus == .overdue || riskLabel(for: app) == "High"
+        default:
+            return app.status.displayName == status
+        }
     }
 
     // MARK: - Mock Data

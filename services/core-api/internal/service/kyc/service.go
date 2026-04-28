@@ -764,22 +764,5 @@ func validateAadhaarNumber(aadhaar string) error {
 	if len(aadhaar) != 12 {
 		return fmt.Errorf("aadhaar number must be exactly 12 digits")
 	}
-	for _, d := range aadhaar {
-		if d < '0' || d > '9' {
-			return fmt.Errorf("aadhaar number must contain only digits")
-		}
-	}
-	weights := []int{1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1}
-	var sum int
-	for i, w := range weights {
-		digit := int(aadhaar[i] - '0')
-		product := digit * w
-		sum += product/10 + product%10
-	}
-	checkDigit := int(aadhaar[11] - '0')
-	expected := (10 - (sum % 10)) % 10
-	if checkDigit != expected {
-		return fmt.Errorf("invalid aadhaar number")
-	}
 	return nil
 }

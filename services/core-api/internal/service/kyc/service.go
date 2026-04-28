@@ -111,7 +111,6 @@ func (s *service) RecordUserConsent(ctx context.Context, req *kycv1.RecordUserCo
 }
 
 func (s *service) InitiateAadhaarKyc(ctx context.Context, req *kycv1.InitiateAadhaarKycRequest) (*kycv1.InitiateAadhaarKycResponse, error) {
-	fmt.Println(req)
 	userID, profile, err := s.resolveBorrowerContext(ctx, req.GetBorrowerUserId())
 	if err != nil {
 		return nil, err
@@ -191,6 +190,7 @@ func (s *service) VerifyAadhaarKycOtp(ctx context.Context, req *kycv1.VerifyAadh
 		OTP:         otp,
 	}
 	apiResp, raw, err := s.client.VerifyAadhaarOTP(ctx, apiReq)
+	fmt.Println("Api Response", apiResp)
 	if err != nil {
 		log.Printf("VerifyAadhaarKycOtp: API failed user=%s: %v", userID, err)
 		return nil, status.Error(codes.Internal, "aadhaar otp verification failed")
@@ -273,6 +273,16 @@ func (s *service) VerifyAadhaarKycOtp(ctx context.Context, req *kycv1.VerifyAadh
 			ProviderTransactionId: apiResp.TransactionID,
 		}, nil
 	}
+
+	fmt.Println(&kycv1.VerifyAadhaarKycOtpResponse{
+		Success:               isValid,
+		Status:                apiResp.Data.Status,
+		Message:               apiResp.Data.Message,
+		ProviderTransactionId: apiResp.TransactionID,
+		Name:                  apiResp.Data.Name,
+		DateOfBirth:           apiResp.Data.DateOfBirth,
+		Gender:                apiResp.Data.Gender,
+	})
 
 	return &kycv1.VerifyAadhaarKycOtpResponse{
 		Success:               isValid,

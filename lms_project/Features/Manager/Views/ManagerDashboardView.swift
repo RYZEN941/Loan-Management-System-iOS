@@ -102,32 +102,32 @@ struct ManagerDashboardView: View {
                     count:   pendingCount,
                     icon:    "clock.fill",
                     caption: pendingCount == 0 ? "Queue clear" : "Awaiting review",
-                    accent:  pendingCount > 0 ? primary : .blue // Logic change
-                ) { navigateToApprovals(status: .underReview) }
+                    accent:  primary
+                ) { navigateToApprovals(filter: .pending) }
 
                 actionCard(
                     title:   "Near SLA",
                     count:   nearSLACount,
                     icon: "clock.badge.exclamationmark.fill",
                     caption: nearSLACount == 0 ? "All within SLA" : "Nearing deadline",
-                    accent:  nearSLACount > 0 ? primary : Theme.Colors.adaptivePrimary(colorScheme) // Logic change
-                ) { navigateToApprovals(sla: .urgent) }
+                    accent:  primary
+                ) { navigateToApprovals(filter: .nearSLA) }
 
                 actionCard(
                     title:   "Risky",
                     count:   highRiskCount,
                     icon:    "shield.fill",
                     caption: highRiskCount == 0 ? "No flags" : "Needs scrutiny",
-                    accent:  highRiskCount > 0 ? critical : Theme.Colors.adaptivePrimary(colorScheme) // Logic change
-                ) { navigateToApprovals(risk: .high) }
+                    accent:  critical
+                ) { navigateToApprovals(filter: .risky) }
 
                 actionCard(
                     title:   "Overdue",
                     count:   overdueCount,
                     icon:    "calendar.badge.exclamationmark",
                     caption: overdueCount == 0 ? "None overdue" : "Past due date",
-                    accent:  overdueCount > 0 ? critical : Theme.Colors.adaptivePrimary(colorScheme) // Logic change
-                ) { navigateToApprovals(sla: .urgent) }
+                    accent:  critical
+                ) { navigateToApprovals(filter: .overdue) }
             }
         }
         .opacity(isAnimating ? 1 : 0)
@@ -484,15 +484,9 @@ struct ManagerDashboardView: View {
 
     // MARK: — Navigation Helpers
 
-    private func navigateToApprovals(
-        status: ApplicationStatus? = nil,
-        risk:   RiskLevel?         = nil,
-        sla:    SLAStatus?         = nil
-    ) {
-        applicationsVM.filterStatus = status
-        applicationsVM.filterRisk   = risk
-        applicationsVM.filterSLA    = sla
-        selectedTab = 1
+    private func navigateToApprovals(filter: ApplicationsViewModel.DashboardFilterType) {
+        applicationsVM.activeDashboardFilter = filter
+        selectedTab = 1 // Switch to Approvals Tab
     }
 
     // MARK: — Disbursement Chart Data

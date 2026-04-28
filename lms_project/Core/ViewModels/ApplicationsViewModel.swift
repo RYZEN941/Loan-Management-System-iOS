@@ -55,6 +55,13 @@ class ApplicationsViewModel: ObservableObject {
     @Published var maxAmount: Double = 100_000_000 // 10 Cr
     @Published var startDate: Date = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
     
+    // MARK: - Dashboard Context State
+    enum DashboardFilterType {
+        case none, pending, nearSLA, risky, overdue
+    }
+
+    @Published var activeDashboardFilter: DashboardFilterType = .none
+    
     private let dataService = MockDataService.shared
     private let xmlService = XMLParserService.shared
     // TODO: Replace with UserStore.shared.branchID once auth session exposes it
@@ -72,7 +79,24 @@ class ApplicationsViewModel: ObservableObject {
 
     var filteredApplications: [LoanApplication] {
             var result = applications
-
+            
+        // Dashboard Contextual Filters
+            switch activeDashboardFilter {
+            case .pending:
+                result = result.filter { $0.status == .managerReview || $0.status == .officerApproved || $0.status == .underReview }
+            case .nearSLA:
+                result = result.filter { $0.slaStatus == .urgent }
+            case .risky:
+                result = result.filter { $0.riskLevel == .high }
+            case .overdue:
+                result = result.filter { $0.slaStatus == .overdue }
+            case .none:
+                // Fallback to manual chip filters if no dashboard shortcut is active
+                if let status = filterStatus { result = result.filter { $0.status == status } }
+                if let risk = filterRisk { result = result.filter { $0.riskLevel == risk } }
+                if let sla = filterSLA { result = result.filter { $0.slaStatus == sla } }
+            }
+        
             // 1. Status Filter (Connects to the Chips)
             if let status = filterStatus {
                 result = result.filter { $0.status == status }

@@ -215,21 +215,11 @@ func (s *service) CreateOrGetDirectRoom(ctx context.Context, req *chatv1.CreateO
 		return nil, err
 	}
 
-	var contextAppID pgtype.UUID
-	if req.GetContextApplicationId() != "" {
-		appID, parseErr := parseUUID(req.GetContextApplicationId(), "context_application_id")
-		if parseErr != nil {
-			return nil, parseErr
-		}
-		contextAppID = uuidToPg(appID)
-	}
-
 	row, err := s.queries.CreateChatRoom(ctx, generated.CreateChatRoomParams{
-		RoomType:             generated.ChatRoomTypeDIRECT,
-		UserAID:              uuidToPg(userA),
-		UserBID:              uuidToPg(userB),
-		CreatedByUserID:      uuidToPg(callerUserID),
-		ContextApplicationID: contextAppID,
+		RoomType:        generated.ChatRoomTypeDIRECT,
+		UserAID:         uuidToPg(userA),
+		UserBID:         uuidToPg(userB),
+		CreatedByUserID: uuidToPg(callerUserID),
 	})
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to create chat room")
@@ -448,13 +438,12 @@ func (s *service) validateCanCreateRoom(ctx context.Context, callerUserID, targe
 }
 
 func (s *service) validateBorrowerCanChatWith(ctx context.Context, borrowerUserID, targetUserID uuid.UUID) error {
-	// Check if target is assigned officer or DST creator of borrower's applications
 	profile, err := s.queries.GetBorrowerProfileByUserID(ctx, uuidToPg(borrowerUserID))
 	if err != nil {
 		return status.Error(codes.NotFound, "borrower profile not found")
 	}
 
-	// Check if target is assigned officer or created_by for any of borrower's applications
+	// Check loan applications
 	rows, err := s.queries.ListLoanApplicationsForBorrowerProfile(ctx, generated.ListLoanApplicationsForBorrowerProfileParams{
 		PrimaryBorrowerProfileID: profile.ID,
 		Limit:                    1000,
@@ -463,7 +452,6 @@ func (s *service) validateBorrowerCanChatWith(ctx context.Context, borrowerUserI
 	if err != nil {
 		return status.Error(codes.Internal, "failed to validate chat eligibility")
 	}
-
 	for _, row := range rows {
 		if row.AssignedOfficerUserID.Valid && row.AssignedOfficerUserID.Bytes == targetUserID {
 			return nil
@@ -473,11 +461,24 @@ func (s *service) validateBorrowerCanChatWith(ctx context.Context, borrowerUserI
 		}
 	}
 
-	return status.Error(codes.PermissionDenied, "cannot create chat room with this user")
+	// Check loan queries
+	if ok, _ := s.queries.BorrowerHasQueryWithOfficer(ctx, generated.BorrowerHasQueryWithOfficerParams{
+		UserID:                uuidToPg(borrowerUserID),
+		AssignedOfficerUserID: uuidToPg(targetUserID),
+	}); ok {
+		return nil
+	}
+	if ok, _ := s.queries.BorrowerHasQueryInManagerBranch(ctx, generated.BorrowerHasQueryInManagerBranchParams{
+		UserID:   uuidToPg(borrowerUserID),
+		UserID_2: uuidToPg(targetUserID),
+	}); ok {
+		return nil
+	}
+
+	return status.Error(codes.PermissionDenied, "you can only chat with officers or managers assigned to your loan applications or queries")
 }
 
 func (s *service) validateOfficerCanChatWith(ctx context.Context, officerUserID, targetUserID uuid.UUID) error {
-	// Same branch officers or managers
 	officerProfile, err := s.queries.GetOfficerProfileByUserID(ctx, uuidToPg(officerUserID))
 	if err != nil {
 		return status.Error(codes.NotFound, "officer profile not found")
@@ -494,20 +495,28 @@ func (s *service) validateOfficerCanChatWith(ctx context.Context, officerUserID,
 		if err != nil {
 			return status.Error(codes.NotFound, "borrower profile not found")
 		}
+		// Check loan applications
 		apps, err := s.queries.ListLoanApplicationsForBorrowerProfile(ctx, generated.ListLoanApplicationsForBorrowerProfileParams{
 			PrimaryBorrowerProfileID: targetBorrowerProfile.ID,
 			Limit:                    1000,
 			Offset:                   0,
 		})
 		if err != nil {
-			return status.Error(codes.Internal, "failed to validate")
+			return status.Error(codes.Internal, "failed to validate chat eligibility")
 		}
 		for _, app := range apps {
 			if app.AssignedOfficerUserID.Valid && app.AssignedOfficerUserID.Bytes == officerUserID {
 				return nil
 			}
 		}
-		return status.Error(codes.PermissionDenied, "officer not assigned to borrower's application")
+		// Check loan queries
+		if ok, _ := s.queries.OfficerHasQueryForBorrower(ctx, generated.OfficerHasQueryForBorrowerParams{
+			AssignedOfficerUserID: uuidToPg(officerUserID),
+			UserID:                uuidToPg(targetUserID),
+		}); ok {
+			return nil
+		}
+		return status.Error(codes.PermissionDenied, "officer is not assigned to this borrower's loan application or query")
 	case generated.UserRoleOfficer:
 		targetProfile, err := s.queries.GetOfficerProfileByUserID(ctx, uuidToPg(targetUserID))
 		if err != nil {
@@ -573,14 +582,21 @@ func (s *service) validateManagerCanChatWith(ctx context.Context, managerUserID,
 			Offset:                   0,
 		})
 		if err != nil {
-			return status.Error(codes.Internal, "failed to validate")
+			return status.Error(codes.Internal, "failed to validate chat eligibility")
 		}
 		for _, app := range apps {
 			if app.BranchID == managerProfile.BranchID {
 				return nil
 			}
 		}
-		return status.Error(codes.PermissionDenied, "borrower has no application in manager's branch")
+		// Check loan queries
+		if ok, _ := s.queries.ManagerBranchHasQueryForBorrower(ctx, generated.ManagerBranchHasQueryForBorrowerParams{
+			UserID:   uuidToPg(managerUserID),
+			UserID_2: uuidToPg(targetUserID),
+		}); ok {
+			return nil
+		}
+		return status.Error(codes.PermissionDenied, "borrower has no loan application or query in your branch")
 	default:
 		return status.Error(codes.PermissionDenied, "manager cannot chat with this role")
 	}
@@ -610,14 +626,21 @@ func (s *service) validateDstCanChatWith(ctx context.Context, dstUserID, targetU
 			Offset:                   0,
 		})
 		if err != nil {
-			return status.Error(codes.Internal, "failed to validate")
+			return status.Error(codes.Internal, "failed to validate chat eligibility")
 		}
 		for _, app := range apps {
 			if app.CreatedByUserID.Bytes == dstUserID {
 				return nil
 			}
 		}
-		return status.Error(codes.PermissionDenied, "dst did not create borrower's application")
+		// Check loan queries in DST's branch
+		if ok, _ := s.queries.DstHasBorrowerQueryInBranch(ctx, generated.DstHasBorrowerQueryInBranchParams{
+			UserID:   uuidToPg(dstUserID),
+			UserID_2: uuidToPg(targetUserID),
+		}); ok {
+			return nil
+		}
+		return status.Error(codes.PermissionDenied, "dst has not created any application or query for this borrower")
 	case generated.UserRoleOfficer:
 		targetProfile, err := s.queries.GetOfficerProfileByUserID(ctx, uuidToPg(targetUserID))
 		if err != nil {
@@ -659,15 +682,14 @@ func (s *service) ensureRoomParticipant(ctx context.Context, roomID, userID uuid
 
 func (s *service) mapChatRoom(row generated.ChatRoom, latestMsg *chatv1.ChatMessage) *chatv1.ChatRoom {
 	return &chatv1.ChatRoom{
-		Id:                    row.ID.String(),
-		RoomType:              toProtoChatRoomType(row.RoomType),
-		UserAId:               row.UserAID.String(),
-		UserBId:               row.UserBID.String(),
-		CreatedByUserId:       row.CreatedByUserID.String(),
-		ContextApplicationId:  nullableUUIDToString(row.ContextApplicationID),
-		CreatedAt:             timeToString(row.CreatedAt),
-		UpdatedAt:             timeToString(row.UpdatedAt),
-		LatestMessage:         latestMsg,
+		Id:              row.ID.String(),
+		RoomType:        toProtoChatRoomType(row.RoomType),
+		UserAId:         row.UserAID.String(),
+		UserBId:         row.UserBID.String(),
+		CreatedByUserId: row.CreatedByUserID.String(),
+		CreatedAt:       timeToString(row.CreatedAt),
+		UpdatedAt:       timeToString(row.UpdatedAt),
+		LatestMessage:  latestMsg,
 	}
 }
 
@@ -684,14 +706,13 @@ func (s *service) mapChatRoomFromListRow(row generated.ListChatRoomsForUserRow) 
 		}
 	}
 	room := generated.ChatRoom{
-		ID:                   row.ID,
-		RoomType:             row.RoomType,
-		UserAID:              row.UserAID,
-		UserBID:              row.UserBID,
-		CreatedByUserID:      row.CreatedByUserID,
-		ContextApplicationID: row.ContextApplicationID,
-		CreatedAt:            row.CreatedAt,
-		UpdatedAt:            row.UpdatedAt,
+		ID:              row.ID,
+		RoomType:        row.RoomType,
+		UserAID:         row.UserAID,
+		UserBID:         row.UserBID,
+		CreatedByUserID: row.CreatedByUserID,
+		CreatedAt:       row.CreatedAt,
+		UpdatedAt:       row.UpdatedAt,
 	}
 	return s.mapChatRoom(room, latestMsg)
 }

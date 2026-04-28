@@ -11,6 +11,49 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const borrowerHasQueryInManagerBranch = `-- name: BorrowerHasQueryInManagerBranch :one
+SELECT EXISTS (
+    SELECT 1 FROM loan_queries lq
+    JOIN borrower_profiles bp ON bp.id = lq.borrower_profile_id
+    JOIN manager_profiles mp ON mp.branch_id = lq.branch_id
+    WHERE bp.user_id = $1
+      AND mp.user_id = $2
+)
+`
+
+type BorrowerHasQueryInManagerBranchParams struct {
+	UserID   pgtype.UUID `json:"user_id"`
+	UserID_2 pgtype.UUID `json:"user_id_2"`
+}
+
+func (q *Queries) BorrowerHasQueryInManagerBranch(ctx context.Context, arg BorrowerHasQueryInManagerBranchParams) (bool, error) {
+	row := q.db.QueryRow(ctx, borrowerHasQueryInManagerBranch, arg.UserID, arg.UserID_2)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const borrowerHasQueryWithOfficer = `-- name: BorrowerHasQueryWithOfficer :one
+SELECT EXISTS (
+    SELECT 1 FROM loan_queries lq
+    JOIN borrower_profiles bp ON bp.id = lq.borrower_profile_id
+    WHERE bp.user_id = $1
+      AND lq.assigned_officer_user_id = $2
+)
+`
+
+type BorrowerHasQueryWithOfficerParams struct {
+	UserID                pgtype.UUID `json:"user_id"`
+	AssignedOfficerUserID pgtype.UUID `json:"assigned_officer_user_id"`
+}
+
+func (q *Queries) BorrowerHasQueryWithOfficer(ctx context.Context, arg BorrowerHasQueryWithOfficerParams) (bool, error) {
+	row := q.db.QueryRow(ctx, borrowerHasQueryWithOfficer, arg.UserID, arg.AssignedOfficerUserID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const createChatMessage = `-- name: CreateChatMessage :one
 INSERT INTO chat_messages (
     room_id,
@@ -61,23 +104,20 @@ INSERT INTO chat_rooms (
     room_type,
     user_a_id,
     user_b_id,
-    created_by_user_id,
-    context_application_id
+    created_by_user_id
 ) VALUES (
     $1,
     $2,
     $3,
-    $4,
-    $5
-) RETURNING id, room_type, user_a_id, user_b_id, created_by_user_id, context_application_id, created_at, updated_at
+    $4
+) RETURNING id, room_type, user_a_id, user_b_id, created_by_user_id, created_at, updated_at
 `
 
 type CreateChatRoomParams struct {
-	RoomType             ChatRoomType `json:"room_type"`
-	UserAID              pgtype.UUID  `json:"user_a_id"`
-	UserBID              pgtype.UUID  `json:"user_b_id"`
-	CreatedByUserID      pgtype.UUID  `json:"created_by_user_id"`
-	ContextApplicationID pgtype.UUID  `json:"context_application_id"`
+	RoomType        ChatRoomType `json:"room_type"`
+	UserAID         pgtype.UUID  `json:"user_a_id"`
+	UserBID         pgtype.UUID  `json:"user_b_id"`
+	CreatedByUserID pgtype.UUID  `json:"created_by_user_id"`
 }
 
 func (q *Queries) CreateChatRoom(ctx context.Context, arg CreateChatRoomParams) (ChatRoom, error) {
@@ -86,7 +126,6 @@ func (q *Queries) CreateChatRoom(ctx context.Context, arg CreateChatRoomParams) 
 		arg.UserAID,
 		arg.UserBID,
 		arg.CreatedByUserID,
-		arg.ContextApplicationID,
 	)
 	var i ChatRoom
 	err := row.Scan(
@@ -95,11 +134,32 @@ func (q *Queries) CreateChatRoom(ctx context.Context, arg CreateChatRoomParams) 
 		&i.UserAID,
 		&i.UserBID,
 		&i.CreatedByUserID,
-		&i.ContextApplicationID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const dstHasBorrowerQueryInBranch = `-- name: DstHasBorrowerQueryInBranch :one
+SELECT EXISTS (
+    SELECT 1 FROM loan_queries lq
+    JOIN borrower_profiles bp ON bp.id = lq.borrower_profile_id
+    JOIN dst_profiles dp ON dp.branch_id = lq.branch_id
+    WHERE dp.user_id = $1
+      AND bp.user_id = $2
+)
+`
+
+type DstHasBorrowerQueryInBranchParams struct {
+	UserID   pgtype.UUID `json:"user_id"`
+	UserID_2 pgtype.UUID `json:"user_id_2"`
+}
+
+func (q *Queries) DstHasBorrowerQueryInBranch(ctx context.Context, arg DstHasBorrowerQueryInBranchParams) (bool, error) {
+	row := q.db.QueryRow(ctx, dstHasBorrowerQueryInBranch, arg.UserID, arg.UserID_2)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }
 
 const getChatMessageByID = `-- name: GetChatMessageByID :one
@@ -125,7 +185,7 @@ func (q *Queries) GetChatMessageByID(ctx context.Context, id pgtype.UUID) (ChatM
 }
 
 const getChatRoomByID = `-- name: GetChatRoomByID :one
-SELECT id, room_type, user_a_id, user_b_id, created_by_user_id, context_application_id, created_at, updated_at
+SELECT id, room_type, user_a_id, user_b_id, created_by_user_id, created_at, updated_at
 FROM chat_rooms
 WHERE id = $1
 LIMIT 1
@@ -140,7 +200,6 @@ func (q *Queries) GetChatRoomByID(ctx context.Context, id pgtype.UUID) (ChatRoom
 		&i.UserAID,
 		&i.UserBID,
 		&i.CreatedByUserID,
-		&i.ContextApplicationID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -148,7 +207,7 @@ func (q *Queries) GetChatRoomByID(ctx context.Context, id pgtype.UUID) (ChatRoom
 }
 
 const getChatRoomByUserPair = `-- name: GetChatRoomByUserPair :one
-SELECT id, room_type, user_a_id, user_b_id, created_by_user_id, context_application_id, created_at, updated_at
+SELECT id, room_type, user_a_id, user_b_id, created_by_user_id, created_at, updated_at
 FROM chat_rooms
 WHERE (user_a_id = $1 AND user_b_id = $2)
    OR (user_a_id = $2 AND user_b_id = $1)
@@ -169,7 +228,6 @@ func (q *Queries) GetChatRoomByUserPair(ctx context.Context, arg GetChatRoomByUs
 		&i.UserAID,
 		&i.UserBID,
 		&i.CreatedByUserID,
-		&i.ContextApplicationID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -246,15 +304,38 @@ SELECT DISTINCT
     u.role,
     COALESCE(op.name, mp.name, dp.name) AS target_name,
     COALESCE(op.branch_id, mp.branch_id, dp.branch_id) AS branch_id
-FROM loan_applications la
-JOIN users u ON u.id = la.assigned_officer_user_id OR u.id = la.created_by_user_id
+FROM (
+    -- Assigned officers and DST creators from loan applications
+    SELECT la.assigned_officer_user_id AS user_id FROM loan_applications la
+    JOIN borrower_profiles bp ON bp.id = la.primary_borrower_profile_id
+    WHERE bp.user_id = $1 AND la.assigned_officer_user_id IS NOT NULL
+    UNION
+    SELECT la.created_by_user_id AS user_id FROM loan_applications la
+    JOIN borrower_profiles bp ON bp.id = la.primary_borrower_profile_id
+    WHERE bp.user_id = $1
+    -- Assigned officers from loan queries
+    UNION
+    SELECT lq.assigned_officer_user_id AS user_id FROM loan_queries lq
+    JOIN borrower_profiles bp ON bp.id = lq.borrower_profile_id
+    WHERE bp.user_id = $1 AND lq.assigned_officer_user_id IS NOT NULL
+    -- Branch managers from loan application branches
+    UNION
+    SELECT mp.user_id FROM loan_applications la
+    JOIN borrower_profiles bp ON bp.id = la.primary_borrower_profile_id
+    JOIN manager_profiles mp ON mp.branch_id = la.branch_id
+    WHERE bp.user_id = $1
+    -- Branch managers from loan query branches
+    UNION
+    SELECT mp.user_id FROM loan_queries lq
+    JOIN borrower_profiles bp ON bp.id = lq.borrower_profile_id
+    JOIN manager_profiles mp ON mp.branch_id = lq.branch_id
+    WHERE bp.user_id = $1
+) targets
+JOIN users u ON u.id = targets.user_id
 LEFT JOIN officer_profiles op ON op.user_id = u.id
 LEFT JOIN manager_profiles mp ON mp.user_id = u.id
 LEFT JOIN dst_profiles dp ON dp.user_id = u.id
-WHERE la.primary_borrower_profile_id = (
-    SELECT bp.id FROM borrower_profiles bp WHERE bp.user_id = $1
-)
-  AND u.is_deleted = false
+WHERE u.is_deleted = false
   AND u.id <> $1
 ORDER BY u.role, target_name
 LIMIT $2 OFFSET $3
@@ -275,7 +356,8 @@ type ListBorrowerChatTargetsRow struct {
 	BranchID   pgtype.UUID `json:"branch_id"`
 }
 
-// Eligibility queries by role
+// Eligibility queries by role.
+// These UNION loan_applications and loan_queries to include both sources.
 func (q *Queries) ListBorrowerChatTargets(ctx context.Context, arg ListBorrowerChatTargetsParams) ([]ListBorrowerChatTargetsRow, error) {
 	rows, err := q.db.Query(ctx, listBorrowerChatTargets, arg.UserID, arg.Limit, arg.Offset)
 	if err != nil {
@@ -347,7 +429,7 @@ func (q *Queries) ListChatMessagesByRoom(ctx context.Context, arg ListChatMessag
 
 const listChatRoomsForUser = `-- name: ListChatRoomsForUser :many
 SELECT
-    r.id, r.room_type, r.user_a_id, r.user_b_id, r.created_by_user_id, r.context_application_id, r.created_at, r.updated_at,
+    r.id, r.room_type, r.user_a_id, r.user_b_id, r.created_by_user_id, r.created_at, r.updated_at,
     m.id AS latest_message_id,
     m.sender_user_id AS latest_sender_user_id,
     m.message_type AS latest_message_type,
@@ -378,7 +460,6 @@ type ListChatRoomsForUserRow struct {
 	UserAID                pgtype.UUID        `json:"user_a_id"`
 	UserBID                pgtype.UUID        `json:"user_b_id"`
 	CreatedByUserID        pgtype.UUID        `json:"created_by_user_id"`
-	ContextApplicationID   pgtype.UUID        `json:"context_application_id"`
 	CreatedAt              pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
 	LatestMessageID        pgtype.UUID        `json:"latest_message_id"`
@@ -403,7 +484,6 @@ func (q *Queries) ListChatRoomsForUser(ctx context.Context, arg ListChatRoomsFor
 			&i.UserAID,
 			&i.UserBID,
 			&i.CreatedByUserID,
-			&i.ContextApplicationID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.LatestMessageID,
@@ -434,23 +514,35 @@ SELECT DISTINCT
     COALESCE(bp.first_name || ' ' || bp.last_name, op.name, mp.name, dp.name) AS target_name,
     db.branch_id
 FROM (
+    -- DST created loan applications
     SELECT la.created_by_user_id AS user_id
     FROM loan_applications la
     WHERE la.created_by_user_id = $1
+    -- Borrowers in DST's loan applications
     UNION
     SELECT bp.user_id
     FROM loan_applications la
     JOIN borrower_profiles bp ON bp.id = la.primary_borrower_profile_id
     WHERE la.created_by_user_id = $1
+    -- Assigned officers for DST's loan applications
     UNION
     SELECT la.assigned_officer_user_id
     FROM loan_applications la
     WHERE la.created_by_user_id = $1
       AND la.assigned_officer_user_id IS NOT NULL
+    -- Borrowers in DST's loan queries (borrower who created the query)
+    UNION
+    SELECT bp.user_id
+    FROM loan_queries lq
+    JOIN borrower_profiles bp ON bp.id = lq.borrower_profile_id
+    WHERE lq.branch_id = (SELECT branch_id FROM dst_profiles WHERE user_id = $1)
+      AND lq.assigned_officer_user_id IS NOT NULL
+    -- Same-branch officers
     UNION
     SELECT op.user_id
     FROM officer_profiles op, dst_branch db
     WHERE op.branch_id = db.branch_id
+    -- Same-branch managers
     UNION
     SELECT mp.user_id
     FROM manager_profiles mp, dst_branch db
@@ -522,18 +614,27 @@ SELECT DISTINCT
     COALESCE(bp.first_name || ' ' || bp.last_name, op.name, mp.name, dp.name) AS target_name,
     COALESCE(mp2.branch_id, op2.branch_id, dp2.branch_id) AS branch_id
 FROM (
+    -- Same-branch officers
     SELECT op2.user_id
     FROM officer_profiles op2, manager_branch mb
     WHERE op2.branch_id = mb.branch_id
+    -- Same-branch managers (excluding self)
     UNION
     SELECT mp2.user_id
     FROM manager_profiles mp2, manager_branch mb
     WHERE mp2.branch_id = mb.branch_id AND mp2.user_id <> $1
+    -- Borrowers with loan applications in this branch
     UNION
     SELECT bp.user_id
     FROM loan_applications la
     JOIN borrower_profiles bp ON bp.id = la.primary_borrower_profile_id
     WHERE la.branch_id = (SELECT branch_id FROM manager_profiles WHERE user_id = $1)
+    -- Borrowers with loan queries in this branch
+    UNION
+    SELECT bp.user_id
+    FROM loan_queries lq
+    JOIN borrower_profiles bp ON bp.id = lq.borrower_profile_id
+    WHERE lq.branch_id = (SELECT branch_id FROM manager_profiles WHERE user_id = $1)
 ) targets
 JOIN users u ON u.id = targets.user_id
 LEFT JOIN borrower_profiles bp ON bp.user_id = u.id
@@ -603,14 +704,23 @@ SELECT DISTINCT
     COALESCE(bp.first_name || ' ' || bp.last_name, op.name, mp.name, dp.name) AS target_name,
     COALESCE(op2.branch_id, mp2.branch_id, dp2.branch_id) AS branch_id
 FROM (
+    -- Borrowers whose loan application this officer is assigned to
     SELECT bp.user_id
     FROM loan_applications la
     JOIN borrower_profiles bp ON bp.id = la.primary_borrower_profile_id
     WHERE la.assigned_officer_user_id = $1
+    -- Borrowers whose loan query this officer is assigned to
+    UNION
+    SELECT bp.user_id
+    FROM loan_queries lq
+    JOIN borrower_profiles bp ON bp.id = lq.borrower_profile_id
+    WHERE lq.assigned_officer_user_id = $1
+    -- Same-branch officers
     UNION
     SELECT op2.user_id
     FROM officer_profiles op2, officer_branch ob
     WHERE op2.branch_id = ob.branch_id AND op2.user_id <> $1
+    -- Same-branch managers
     UNION
     SELECT mp2.user_id
     FROM manager_profiles mp2, officer_branch ob
@@ -670,4 +780,50 @@ func (q *Queries) ListOfficerChatTargets(ctx context.Context, arg ListOfficerCha
 		return nil, err
 	}
 	return items, nil
+}
+
+const managerBranchHasQueryForBorrower = `-- name: ManagerBranchHasQueryForBorrower :one
+SELECT EXISTS (
+    SELECT 1 FROM loan_queries lq
+    JOIN borrower_profiles bp ON bp.id = lq.borrower_profile_id
+    JOIN manager_profiles mp ON mp.branch_id = lq.branch_id
+    WHERE mp.user_id = $1
+      AND bp.user_id = $2
+)
+`
+
+type ManagerBranchHasQueryForBorrowerParams struct {
+	UserID   pgtype.UUID `json:"user_id"`
+	UserID_2 pgtype.UUID `json:"user_id_2"`
+}
+
+func (q *Queries) ManagerBranchHasQueryForBorrower(ctx context.Context, arg ManagerBranchHasQueryForBorrowerParams) (bool, error) {
+	row := q.db.QueryRow(ctx, managerBranchHasQueryForBorrower, arg.UserID, arg.UserID_2)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const officerHasQueryForBorrower = `-- name: OfficerHasQueryForBorrower :one
+
+SELECT EXISTS (
+    SELECT 1 FROM loan_queries lq
+    JOIN borrower_profiles bp ON bp.id = lq.borrower_profile_id
+    WHERE lq.assigned_officer_user_id = $1
+      AND bp.user_id = $2
+)
+`
+
+type OfficerHasQueryForBorrowerParams struct {
+	AssignedOfficerUserID pgtype.UUID `json:"assigned_officer_user_id"`
+	UserID                pgtype.UUID `json:"user_id"`
+}
+
+// Validation queries for CreateOrGetDirectRoom eligibility checks.
+// These check whether a specific target user is eligible for chat with the caller.
+func (q *Queries) OfficerHasQueryForBorrower(ctx context.Context, arg OfficerHasQueryForBorrowerParams) (bool, error) {
+	row := q.db.QueryRow(ctx, officerHasQueryForBorrower, arg.AssignedOfficerUserID, arg.UserID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }

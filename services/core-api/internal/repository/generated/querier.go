@@ -14,6 +14,8 @@ type Querier interface {
 	ActivateUser(ctx context.Context, id pgtype.UUID) error
 	AssignLoanApplicationOfficer(ctx context.Context, arg AssignLoanApplicationOfficerParams) error
 	AssignLoanQueryOfficer(ctx context.Context, arg AssignLoanQueryOfficerParams) error
+	BorrowerHasQueryInManagerBranch(ctx context.Context, arg BorrowerHasQueryInManagerBranchParams) (bool, error)
+	BorrowerHasQueryWithOfficer(ctx context.Context, arg BorrowerHasQueryWithOfficerParams) (bool, error)
 	ChangeUserPassword(ctx context.Context, arg ChangeUserPasswordParams) error
 	CountApprovedRequiredDocsByApplication(ctx context.Context, id pgtype.UUID) (int64, error)
 	CountMandatoryRequiredDocsByApplication(ctx context.Context, id pgtype.UUID) (int64, error)
@@ -53,6 +55,7 @@ type Querier interface {
 	DeleteProductFeesByProductID(ctx context.Context, loanProductID pgtype.UUID) error
 	DeleteProductRequiredDocumentsByProductID(ctx context.Context, loanProductID pgtype.UUID) error
 	DeleteUpcomingEmiSchedulesByLoanID(ctx context.Context, loanID pgtype.UUID) error
+	DstHasBorrowerQueryInBranch(ctx context.Context, arg DstHasBorrowerQueryInBranchParams) (bool, error)
 	GetActiveMediaFileByIDAndUser(ctx context.Context, arg GetActiveMediaFileByIDAndUserParams) (MediaFile, error)
 	GetAdminProfileByUserID(ctx context.Context, userID pgtype.UUID) (AdminProfile, error)
 	GetApplicationCollateralByApplicationID(ctx context.Context, applicationID pgtype.UUID) (ApplicationCollateral, error)
@@ -102,7 +105,8 @@ type Querier interface {
 	ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error)
 	ListBankBranches(ctx context.Context, arg ListBankBranchesParams) ([]BankBranch, error)
 	ListBorrowerAadhaarKycHistory(ctx context.Context, arg ListBorrowerAadhaarKycHistoryParams) ([]BorrowerAadhaarKycHistory, error)
-	// Eligibility queries by role
+	// Eligibility queries by role.
+	// These UNION loan_applications and loan_queries to include both sources.
 	ListBorrowerChatTargets(ctx context.Context, arg ListBorrowerChatTargetsParams) ([]ListBorrowerChatTargetsRow, error)
 	ListBorrowerPanKycHistory(ctx context.Context, arg ListBorrowerPanKycHistoryParams) ([]BorrowerPanKycHistory, error)
 	ListBureauScoresByApplicationID(ctx context.Context, applicationID pgtype.UUID) ([]BureauScore, error)
@@ -131,9 +135,13 @@ type Querier interface {
 	ListPaymentsByLoanID(ctx context.Context, loanID pgtype.UUID) ([]Payment, error)
 	ListProductFeesByProductID(ctx context.Context, loanProductID pgtype.UUID) ([]ProductFee, error)
 	ListProductRequiredDocumentsByProductID(ctx context.Context, loanProductID pgtype.UUID) ([]ProductRequiredDocument, error)
+	ManagerBranchHasQueryForBorrower(ctx context.Context, arg ManagerBranchHasQueryForBorrowerParams) (bool, error)
 	MarkBorrowerAadhaarVerified(ctx context.Context, arg MarkBorrowerAadhaarVerifiedParams) error
 	MarkBorrowerPanVerified(ctx context.Context, arg MarkBorrowerPanVerifiedParams) error
 	MarkUpcomingSchedulesAsOverdue(ctx context.Context) (int64, error)
+	// Validation queries for CreateOrGetDirectRoom eligibility checks.
+	// These check whether a specific target user is eligible for chat with the caller.
+	OfficerHasQueryForBorrower(ctx context.Context, arg OfficerHasQueryForBorrowerParams) (bool, error)
 	ResetUserPassword(ctx context.Context, arg ResetUserPasswordParams) error
 	RevokeRefreshToken(ctx context.Context, hashedToken string) error
 	RevokeRefreshTokensForUserDevice(ctx context.Context, arg RevokeRefreshTokensForUserDeviceParams) error

@@ -51,10 +51,9 @@ message ChatRoom {
   string user_a_id = 3;
   string user_b_id = 4;
   string created_by_user_id = 5;
-  string context_application_id = 6;
-  string created_at = 7;
-  string updated_at = 8;
-  ChatMessage latest_message = 9;
+  string created_at = 6;
+  string updated_at = 7;
+  ChatMessage latest_message = 8;
 }
 
 message ListChatEligibleUsersRequest {
@@ -69,7 +68,6 @@ message ListChatEligibleUsersResponse {
 
 message CreateOrGetDirectRoomRequest {
   string target_user_id = 1;
-  string context_application_id = 2;
 }
 
 message CreateOrGetDirectRoomResponse {

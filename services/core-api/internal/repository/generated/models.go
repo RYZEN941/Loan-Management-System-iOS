@@ -1265,14 +1265,13 @@ type ChatMessage struct {
 }
 
 type ChatRoom struct {
-	ID                   pgtype.UUID        `json:"id"`
-	RoomType             ChatRoomType       `json:"room_type"`
-	UserAID              pgtype.UUID        `json:"user_a_id"`
-	UserBID              pgtype.UUID        `json:"user_b_id"`
-	CreatedByUserID      pgtype.UUID        `json:"created_by_user_id"`
-	ContextApplicationID pgtype.UUID        `json:"context_application_id"`
-	CreatedAt            pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+	ID              pgtype.UUID        `json:"id"`
+	RoomType        ChatRoomType       `json:"room_type"`
+	UserAID         pgtype.UUID        `json:"user_a_id"`
+	UserBID         pgtype.UUID        `json:"user_b_id"`
+	CreatedByUserID pgtype.UUID        `json:"created_by_user_id"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
 type DstProfile struct {

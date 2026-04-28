@@ -160,7 +160,7 @@ struct LoginOTPView: View {
                 )
             }
 
-            OTPBoxRow(otp: $otp, focused: $focused)
+            OTPBoxRow(otp: $otp, focused: $focused, isSecure: true)
                 .disabled(viewModel.isLoading || viewModel.selectedFactorType == nil)
                 .opacity(viewModel.selectedFactorType == nil ? 0.5 : 1)
 

@@ -9,7 +9,7 @@ struct LoanMarketplaceView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Loan Marketplace")
+                    Text("Discover")
                         .font(.largeTitle).bold()
                     Text("Find the right loan product from live backend data.")
                         .font(.subheadline)
@@ -189,6 +189,10 @@ struct LoanDetailScreen: View {
         loan.isActive ? Color(hex: "#00A86B") : DS.danger
     }
 
+    private var primaryCTAButtonTitle: String {
+        loan.name == "Home" ? "Ask Query" : "Apply Now"
+    }
+
     var body: some View {
         ZStack(alignment: .bottom) {
             ScrollView {
@@ -261,7 +265,7 @@ struct LoanDetailScreen: View {
                 Button {
                     router.push(.startApplication(loan))
                 } label: {
-                    Text("Apply Now")
+                    Text(primaryCTAButtonTitle)
                         .font(.headline)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)

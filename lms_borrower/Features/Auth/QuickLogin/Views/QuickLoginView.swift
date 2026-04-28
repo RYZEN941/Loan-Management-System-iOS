@@ -128,40 +128,13 @@ struct QuickLoginView: View {
     }
 
     private var methodPicker: some View {
-        VStack(spacing: 10) {
-            ForEach(availableMethods) { method in
-                let isSelected = quickMethod == method
-                Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        quickMethod = method
-                    }
-                } label: {
-                    HStack {
-                        Text(method.rawValue)
-                            .font(.system(size: 16, weight: isSelected ? .semibold : .medium))
-                            .foregroundColor(isSelected ? DS.primary : DS.textPrimary)
-                        
-                        Spacer()
-                        
-                        if isSelected {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(DS.primary)
-                                .font(.system(size: 14))
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 14)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(isSelected ? DS.primary.opacity(0.06) : Color.white)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(isSelected ? DS.primary : DS.border, lineWidth: isSelected ? 1.5 : 1)
-                    )
-                }
+        Picker("Verification Method", selection: $quickMethod) {
+            ForEach(QuickMethod.allCases) { method in
+                Text(method.rawValue)
+                    .tag(method)
             }
         }
+        .pickerStyle(.segmented)
     }
 
     private var quickLoginSection: some View {

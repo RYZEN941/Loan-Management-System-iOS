@@ -82,11 +82,18 @@ struct AdminDashboardView: View {
         }
     }
     
+    private var greetingText: String {
+        let name   = authVM.currentUser?.name.split(separator: " ").first.map(String.init) ?? "Manager"
+        let hour   = Calendar.current.component(.hour, from: Date())
+        let prefix = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening"
+        return "\(prefix), \(name)"
+    }
+    
     // MARK: - Greeting Bar
     
     private var greetingBar: some View {
         HStack(alignment: .center) {
-            Text("Command Center")
+            Text(greetingText)
                 .font(.system(size: 30, weight: .bold, design: .rounded))
                 .foregroundStyle(.primary)
             Spacer()
@@ -107,15 +114,40 @@ struct AdminDashboardView: View {
     
     // MARK: - 1. ACTIONS REQUIRED
     
+    // MARK: - 1. ACTIONS REQUIRED
+
     private var actionRequiredSection: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             sectionHeader(title: "Action Required", icon: "exclamationmark.circle.fill")
             
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: Theme.Spacing.md)], spacing: Theme.Spacing.md) {
-                statusCard(title: "SLA Breaches", count: slaBreachesCount, color: .red, icon: "timer", subtext: slaBreachesCount == 0 ? "No overdue SLA" : "Requires attention")
-                statusCard(title: "Fraud Alerts", count: riskVM.fraudFlagCount, color: .orange, icon: "shield.righthalf.filled", subtext: riskVM.fraudFlagCount == 0 ? "No derived flags" : "Review signals")
-                statusCard(title: "Policy Violations", count: policyViolationCount, color: .orange, icon: "doc.on.doc.fill", subtext: policyViolationCount == 0 ? "Within policy thresholds" : "FOIR/LTV threshold breach")
-                statusCard(title: "Stuck Applications", count: stuckApplicationsCount, color: .yellow, icon: "hourglass.badge.plus", subtext: stuckApplicationsCount == 0 ? "No stuck apps" : "Under review > 3 days")
+                // SLA Breaches: Blue if 0, Red if > 0
+                statusCard(title: "SLA Breaches",
+                           count: slaBreachesCount,
+                           color: slaBreachesCount > 0 ? .red : Theme.Colors.adaptivePrimary(colorScheme),
+                           icon: "timer",
+                           subtext: slaBreachesCount == 0 ? "No overdue SLA" : "Requires attention")
+                
+                // Fraud Alerts: Blue if 0, Orange if > 0
+                statusCard(title: "Fraud Alerts",
+                           count: riskVM.fraudFlagCount,
+                           color: riskVM.fraudFlagCount > 0 ? .orange : Theme.Colors.adaptivePrimary(colorScheme),
+                           icon: "shield.righthalf.filled",
+                           subtext: riskVM.fraudFlagCount == 0 ? "No derived flags" : "Review signals")
+                
+                // Policy Violations: Blue if 0, Orange if > 0
+                statusCard(title: "Policy Violations",
+                           count: policyViolationCount,
+                           color: policyViolationCount > 0 ? .orange : Theme.Colors.adaptivePrimary(colorScheme),
+                           icon: "doc.on.doc.fill",
+                           subtext: policyViolationCount == 0 ? "Within policy thresholds" : "FOIR/LTV threshold breach")
+                
+                // Stuck Applications: Blue if 0, Yellow if > 0
+                statusCard(title: "Stuck Applications",
+                           count: stuckApplicationsCount,
+                           color: stuckApplicationsCount > 0 ? .yellow : Theme.Colors.adaptivePrimary(colorScheme),
+                           icon: "hourglass.badge.plus",
+                           subtext: stuckApplicationsCount == 0 ? "No stuck apps" : "Under review > 3 days")
             }
         }
         .opacity(isAnimating ? 1 : 0)
@@ -130,8 +162,8 @@ struct AdminDashboardView: View {
             
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: Theme.Spacing.md)], spacing: Theme.Spacing.md) {
                 statusCard(title: "Processing Time", value: "4.2h", color: Theme.Colors.adaptivePrimary(colorScheme), icon: "clock.fill", trend: "↓ 8%", trendPositive: true, subtext: "Limit: 12h")
-                statusCard(title: "Applications Today", value: "\(applicationsTodayCount)", color: .purple, icon: "doc.text.fill", subtext: "From backend feed")
-                statusCard(title: "Active Users", value: "\(adminVM.activeUsersCount)", color: .green, icon: "person.2.fill", subtext: "From admin directory")
+                statusCard(title: "Applications Today", value: "\(applicationsTodayCount)", color: Theme.Colors.adaptivePrimary(colorScheme), icon: "doc.text.fill", subtext: "From backend feed")
+                statusCard(title: "Active Users", value: "\(adminVM.activeUsersCount)", color: Theme.Colors.adaptivePrimary(colorScheme), icon: "person.2.fill", subtext: "From admin directory")
                 statusCard(title: "SLA Compliance", value: "\(slaCompliancePercent)%", color: Theme.Colors.adaptivePrimary(colorScheme), icon: "checkmark.shield.fill", subtext: "Target: 95%")
             }
         }
@@ -169,14 +201,14 @@ struct AdminDashboardView: View {
             default: break
             }
         }) {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .top) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(accent.opacity(0.10))
-                            .frame(width: 36, height: 36)
+                            .fill(accent.opacity(0.18))
+                            .frame(width: 44, height: 44)
                         Image(systemName: icon)
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 20, weight: .bold))
                             .foregroundStyle(accent)
                     }
                     Spacer()
@@ -196,22 +228,24 @@ struct AdminDashboardView: View {
                             .foregroundStyle(Color(.tertiaryLabel))
                     }
                 }
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(value ?? "\(count ?? 0)")
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
                         .foregroundStyle(accent)
                         .contentTransition(.numericText())
                     Text(title)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(.primary)
                     if let subtext = subtext {
                         Text(subtext)
-                            .font(.system(size: 11))
-                            .foregroundStyle(.tertiary)
+                            .font(.system(size: 13))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
-            .padding(12)
+            .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Theme.Colors.adaptiveSurface(colorScheme))
             .clipShape(RoundedRectangle(cornerRadius: 16))
@@ -589,11 +623,11 @@ struct AdminDashboardView: View {
 extension AdminDashboardView {
     func sectionHeader(title: String, icon: String) -> some View {
         HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
+//            Image(systemName: icon)
+//                .font(.system(size: 14, weight: .bold))
+//                .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
             Text(title.uppercased())
-                .font(.system(size: 11, weight: .bold))
+                .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(.secondary)
                 .tracking(0.7)
         }

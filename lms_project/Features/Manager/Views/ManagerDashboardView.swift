@@ -55,7 +55,6 @@ struct ManagerDashboardView: View {
                 bg.ignoresSafeArea()
                 ScrollView {
                     VStack(spacing: 20) {
-                        greetingBar
                         actionRequiredSection
                         portfolioHealthSection
                         disbursementSection
@@ -66,7 +65,7 @@ struct ManagerDashboardView: View {
                     .padding(.bottom, 28)
                 }
             }
-            .navigationTitle("Dashboard")
+            .navigationTitle(greetingText)
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -80,37 +79,6 @@ struct ManagerDashboardView: View {
         }
     }
 
-    // MARK: — Greeting Bar
-
-    private var greetingBar: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(greetingText)
-                    .font(Theme.Typography.titleLarge)
-                HStack(spacing: 5) {
-                    Image(systemName: "building.2.fill")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(primary)
-                    Text(authVM.currentUser?.branch ?? "Branch")
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            Spacer()
-            HStack(spacing: 5) {
-                Circle().fill(Color.green).frame(width: 6, height: 6)
-                Text("LIVE")
-                    .font(Theme.Typography.caption2)
-                    .foregroundStyle(Color.green)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(Color.green.opacity(0.10))
-            .clipShape(Capsule())
-        }
-        .opacity(isAnimating ? 1 : 0)
-    }
-
     private var greetingText: String {
         let name   = authVM.currentUser?.name.split(separator: " ").first.map(String.init) ?? "Manager"
         let hour   = Calendar.current.component(.hour, from: Date())
@@ -122,47 +90,53 @@ struct ManagerDashboardView: View {
     // MARK: — SECTION 1 · Action Required
     // ─────────────────────────────────────────────────────────────────────────
 
+    // MARK: — SECTION 1 · Action Required
+
     private var actionRequiredSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(title: "Action Required", icon: "exclamationmark.circle.fill")
+            VStack(alignment: .leading, spacing: 12) {
+                sectionHeader(title: "Action Required", icon: "exclamationmark.circle.fill")
 
-            LazyVGrid(columns: fourColGrid, spacing: 10) {
-                actionCard(
-                    title:   "Pending",
-                    count:   pendingCount,
-                    icon:    "clock.fill",
-                    caption: pendingCount == 0 ? "Queue clear" : "Awaiting review",
-                    accent:  primary
-                ) { navigateToApprovals(status: .underReview) }
+                LazyVGrid(columns: fourColGrid, spacing: 10) {
+                    // Pending: Blue if 0, Brand Primary if > 0
+                    actionCard(
+                        title:   "Pending",
+                        count:   pendingCount,
+                        icon:    "clock.fill",
+                        caption: pendingCount == 0 ? "Queue clear" : "Awaiting review",
+                        accent:  pendingCount > 0 ? primary : Theme.Colors.adaptivePrimary(colorScheme)
+                    ) { navigateToApprovals(filter: .pending) }
 
-                actionCard(
-                    title:   "Near SLA",
-                    count:   nearSLACount,
-                    icon:    "clock.badge.exclamationmark.fill",
-                    caption: nearSLACount == 0 ? "All within SLA" : "Nearing deadline",
-                    accent:  primary
-                ) { navigateToApprovals(sla: .urgent) }
+                    // Near SLA: Blue if 0, Brand Primary if > 0
+                    actionCard(
+                        title:   "Near SLA",
+                        count:   nearSLACount,
+                        icon:    "clock.badge.exclamationmark.fill",
+                        caption: nearSLACount == 0 ? "All within SLA" : "Nearing deadline",
+                        accent:  nearSLACount > 0 ? primary : Theme.Colors.adaptivePrimary(colorScheme)
+                    ) { navigateToApprovals(filter: .nearSLA) }
 
-                actionCard(
-                    title:   "Risky",
-                    count:   highRiskCount,
-                    icon:    "shield.fill",
-                    caption: highRiskCount == 0 ? "No flags" : "Needs scrutiny",
-                    accent:  critical
-                ) { navigateToApprovals(risk: .high) }
+                    // Risky: Blue if 0, Critical Red if > 0
+                    actionCard(
+                        title:   "Risky",
+                        count:   highRiskCount,
+                        icon:    "shield.fill",
+                        caption: highRiskCount == 0 ? "No flags" : "Needs scrutiny",
+                        accent:  highRiskCount > 0 ? critical : Theme.Colors.adaptivePrimary(colorScheme)
+                    ) { navigateToApprovals(filter: .risky) }
 
-                actionCard(
-                    title:   "Overdue",
-                    count:   overdueCount,
-                    icon:    "calendar.badge.exclamationmark",
-                    caption: overdueCount == 0 ? "None overdue" : "Past due date",
-                    accent:  critical
-                ) { navigateToApprovals(sla: .urgent) }
+                    // Overdue: Blue if 0, Critical Red if > 0
+                    actionCard(
+                        title:   "Overdue",
+                        count:   overdueCount,
+                        icon:    "calendar.badge.exclamationmark",
+                        caption: overdueCount == 0 ? "None overdue" : "Past due date",
+                        accent:  overdueCount > 0 ? critical : Theme.Colors.adaptivePrimary(colorScheme)
+                    ) { navigateToApprovals(filter: .overdue) }
+                }
             }
+            .opacity(isAnimating ? 1 : 0)
+            .offset(y: isAnimating ? 0 : 14)
         }
-        .opacity(isAnimating ? 1 : 0)
-        .offset(y: isAnimating ? 0 : 14)
-    }
 
     @ViewBuilder
     private func actionCard(
@@ -178,10 +152,10 @@ struct ManagerDashboardView: View {
                 HStack(alignment: .top) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(accent.opacity(0.10))
-                            .frame(width: 32, height: 32)
+                            .fill(accent.opacity(0.18))
+                            .frame(width: 44, height: 44)
                         Image(systemName: icon)
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: 20, weight: .bold))
                             .foregroundStyle(accent)
                     }
                     Spacer()
@@ -189,20 +163,22 @@ struct ManagerDashboardView: View {
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(Color(.tertiaryLabel))
                 }
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("\(count)")
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .font(.system(size: 36, weight: .bold, design: .rounded))
                         .foregroundStyle(accent)
                         .contentTransition(.numericText())
                     Text(title)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(.primary)
                     Text(caption)
-                        .font(.system(size: 11))
+                        .font(.system(size: 13))
                         .foregroundStyle(.tertiary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .padding(12)
+            .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(surface)
             .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
@@ -259,24 +235,24 @@ struct ManagerDashboardView: View {
     private func healthCard(label: String, value: String, badge: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(label)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
                 .tracking(0.3)
             Text(value)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .font(.system(size: 24, weight: .bold, design: .rounded))
                 .foregroundStyle(color)
                 .minimumScaleFactor(0.55)
                 .lineLimit(1)
             Text(badge)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(color)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
                 .background(color.opacity(0.10))
                 .clipShape(Capsule())
         }
-        .padding(12)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(surface)
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
@@ -465,12 +441,12 @@ struct ManagerDashboardView: View {
     private func npaTypeCard(type: LoanType, npa: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(type.displayName)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 14, weight: .bold))
                 .foregroundStyle(.primary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Text("\(npa)%")
-                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundStyle(color)
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
@@ -500,11 +476,11 @@ struct ManagerDashboardView: View {
 
     private func sectionHeader(title: String, icon: String) -> some View {
         HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(primary)
+//            Image(systemName: icon)
+//                .font(.system(size: 12, weight: .bold))
+//                .foregroundStyle(primary)
             Text(title.uppercased())
-                .font(.system(size: 11, weight: .bold))
+                .font(.system(size: 16, weight: .bold))
                 .foregroundStyle(.secondary)
                 .tracking(0.7)
         }
@@ -512,15 +488,9 @@ struct ManagerDashboardView: View {
 
     // MARK: — Navigation Helpers
 
-    private func navigateToApprovals(
-        status: ApplicationStatus? = nil,
-        risk:   RiskLevel?         = nil,
-        sla:    SLAStatus?         = nil
-    ) {
-        applicationsVM.filterStatus = status
-        applicationsVM.filterRisk   = risk
-        applicationsVM.filterSLA    = sla
-        selectedTab = 1
+    private func navigateToApprovals(filter: ApplicationsViewModel.DashboardFilterType) {
+        applicationsVM.activeDashboardFilter = filter
+        selectedTab = 1 // Switch to Approvals Tab
     }
 
     // MARK: — Disbursement Chart Data

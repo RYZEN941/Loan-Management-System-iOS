@@ -37,7 +37,7 @@ struct LODashboardView: View {
                 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 20) {
-                        greetingBar
+//                        greetingBar
                         portfolioOverviewSection
                         performanceTrendSection
                         recentApplicationsSection
@@ -47,7 +47,7 @@ struct LODashboardView: View {
                     .padding(.bottom, 28)
                 }
             }
-            .navigationTitle("Dashboard")
+            .navigationTitle(greetingText)
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -63,34 +63,34 @@ struct LODashboardView: View {
 
     // MARK: — Greeting Bar (Unified)
 
-    private var greetingBar: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(greetingText)
-                    .font(Theme.Typography.titleLarge)
-                HStack(spacing: 5) {
-                    Image(systemName: "mappin.and.ellipse")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(primary)
-                    Text(authVM.currentUser?.branch ?? "Branch")
-                        .font(Theme.Typography.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            Spacer()
-            HStack(spacing: 5) {
-                Circle().fill(Color.blue).frame(width: 6, height: 6)
-                Text(todayFormatted.uppercased())
-                    .font(Theme.Typography.caption2)
-                    .foregroundStyle(primary)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(primary.opacity(0.10))
-            .clipShape(Capsule())
-        }
-        .opacity(isAnimating ? 1 : 0)
-    }
+//    private var greetingBar: some View {
+//        HStack(alignment: .center) {
+//            VStack(alignment: .leading, spacing: 3) {
+//                Text(greetingText)
+//                    .font(Theme.Typography.titleLarge)
+//                HStack(spacing: 5) {
+//                    Image(systemName: "mappin.and.ellipse")
+//                        .font(.system(size: 11, weight: .semibold))
+//                        .foregroundStyle(primary)
+//                    Text(authVM.currentUser?.branch ?? "Branch")
+//                        .font(Theme.Typography.caption)
+//                        .foregroundStyle(.secondary)
+//                }
+//            }
+//            Spacer()
+//            HStack(spacing: 5) {
+//                Circle().fill(Color.blue).frame(width: 6, height: 6)
+//                Text(todayFormatted.uppercased())
+//                    .font(Theme.Typography.caption2)
+//                    .foregroundStyle(primary)
+//            }
+//            .padding(.horizontal, 10)
+//            .padding(.vertical, 6)
+//            .background(primary.opacity(0.10))
+//            .clipShape(Capsule())
+//        }
+//        .opacity(isAnimating ? 1 : 0)
+//    }
 
     private var greetingText: String {
         let name = authVM.currentUser?.name.split(separator: " ").first.map(String.init) ?? "Officer"
@@ -107,15 +107,36 @@ struct LODashboardView: View {
 
     // MARK: — Portfolio Overview (Updated to match Health Cards)
 
+    // MARK: — Portfolio Overview
+
     private var portfolioOverviewSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             sectionHeader(title: "Portfolio Overview", icon: "briefcase.fill")
 
             LazyVGrid(columns: responsiveGrid, spacing: 10) {
-                healthCard(label: "Active Cases", value: "\(assignedCount)", badge: "Assigned", color: primary)
-                healthCard(label: "Pending Review", value: "\(pendingReviewCount)", badge: "In Queue", color: warning)
-                healthCard(label: "High Risk", value: "\(highRiskCount)", badge: "Critical", color: critical)
-                healthCard(label: "Approved", value: "\(approvedCount)", badge: "Life-time", color: success)
+                // Active Cases: Blue if 0, Brand Primary if > 0
+                healthCard(label: "Active Cases",
+                           value: "\(assignedCount)",
+                           badge: "Assigned",
+                           color: assignedCount > 0 ? primary : Theme.Colors.adaptivePrimary(colorScheme))
+                
+                // Pending Review: Blue if 0, Warning Orange if > 0
+                healthCard(label: "Pending Review",
+                           value: "\(pendingReviewCount)",
+                           badge: "In Queue",
+                           color: pendingReviewCount > 0 ? warning : Theme.Colors.adaptivePrimary(colorScheme))
+                
+                // High Risk: Blue if 0, Critical Red if > 0
+                healthCard(label: "High Risk",
+                           value: "\(highRiskCount)",
+                           badge: "Critical",
+                           color: highRiskCount > 0 ? critical : Theme.Colors.adaptivePrimary(colorScheme))
+                
+                // Approved: Always Success Green or Blue if 0
+                healthCard(label: "Approved",
+                           value: "\(approvedCount)",
+                           badge: "Life-time",
+                           color: approvedCount > 0 ? success : Theme.Colors.adaptivePrimary(colorScheme))
             }
         }
         .opacity(isAnimating ? 1 : 0)
@@ -125,29 +146,29 @@ struct LODashboardView: View {
     private func healthCard(label: String, value: String, badge: String, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(label)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
                 .tracking(0.3)
             Text(value)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .font(.system(size: 26, weight: .bold, design: .rounded))
                 .foregroundStyle(color)
                 .lineLimit(1)
             Text(badge)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(color)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
                 .background(color.opacity(0.10))
                 .clipShape(Capsule())
         }
-        .padding(12)
+        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(surface)
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(border, lineWidth: 1)
+                .stroke(border, lineWidth: 1.5)
         )
     }
 
@@ -265,8 +286,8 @@ struct LODashboardView: View {
 
     private func sectionHeader(title: String, icon: String) -> some View {
         HStack(spacing: 6) {
-            Image(systemName: icon).font(.system(size: 12, weight: .bold)).foregroundStyle(primary)
-            Text(title.uppercased()).font(.system(size: 11, weight: .bold)).foregroundStyle(.secondary).tracking(0.7)
+//            Image(systemName: icon).font(.system(size: 12, weight: .bold)).foregroundStyle(primary)
+            Text(title.uppercased()).font(.system(size: 16, weight: .bold)).foregroundStyle(.secondary).tracking(0.7)
         }
     }
 }

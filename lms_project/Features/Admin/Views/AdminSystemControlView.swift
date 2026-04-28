@@ -1046,9 +1046,6 @@ struct EditUserSheet: View {
                         TextField("Region", text: $newBranchRegion)
                         TextField("City", text: $newBranchCity)
                     }
-                    Text("Name changes are not supported by the current backend employee update API.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
                 
                 Section("Account Details") {

@@ -62,11 +62,17 @@ struct ChatListView: View {
                                 Button {
                                     router.push(.chatConversation(roomID: room.id))
                                 } label: {
-                                    let otherUserID = room.otherUserID(currentUserID: sessionStore.borrowerProfileId.isEmpty ? "" : sessionStore.borrowerProfileId)
-                                    let participantName = viewModel.participantNames[otherUserID] ?? "User"
+                                    let participantName = viewModel.participantName(for: room)
                                     ChatRoomPreviewRow(room: room, participantName: participantName)
+                                        .onAppear {
+                                            viewModel.loadMoreRoomsIfNeeded(currentRoom: room)
+                                        }
                                 }
                                 .buttonStyle(PlainButtonStyle())
+                            }
+                            if viewModel.isLoadingMoreRooms {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity)
                             }
                         }
                         .padding(.horizontal, 20)

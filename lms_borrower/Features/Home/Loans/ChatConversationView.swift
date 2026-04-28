@@ -10,18 +10,25 @@ class ChatConversationViewModel: ObservableObject {
     @Published var errorMessage: String? = nil
     @Published var participantName: String = "User"
     @Published var participantRole: String = ""
+    @Published var hasMoreMessages: Bool = true
+    @Published var isLoadingOlderMessages: Bool = false
 
     private let chatService: ChatServiceProtocol
     private let roomID: String
     private var currentUserID: String = ""
     private var messageStreamTask: Task<Void, Never>?
     private var lastMessageID: String? = nil
+    private var messagesOffset: Int = 0
+    private let messagePageSize: Int = 50
+    private var reconnectAttempt: Int = 0
+    private let maxReconnectDelaySeconds: UInt64 = 30
 
     init(roomID: String, chatService: ChatServiceProtocol = ServiceContainer.chatService) {
         self.roomID = roomID
         self.chatService = chatService
         self.currentUserID = Self.resolveCurrentUserID()
         loadMessages()
+        loadParticipantInfo()
         startStreaming()
     }
 
@@ -49,25 +56,54 @@ class ChatConversationViewModel: ObservableObject {
     func loadMessages() {
         isLoading = true
         errorMessage = nil
+        messagesOffset = 0
 
         Task {
             do {
                 let loadedMessages = try await chatService.listRoomMessages(
                     roomID: roomID,
-                    limit: 100,
+                    limit: messagePageSize,
                     offset: 0
                 )
-                if let last = loadedMessages.last {
-                    lastMessageID = last.id
-                }
+                let normalized = normalizeMessages(loadedMessages)
                 await MainActor.run {
-                    self.messages = loadedMessages.reversed()
+                    self.messages = normalized
+                    self.lastMessageID = normalized.last?.id
+                    self.hasMoreMessages = loadedMessages.count >= self.messagePageSize
+                    self.messagesOffset = loadedMessages.count
                     self.isLoading = false
                 }
             } catch {
                 await MainActor.run {
-                    self.errorMessage = error.localizedDescription
+                    self.handleChatError(error)
                     self.isLoading = false
+                }
+            }
+        }
+    }
+
+    func loadOlderMessages() {
+        guard !isLoadingOlderMessages, hasMoreMessages else { return }
+        isLoadingOlderMessages = true
+
+        Task {
+            do {
+                let olderMessages = try await chatService.listRoomMessages(
+                    roomID: roomID,
+                    limit: messagePageSize,
+                    offset: messagesOffset
+                )
+                await MainActor.run {
+                    self.messages = self.normalizeMessages(self.messages + olderMessages)
+                    self.lastMessageID = self.messages.last?.id
+                    self.messagesOffset += olderMessages.count
+                    self.hasMoreMessages = olderMessages.count >= self.messagePageSize
+                    self.isLoadingOlderMessages = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.handleChatError(error)
+                    self.isLoadingOlderMessages = false
                 }
             }
         }
@@ -78,27 +114,82 @@ class ChatConversationViewModel: ObservableObject {
     private func startStreaming() {
         messageStreamTask?.cancel()
         messageStreamTask = Task {
-            let stream = chatService.subscribeToRoomMessages(roomID: roomID, afterMessageID: lastMessageID)
+            while !Task.isCancelled {
+                let stream = chatService.subscribeToRoomMessages(roomID: roomID, afterMessageID: lastMessageID)
+                do {
+                    for try await event in stream {
+                        if Task.isCancelled { break }
 
-            do {
-                for try await event in stream {
-                    if Task.isCancelled { break }
-
-                    if !event.isHeartbeat, let newMessage = event.message {
-                        lastMessageID = newMessage.id
-                        await MainActor.run {
-                            if !self.messages.contains(where: { $0.id == newMessage.id }) {
-                                self.messages.append(newMessage)
+                        if !event.isHeartbeat, let newMessage = event.message {
+                            await MainActor.run {
+                                self.messages = self.normalizeMessages(self.messages + [newMessage])
+                                self.lastMessageID = self.messages.last?.id
                             }
                         }
                     }
-                }
-            } catch {
-                await MainActor.run {
-                    self.errorMessage = error.localizedDescription
+                    break
+                } catch {
+                    if Task.isCancelled { break }
+                    await MainActor.run {
+                        self.handleChatError(error)
+                    }
+                    await reconcileLatestMessages()
+                    reconnectAttempt += 1
+                    let delaySeconds = min(UInt64(1 << min(reconnectAttempt, 5)), maxReconnectDelaySeconds)
+                    try? await Task.sleep(nanoseconds: (delaySeconds * 1_000_000_000) + UInt64.random(in: 0...500_000_000))
                 }
             }
         }
+    }
+
+    private func reconcileLatestMessages() async {
+        do {
+            let recent = try await chatService.listRoomMessages(roomID: roomID, limit: messagePageSize, offset: 0)
+            await MainActor.run {
+                self.messages = self.normalizeMessages(self.messages + recent)
+                self.lastMessageID = self.messages.last?.id
+            }
+        } catch {
+            await MainActor.run {
+                self.handleChatError(error)
+            }
+        }
+    }
+
+    private func normalizeMessages(_ messages: [ChatMessage]) -> [ChatMessage] {
+        var byID: [String: ChatMessage] = [:]
+        for message in messages {
+            byID[message.id] = message
+        }
+        return byID.values.sorted {
+            if $0.createdAt != $1.createdAt { return $0.createdAt < $1.createdAt }
+            return $0.id < $1.id
+        }
+    }
+
+    private func loadParticipantInfo() {
+        Task {
+            do {
+                let rooms = try await chatService.listMyChatRooms(limit: 100, offset: 0)
+                guard let room = rooms.first(where: { $0.id == roomID }) else { return }
+                let otherID = room.otherUserID(currentUserID: currentUserID)
+                let users = try await chatService.listEligibleUsers(query: "", limit: 100, offset: 0)
+                let participant = users.first(where: { $0.id == otherID })
+                await MainActor.run {
+                    self.participantName = participant?.displayName ?? "User"
+                    self.participantRole = participant?.role.capitalized ?? ""
+                }
+            } catch {
+                // best-effort participant info only
+            }
+        }
+    }
+
+    private func handleChatError(_ error: Error) {
+        if let chatError = error as? ChatError, case .unauthenticated = chatError {
+            NotificationCenter.default.post(name: .sessionExpired, object: nil)
+        }
+        errorMessage = error.localizedDescription
     }
 
     // MARK: - Sending Messages
@@ -118,14 +209,12 @@ class ChatConversationViewModel: ObservableObject {
                     metadataJSON: nil
                 )
                 await MainActor.run {
-                    if !self.messages.contains(where: { $0.id == sentMessage.id }) {
-                        self.messages.append(sentMessage)
-                    }
-                    self.lastMessageID = sentMessage.id
+                    self.messages = self.normalizeMessages(self.messages + [sentMessage])
+                    self.lastMessageID = self.messages.last?.id
                 }
             } catch {
                 await MainActor.run {
-                    self.errorMessage = error.localizedDescription
+                    self.handleChatError(error)
                     self.inputText = text
                 }
             }
@@ -167,9 +256,18 @@ struct ChatConversationView: View {
                                 ChatScrollOffsetReader()
                                     .frame(height: 0)
                                 LazyVStack(spacing: 2) {
+                                    if viewModel.isLoadingOlderMessages {
+                                        ProgressView()
+                                            .padding(.vertical, 8)
+                                    }
                                     ForEach(viewModel.messages) { message in
                                         ChatBubble(message: message, isFromMe: viewModel.isCurrentUser(message.senderUserID))
                                             .id(message.id)
+                                            .onAppear {
+                                                if message.id == viewModel.messages.first?.id {
+                                                    viewModel.loadOlderMessages()
+                                                }
+                                            }
                                     }
                                 }
                                 .padding(.top, topInset + 62)

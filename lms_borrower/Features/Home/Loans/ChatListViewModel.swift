@@ -15,11 +15,15 @@ final class ChatListViewModel: ObservableObject {
     @Published var errorMessage: String? = nil
     @Published var searchQuery: String = ""
     @Published var participantNames: [String: String] = [:]
+    @Published var hasMoreRooms: Bool = true
+    @Published var isLoadingMoreRooms: Bool = false
 
     private let chatService: ChatServiceProtocol
     private var cancellables = Set<AnyCancellable>()
     private var currentUserID: String = ""
     private var searchDebounceTask: Task<Void, Never>?
+    private var roomsOffset: Int = 0
+    private let roomsPageSize: Int = 30
 
     init(chatService: ChatServiceProtocol = ServiceContainer.chatService) {
         self.chatService = chatService
@@ -38,25 +42,49 @@ final class ChatListViewModel: ObservableObject {
     // MARK: - Data Loading
 
     func loadChatRooms() {
-        isLoading = true
+        loadChatRooms(reset: true)
+    }
+
+    func loadChatRooms(reset: Bool) {
+        if reset {
+            isLoading = true
+            roomsOffset = 0
+            hasMoreRooms = true
+        } else {
+            guard hasMoreRooms, !isLoadingMoreRooms else { return }
+            isLoadingMoreRooms = true
+        }
         errorMessage = nil
 
         Task {
             do {
-                let rooms = try await chatService.listMyChatRooms(limit: 50, offset: 0)
+                let rooms = try await chatService.listMyChatRooms(limit: roomsPageSize, offset: roomsOffset)
                 let names = await resolveParticipantNames(for: rooms)
                 await MainActor.run {
-                    self.chatRooms = rooms
+                    if reset {
+                        self.chatRooms = rooms
+                    } else {
+                        self.chatRooms = self.mergeRooms(self.chatRooms + rooms)
+                    }
                     self.participantNames.merge(names) { _, new in new }
+                    self.roomsOffset += rooms.count
+                    self.hasMoreRooms = rooms.count >= self.roomsPageSize
                     self.isLoading = false
+                    self.isLoadingMoreRooms = false
                 }
             } catch {
                 await MainActor.run {
                     self.errorMessage = error.localizedDescription
                     self.isLoading = false
+                    self.isLoadingMoreRooms = false
                 }
             }
         }
+    }
+
+    func loadMoreRoomsIfNeeded(currentRoom: ChatRoom) {
+        guard let lastID = chatRooms.last?.id, currentRoom.id == lastID else { return }
+        loadChatRooms(reset: false)
     }
 
     private func resolveParticipantNames(for rooms: [ChatRoom]) async -> [String: String] {
@@ -138,7 +166,25 @@ final class ChatListViewModel: ObservableObject {
         }
     }
 
+    func participantName(for room: ChatRoom) -> String {
+        let otherUserID = room.otherUserID(currentUserID: currentUserID)
+        return participantNames[otherUserID] ?? "User"
+    }
+
     func refresh() {
         loadChatRooms()
+    }
+
+    private func mergeRooms(_ rooms: [ChatRoom]) -> [ChatRoom] {
+        var byID: [String: ChatRoom] = [:]
+        for room in rooms {
+            byID[room.id] = room
+        }
+        return byID.values.sorted {
+            let l = $0.latestMessage?.createdAt ?? $0.updatedAt
+            let r = $1.latestMessage?.createdAt ?? $1.updatedAt
+            if l != r { return l > r }
+            return $0.id < $1.id
+        }
     }
 }

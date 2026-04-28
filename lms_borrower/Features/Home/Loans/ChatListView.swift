@@ -169,21 +169,45 @@ struct NewChatSheet: View {
     @EnvironmentObject var router: AppRouter
     @State private var selectedUser: ChatUser?
     @State private var isCreating = false
+    @State private var sheetSearchQuery = ""
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
+            VStack(spacing: 0) {
+                HStack {
+                    Image(systemName: "magnifyingglass").foregroundColor(.secondary)
+                    TextField("Search by name, email, or phone...", text: $sheetSearchQuery)
+                        .onChange(of: sheetSearchQuery) { _, _ in
+                            viewModel.searchQuery = sheetSearchQuery
+                            viewModel.searchEligibleUsers()
+                        }
+                    if !sheetSearchQuery.isEmpty {
+                        Button {
+                            sheetSearchQuery = ""
+                            viewModel.searchQuery = ""
+                            viewModel.eligibleUsers = []
+                        } label: {
+                            Image(systemName: "xmark.circle.fill").foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .padding(12)
+                .background(Color.secondary.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+
                 if viewModel.eligibleUsers.isEmpty {
                     VStack(spacing: 12) {
                         Image(systemName: "magnifyingglass")
                             .font(.system(size: 44))
                             .foregroundColor(.secondary)
-                        Text("Search for users to start a conversation")
+                        Text(sheetSearchQuery.isEmpty ? "Search for users to start a conversation" : "No users found")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                     }
-                    .padding(.vertical, 40)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     List {
                         ForEach(viewModel.eligibleUsers) { user in
@@ -244,12 +268,14 @@ struct NewChatSheet: View {
                 await MainActor.run {
                     isCreating = false
                     dismiss()
-                    router.push(.chatConversation(roomID: room.id))
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        router.push(.chatConversation(roomID: room.id))
+                    }
                 }
             } catch {
                 await MainActor.run {
                     isCreating = false
-                    // errorMessage is set by viewModel
+                    viewModel.errorMessage = error.localizedDescription
                 }
             }
         }

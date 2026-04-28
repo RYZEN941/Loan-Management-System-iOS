@@ -971,6 +971,53 @@ struct UploadedDocFile: Identifiable {
     let uploadedAt: Date
 }
 
+
+// MARK: - 1. Add the Data Model here
+struct NPADataPoint: Identifiable {
+    let id = UUID()
+    let category: String
+    let npaCount: Int
+    let totalCount: Int
+    var npaRatio: Double {
+        totalCount > 0 ? (Double(npaCount) / Double(totalCount)) * 100 : 0
+    }
+}
+
+// MARK: - 2. Add the Extension here
+extension ApplicationsViewModel {
+    /// Identify NPA Loans (Overdue > 90 days)
+    var npaLoans: [LoanApplication] {
+        applications.filter { $0.slaDeadline.daysRemaining < -90 }
+    }
+
+    /// Group by Loan Type
+    var npaByLoanType: [NPADataPoint] {
+        let groups = Dictionary(grouping: applications, by: { $0.loan.type.displayName })
+        return groups.map { (key, apps) in
+            NPADataPoint(category: key,
+                         npaCount: apps.filter { $0.slaDeadline.daysRemaining < -90 }.count,
+                         totalCount: apps.count)
+        }.sorted { $0.npaCount > $1.npaCount }
+    }
+
+    /// Group by Tenure Buckets
+    var npaByTenure: [NPADataPoint] {
+        func getBucket(_ months: Int) -> String {
+            if months <= 12 { return "0-1 yr" }
+            if months <= 36 { return "1-3 yr" }
+            return "3+ yr"
+        }
+        let groups = Dictionary(grouping: applications, by: { getBucket($0.loan.tenure) })
+        return groups.map { (key, apps) in
+            NPADataPoint(category: key,
+                         npaCount: apps.filter { $0.slaDeadline.daysRemaining < -90 }.count,
+                         totalCount: apps.count)
+        }
+    }
+}
+
+
+
 private extension LoanProduct {
     var loanTypeForUI: LoanType {
         switch category {

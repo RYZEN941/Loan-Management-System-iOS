@@ -29,6 +29,8 @@ type AuthService interface {
 	GetMyProfile(ctx context.Context, req *authv1.GetMyProfileRequest) (*authv1.GetMyProfileResponse, error)
 	GetBorrowerProfile(ctx context.Context, req *authv1.GetBorrowerProfileRequest) (*authv1.BorrowerProfile, error)
 	GetUser(ctx context.Context, req *authv1.GetUserRequest) (*authv1.GetUserResponse, error)
+	GetOfficerProfileByUserID(ctx context.Context, req *authv1.GetUserRequest) (*authv1.OfficerProfile, error)
+	GetManagerProfileByUserID(ctx context.Context, req *authv1.GetUserRequest) (*authv1.ManagerProfile, error)
 	SearchBorrowerSignupStatus(ctx context.Context, req *authv1.SearchBorrowerSignupStatusRequest) (*authv1.SearchBorrowerSignupStatusResponse, error)
 	RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequest) (*authv1.AuthTokens, error)
 	Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv1.LogoutResponse, error)
@@ -109,6 +111,14 @@ func (h *AuthHandler) GetBorrowerProfile(ctx context.Context, req *authv1.GetBor
 
 func (h *AuthHandler) GetUser(ctx context.Context, req *authv1.GetUserRequest) (*authv1.GetUserResponse, error) {
 	return h.authService.GetUser(ctx, req)
+}
+
+func (h *AuthHandler) GetOfficerProfileByUserID(ctx context.Context, req *authv1.GetUserRequest) (*authv1.OfficerProfile, error) {
+	return h.authService.GetOfficerProfileByUserID(ctx, req)
+}
+
+func (h *AuthHandler) GetManagerProfileByUserID(ctx context.Context, req *authv1.GetUserRequest) (*authv1.ManagerProfile, error) {
+	return h.authService.GetManagerProfileByUserID(ctx, req)
 }
 
 func (h *AuthHandler) SearchBorrowerSignupStatus(ctx context.Context, req *authv1.SearchBorrowerSignupStatusRequest) (*authv1.SearchBorrowerSignupStatusResponse, error) {

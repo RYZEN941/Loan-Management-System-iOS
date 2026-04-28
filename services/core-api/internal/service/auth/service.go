@@ -49,6 +49,8 @@ type Service interface {
 	GetMyProfile(ctx context.Context, req *authv1.GetMyProfileRequest) (*authv1.GetMyProfileResponse, error)
 	GetBorrowerProfile(ctx context.Context, req *authv1.GetBorrowerProfileRequest) (*authv1.BorrowerProfile, error)
 	GetUser(ctx context.Context, req *authv1.GetUserRequest) (*authv1.GetUserResponse, error)
+	GetOfficerProfileByUserID(ctx context.Context, req *authv1.GetUserRequest) (*authv1.OfficerProfile, error)
+	GetManagerProfileByUserID(ctx context.Context, req *authv1.GetUserRequest) (*authv1.ManagerProfile, error)
 	SearchBorrowerSignupStatus(ctx context.Context, req *authv1.SearchBorrowerSignupStatusRequest) (*authv1.SearchBorrowerSignupStatusResponse, error)
 	RefreshToken(ctx context.Context, req *authv1.RefreshTokenRequest) (*authv1.AuthTokens, error)
 	Logout(ctx context.Context, req *authv1.LogoutRequest) (*authv1.LogoutResponse, error)
@@ -955,13 +957,9 @@ func (s *service) GetBorrowerProfile(ctx context.Context, req *authv1.GetBorrowe
 }
 
 func (s *service) GetUser(ctx context.Context, req *authv1.GetUserRequest) (*authv1.GetUserResponse, error) {
-	targetUserIDStr := strings.TrimSpace(req.GetUserId())
-	if targetUserIDStr == "" {
-		return nil, status.Error(codes.InvalidArgument, "user_id is required")
-	}
-	targetUserID, err := uuid.Parse(targetUserIDStr)
+	targetUserID, err := parseUserIDFromRequest(req)
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "user_id must be a valid uuid")
+		return nil, err
 	}
 
 	user, err := s.queries.GetUserByID(ctx, pgtype.UUID{Bytes: targetUserID, Valid: true})
@@ -982,6 +980,66 @@ func (s *service) GetUser(ctx context.Context, req *authv1.GetUserRequest) (*aut
 			CreatedAt: timeToString(user.CreatedAt),
 		},
 	}, nil
+}
+
+func (s *service) GetOfficerProfileByUserID(ctx context.Context, req *authv1.GetUserRequest) (*authv1.OfficerProfile, error) {
+	targetUserID, err := parseUserIDFromRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	profile, err := s.queries.GetOfficerProfileByUserID(ctx, pgtype.UUID{Bytes: targetUserID, Valid: true})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, status.Error(codes.NotFound, "officer profile not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to fetch officer profile")
+	}
+
+	return &authv1.OfficerProfile{
+		ProfileId:      profile.ID.String(),
+		Name:           profile.Name,
+		Branch:         s.loadBranchProfile(ctx, profile.BranchID),
+		CreatedAt:      timeToString(profile.CreatedAt),
+		EmployeeSerial: profile.EmployeeSerial,
+		EmployeeCode:   nullableTextToString(profile.EmployeeCode),
+	}, nil
+}
+
+func (s *service) GetManagerProfileByUserID(ctx context.Context, req *authv1.GetUserRequest) (*authv1.ManagerProfile, error) {
+	targetUserID, err := parseUserIDFromRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
+	profile, err := s.queries.GetManagerProfileByUserID(ctx, pgtype.UUID{Bytes: targetUserID, Valid: true})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, status.Error(codes.NotFound, "manager profile not found")
+		}
+		return nil, status.Error(codes.Internal, "failed to fetch manager profile")
+	}
+
+	return &authv1.ManagerProfile{
+		ProfileId:      profile.ID.String(),
+		Name:           profile.Name,
+		Branch:         s.loadBranchProfile(ctx, profile.BranchID),
+		CreatedAt:      timeToString(profile.CreatedAt),
+		EmployeeSerial: profile.EmployeeSerial,
+		EmployeeCode:   nullableTextToString(profile.EmployeeCode),
+	}, nil
+}
+
+func parseUserIDFromRequest(req *authv1.GetUserRequest) (uuid.UUID, error) {
+	targetUserIDStr := strings.TrimSpace(req.GetUserId())
+	if targetUserIDStr == "" {
+		return uuid.Nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+	targetUserID, err := uuid.Parse(targetUserIDStr)
+	if err != nil {
+		return uuid.Nil, status.Error(codes.InvalidArgument, "user_id must be a valid uuid")
+	}
+	return targetUserID, nil
 }
 
 func (s *service) SearchBorrowerSignupStatus(ctx context.Context, req *authv1.SearchBorrowerSignupStatusRequest) (*authv1.SearchBorrowerSignupStatusResponse, error) {

@@ -30,6 +30,8 @@ service AuthService {
   rpc GetMyProfile(GetMyProfileRequest) returns (GetMyProfileResponse);
   rpc GetBorrowerProfile(GetBorrowerProfileRequest) returns (BorrowerProfile);
   rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc GetOfficerProfileByUserID(GetUserRequest) returns (OfficerProfile);
+  rpc GetManagerProfileByUserID(GetUserRequest) returns (ManagerProfile);
   rpc SearchBorrowerSignupStatus(SearchBorrowerSignupStatusRequest) returns (SearchBorrowerSignupStatusResponse);
   rpc RefreshToken(RefreshTokenRequest) returns (AuthTokens);
   rpc Logout(LogoutRequest) returns (LogoutResponse);

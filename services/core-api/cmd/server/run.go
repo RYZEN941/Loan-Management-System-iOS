@@ -103,6 +103,8 @@ func Run() error {
 		"/auth.v1.AuthService/VerifyForgotPasswordOTPs":                  {},
 		"/auth.v1.AuthService/ResetForgotPassword":                       {},
 		"/auth.v1.AuthService/RefreshToken":                              {},
+		"/auth.v1.AuthService/GetOfficerProfileByUserID":                 {},
+		"/auth.v1.AuthService/GetManagerProfileByUserID":                 {},
 		"/grpc.health.v1.Health/Check":                                   {},
 		"/grpc.health.v1.Health/Watch":                                   {},
 		"/grpc.reflection.v1.ServerReflection/ServerReflectionInfo":      {},
@@ -112,7 +114,7 @@ func Run() error {
 	rbacPolicy := grpcinterceptors.RBACPolicy{
 		"/admin.v1.AdminService/CreateEmployeeAccount":                {"admin"},
 		"/admin.v1.AdminService/ListEmployeeAccounts":                 {"admin"},
-		"/admin.v1.AdminService/ListBranchOfficers":                  {"manager", "admin"},
+		"/admin.v1.AdminService/ListBranchOfficers":                   {"manager", "admin"},
 		"/admin.v1.AdminService/CreateDstAccount":                     {"manager"},
 		"/admin.v1.AdminService/UpdateDstAccount":                     {"manager", "admin"},
 		"/admin.v1.AdminService/CreateBankBranch":                     {"admin"},

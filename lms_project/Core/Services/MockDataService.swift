@@ -173,19 +173,19 @@ class MockDataService: LMSDataService {
     
     func fetchConversations() -> [Conversation] {
         return [
-            Conversation(id: "CONV-001", participantName: "Rajesh Kumar", participantRole: "Borrower", participantEmail: "rajesh.kumar@email.com",
+            Conversation(id: "CONV-001", participantUserID: "BOR-001", participantName: "Rajesh Kumar", participantRole: "Borrower", participantEmail: "rajesh.kumar@email.com",
                          lastMessage: "I have uploaded the bank statement.", lastMessageTime: Date().addingTimeInterval(-3600),
                          unreadCount: 2, isOnline: true),
-            Conversation(id: "CONV-002", participantName: "Priya Sharma", participantRole: "Borrower", participantEmail: "priya.sharma@email.com",
+            Conversation(id: "CONV-002", participantUserID: "BOR-002", participantName: "Priya Sharma", participantRole: "Borrower", participantEmail: "priya.sharma@email.com",
                          lastMessage: "When will I receive an update?", lastMessageTime: Date().addingTimeInterval(-7200),
                          unreadCount: 1, isOnline: false),
-            Conversation(id: "CONV-003", participantName: "Neha Kapoor", participantRole: "Loan Officer", participantEmail: "neha.kapoor@bank.com",
+            Conversation(id: "CONV-003", participantUserID: "LO-002", participantName: "Neha Kapoor", participantRole: "Loan Officer", participantEmail: "neha.kapoor@bank.com",
                          lastMessage: "Can you review APP-2024-005?", lastMessageTime: Date().addingTimeInterval(-14400),
                          unreadCount: 0, isOnline: true),
-            Conversation(id: "CONV-004", participantName: "Vikram Desai", participantRole: "Borrower", participantEmail: "vikram.desai@email.com",
+            Conversation(id: "CONV-004", participantUserID: "BOR-003", participantName: "Vikram Desai", participantRole: "Borrower", participantEmail: "vikram.desai@email.com",
                          lastMessage: "Thank you for the update.", lastMessageTime: Date().addingTimeInterval(-86400),
                          unreadCount: 0, isOnline: false),
-            Conversation(id: "CONV-005", participantName: "Ravi Shankar", participantRole: "Loan Officer", participantEmail: "ravi.shankar@bank.com",
+            Conversation(id: "CONV-005", participantUserID: "LO-003", participantName: "Ravi Shankar", participantRole: "Loan Officer", participantEmail: "ravi.shankar@bank.com",
                          lastMessage: "Meeting at 3 PM today.", lastMessageTime: Date().addingTimeInterval(-28800),
                          unreadCount: 0, isOnline: true)
         ]

@@ -4,9 +4,6 @@
 //
 
 import SwiftUI
-import PhotosUI
-import UniformTypeIdentifiers
-import UIKit
 
 struct LOMessagesView: View {
 
@@ -24,11 +21,6 @@ struct LOMessagesView: View {
     @Binding var showProfile: Bool
 
     @State private var showQuickReplies      = false
-    @State private var showAttachmentOptions = false
-    @State private var showPhotoPicker       = false
-    @State private var showFileImporter      = false
-    @State private var showCamera            = false
-    @State private var selectedPhoto: PhotosPickerItem?
     @State private var sidebarCollapsed      = false
     @State private var selectedChip: MsgChip = .all
 
@@ -72,8 +64,7 @@ struct LOMessagesView: View {
                 // Left: new conversation
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
-                        messagesVM.resetAddUser()
-                        messagesVM.showAddUser = true
+                        messagesVM.openNewConversationSheet()
                     } label: {
                         Image(systemName: "plus")
                     }
@@ -87,6 +78,9 @@ struct LOMessagesView: View {
             .onAppear {
                 messagesVM.loadConversations()
             }
+            .onDisappear {
+                messagesVM.pauseActiveSubscription()
+            }
             .sheet(isPresented: $messagesVM.showAddUser) {
                 NavigationStack {
                     VStack(spacing: Theme.Spacing.md) {
@@ -94,22 +88,52 @@ struct LOMessagesView: View {
                             .font(Theme.Typography.headline)
                             .padding(.top)
 
-                        TextField("Enter email or phone number", text: $messagesVM.addUserInput)
+                        TextField("Search name, email, phone", text: $messagesVM.addUserInput)
                             .textFieldStyle(RoundedBorderTextFieldStyle())
                             .padding(.horizontal)
+                            .onChange(of: messagesVM.addUserInput) { _, _ in
+                                messagesVM.searchEligibleUsers()
+                            }
+
+                        if messagesVM.isLoadingAddUserResults {
+                            ProgressView("Loading users...")
+                                .font(Theme.Typography.caption)
+                        }
+
+                        ScrollView {
+                            LazyVStack(spacing: 8) {
+                                ForEach(messagesVM.addUserResults) { user in
+                                    Button {
+                                        messagesVM.createConversation(with: user)
+                                    } label: {
+                                        HStack {
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(user.name)
+                                                    .font(Theme.Typography.subheadline)
+                                                    .foregroundStyle(.primary)
+                                                Text("\(user.role) · \(user.email)")
+                                                    .font(Theme.Typography.caption)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                            Spacer()
+                                            Image(systemName: "chevron.right")
+                                                .foregroundStyle(.tertiary)
+                                        }
+                                        .padding(12)
+                                        .background(Theme.Colors.adaptiveSurface(colorScheme))
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
 
                         if let error = messagesVM.addUserError {
                             Text(error)
                                 .font(Theme.Typography.caption)
                                 .foregroundColor(Theme.Colors.critical)
                         }
-
-                        Button("Add User") {
-                            messagesVM.submitAddUser()
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(Theme.Colors.primary)
-                        .padding(.top)
 
                         Spacer()
                     }
@@ -129,12 +153,21 @@ struct LOMessagesView: View {
     // MARK: - Conversation List (left panel)
 
     private var filteredConversations: [Conversation] {
+        let roleFiltered: [Conversation]
         switch selectedChip {
-        case .all:      return messagesVM.conversations
-        case .borrower: return messagesVM.conversations.filter { $0.participantRole.lowercased().contains("borrower") }
-        case .officer:  return messagesVM.conversations.filter { $0.participantRole.lowercased().contains("officer") }
-        case .dst:      return messagesVM.conversations.filter { $0.participantRole.lowercased().contains("dst") }
-        case .manager:  return messagesVM.conversations.filter { $0.participantRole.lowercased().contains("manager") }
+        case .all:      roleFiltered = messagesVM.conversations
+        case .borrower: roleFiltered = messagesVM.conversations.filter { $0.participantRole.lowercased().contains("borrower") }
+        case .officer:  roleFiltered = messagesVM.conversations.filter { $0.participantRole.lowercased().contains("officer") }
+        case .dst:      roleFiltered = messagesVM.conversations.filter { $0.participantRole.lowercased().contains("dst") }
+        case .manager:  roleFiltered = messagesVM.conversations.filter { $0.participantRole.lowercased().contains("manager") }
+        }
+
+        let search = messagesVM.conversationSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !search.isEmpty else { return roleFiltered }
+        return roleFiltered.filter {
+            $0.participantName.lowercased().contains(search) ||
+            $0.participantEmail.lowercased().contains(search) ||
+            $0.lastMessage.lowercased().contains(search)
         }
     }
 
@@ -163,9 +196,8 @@ struct LOMessagesView: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(Theme.Colors.primary)
                     .font(.system(size: 14, weight: .bold))
-                Text("Search conversations")
+                TextField("Search conversations", text: $messagesVM.conversationSearchQuery)
                     .font(Theme.Typography.subheadline)
-                    .foregroundStyle(.tertiary)
                 Spacer()
             }
             .padding(.horizontal, 16)
@@ -255,15 +287,13 @@ struct LOMessagesView: View {
 
                     Spacer()
 
-                    if conversation.isOnline {
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(Theme.Colors.success)
-                                .frame(width: 6, height: 6)
-                            Text("Online")
-                                .font(Theme.Typography.caption)
-                                .foregroundStyle(Theme.Colors.success)
-                        }
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(connectionColor)
+                            .frame(width: 6, height: 6)
+                        Text(connectionLabel)
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(connectionColor)
                     }
                 }
                 .padding(.horizontal, Theme.Spacing.md)
@@ -333,24 +363,10 @@ struct LOMessagesView: View {
                     }
                     .buttonStyle(.plain)
 
-                    // Text + paperclip — paperclip uses popover anchored to itself
                     HStack(spacing: 12) {
                         TextField("Type a message...", text: $messagesVM.messageText)
                             .font(Theme.Typography.body)
                             .padding(.vertical, 10)
-
-                        // Paperclip with popover (anchored above the button)
-                        Button {
-                            showAttachmentOptions = true
-                        } label: {
-                            Image(systemName: "paperclip")
-                                .font(.system(size: 18))
-                                .foregroundStyle(Theme.Colors.primary)
-                        }
-                        .buttonStyle(.plain)
-                        .popover(isPresented: $showAttachmentOptions, arrowEdge: .bottom) {
-                            attachmentPopover
-                        }
                     }
                     .padding(.horizontal, 16)
                     .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
@@ -391,79 +407,25 @@ struct LOMessagesView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhoto, matching: .images)
-        .onChange(of: selectedPhoto) { _, newItem in
-            guard let item = newItem else { return }
-            Task {
-                if let _ = try? await item.loadTransferable(type: Data.self) {
-                    let name = "Photo_\(Int(Date().timeIntervalSince1970)).jpg"
-                    await MainActor.run {
-                        messagesVM.sendMessage(attachmentName: name)
-                        selectedPhoto = nil
-                    }
-                }
-            }
-        }
-        .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.pdf, .image, .plainText, .data], allowsMultipleSelection: false) { result in
-            if case let .success(urls) = result, let fileURL = urls.first {
-                messagesVM.sendMessage(attachmentName: fileURL.lastPathComponent)
-            }
-        }
-        .sheet(isPresented: $showCamera) {
-            LOImagePicker(sourceType: .camera) { image in
-                showCamera = false
-                if image != nil {
-                    let name = "Camera_\(Int(Date().timeIntervalSince1970)).jpg"
-                    messagesVM.sendMessage(attachmentName: name)
-                }
-            }
+    }
+
+    private var connectionLabel: String {
+        switch messagesVM.connectionState {
+        case .connected: return "Connected"
+        case .connecting: return "Connecting"
+        case .reconnecting: return "Reconnecting"
+        case .disconnected: return "Offline"
         }
     }
 
-    // MARK: - Attachment popover (appears right above the paperclip)
-
-    private var attachmentPopover: some View {
-        VStack(spacing: 0) {
-            attachPopButton(icon: "photo.on.rectangle", label: "Choose Photo") {
-                showAttachmentOptions = false
-                showPhotoPicker = true
-            }
-            Divider()
-            attachPopButton(icon: "doc.fill", label: "Choose Document") {
-                showAttachmentOptions = false
-                showFileImporter = true
-            }
-            if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                Divider()
-                attachPopButton(icon: "camera.fill", label: "Take Photo") {
-                    showAttachmentOptions = false
-                    showCamera = true
-                }
-            }
+    private var connectionColor: Color {
+        switch messagesVM.connectionState {
+        case .connected: return Theme.Colors.success
+        case .connecting, .reconnecting: return Theme.Colors.warning
+        case .disconnected: return Theme.Colors.neutral
         }
-        .frame(width: 200)
-        .background(Theme.Colors.adaptiveSurface(colorScheme))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .presentationCompactAdaptation(.popover)
     }
 
-    private func attachPopButton(icon: String, label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Theme.Colors.primary)
-                    .frame(width: 20)
-                Text(label)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(.primary)
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-        }
-        .buttonStyle(.plain)
-    }
 }
 
 // MARK: - Conversation Row
@@ -553,44 +515,5 @@ private struct ConversationRow: View {
             }
         )
         .contentShape(Rectangle())
-    }
-}
-
-// MARK: - Image Picker
-
-private struct LOImagePicker: UIViewControllerRepresentable {
-    let sourceType: UIImagePickerController.SourceType
-    let onImagePicked: (UIImage?) -> Void
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(onImagePicked: onImagePicked)
-    }
-
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.sourceType = sourceType
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
-
-    final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
-        let onImagePicked: (UIImage?) -> Void
-
-        init(onImagePicked: @escaping (UIImage?) -> Void) {
-            self.onImagePicked = onImagePicked
-        }
-
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            onImagePicked(nil)
-            picker.dismiss(animated: true)
-        }
-
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            let image = info[.originalImage] as? UIImage
-            onImagePicked(image)
-            picker.dismiss(animated: true)
-        }
     }
 }

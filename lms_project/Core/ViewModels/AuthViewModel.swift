@@ -88,6 +88,12 @@ class AuthViewModel: ObservableObject {
     @Published var authNotice: String? = nil
     @Published var isLoading: Bool = false
 
+    // Forgot Password flow state
+    @Published var resetSessionID: String = ""
+    @Published var forgotPasswordError: String? = nil
+    @Published var maskedEmail: String = ""
+    @Published var maskedPhone: String = ""
+
     private let dataService = MockDataService.shared
     private let authAPI = AuthAPI()
     private let sessionStore = SessionStore.shared
@@ -362,6 +368,60 @@ class AuthViewModel: ObservableObject {
                 passwordChangeError = (error as? LocalizedError)?.errorDescription ?? "Failed to change password"
             }
             isLoading = false
+        }
+    }
+
+    // MARK: - Forgot Password Flow
+
+    func initiateForgotPassword(emailOrPhone: String) async -> Bool {
+        forgotPasswordError = nil
+        isLoading = true
+        defer { isLoading = false }
+        
+        do {
+            let response = try await authAPI.initiateForgotPassword(emailOrPhone: emailOrPhone)
+            resetSessionID = response.resetSessionID
+            maskedEmail = response.maskedEmail
+            maskedPhone = response.maskedPhone
+            return true
+        } catch {
+            forgotPasswordError = (error as? LocalizedError)?.errorDescription ?? "Failed to initiate password reset"
+            return false
+        }
+    }
+
+    func verifyForgotPasswordOTP(emailCode: String, phoneCode: String) async -> Bool {
+        forgotPasswordError = nil
+        isLoading = true
+        defer { isLoading = false }
+        
+        do {
+            let response = try await authAPI.verifyForgotPasswordOTPs(
+                resetSessionID: resetSessionID,
+                emailCode: emailCode,
+                phoneCode: phoneCode
+            )
+            return response.verified
+        } catch {
+            forgotPasswordError = (error as? LocalizedError)?.errorDescription ?? "OTP verification failed"
+            return false
+        }
+    }
+
+    func resetForgotPassword(newPassword: String) async -> Bool {
+        forgotPasswordError = nil
+        isLoading = true
+        defer { isLoading = false }
+        
+        do {
+            let response = try await authAPI.resetForgotPassword(
+                resetSessionID: resetSessionID,
+                newPassword: newPassword
+            )
+            return response.success
+        } catch {
+            forgotPasswordError = (error as? LocalizedError)?.errorDescription ?? "Failed to reset password"
+            return false
         }
     }
 

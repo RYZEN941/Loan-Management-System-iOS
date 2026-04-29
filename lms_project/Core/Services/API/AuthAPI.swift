@@ -255,6 +255,81 @@ struct AuthAPI {
             }
         }
     }
+
+    func initiateForgotPassword(emailOrPhone: String) async throws -> Auth_V1_InitiateForgotPasswordResponse {
+        var request = Auth_V1_InitiateForgotPasswordRequest()
+        request.emailOrPhone = emailOrPhone
+        let descriptor = GRPCCore.MethodDescriptor(
+            service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "auth.v1.AuthService"),
+            method: "InitiateForgotPassword"
+        )
+        do {
+            return try await CoreAPIClient.withClient { client in
+                try await client.unary(
+                    request: .init(message: request, metadata: CoreAPIClient.anonymousMetadata()),
+                    descriptor: descriptor,
+                    serializer: GRPCProtobuf.ProtobufSerializer<Auth_V1_InitiateForgotPasswordRequest>(),
+                    deserializer: GRPCProtobuf.ProtobufDeserializer<Auth_V1_InitiateForgotPasswordResponse>(),
+                    options: .defaults
+                ) { response in
+                    try response.message
+                }
+            }
+        } catch {
+            throw APIError.from(error)
+        }
+    }
+
+    func verifyForgotPasswordOTPs(resetSessionID: String, emailCode: String, phoneCode: String) async throws -> Auth_V1_VerifyForgotPasswordOTPsResponse {
+        var request = Auth_V1_VerifyForgotPasswordOTPsRequest()
+        request.resetSessionID = resetSessionID
+        request.emailCode = emailCode
+        request.phoneCode = phoneCode
+        let descriptor = GRPCCore.MethodDescriptor(
+            service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "auth.v1.AuthService"),
+            method: "VerifyForgotPasswordOTPs"
+        )
+        do {
+            return try await CoreAPIClient.withClient { client in
+                try await client.unary(
+                    request: .init(message: request, metadata: CoreAPIClient.anonymousMetadata()),
+                    descriptor: descriptor,
+                    serializer: GRPCProtobuf.ProtobufSerializer<Auth_V1_VerifyForgotPasswordOTPsRequest>(),
+                    deserializer: GRPCProtobuf.ProtobufDeserializer<Auth_V1_VerifyForgotPasswordOTPsResponse>(),
+                    options: .defaults
+                ) { response in
+                    try response.message
+                }
+            }
+        } catch {
+            throw APIError.from(error)
+        }
+    }
+
+    func resetForgotPassword(resetSessionID: String, newPassword: String) async throws -> Auth_V1_ResetForgotPasswordResponse {
+        var request = Auth_V1_ResetForgotPasswordRequest()
+        request.resetSessionID = resetSessionID
+        request.newPassword = newPassword
+        let descriptor = GRPCCore.MethodDescriptor(
+            service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "auth.v1.AuthService"),
+            method: "ResetForgotPassword"
+        )
+        do {
+            return try await CoreAPIClient.withClient { client in
+                try await client.unary(
+                    request: .init(message: request, metadata: CoreAPIClient.anonymousMetadata()),
+                    descriptor: descriptor,
+                    serializer: GRPCProtobuf.ProtobufSerializer<Auth_V1_ResetForgotPasswordRequest>(),
+                    deserializer: GRPCProtobuf.ProtobufDeserializer<Auth_V1_ResetForgotPasswordResponse>(),
+                    options: .defaults
+                ) { response in
+                    try response.message
+                }
+            }
+        } catch {
+            throw APIError.from(error)
+        }
+    }
 }
 
 // MARK: - Manual Proto Definitions for SearchBorrowerSignupStatus
@@ -688,3 +763,173 @@ private struct Auth_SearchBorrowerSignupStatusResponse: Sendable {
 extension Auth_SearchBorrowerSignupStatusRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {}
 extension Auth_BorrowerSignupStatusItem: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {}
 extension Auth_SearchBorrowerSignupStatusResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {}
+
+// MARK: - Forgot Password Proto Definitions
+
+struct Auth_V1_InitiateForgotPasswordRequest: Sendable, SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+    static let protoMessageName = "auth.v1.InitiateForgotPasswordRequest"
+    static let _protobuf_nameMap: SwiftProtobuf._NameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{E}email_or_phone\0")
+
+    var emailOrPhone: String = ""
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+    mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+        while let f = try decoder.nextFieldNumber() {
+            switch f {
+            case 1: try decoder.decodeSingularStringField(value: &emailOrPhone)
+            default: break
+            }
+        }
+    }
+    func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+        if !emailOrPhone.isEmpty { try visitor.visitSingularStringField(value: emailOrPhone, fieldNumber: 1) }
+        try unknownFields.traverse(visitor: &visitor)
+    }
+    static func ==(lhs: Self, rhs: Self) -> Bool {
+        return lhs.emailOrPhone == rhs.emailOrPhone
+    }
+}
+
+struct Auth_V1_InitiateForgotPasswordResponse: Sendable, SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+    static let protoMessageName = "auth.v1.InitiateForgotPasswordResponse"
+    static let _protobuf_nameMap: SwiftProtobuf._NameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{10}reset_session_id\0\u{E}challenge_sent\0\u{C}masked_email\0\u{C}masked_phone\0")
+
+    var resetSessionID: String = ""
+    var challengeSent: Bool = false
+    var maskedEmail: String = ""
+    var maskedPhone: String = ""
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+    mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+        while let f = try decoder.nextFieldNumber() {
+            switch f {
+            case 1: try decoder.decodeSingularStringField(value: &resetSessionID)
+            case 2: try decoder.decodeSingularBoolField(value: &challengeSent)
+            case 3: try decoder.decodeSingularStringField(value: &maskedEmail)
+            case 4: try decoder.decodeSingularStringField(value: &maskedPhone)
+            default: break
+            }
+        }
+    }
+    func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+        if !resetSessionID.isEmpty { try visitor.visitSingularStringField(value: resetSessionID, fieldNumber: 1) }
+        if challengeSent { try visitor.visitSingularBoolField(value: challengeSent, fieldNumber: 2) }
+        if !maskedEmail.isEmpty { try visitor.visitSingularStringField(value: maskedEmail, fieldNumber: 3) }
+        if !maskedPhone.isEmpty { try visitor.visitSingularStringField(value: maskedPhone, fieldNumber: 4) }
+        try unknownFields.traverse(visitor: &visitor)
+    }
+    static func ==(lhs: Self, rhs: Self) -> Bool {
+        return lhs.resetSessionID == rhs.resetSessionID && lhs.challengeSent == rhs.challengeSent && lhs.maskedEmail == rhs.maskedEmail && lhs.maskedPhone == rhs.maskedPhone
+    }
+}
+
+struct Auth_V1_VerifyForgotPasswordOTPsRequest: Sendable, SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+    static let protoMessageName = "auth.v1.VerifyForgotPasswordOTPsRequest"
+    static let _protobuf_nameMap: SwiftProtobuf._NameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{10}reset_session_id\0\u{A}email_code\0\u{A}phone_code\0")
+
+    var resetSessionID: String = ""
+    var emailCode: String = ""
+    var phoneCode: String = ""
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+    mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+        while let f = try decoder.nextFieldNumber() {
+            switch f {
+            case 1: try decoder.decodeSingularStringField(value: &resetSessionID)
+            case 2: try decoder.decodeSingularStringField(value: &emailCode)
+            case 3: try decoder.decodeSingularStringField(value: &phoneCode)
+            default: break
+            }
+        }
+    }
+    func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+        if !resetSessionID.isEmpty { try visitor.visitSingularStringField(value: resetSessionID, fieldNumber: 1) }
+        if !emailCode.isEmpty { try visitor.visitSingularStringField(value: emailCode, fieldNumber: 2) }
+        if !phoneCode.isEmpty { try visitor.visitSingularStringField(value: phoneCode, fieldNumber: 3) }
+        try unknownFields.traverse(visitor: &visitor)
+    }
+    static func ==(lhs: Self, rhs: Self) -> Bool {
+        return lhs.resetSessionID == rhs.resetSessionID && lhs.emailCode == rhs.emailCode && lhs.phoneCode == rhs.phoneCode
+    }
+}
+
+struct Auth_V1_VerifyForgotPasswordOTPsResponse: Sendable, SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+    static let protoMessageName = "auth.v1.VerifyForgotPasswordOTPsResponse"
+    static let _protobuf_nameMap: SwiftProtobuf._NameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{8}verified\0")
+
+    var verified: Bool = false
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+    mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+        while let f = try decoder.nextFieldNumber() {
+            switch f {
+            case 1: try decoder.decodeSingularBoolField(value: &verified)
+            default: break
+            }
+        }
+    }
+    func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+        if verified { try visitor.visitSingularBoolField(value: verified, fieldNumber: 1) }
+        try unknownFields.traverse(visitor: &visitor)
+    }
+    static func ==(lhs: Self, rhs: Self) -> Bool {
+        return lhs.verified == rhs.verified
+    }
+}
+
+struct Auth_V1_ResetForgotPasswordRequest: Sendable, SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+    static let protoMessageName = "auth.v1.ResetForgotPasswordRequest"
+    static let _protobuf_nameMap: SwiftProtobuf._NameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{10}reset_session_id\0\u{C}new_password\0")
+
+    var resetSessionID: String = ""
+    var newPassword: String = ""
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+    mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+        while let f = try decoder.nextFieldNumber() {
+            switch f {
+            case 1: try decoder.decodeSingularStringField(value: &resetSessionID)
+            case 2: try decoder.decodeSingularStringField(value: &newPassword)
+            default: break
+            }
+        }
+    }
+    func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+        if !resetSessionID.isEmpty { try visitor.visitSingularStringField(value: resetSessionID, fieldNumber: 1) }
+        if !newPassword.isEmpty { try visitor.visitSingularStringField(value: newPassword, fieldNumber: 2) }
+        try unknownFields.traverse(visitor: &visitor)
+    }
+    static func ==(lhs: Self, rhs: Self) -> Bool {
+        return lhs.resetSessionID == rhs.resetSessionID && lhs.newPassword == rhs.newPassword
+    }
+}
+
+struct Auth_V1_ResetForgotPasswordResponse: Sendable, SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+    static let protoMessageName = "auth.v1.ResetForgotPasswordResponse"
+    static let _protobuf_nameMap: SwiftProtobuf._NameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{7}success\0")
+
+    var success: Bool = false
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+    mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+        while let f = try decoder.nextFieldNumber() {
+            switch f {
+            case 1: try decoder.decodeSingularBoolField(value: &success)
+            default: break
+            }
+        }
+    }
+    func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+        if success { try visitor.visitSingularBoolField(value: success, fieldNumber: 1) }
+        try unknownFields.traverse(visitor: &visitor)
+    }
+    static func ==(lhs: Self, rhs: Self) -> Bool {
+        return lhs.success == rhs.success
+    }
+}

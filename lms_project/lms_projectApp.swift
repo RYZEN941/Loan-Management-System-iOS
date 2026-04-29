@@ -24,6 +24,15 @@ struct lms_projectApp: App {
                 .environmentObject(messagesVM)
                 .environmentObject(adminVM)
                 .preferredColorScheme(authVM.isDarkMode ? .dark : .light)
+                .onChange(of: authVM.currentRole) { _, newRole in
+                    if newRole != nil {
+                        // User just authenticated — start loading data immediately
+                        applicationsVM.preloadAfterLogin()
+                    } else {
+                        // User logged out — reset data state
+                        applicationsVM.resetOnLogout()
+                    }
+                }
         }
     }
 }

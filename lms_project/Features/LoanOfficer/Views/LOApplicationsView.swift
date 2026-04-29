@@ -45,6 +45,11 @@ struct LOApplicationsView: View {
     @State private var showSanctionLetterPicker = false
     @State private var sanctionLetterAppID: String? = nil
     @State private var selectedLOChip: LOChip = .all
+    @State private var showBorrowerHistorySheet = false
+    @State private var borrowerHistoryEntries: [BorrowerLoanHistoryEntry] = []
+    @State private var showEditTerms = false
+    @State private var editTenureText = ""
+    @State private var editInterestRateText = ""
 
     private let sidebarWidth: CGFloat = 320
 
@@ -128,12 +133,28 @@ struct LOApplicationsView: View {
                 }
             }
             .onAppear {
-                applicationsVM.resetFiltersToAll()
-                applicationsVM.loadData(autoSelectFirst: true)
-                selectedLOChip = .all
+                applicationsVM.loadData(autoSelectFirst: false)
+                applicationsVM.startRealtimeSync()
+                
+                if applicationsVM.activeDashboardFilter == .none {
+                    applicationsVM.resetFiltersToAll()
+                } else {
+                    selectedLOChip = LOChip(rawValue: applicationsVM.loanOfficerFilterChip(for: applicationsVM.activeDashboardFilter)) ?? .all
+                }
+                if applicationsVM.activeDashboardFilter == .none {
+                    selectedLOChip = .all
+                }
+                applicationsVM.syncSelectedApplicationWithFilters()
+                
                 if let app = applicationsVM.selectedApplication {
                     applicationsVM.loadBranchOfficers(branchName: app.branch)
                 }
+            }
+            .onChange(of: applicationsVM.filteredApplications.map(\.id)) {
+                applicationsVM.syncSelectedApplicationWithFilters()
+            }
+            .onDisappear {
+                applicationsVM.stopRealtimeSync()
             }
             .alert("Action", isPresented: $applicationsVM.showActionAlert) {
                 Button("OK") {}
@@ -165,6 +186,14 @@ struct LOApplicationsView: View {
             .sheet(isPresented: $showFilterSheet) {
                     FilterRangeSheet(applicationsVM: applicationsVM)
                 }
+            .sheet(isPresented: $showBorrowerHistorySheet) {
+                borrowerHistoryListSheet
+            }
+            .sheet(isPresented: $showEditTerms) {
+                if let app = applicationsVM.selectedApplication {
+                    editTermsSheet(app)
+                }
+            }
         }
         .animation(.easeInOut(duration: 0.28), value: sidebarCollapsed)
     }
@@ -182,7 +211,7 @@ struct LOApplicationsView: View {
                         .font(.system(size: 24, weight: .bold, design: .rounded))
                 }
                 Spacer()
-                Text("\(filteredLOApplications.count)")
+                Text("\(applicationsVM.filteredApplications.count)")
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(Theme.Colors.adaptivePrimary(colorScheme))
                     .padding(.horizontal, 12)
@@ -220,14 +249,16 @@ struct LOApplicationsView: View {
                             withAnimation(.spring(response: 0.3)) {
                                 selectedLOChip = chip
                                 // Pass the selection to the ViewModel
+                                applicationsVM.activeDashboardFilter = .none
                                 switch chip {
-                                case .all: applicationsVM.filterStatus = nil
-                                case .new: applicationsVM.filterStatus = .pending
-                                case .myReview: applicationsVM.filterStatus = .officerReview
-                                case .sentToManager: applicationsVM.filterStatus = .managerReview
-                                case .approved: applicationsVM.filterStatus = .approved
-                                case .rejected: applicationsVM.filterStatus = .rejected
+                                case .all: applicationsVM.filterStatuses = nil
+                                case .new: applicationsVM.filterStatuses = applicationsVM.loanOfficerNewStatuses
+                                case .myReview: applicationsVM.filterStatuses = applicationsVM.loanOfficerMyReviewStatuses
+                                case .sentToManager: applicationsVM.filterStatuses = applicationsVM.loanOfficerSentToManagerStatuses
+                                case .approved: applicationsVM.filterStatuses = applicationsVM.approvedStatuses
+                                case .rejected: applicationsVM.filterStatuses = applicationsVM.rejectedStatuses
                                 }
+                                applicationsVM.syncSelectedApplicationWithFilters()
                             }
                         }
                     }
@@ -239,7 +270,7 @@ struct LOApplicationsView: View {
             Divider()
 
             // List
-            if filteredLOApplications.isEmpty {
+            if applicationsVM.filteredApplications.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "doc.text.magnifyingglass")
                         .font(.system(size: 32, weight: .thin))
@@ -277,48 +308,7 @@ struct LOApplicationsView: View {
         .background(Theme.Colors.adaptiveSurface(colorScheme))
     }
 
-    // MARK: - Advanced Filtering & Sorting Logic
 
-    private var filteredLOApplications: [LoanApplication] {
-        // 1. Start with the base list from VM
-        var base = applicationsVM.applications
-        
-        // 2. Apply Status Filter (from Chips)
-        switch selectedLOChip {
-        case .all: break
-        case .new:
-            base = base.filter { $0.status == .pending }
-        case .myReview:
-            base = base.filter { $0.status == .officerReview }
-        case .sentToManager:
-            base = base.filter { $0.status == .managerReview || $0.status == .officerApproved }
-        case .approved:
-            base = base.filter { $0.status == .approved || $0.status == .managerApproved }
-        case .rejected:
-            base = base.filter { $0.status == .rejected || $0.status == .officerRejected || $0.status == .managerRejected }
-        }
-        
-        // 3. Apply Search Query
-        let query = applicationsVM.searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !query.isEmpty {
-            base = base.filter {
-                $0.borrower.name.localizedCaseInsensitiveContains(query) ||
-                $0.id.localizedCaseInsensitiveContains(query) ||
-                $0.borrower.employer.localizedCaseInsensitiveContains(query)
-            }
-        }
-        
-        return base.sorted {
-            if $0.slaStatus != $1.slaStatus {
-                return $0.slaStatus == .overdue
-            }
-            // Optional: Add Risk Level as the tie-breaker before Date
-            if $0.riskLevel != $1.riskLevel {
-                return $0.riskLevel == .high
-            }
-            return $0.createdAt > $1.createdAt
-        }
-    }
     
     // MARK: - Consolidated Borrower Profile
         private func consolidatedBorrowerProfile(_ app: LoanApplication) -> some View {
@@ -328,13 +318,13 @@ struct LOApplicationsView: View {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                     modernFinTile("Full Name", app.borrower.name, icon: "person.fill")
                     modernFinTile("Email Address", app.borrower.email, icon: "envelope.fill")
-                    modernFinTile("CIBIL Score", "\(app.financials.cibilScore)", icon: "bolt.fill", color: cibilColor(app.financials.cibilScore))
+                    modernFinTile("CIBIL Score", app.financials.cibilScore >= 0 ? "\(app.financials.cibilScore)" : "N/A", icon: "bolt.fill", color: cibilColor(app.financials.cibilScore))
                     modernFinTile("DTI Ratio", app.financials.dtiRatio.percentFormatted, icon: "chart.pie.fill", color: dtiColor(app.financials.dtiRatio))
                     modernFinTile("Risk Assessment", app.riskLevel.displayName, icon: "shield.fill", color: app.riskLevel.adaptiveColor(colorScheme))
                     modernFinTile("Monthly Income", app.financials.monthlyIncome.currencyFormatted, icon: "arrow.up.right.circle")
-                    modernFinTile("Annual Income", app.financials.annualIncome.currencyFormatted, icon: "calendar")
+                    modernFinTile("Existing EMI", app.financials.existingEMI.currencyFormatted, icon: "arrow.down.right.circle")
                     modernFinTile("EMI Amount", app.loan.emi.currencyFormatted, icon: "indianrupeesign.circle.fill")
-                    modernFinTile("FOIR", String(format: "%.1f%%", app.financials.foir), icon: "percent")
+                    modernFinTile("FOIR", app.financials.foir >= 0 ? String(format: "%.1f%%", app.financials.foir) : "N/A", icon: "percent")
                 }
             }
             .padding(20)
@@ -365,14 +355,19 @@ struct LOApplicationsView: View {
                 sectionLabel("Loan Repayment Ledger", icon: "clock.badge.checkmark.fill")
                 
                 HStack(spacing: 12) {
-                    summaryMiniTile(label: "Outstanding", value: "₹18,45,200", color: primary)
-                    summaryMiniTile(label: "Paid to Date", value: "₹6,54,800", color: .secondary)
-                    summaryMiniTile(label: "Next EMI", value: "15 May", color: .orange)
+                    summaryMiniTile(label: "Outstanding", value: app.repaymentSummary.outstanding, color: primary)
+                    summaryMiniTile(label: "Paid to Date", value: app.repaymentSummary.paidToDate, color: .secondary)
+                    summaryMiniTile(label: "Next EMI", value: app.repaymentSummary.nextEmi, color: .orange)
                 }
                 
                 VStack(spacing: 0) {
-                    repaymentRow(period: "April 2026", date: "15 Apr", amount: app.loan.emi.currencyFormatted, status: "Paid", isPaid: true)
-                    repaymentRow(period: "May 2026", date: "15 May", amount: app.loan.emi.currencyFormatted, status: "Upcoming", isPaid: false)
+                    if app.repaymentHistory.isEmpty {
+                        repaymentRow(period: "Repayment History", date: "N/A", amount: "N/A", status: "Unavailable", isPaid: false)
+                    } else {
+                        ForEach(app.repaymentHistory) { item in
+                            repaymentRow(period: item.period, date: item.dueDateText, amount: item.amount, status: item.status, isPaid: item.isPaid)
+                        }
+                    }
                 }
                 .background(Color(.tertiarySystemFill).opacity(0.3))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -420,7 +415,6 @@ struct LOApplicationsView: View {
             if let app = applicationsVM.selectedApplication {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
-                        selectedApplicationHint(app)
                         // Header row
                         detailHeader(app)
 
@@ -429,8 +423,11 @@ struct LOApplicationsView: View {
                             HStack(alignment: .top, spacing: 24) {
                                 VStack(alignment: .leading, spacing: 24) {
                                     consolidatedBorrowerProfile(app)
+                                    editTermsSummarySection(app)
                                     borrowerHistorySection(app)
-                                    repaymentHistorySection(app)
+                                    if app.isDisbursed {
+                                        repaymentHistorySection(app)
+                                    }
                                     documentsSection(app)
                                     sanctionLetterSection(app)
                                 }
@@ -445,8 +442,11 @@ struct LOApplicationsView: View {
                         } else {
                             // Normal stacked layout
                             consolidatedBorrowerProfile(app)
+                            editTermsSummarySection(app)
                             borrowerHistorySection(app)
-                            repaymentHistorySection(app)
+                            if app.isDisbursed {
+                                repaymentHistorySection(app)
+                            }
                             documentsSection(app)
                             sanctionLetterSection(app)
                             internalRemarksSection(app)
@@ -527,7 +527,9 @@ struct LOApplicationsView: View {
             
             // Borrower Meta Grid
             HStack(spacing: 20) {
-                metaLabel(app.borrower.employer, systemImage: "building.2.fill")
+                if app.borrower.employer != "N/A" {
+                    metaLabel(app.borrower.employer, systemImage: "building.2.fill")
+                }
                 metaLabel(app.borrower.employmentType, systemImage: "person.text.rectangle.fill")
             }
             .font(.system(size: 13))
@@ -552,12 +554,12 @@ struct LOApplicationsView: View {
                 // Origin/Assignment labels
                 Group {
                     Text("Officer: ").foregroundStyle(.tertiary) +
-                    Text(applicationsVM.officerDisplayName(for: app.assignedTo)).foregroundStyle(.secondary)
+                    Text(app.assignedToName.isEmpty ? "Unassigned" : app.assignedToName).foregroundStyle(.secondary)
                     
                     Text(" • ").foregroundStyle(.tertiary)
                     
                     Text("By: ").foregroundStyle(.tertiary) +
-                    Text(applicationsVM.officerDisplayName(for: app.createdByUserID)).foregroundStyle(.secondary)
+                    Text(app.createdByName.isEmpty ? "Creator" : app.createdByName).foregroundStyle(.secondary)
                 }
                 .font(.system(size: 11, weight: .medium))
             }
@@ -618,10 +620,10 @@ struct LOApplicationsView: View {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                     modernFinTile("Monthly Income", app.financials.monthlyIncome.currencyFormatted, icon: "arrow.up.right.circle")
                     modernFinTile("Existing EMI", app.financials.existingEMI.currencyFormatted, icon: "arrow.down.left.circle")
-                    modernFinTile("CIBIL Score", "\(app.financials.cibilScore)", icon: "gauge.medium", color: cibilColor(app.financials.cibilScore))
+                    modernFinTile("CIBIL Score", app.financials.cibilScore >= 0 ? "\(app.financials.cibilScore)" : "N/A", icon: "gauge.medium", color: cibilColor(app.financials.cibilScore))
                     modernFinTile("DTI Ratio", app.financials.dtiRatio.percentFormatted, icon: "percent")
                     modernFinTile("Bank Balance", app.financials.bankBalance.currencyFormatted, icon: "building.columns")
-                    modernFinTile("Annual Income", app.financials.annualIncome.currencyFormatted, icon: "calendar")
+                    // Removed Annual Income tile as requested.
                 }
             }
             .padding(20)
@@ -668,20 +670,32 @@ struct LOApplicationsView: View {
             )
         }
 
-    private func cibilColor(_ s: Int)    -> Color { s >= 750 ? Theme.Colors.success : s >= 650 ? Theme.Colors.neutral : Theme.Colors.critical }
-    private func dtiColor(_ r: Double)   -> Color { r <= 0.30 ? Theme.Colors.success : r <= 0.40 ? Theme.Colors.neutral : Theme.Colors.critical }
+    private func cibilColor(_ s: Int)    -> Color { s < 0 ? Theme.Colors.neutral : (s >= 750 ? Theme.Colors.success : s >= 650 ? Theme.Colors.neutral : Theme.Colors.critical) }
+    private func dtiColor(_ r: Double)   -> Color { r < 0 ? Theme.Colors.neutral : (r <= 0.30 ? Theme.Colors.success : r <= 0.40 ? Theme.Colors.neutral : Theme.Colors.critical) }
 
     // ────────────────────────────────────────────────────────────────
     // MARK: - Borrower History Section
     // ────────────────────────────────────────────────────────────────
 
     private func borrowerHistorySection(_ app: LoanApplication) -> some View {
-        let thisBank = sampleThisBankLoans(for: app)
-        let otherBanks = sampleOtherBankLoans(for: app)
+        let thisBank = app.borrowerHistoryThisBank
+        let otherBanks = app.borrowerHistoryOtherLenders
+        let previewEntries = Array(thisBank.prefix(3))
 
         return VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "Borrower History", icon: "clock.arrow.circlepath")
-                .description("Previous loans from this bank and other institutions.")
+            HStack(alignment: .top) {
+                SectionHeader(title: "Borrower History", icon: "clock.arrow.circlepath")
+                    .description("Previous loans from this bank and other institutions.")
+                Spacer()
+                if thisBank.count > 3 {
+                    Button("Show All") {
+                        borrowerHistoryEntries = thisBank
+                        showBorrowerHistorySheet = true
+                    }
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(primary)
+                }
+            }
 
             // ── This Bank ──
             VStack(alignment: .leading, spacing: 8) {
@@ -691,27 +705,13 @@ struct LOApplicationsView: View {
                         .font(.system(size: 13)).foregroundStyle(.secondary)
                         .padding(.leading, 4)
                 } else {
-                    ForEach(thisBank) { entry in
-                        historyRow(entry)
+                    ForEach(previewEntries) { entry in
+                        historyRowButton(entry)
                     }
                 }
             }
 
-            Divider()
 
-            // ── Other Banks ──
-            VStack(alignment: .leading, spacing: 8) {
-                historySubHeader("Other Banks / NBFCs", icon: "building.2.fill", color: Color(hex: "#5E5CE6"))
-                if otherBanks.isEmpty {
-                    Text("No declared external loan history.")
-                        .font(.system(size: 13)).foregroundStyle(.secondary)
-                        .padding(.leading, 4)
-                } else {
-                    ForEach(otherBanks) { entry in
-                        historyRow(entry)
-                    }
-                }
-            }
         }
         .padding(16)
         .background(
@@ -736,10 +736,11 @@ struct LOApplicationsView: View {
     }
 
     private func historyRow(_ entry: BorrowerLoanHistoryEntry) -> some View {
-        HStack(spacing: 12) {
+        let accent = historyColor(entry.statusStyle)
+        return HStack(spacing: 12) {
             // Left accent
             RoundedRectangle(cornerRadius: 2)
-                .fill(entry.statusColor)
+                .fill(accent)
                 .frame(width: 4, height: 48)
 
             VStack(alignment: .leading, spacing: 3) {
@@ -759,46 +760,78 @@ struct LOApplicationsView: View {
                     .foregroundStyle(.primary)
                 Text(entry.status)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(entry.statusColor)
+                    .foregroundStyle(accent)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(entry.statusColor.opacity(0.12))
+                    .background(accent.opacity(0.12))
                     .clipShape(Capsule())
             }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(entry.statusColor.opacity(0.04))
+        .background(accent.opacity(0.04))
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .stroke(entry.statusColor.opacity(0.12), lineWidth: 1)
+                .stroke(accent.opacity(0.12), lineWidth: 1)
         )
     }
 
-    // Sample borrower history data (replace with real API data when available)
-    private func sampleThisBankLoans(for app: LoanApplication) -> [BorrowerLoanHistoryEntry] {
-        let score = app.financials.cibilScore
-        if score > 0 {
-            return [
-                BorrowerLoanHistoryEntry(loanType: "Personal Loan", institution: "Our Bank", amount: "₹1,50,000", status: "Closed", statusColor: Theme.Colors.success),
-                BorrowerLoanHistoryEntry(loanType: "Vehicle Loan",  institution: "Our Bank", amount: "₹3,20,000", status: "Active",  statusColor: Theme.Colors.primary)
-            ]
+    private func historyRowButton(_ entry: BorrowerLoanHistoryEntry) -> some View {
+        Button {
+            applicationsVM.selectApplication(applicationID: entry.id)
+        } label: {
+            historyRow(entry)
         }
-        return []
+        .buttonStyle(.plain)
     }
 
-    private func sampleOtherBankLoans(for app: LoanApplication) -> [BorrowerLoanHistoryEntry] {
-        let emi = app.financials.existingEMI
-        if emi > 0 {
-            return [
-                BorrowerLoanHistoryEntry(loanType: "Home Loan",     institution: "HDFC Bank",  amount: "₹28,00,000", status: "Active",  statusColor: Theme.Colors.warning),
-                BorrowerLoanHistoryEntry(loanType: "Credit Card",   institution: "ICICI Bank", amount: "₹50,000",    status: "Overdue", statusColor: Theme.Colors.critical)
-            ]
+    private func historyColor(_ style: HistoryStatusStyle) -> Color {
+        switch style {
+        case .primary: return Theme.Colors.primary
+        case .success: return Theme.Colors.success
+        case .warning: return Theme.Colors.warning
+        case .critical: return Theme.Colors.critical
+        case .neutral: return Theme.Colors.neutral
         }
-        return [
-            BorrowerLoanHistoryEntry(loanType: "Education Loan", institution: "SBI",       amount: "₹4,00,000",  status: "Closed", statusColor: Theme.Colors.success)
-        ]
+    }
+
+    private var borrowerHistoryListSheet: some View {
+        NavigationStack {
+            List(borrowerHistoryEntries) { entry in
+                Button {
+                    showBorrowerHistorySheet = false
+                    applicationsVM.selectApplication(applicationID: entry.id)
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(entry.loanType)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.primary)
+                            Text(entry.institution)
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text(entry.amount)
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                            Text(entry.status)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(historyColor(entry.statusStyle))
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+            .navigationTitle("Previous Applications")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Close") { showBorrowerHistorySheet = false }
+                }
+            }
+        }
     }
 
 
@@ -816,14 +849,20 @@ struct LOApplicationsView: View {
             ForEach(app.documents) { doc in
                 DocumentUploadRow(
                     applicationID: app.id,
+                    borrowerProfileID: app.primaryBorrowerProfileID,
                     doc: doc,
                     uploadedFiles: applicationsVM.uploadedFiles[doc.id] ?? [],
                     onUpload: { file in
-                        applicationsVM.recordUploadedFile(file, forDocumentId: doc.id)
+                        applicationsVM.uploadApplicationDocument(
+                            file: file,
+                            document: doc,
+                            applicationID: app.id,
+                            borrowerProfileID: app.primaryBorrowerProfileID
+                        )
                     },
                     onVerify: { approved, reason in
                         applicationsVM.verifyDocument(
-                            documentId: doc.id,
+                            document: doc,
                             applicationId: app.id,
                             approved: approved,
                             rejectionReason: reason
@@ -1099,6 +1138,100 @@ struct LOApplicationsView: View {
         }
     }
 
+    private func editTermsSummarySection(_ app: LoanApplication) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                sectionLabel("Loan Terms", icon: "pencil.and.list.clipboard")
+                Spacer()
+                Button {
+                    editTenureText = "\(app.loan.tenure)"
+                    editInterestRateText = String(format: "%.2f", app.loan.interestRate)
+                    showEditTerms = true
+                } label: {
+                    Label("Edit", systemImage: "pencil")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(primary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(primary.opacity(0.1))
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                modernFinTile("Requested Amount", app.loan.amount.currencyFormatted, icon: "indianrupeesign.circle")
+                modernFinTile("Tenure", "\(app.loan.tenure) months", icon: "calendar")
+                modernFinTile("Interest Rate", String(format: "%.2f%%", app.loan.interestRate), icon: "percent")
+                modernFinTile("EMI", app.loan.emi.currencyFormatted, icon: "waveform.path.ecg")
+                modernFinTile("Loan Type", app.loan.type.displayName, icon: "building.columns")
+            }
+        }
+        .padding(20)
+        .background(surface)
+        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .overlay(RoundedRectangle(cornerRadius: 24).stroke(border, lineWidth: 1))
+    }
+
+    private func editTermsSheet(_ app: LoanApplication) -> some View {
+        NavigationStack {
+            Form {
+                Section {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Tenure (months)").font(.caption).foregroundStyle(.secondary)
+                        TextField("e.g. 60", text: $editTenureText)
+                            .keyboardType(.numberPad)
+                    }
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Interest Rate (% p.a.)").font(.caption).foregroundStyle(.secondary)
+                        TextField("e.g. 10.50", text: $editInterestRateText)
+                            .keyboardType(.decimalPad)
+                    }
+                } header: {
+                    Text("Update Loan Terms")
+                } footer: {
+                    Text("These terms are saved to the backend immediately and refresh the EMI and risk metrics for the application.")
+                }
+
+                Section {
+                    Button {
+                        let tenure = Int(editTenureText) ?? app.loan.tenure
+                        let rate = Double(editInterestRateText) ?? app.loan.interestRate
+                        applicationsVM.updateLoanTerms(
+                            applicationId: app.id,
+                            tenureMonths: tenure,
+                            offeredInterestRate: rate
+                        )
+                        showEditTerms = false
+                    } label: {
+                        Text("Save Terms")
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                    }
+                    .listRowBackground(primary)
+                    .disabled(
+                        editTenureText.isEmpty || editInterestRateText.isEmpty ||
+                        Int(editTenureText) == nil || Double(editInterestRateText) == nil
+                    )
+                }
+            }
+            .navigationTitle("Edit Loan Terms")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showEditTerms = false
+                    } label: {
+                        Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+    }
+
     // ────────────────────────────────────────────────────────────────
     // MARK: - Shared helpers
     // ────────────────────────────────────────────────────────────────
@@ -1123,6 +1256,7 @@ struct LOApplicationsView: View {
 
 struct DocumentUploadRow: View {
     let applicationID: String
+    let borrowerProfileID: String
     let doc: LoanDocument
     let uploadedFiles: [UploadedDocFile]
     let onUpload: (UploadedDocFile) -> Void
@@ -1141,6 +1275,11 @@ struct DocumentUploadRow: View {
 
     private var hasLinkedDocument: Bool {
         doc.mediaFileID != nil || doc.fileURL != nil
+    }
+
+    private var hasBackendDocument: Bool {
+        let backendID = doc.backendDocumentID?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return !backendID.isEmpty
     }
 
     private var linkedPreviewFile: UploadedDocFile {
@@ -1176,7 +1315,7 @@ struct DocumentUploadRow: View {
                 Spacer()
 
                 // Verify / Reject actions (shown once files are uploaded)
-                if (!uploadedFiles.isEmpty || hasLinkedDocument) && doc.status != .verified {
+                if hasBackendDocument && doc.status != .verified {
                     HStack(spacing: 6) {
                         if doc.status != .verified {
                             Button {
@@ -1495,17 +1634,17 @@ struct DocumentPreviewSheet: View {
             if let data = file.data ?? remoteDocumentData, let document = PDFDocument(data: data) {
                 PDFDocumentView(document: document)
                     .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
-            } else if let remotePreviewError {
-                previewUnavailable(message: remotePreviewError)
+            } else if let url = file.url {
+                RemoteDocumentWebView(url: url)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
+            } else if (remotePreviewError != nil) {
+                previewUnavailable(message: remotePreviewError!)
             } else if file.url != nil {
                 ProgressView("Loading document...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 previewUnavailable(message: "This PDF could not be loaded.")
             }
-        } else if let url = file.url {
-            RemoteDocumentWebView(url: url)
-                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
         } else {
             previewUnavailable(message: "Preview is unavailable for this file.")
         }
@@ -1730,14 +1869,13 @@ struct CreateApplicationSheet: View {
     @State private var selectedLoanProductID = ""
     @State private var loanAmountText        = ""
     @State private var tenureText            = ""
-    @State private var monthlyIncomeText     = ""
     @State private var existingEMIText       = ""
-    @State private var xmlParsed             = false
 
     // Submission state
     @State private var isSubmitting    = false
     @State private var submitError     = ""
     @State private var showSubmitError = false
+    @State private var lookupTask: Task<Void, Never>? = nil
 
     // Documents: driven by selected loan product
     struct DocEntry: Identifiable {
@@ -1762,7 +1900,7 @@ struct CreateApplicationSheet: View {
     }
 
     private var canSubmit: Bool {
-        !borrowerName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !borrowerProfileID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         !loanAmountText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         !selectedLoanProductID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
@@ -1909,30 +2047,11 @@ struct CreateApplicationSheet: View {
     private var financialSection: some View {
         formSection(title: "Financial Profile", icon: "chart.bar.doc.horizontal.fill") {
             VStack(spacing: 16) {
-                HStack(spacing: 16) {
-                    customTextField("Monthly Income (₹)", text: $monthlyIncomeText, icon: "arrow.up.right.circle").keyboardType(.numberPad)
-                    customTextField("Existing EMI (₹)", text: $existingEMIText, icon: "arrow.down.left.circle").keyboardType(.numberPad)
-                }
-                Button {
-                    withAnimation {
-                        applicationsVM.simulateXMLUpload()
-                        xmlParsed = true
-                        if let r = applicationsVM.xmlParseResult {
-                            monthlyIncomeText = String(Int(r.monthlyIncome))
-                        }
-                    }
-                } label: {
-                    HStack {
-                        Image(systemName: xmlParsed ? "checkmark.seal.fill" : "doc.viewfinder.fill")
-                        Text(xmlParsed ? "Bank Statement Parsed" : "Auto-fill via Bank Statement (XML)")
-                            .fontWeight(.semibold)
-                    }
-                    .font(Theme.Typography.subheadline)
-                    .foregroundStyle(xmlParsed ? .white : Theme.Colors.primary)
-                    .frame(maxWidth: .infinity).padding(.vertical, 12)
-                    .background(xmlParsed ? Theme.Colors.success : Theme.Colors.primary.opacity(0.1))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
+                customTextField("Existing EMI (₹)", text: $existingEMIText, icon: "arrow.down.left.circle").keyboardType(.numberPad)
+                Text("Monthly income is pulled from the borrower's backend profile after borrower lookup.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
@@ -2022,28 +2141,36 @@ struct CreateApplicationSheet: View {
     }
 
     private func runBorrowerLookup() {
+        lookupTask?.cancel()
+        
         let email = borrowerEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let phone = borrowerPhone.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !email.isEmpty || !phone.isEmpty else {
+        guard !email.isEmpty || phone.count >= 10 else {
             borrowerLookupHint = ""; borrowerLookupOK = false; return
         }
         
-        borrowerLookupHint = "Searching..."
-        Task {
+        lookupTask = Task {
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            if Task.isCancelled { return }
+            
+            await MainActor.run { borrowerLookupHint = "Searching..." }
             do {
                 if let profileID = try await applicationsVM.resolveBorrowerProfileID(email: email, phone: phone) {
+                    if Task.isCancelled { return }
                     await MainActor.run {
                         borrowerLookupOK = true
-                        borrowerLookupHint = "Borrower found! Profile verified."
+                        borrowerLookupHint = "Borrower found. Details will be pulled from backend."
                         self.borrowerProfileID = profileID
                     }
                 } else {
+                    if Task.isCancelled { return }
                     await MainActor.run {
                         borrowerLookupOK = false
-                        borrowerLookupHint = "No matching borrower found in the system. Please ensure they have signed up."
+                        borrowerLookupHint = "No matching borrower found. Please ensure they have signed up."
                     }
                 }
             } catch {
+                if Task.isCancelled { return }
                 await MainActor.run {
                     borrowerLookupOK = false
                     borrowerLookupHint = "Error searching for borrower: \(error.localizedDescription)"
@@ -2055,7 +2182,6 @@ struct CreateApplicationSheet: View {
     private func submit() {
         let amount = Double(loanAmountText) ?? 0
         let tenure = Int(tenureText) ?? 12
-        let income = Double(monthlyIncomeText) ?? 0
         let emi    = Double(existingEMIText) ?? 0
         guard let selectedProduct else {
             submitError = "Please select a valid loan product."; showSubmitError = true; return
@@ -2072,7 +2198,7 @@ struct CreateApplicationSheet: View {
                     selectedLoanProduct: selectedProduct,
                     requestedAmount: amount,
                     tenureMonths: tenure,
-                    monthlyIncome: income,
+                    monthlyIncome: 0,
                     existingEMI: emi,
                     documents: []
                 )
@@ -2188,17 +2314,4 @@ struct DocumentFilePicker: UIViewControllerRepresentable {
         }
         func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) { onCancel() }
     }
-}
-
-// ────────────────────────────────────────────────────────────────────
-// MARK: - Borrower Loan History Entry Model
-// ────────────────────────────────────────────────────────────────────
-
-struct BorrowerLoanHistoryEntry: Identifiable {
-    let id = UUID()
-    let loanType: String
-    let institution: String
-    let amount: String
-    let status: String
-    let statusColor: Color
 }

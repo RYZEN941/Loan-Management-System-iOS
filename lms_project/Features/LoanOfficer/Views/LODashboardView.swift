@@ -114,62 +114,85 @@ struct LODashboardView: View {
             sectionHeader(title: "Portfolio Overview", icon: "briefcase.fill")
 
             LazyVGrid(columns: responsiveGrid, spacing: 10) {
-                // Active Cases: Blue if 0, Brand Primary if > 0
+                // Active Cases
                 healthCard(label: "Active Cases",
                            value: "\(assignedCount)",
                            badge: "Assigned",
-                           color: assignedCount > 0 ? primary : Theme.Colors.adaptivePrimary(colorScheme))
+                           color: assignedCount > 0 ? primary : Theme.Colors.adaptivePrimary(colorScheme)) {
+                    applicationsVM.activeDashboardFilter = .none
+                    applicationsVM.filterStatuses = nil
+                    withAnimation { selectedTab = 1 }
+                }
                 
-                // Pending Review: Blue if 0, Warning Orange if > 0
+                // Pending Review
                 healthCard(label: "Pending Review",
                            value: "\(pendingReviewCount)",
                            badge: "In Queue",
-                           color: pendingReviewCount > 0 ? warning : Theme.Colors.adaptivePrimary(colorScheme))
+                           color: pendingReviewCount > 0 ? warning : Theme.Colors.adaptivePrimary(colorScheme)) {
+                    applicationsVM.activeDashboardFilter = .pending
+                    withAnimation { selectedTab = 1 }
+                }
                 
-                // High Risk: Blue if 0, Critical Red if > 0
+                // High Risk
                 healthCard(label: "High Risk",
                            value: "\(highRiskCount)",
                            badge: "Critical",
-                           color: highRiskCount > 0 ? critical : Theme.Colors.adaptivePrimary(colorScheme))
+                           color: highRiskCount > 0 ? critical : Theme.Colors.adaptivePrimary(colorScheme)) {
+                    applicationsVM.activeDashboardFilter = .risky
+                    withAnimation { selectedTab = 1 }
+                }
                 
-                // Approved: Always Success Green or Blue if 0
+                // Approved
                 healthCard(label: "Approved",
                            value: "\(approvedCount)",
                            badge: "Life-time",
-                           color: approvedCount > 0 ? success : Theme.Colors.adaptivePrimary(colorScheme))
+                           color: approvedCount > 0 ? success : Theme.Colors.adaptivePrimary(colorScheme)) {
+                    applicationsVM.activeDashboardFilter = .none
+                    applicationsVM.filterStatuses = [.approved, .managerApproved, .officerApproved]
+                    withAnimation { selectedTab = 1 }
+                }
             }
         }
         .opacity(isAnimating ? 1 : 0)
         .offset(y: isAnimating ? 0 : 14)
     }
 
-    private func healthCard(label: String, value: String, badge: String, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(label)
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .tracking(0.3)
-            Text(value)
-                .font(.system(size: 26, weight: .bold, design: .rounded))
-                .foregroundStyle(color)
-                .lineLimit(1)
-            Text(badge)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(color)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background(color.opacity(0.10))
-                .clipShape(Capsule())
+    private func healthCard(label: String, value: String, badge: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(label)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                        .tracking(0.3)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.secondary.opacity(0.7))
+                }
+                Text(value)
+                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                    .foregroundStyle(color)
+                    .lineLimit(1)
+                Text(badge)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(color)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(color.opacity(0.10))
+                    .clipShape(Capsule())
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(surface)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.Radius.lg)
+                    .stroke(border, lineWidth: 1.5)
+            )
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(surface)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.lg))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.Radius.lg)
-                .stroke(border, lineWidth: 1.5)
-        )
+        .buttonStyle(.plain)
     }
 
     // MARK: — Performance Trend

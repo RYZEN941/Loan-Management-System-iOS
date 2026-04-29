@@ -75,7 +75,7 @@ struct ApplicationRow: View {
                     Spacer()
                     
                     // Risk badge
-                    if application.riskLevel == .high {
+                    if application.isHighRisk {
                         HStack(spacing: 3) {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.system(size: 10))
@@ -96,7 +96,7 @@ struct ApplicationRow: View {
         .background(
             isSelected
             ? (colorScheme == .dark ? Theme.Colors.adaptiveSurfaceSecondary(colorScheme) : Theme.Colors.lightBlue)
-            : Color.clear
+            : (application.isHighRisk ? Theme.Colors.adaptiveCritical(colorScheme).opacity(0.03) : Color.clear)
         )
         .overlay(
             Group {

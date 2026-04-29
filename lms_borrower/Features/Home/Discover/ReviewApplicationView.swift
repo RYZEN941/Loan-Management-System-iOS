@@ -82,6 +82,8 @@ struct ReviewApplicationView: View {
                 ReviewDataRow(label: "Loan Amount", value: formatCurrency(currentApplication.requestedAmount))
                 ReviewDataRow(label: "Tenure", value: "\(currentApplication.tenureMonths) Months")
                 ReviewDataRow(label: "Interest Rate", value: "\(currentApplication.offeredInterestRate)% p.a.")
+                ReviewDataRow(label: "Processing Fee", value: formatCurrency(String(processingFeeAmount)))
+                ReviewDataRow(label: "Total Payment", value: formatCurrency(String(totalPaymentAmount)))
                 ReviewDataRow(label: "Branch", value: currentApplication.branchName.isEmpty ? currentApplication.branchId : currentApplication.branchName)
                 Divider()
                 ReviewDataRow(label: "Current Status", value: currentApplication.status.displayName, isHighlight: true)
@@ -183,6 +185,42 @@ struct ReviewApplicationView: View {
         formatter.locale = Locale(identifier: "en_IN")
         formatter.maximumFractionDigits = 0
         return formatter.string(from: NSNumber(value: amount)) ?? raw
+    }
+
+    private var processingFeeAmount: Double {
+        guard let fee = product?.fees.first(where: { $0.type == .processing }),
+              let requestedAmount = Double(currentApplication.requestedAmount),
+              let feeValue = Double(fee.value) else {
+            return 0
+        }
+        
+        switch fee.calcMethod {
+        case .flat:
+            return feeValue
+        case .percentage:
+            return (requestedAmount * feeValue) / 100.0
+        default:
+            return 0
+        }
+    }
+
+    private var totalPaymentAmount: Double {
+        guard let principal = Double(currentApplication.requestedAmount),
+              let rate = Double(currentApplication.offeredInterestRate) else {
+            return 0
+        }
+        let n = Double(currentApplication.tenureMonths)
+        
+        let totalAmountAndInterest: Double
+        if rate > 0 {
+            let r = (rate / 12) / 100
+            let emi = (principal * r * pow(1 + r, n)) / (pow(1 + r, n) - 1)
+            totalAmountAndInterest = emi * n
+        } else {
+            totalAmountAndInterest = principal
+        }
+        
+        return totalAmountAndInterest + processingFeeAmount
     }
 }
 

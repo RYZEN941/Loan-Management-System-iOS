@@ -136,8 +136,17 @@ class ChatConversationViewModel: ObservableObject {
                             print("DEBUG: [ChatConversationVM] Heartbeat received for room: \(roomID)")
                         }
                     }
-                    print("DEBUG: [ChatConversationVM] Stream ended normally for room: \(roomID)")
-                    break
+                    
+                    if Task.isCancelled {
+                        print("DEBUG: [ChatConversationVM] Stream ended and task is cancelled for room: \(roomID)")
+                        break
+                    }
+                    
+                    print("DEBUG: [ChatConversationVM] Stream ended normally (server disconnected). Reconnecting...")
+                    await reconcileLatestMessages()
+                    reconnectAttempt += 1
+                    let delaySeconds = min(UInt64(1 << min(reconnectAttempt, 5)), maxReconnectDelaySeconds)
+                    try? await Task.sleep(nanoseconds: (delaySeconds * 1_000_000_000) + UInt64.random(in: 0...500_000_000))
                 } catch {
                     if Task.isCancelled { 
                         print("DEBUG: [ChatConversationVM] Stream caught error but task is cancelled: \(error)")

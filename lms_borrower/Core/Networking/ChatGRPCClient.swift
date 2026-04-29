@@ -236,8 +236,8 @@ public final class ChatGRPCClient: ChatGRPCClientProtocol {
                     print("DEBUG: [ChatGRPCClient] subscribeRoomMessages finished for \(request.roomID)")
                     continuation.finish()
                 } catch {
-                    if Task.isCancelled || "\(error)".contains("CancellationError") {
-                        print("DEBUG: [ChatGRPCClient] subscribeRoomMessages task was cancelled or caught CancellationError for \(request.roomID)")
+                    if Task.isCancelled {
+                        print("DEBUG: [ChatGRPCClient] subscribeRoomMessages task was cancelled for \(request.roomID)")
                         continuation.finish()
                     } else {
                         print("DEBUG: [ChatGRPCClient] subscribeRoomMessages stream error for \(request.roomID): \(error)")

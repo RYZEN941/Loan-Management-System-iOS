@@ -4,6 +4,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct ManagerTabView: View {
 
@@ -14,6 +15,10 @@ struct ManagerTabView: View {
     
     @State private var selectedTab = 0
     @State private var showProfile = false
+
+    init() {
+        configureTabBarAppearance()
+    }
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -52,5 +57,29 @@ struct ManagerTabView: View {
         .sheet(isPresented: $showProfile) {
             ManagerProfileView()
         }
+    }
+
+    private func configureTabBarAppearance() {
+        let appearance = UITabBarAppearance()
+        appearance.configureWithDefaultBackground()
+        appearance.stackedLayoutAppearance.normal.iconColor = UIColor.systemGray3
+
+        let normalAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 13, weight: .medium),
+            .foregroundColor: UIColor.systemGray3
+        ]
+        let selectedAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 13, weight: .bold)
+        ]
+
+        appearance.stackedLayoutAppearance.normal.titleTextAttributes = normalAttrs
+        appearance.stackedLayoutAppearance.selected.titleTextAttributes = selectedAttrs
+        appearance.stackedLayoutAppearance.normal.titlePositionAdjustment = UIOffset(horizontal: 0, vertical: 2)
+        appearance.stackedLayoutAppearance.selected.titlePositionAdjustment = UIOffset(horizontal: 0, vertical: 2)
+        appearance.stackedItemPositioning = .automatic
+        appearance.stackedItemWidth = 60
+
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
     }
 }

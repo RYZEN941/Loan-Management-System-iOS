@@ -40,14 +40,57 @@ struct LoanApplication: Identifiable, Codable, Hashable {
     var repaymentHistory: [RepaymentHistoryItem] = []
     var isDisbursed: Bool = false
 
-    // MARK: - Risk Logic (Add here)
+    // MARK: - Risk Logic
     var isHighRisk: Bool {
-            // High Risk IF: CIBIL < 600 OR FOIR > 60% OR Overdue SLA OR Explicit High Risk Level
-            financials.cibilScore < 600 ||
-            financials.foir > 60 ||
-            slaStatus == .overdue ||
-            riskLevel == .high
+        financials.cibilScore < 600 ||
+        financials.foir > 60 ||
+        slaStatus == .overdue ||
+        riskLevel == .high
+    }
+
+    var dtiPercentage: Double {
+        let monthlyIncome = max(financials.monthlyIncome, 0)
+        let totalEMI = max(financials.existingEMI, 0) + max(financials.proposedEMI, 0)
+        guard monthlyIncome > 0 else { return totalEMI > 0 ? 100 : 0 }
+        return min(max((totalEMI / monthlyIncome) * 100, 0), 100)
+    }
+
+    var riskPercentage: Int {
+        let dtiComponent = dtiPercentage * 0.65
+        let cibilPenalty: Double
+        switch financials.cibilScore {
+        case ..<0:
+            cibilPenalty = 18
+        case ..<600:
+            cibilPenalty = 38
+        case ..<650:
+            cibilPenalty = 28
+        case ..<700:
+            cibilPenalty = 18
+        case ..<750:
+            cibilPenalty = 10
+        default:
+            cibilPenalty = 4
         }
+        let overduePenalty = slaStatus == .overdue ? 14.0 : (slaStatus == .urgent ? 7.0 : 0.0)
+        let riskPenalty = riskLevel == .high ? 10.0 : (riskLevel == .medium ? 5.0 : 0.0)
+        return min(100, max(0, Int(round(dtiComponent + cibilPenalty + overduePenalty + riskPenalty))))
+    }
+
+    var riskSummaryTitle: String {
+        switch riskPercentage {
+        case 0...35:
+            return "Low Risk"
+        case 36...65:
+            return "Mid Risk"
+        default:
+            return "High Risk"
+        }
+    }
+
+    var riskSummaryText: String {
+        "\(riskSummaryTitle) • \(riskPercentage)%"
+    }
     
     var slaStatus: SLAStatus {
         let days = slaDeadline.daysRemaining

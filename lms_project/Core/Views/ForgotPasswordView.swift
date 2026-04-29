@@ -180,22 +180,26 @@ struct ForgotPasswordView: View {
                     return
                 }
                 
-                if selectedMethod == .sms {
-                    let digitsOnly = inputValue.filter { $0.isNumber }
-                    if digitsOnly.count != inputValue.count {
-                        errorMessage = "Invalid phone number. Only numbers allowed."
-                        return
+                Task {
+                    let success = await authVM.initiateForgotPassword(emailOrPhone: inputValue)
+                    if success {
+                        errorMessage = nil
+                        otp = ""
+                        withAnimation(.easeInOut(duration: 0.35)) { currentStep = .otp }
+                    } else {
+                        errorMessage = authVM.forgotPasswordError
                     }
                 }
-                
-                errorMessage = nil
-                otp = "" // Reset OTP
-                withAnimation(.easeInOut(duration: 0.35)) { currentStep = .otp }
             } label: {
-                primaryButtonLabel("Send OTP")
+                if authVM.isLoading {
+                    ProgressView().tint(.white).frame(width: 280, height: 50).background(Theme.Colors.primary).clipShape(RoundedRectangle(cornerRadius: 14))
+                } else {
+                    primaryButtonLabel("Send OTP")
+                }
             }
             .buttonStyle(.plain)
             .padding(.top, 24)
+            .disabled(authVM.isLoading)
         }
         .frame(maxWidth: 480).padding(.horizontal, 48)
         .onAppear { isInputFocused = true }
@@ -231,18 +235,17 @@ struct ForgotPasswordView: View {
             errorView
             
             Button {
-                if otp == "123456" {
-                    errorMessage = nil
-                    withAnimation { currentStep = .reset }
-                } else {
-                    errorMessage = "Invalid OTP. Please try 123456."
-                }
+                verifyOtpAndProceed()
             } label: {
-                primaryButtonLabel("Verify OTP")
+                if authVM.isLoading {
+                    ProgressView().tint(.white).frame(width: 280, height: 50).background(Theme.Colors.primary).clipShape(RoundedRectangle(cornerRadius: 14))
+                } else {
+                    primaryButtonLabel("Verify OTP")
+                }
             }
             .buttonStyle(.plain)
             .padding(.top, 24)
-            .disabled(otp.count < 6)
+            .disabled(otp.count < 6 || authVM.isLoading)
             
             Button {
                 otp = ""
@@ -264,18 +267,24 @@ struct ForgotPasswordView: View {
             if newValue.count > 6 {
                 otp = String(newValue.prefix(6))
             }
-            
             if otp.count == 6 {
-                if otp == "123456" {
-                    errorMessage = nil
-                    withAnimation(.easeInOut(duration: 0.35)) {
-                        currentStep = .reset
-                    }
-                } else {
-                    errorMessage = "Invalid OTP. Please try 123456."
+                verifyOtpAndProceed()
+            }
+        }
+    }
+    
+    private func verifyOtpAndProceed() {
+        // As requested: the otp can be hard coded to be 123456 for now
+        // We will send '123456' to the backend to verify the session
+        Task {
+            let success = await authVM.verifyForgotPasswordOTP(emailCode: "123456", phoneCode: "123456")
+            if success {
+                errorMessage = nil
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    currentStep = .reset
                 }
             } else {
-                errorMessage = nil
+                errorMessage = authVM.forgotPasswordError ?? "Invalid OTP. Please try 123456."
             }
         }
     }
@@ -316,14 +325,26 @@ struct ForgotPasswordView: View {
                 } else if newPassword != confirmPassword {
                     errorMessage = "Passwords do not match"
                 } else {
-                    errorMessage = nil
-                    withAnimation(.easeInOut(duration: 0.35)) { currentStep = .success }
+                    Task {
+                        let success = await authVM.resetForgotPassword(newPassword: newPassword)
+                        if success {
+                            errorMessage = nil
+                            withAnimation(.easeInOut(duration: 0.35)) { currentStep = .success }
+                        } else {
+                            errorMessage = authVM.forgotPasswordError
+                        }
+                    }
                 }
             } label: {
-                primaryButtonLabel("Reset Password")
+                if authVM.isLoading {
+                    ProgressView().tint(.white).frame(width: 280, height: 50).background(Theme.Colors.primary).clipShape(RoundedRectangle(cornerRadius: 14))
+                } else {
+                    primaryButtonLabel("Reset Password")
+                }
             }
             .buttonStyle(.plain)
             .padding(.top, 24)
+            .disabled(authVM.isLoading)
         }
         .frame(maxWidth: 480).padding(.horizontal, 48)
     }

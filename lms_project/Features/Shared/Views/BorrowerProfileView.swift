@@ -187,27 +187,25 @@ struct BorrowerProfileView: View {
         VStack(alignment: .leading, spacing: 16) {
             sectionLabel("Credit Profile", icon: "chart.bar.doc.horizontal.fill")
 
-            CIBILGaugeView(score: latestApplication.financials.cibilScore)
-
             HStack(spacing: 12) {
                 ratioTile(
                     title: "FOIR",
                     value: String(format: "%.1f%%", latestApplication.financials.foir),
                     threshold: "Target <= 50%",
-                    color: latestApplication.financials.foir <= 50 ? Theme.Colors.success : .orange
+                    color: .primary
                 )
                 ratioTile(
                     title: "DTI Ratio",
                     value: latestApplication.financials.dtiRatio.percentFormatted,
-                    threshold: latestApplication.financials.dtiRatio <= 0.30 ? "Healthy" : "Needs attention",
-                    color: dtiColor(latestApplication.financials.dtiRatio)
+                    threshold: "Ratio",
+                    color: .primary
                 )
             }
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 statTile("Monthly Income", latestApplication.financials.monthlyIncome.currencyFormatted, icon: "indianrupeesign")
-                statTile("Annual Income", latestApplication.financials.annualIncome.currencyFormatted, icon: "calendar")
-                statTile("Bank Balance", latestApplication.financials.bankBalance.currencyFormatted, icon: "building.columns")
+                statTile("Existing EMI", latestApplication.financials.existingEMI.currencyFormatted, icon: "arrow.down.right.circle")
+                statTile("CIBIL Score", latestApplication.financials.cibilScore >= 0 ? "\(latestApplication.financials.cibilScore)" : "N/A", icon: "bolt.fill")
             }
         }
         .padding(20)
@@ -394,8 +392,9 @@ struct BorrowerProfileView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(primary.opacity(0.05))
+        .background(primary.opacity(0.03))
         .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(border.opacity(0.5), lineWidth: 0.5))
     }
 
     private func ratioTile(title: String, value: String, threshold: String, color: Color) -> some View {
@@ -405,15 +404,16 @@ struct BorrowerProfileView: View {
                 .foregroundStyle(.secondary)
             Text(value)
                 .font(.system(size: 18, weight: .bold, design: .rounded))
-                .foregroundStyle(color)
+                .foregroundStyle(.primary)
             Text(threshold)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(color.opacity(0.08))
+        .background(primary.opacity(0.03))
         .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(border.opacity(0.5), lineWidth: 0.5))
     }
 
     private func sectionLabel(_ title: String, icon: String) -> some View {

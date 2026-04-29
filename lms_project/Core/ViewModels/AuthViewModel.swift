@@ -140,11 +140,11 @@ class AuthViewModel: ObservableObject {
 
     func primeSignInExperience(identifier: String) {
         let trimmed = identifier.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count >= 4, !hasPrewarmedConnection else { return }
+        guard trimmed.count >= 5, !hasPrewarmedConnection else { return }
 
         loginPrimeTask?.cancel()
         loginPrimeTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 250_000_000)
+            try? await Task.sleep(nanoseconds: 500_000_000)
             guard let self, !Task.isCancelled else { return }
             await CoreAPIClient.prewarmConnection()
             self.hasPrewarmedConnection = true

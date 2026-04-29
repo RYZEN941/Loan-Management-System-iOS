@@ -329,6 +329,11 @@ struct CredentialsStep: View {
         .onChange(of: email) { _, newValue in
             authVM.primeSignInExperience(identifier: newValue)
         }
+        .onChange(of: focus) { previous, current in
+            if previous == .email && current != .email {
+                authVM.primeSignInExperience(identifier: email)
+            }
+        }
     }
 
     private func submit() {

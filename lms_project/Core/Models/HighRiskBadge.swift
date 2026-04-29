@@ -17,10 +17,10 @@ struct HighRiskBadge: View {
             Text("High Risk")
                 .font(.system(size: 10, weight: .bold))
         }
-        .foregroundStyle(Theme.Colors.adaptiveCritical(colorScheme))
+        .foregroundStyle(.secondary)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(Theme.Colors.adaptiveCritical(colorScheme).opacity(0.1))
+        .background(Color.secondary.opacity(0.1))
         .clipShape(Capsule())
     }
 }

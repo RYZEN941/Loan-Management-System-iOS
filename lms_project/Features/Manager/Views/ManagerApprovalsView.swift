@@ -87,6 +87,7 @@ struct ManagerApprovalsView: View {
             .onAppear {
                             // Load latest data without auto-selecting to handle the "No match" case correctly
                             applicationsVM.loadData(autoSelectFirst: false)
+                            applicationsVM.startRealtimeSync()
                             borrowerVM.refresh(from: applicationsVM.applications)
                             
                             // Only reset if navigating normally (not via Dashboard card)
@@ -110,6 +111,9 @@ struct ManagerApprovalsView: View {
                                 applicationsVM.selectedApplication = applicationsVM.filteredApplications.first
                             }
                         }
+            .onDisappear {
+                applicationsVM.stopRealtimeSync()
+            }
             .onChange(of: applicationsVM.applications) { _, newValue in
                 borrowerVM.refresh(from: newValue)
             }
@@ -274,29 +278,28 @@ struct ManagerApprovalsView: View {
                 sectionLabel("Borrower Profile & Risk Analysis", icon: "person.text.rectangle.fill")
                 
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                    // Personal Details
-                    modernFinTile("Full Name", app.borrower.name, icon: "person.fill")
-                    modernFinTile("Email Address", app.borrower.email, icon: "envelope.fill")
-                    
-                    // Risk / Financial Metrics
-                    modernFinTile("CIBIL Score", app.financials.cibilScore >= 0 ? "\(app.financials.cibilScore)" : "N/A", icon: "bolt.fill", color: cibilColor(app.financials.cibilScore))
-                    modernFinTile("DTI Ratio", app.financials.dtiRatio.percentFormatted, icon: "chart.pie.fill", color: dtiColor(app.financials.dtiRatio))
-                    modernFinTile("Risk Assessment", app.riskLevel.displayName, icon: "shield.fill", color: app.riskLevel.adaptiveColor(colorScheme))
-                    
-                    // Income & EMI
-                    modernFinTile("Monthly Income", app.financials.monthlyIncome.currencyFormatted, icon: "arrow.up.right.circle")
-                    modernFinTile("Existing EMI", app.financials.existingEMI.currencyFormatted, icon: "arrow.down.right.circle")
-                    modernFinTile("Proposed EMI", app.financials.proposedEMI.currencyFormatted, icon: "indianrupeesign.circle.fill")
-                    modernFinTile("FOIR", app.financials.foir >= 0 ? String(format: "%.1f%%", app.financials.foir) : "N/A", icon: "percent")
+                    profileSummaryTile(
+                        "Personal Info",
+                        primaryValue: app.borrower.name,
+                        secondaryValue: app.borrower.email,
+                        tertiaryValue: app.borrower.phone,
+                        icon: "person.text.rectangle.fill"
+                    )
+                    modernFinTile("CIBIL Score", app.financials.cibilScore >= 0 ? "\(app.financials.cibilScore)" : "N/A", icon: "bolt.fill")
+                    modernFinTile("Monthly Income", app.financials.monthlyIncome >= 0 ? app.financials.monthlyIncome.currencyFormatted : "N/A", icon: "arrow.up.right.circle")
+                    modernFinTile("Existing EMIs", app.financials.existingEMI >= 0 ? app.financials.existingEMI.currencyFormatted : "N/A", icon: "arrow.down.right.circle")
+                    modernFinTile("Proposed EMI", app.financials.proposedEMI >= 0 ? app.financials.proposedEMI.currencyFormatted : "N/A", icon: "indianrupeesign.circle.fill")
+                    modernFinTile("DTI Ratio", String(format: "%.1f%%", app.dtiPercentage), icon: "chart.pie.fill")
+                    profileSummaryTile(
+                        "Employment",
+                        primaryValue: app.borrower.employmentType,
+                        secondaryValue: app.borrower.employer,
+                        tertiaryValue: app.branch,
+                        icon: "briefcase.fill"
+                    )
+                    modernFinTile("Loan Purpose", app.loan.type.displayName, icon: "building.columns.fill")
+                    modernFinTile("Risk Summary", app.riskSummaryText, icon: "shield.lefthalf.filled", color: riskSummaryColor(for: app))
                 }
-
-                HStack(spacing: 12) {
-                    modernFinTile("Employment Type", app.borrower.employmentType, icon: "briefcase.fill")
-                    modernFinTile("Years At Employer", "\(max(1, min(18, 2 + abs(app.id.hashValue % 9)))) yrs", icon: "clock.badge.checkmark")
-                    modernFinTile("Branch", app.branch, icon: "building.2.fill")
-                }
-
-                CIBILGaugeView(score: app.financials.cibilScore)
             }
             .padding(20)
             .background(surface)
@@ -653,24 +656,64 @@ struct ManagerApprovalsView: View {
         private func modernFinTile(_ label: String, _ value: String, icon: String, color: Color = .primary) -> some View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 6) {
-                    Image(systemName: icon).font(.system(size: 10, weight: .bold)).foregroundStyle(color.opacity(0.6))
+                    Image(systemName: icon).font(.system(size: 10, weight: .bold)).foregroundStyle(primary.opacity(0.6))
                     Text(label.uppercased()).font(.system(size: 9, weight: .bold)).foregroundStyle(.secondary).tracking(0.8)
                 }
                 Text(value).font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundStyle(color == Theme.Colors.adaptiveSuccess(colorScheme) ? primary : color)
+                    .foregroundStyle(.primary)
                     .lineLimit(1).minimumScaleFactor(0.8)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12)
-            .background(RoundedRectangle(cornerRadius: 12).fill(color.opacity(0.04)))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(color.opacity(0.08), lineWidth: 0.5))
+            .background(RoundedRectangle(cornerRadius: 12).fill(primary.opacity(0.03)))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(border.opacity(0.5), lineWidth: 0.5))
         }
 
-    private func cibilColor(_ s: Int) -> Color {
-        s < 0 ? Theme.Colors.neutral : (s >= 750 ? Theme.Colors.adaptiveSuccess(colorScheme) : s >= 650 ? Theme.Colors.adaptiveWarning(colorScheme) : Theme.Colors.adaptiveCritical(colorScheme))
+        private func profileSummaryTile(
+            _ label: String,
+            primaryValue: String,
+            secondaryValue: String,
+            tertiaryValue: String,
+            icon: String
+        ) -> some View {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: icon).font(.system(size: 10, weight: .bold)).foregroundStyle(primary.opacity(0.6))
+                    Text(label.uppercased()).font(.system(size: 9, weight: .bold)).foregroundStyle(.secondary).tracking(0.8)
+                }
+                Text(normalizedProfileValue(primaryValue))
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                Text(normalizedProfileValue(secondaryValue))
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Text(normalizedProfileValue(tertiaryValue))
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(RoundedRectangle(cornerRadius: 12).fill(primary.opacity(0.04)))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(border.opacity(0.5), lineWidth: 0.5))
+        }
+
+    private func riskSummaryColor(for application: LoanApplication) -> Color {
+        switch application.riskPercentage {
+        case 0...35:
+            return primary
+        case 36...65:
+            return Theme.Colors.warning
+        default:
+            return Theme.Colors.critical
+        }
     }
-    private func dtiColor(_ r: Double) -> Color {
-        r < 0 ? Theme.Colors.neutral : (r <= 0.30 ? Theme.Colors.adaptiveSuccess(colorScheme) : r <= 0.40 ? Theme.Colors.adaptiveWarning(colorScheme) : Theme.Colors.adaptiveCritical(colorScheme))
+
+    private func normalizedProfileValue(_ value: String) -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "N/A" : trimmed
     }
 
     // MARK: - Borrower History Section
@@ -1353,51 +1396,57 @@ struct ManagerApprovalsView: View {
     // MARK: - Rejection Sheet
     private var rejectionSheet: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                VStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.octagon.fill").font(.system(size: 48)).foregroundStyle(Theme.Colors.adaptiveCritical(colorScheme))
-                    Text("Rejection Remarks").font(Theme.Typography.title)
-                }
-                .padding(.top)
-                
-                Text("Explain why this application is being rejected.")
-                    .font(Theme.Typography.subheadline).foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-                
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Reason")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                    TextEditor(text: $applicationsVM.rejectionRemarksText)
-                        .padding(12)
-                        .frame(height: 180)
-                        .scrollContentBackground(.hidden)
-                        .background(ManagerTheme.Colors.surface(colorScheme))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1))
-                    HStack {
-                        Text("This reason is sent to the backend and saved in internal remarks.")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Text("\(applicationsVM.rejectionRemarksText.trimmingCharacters(in: .whitespacesAndNewlines).count) chars")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(.tertiary)
+            ScrollView {
+                VStack(spacing: 24) {
+                    VStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.octagon.fill").font(.system(size: 48)).foregroundStyle(Theme.Colors.adaptiveCritical(colorScheme))
+                        Text("Rejection Remarks").font(Theme.Typography.title)
                     }
+                    .padding(.top)
+                    
+                    Text("Explain why this application is being rejected.")
+                        .font(Theme.Typography.subheadline).foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
+                    
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Reason")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                        TextEditor(text: $applicationsVM.rejectionRemarksText)
+                            .padding(12)
+                            .frame(minHeight: 140, maxHeight: 200)
+                            .scrollContentBackground(.hidden)
+                            .background(ManagerTheme.Colors.surface(colorScheme))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1))
+                        HStack {
+                            Text("This reason is sent to the backend and saved in internal remarks.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text("\(applicationsVM.rejectionRemarksText.trimmingCharacters(in: .whitespacesAndNewlines).count) chars")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .padding(.horizontal)
+                    
+                    Button { applicationsVM.confirmRejectWithRemarks() } label: {
+                        Text("Confirm Rejection").font(.headline).foregroundColor(.white)
+                            .frame(maxWidth: .infinity).padding(.vertical, 16)
+                            .background(
+                                applicationsVM.rejectionRemarksText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                    ? Color.secondary.opacity(0.3)
+                                    : Theme.Colors.adaptiveCritical(colorScheme)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    .padding(.horizontal)
+                    .disabled(applicationsVM.rejectionRemarksText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    
+                    Spacer(minLength: 20)
                 }
-                .padding(.horizontal)
-                
-                Button { applicationsVM.confirmRejectWithRemarks() } label: {
-                    Text("Confirm Rejection").font(.headline).foregroundColor(.white)
-                        .frame(maxWidth: .infinity).padding(.vertical, 16)
-                        .background(Theme.Colors.adaptiveCritical(colorScheme))
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
-                .padding(.horizontal)
-                .disabled(applicationsVM.rejectionRemarksText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                
-                Spacer()
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1408,7 +1457,7 @@ struct ManagerApprovalsView: View {
                 }
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
     }
 
     // MARK: - Send Back Sheet

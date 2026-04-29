@@ -320,22 +320,19 @@ struct LOApplicationsView: View {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                     modernFinTile("Full Name", app.borrower.name, icon: "person.fill")
                     modernFinTile("Email Address", app.borrower.email, icon: "envelope.fill")
-                    modernFinTile("CIBIL Score", app.financials.cibilScore >= 0 ? "\(app.financials.cibilScore)" : "N/A", icon: "bolt.fill", color: cibilColor(app.financials.cibilScore))
-                    modernFinTile("DTI Ratio", app.financials.dtiRatio.percentFormatted, icon: "chart.pie.fill", color: dtiColor(app.financials.dtiRatio))
-                    modernFinTile("Risk Assessment", app.riskLevel.displayName, icon: "shield.fill", color: app.riskLevel.adaptiveColor(colorScheme))
-                    modernFinTile("Monthly Income", app.financials.monthlyIncome.currencyFormatted, icon: "arrow.up.right.circle")
-                    modernFinTile("Existing EMI", app.financials.existingEMI.currencyFormatted, icon: "arrow.down.right.circle")
-                    modernFinTile("EMI Amount", app.loan.emi.currencyFormatted, icon: "indianrupeesign.circle.fill")
+                    modernFinTile("CIBIL Score", app.financials.cibilScore >= 0 ? "\(app.financials.cibilScore)" : "N/A", icon: "bolt.fill")
+                    modernFinTile("DTI Ratio", app.financials.dtiRatio >= 0 ? app.financials.dtiRatio.percentFormatted : "N/A", icon: "chart.pie.fill")
+                    modernFinTile("Risk Assessment", app.riskLevel.displayName, icon: "shield.fill")
+                    modernFinTile("Monthly Income", app.financials.monthlyIncome >= 0 ? app.financials.monthlyIncome.currencyFormatted : "N/A", icon: "arrow.up.right.circle")
+                    modernFinTile("Existing EMI", app.financials.existingEMI >= 0 ? app.financials.existingEMI.currencyFormatted : "N/A", icon: "arrow.down.right.circle")
+                    modernFinTile("Proposed EMI", app.financials.proposedEMI >= 0 ? app.financials.proposedEMI.currencyFormatted : "N/A", icon: "indianrupeesign.circle.fill")
                     modernFinTile("FOIR", app.financials.foir >= 0 ? String(format: "%.1f%%", app.financials.foir) : "N/A", icon: "percent")
                 }
 
                 HStack(spacing: 12) {
                     modernFinTile("Employment Type", app.borrower.employmentType, icon: "briefcase.fill")
-                    modernFinTile("Years At Employer", "\(estimatedYearsAtEmployer(for: app)) yrs", icon: "clock.badge.checkmark")
                     modernFinTile("Branch", app.branch, icon: "building.2.fill")
                 }
-
-                CIBILGaugeView(score: app.financials.cibilScore)
             }
             .padding(20)
             .background(surface)
@@ -641,42 +638,12 @@ struct LOApplicationsView: View {
     // MARK: - Financial Section
     // ────────────────────────────────────────────────────────────────
 
-    private func financialSection(_ app: LoanApplication) -> some View {
-            VStack(alignment: .leading, spacing: 20) {
-                // Header with a subtle trailing info or refresh indicator
-                HStack {
-                    sectionLabel("Financial Overview", icon: "chart.bar.fill")
-                    Spacer()
-                    Image(systemName: "checkmark.shield.fill")
-                        .font(.system(size: 12))
-                        .foregroundStyle(primary.opacity(0.5))
-                }
-                
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                    modernFinTile("Monthly Income", app.financials.monthlyIncome.currencyFormatted, icon: "arrow.up.right.circle")
-                    modernFinTile("Existing EMI", app.financials.existingEMI.currencyFormatted, icon: "arrow.down.left.circle")
-                    modernFinTile("CIBIL Score", app.financials.cibilScore >= 0 ? "\(app.financials.cibilScore)" : "N/A", icon: "gauge.medium", color: cibilColor(app.financials.cibilScore))
-                    modernFinTile("DTI Ratio", app.financials.dtiRatio.percentFormatted, icon: "percent")
-                    modernFinTile("Bank Balance", app.financials.bankBalance.currencyFormatted, icon: "building.columns")
-                    // Removed Annual Income tile as requested.
-                }
-            }
-            .padding(20)
-            .background(surface)
-            .clipShape(RoundedRectangle(cornerRadius: 24)) // Slightly larger radius for the container
-            .overlay(
-                RoundedRectangle(cornerRadius: 24)
-                    .stroke(border, lineWidth: 1)
-            )
-        }
-
         private func modernFinTile(_ label: String, _ value: String, icon: String, color: Color = .primary) -> some View {
             VStack(alignment: .leading, spacing: 8) {
-                // Icon and Label Row
                 HStack(spacing: 6) {
                     Image(systemName: icon)
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(color.opacity(0.6))
+                        .foregroundStyle(primary.opacity(0.6))
                     
                     Text(label.uppercased())
                         .font(.system(size: 9, weight: .bold))
@@ -686,27 +653,25 @@ struct LOApplicationsView: View {
                 
                 Text(value)
                     .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundStyle(color == Theme.Colors.success ? primary : color)
+                    .foregroundStyle(.primary)
                     .minimumScaleFactor(0.8)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            // Subtle tile background
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(color.opacity(0.04)) // Extremely subtle tint based on the color of the metric
+                    .fill(primary.opacity(0.03))
             )
-            // Inner hair-line border for the tile
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(color.opacity(0.08), lineWidth: 0.5)
+                    .stroke(border.opacity(0.5), lineWidth: 0.5)
             )
         }
 
-    private func cibilColor(_ s: Int)    -> Color { s < 0 ? Theme.Colors.neutral : (s >= 750 ? Theme.Colors.success : s >= 650 ? Theme.Colors.neutral : Theme.Colors.critical) }
-    private func dtiColor(_ r: Double)   -> Color { r < 0 ? Theme.Colors.neutral : (r <= 0.30 ? Theme.Colors.success : r <= 0.40 ? Theme.Colors.neutral : Theme.Colors.critical) }
+    private func cibilColor(_ s: Int)    -> Color { .primary }
+    private func dtiColor(_ r: Double)   -> Color { .primary }
 
     // ────────────────────────────────────────────────────────────────
     // MARK: - Borrower History Section
@@ -1302,9 +1267,7 @@ struct LOApplicationsView: View {
         }
     }
 
-    private func estimatedYearsAtEmployer(for app: LoanApplication) -> Int {
-        max(1, min(18, 2 + abs(app.id.hashValue % 9)))
-    }
+
 }
 
 // ────────────────────────────────────────────────────────────────────

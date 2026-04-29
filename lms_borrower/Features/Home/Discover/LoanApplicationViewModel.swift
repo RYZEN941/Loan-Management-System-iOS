@@ -114,7 +114,11 @@ final class LoanApplicationViewModel: ObservableObject {
         return true
     }
 
-    func validateDisbursementDetails() -> Bool {
+    func validateDisbursementDetails(isPersonalLoan: Bool) -> Bool {
+        if !isPersonalLoan {
+            return true
+        }
+
         let trimmedAccountNumber = disbursementAccountNumber.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedIFSC = disbursementIfscCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         let trimmedBankName = disbursementBankName.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -145,12 +149,12 @@ final class LoanApplicationViewModel: ObservableObject {
         return true
     }
 
-    func submitApplication() async -> BorrowerLoanApplication? {
+    func submitApplication(isPersonalLoan: Bool) async -> BorrowerLoanApplication? {
         guard !isSubmitting else { return nil }
         guard ensureBranchValidityBeforeSubmit() else {
             return nil
         }
-        guard validateDisbursementDetails() else {
+        guard validateDisbursementDetails(isPersonalLoan: isPersonalLoan) else {
             return nil
         }
 
@@ -183,6 +187,7 @@ final class LoanApplicationViewModel: ObservableObject {
                 branchId: trimmedBranchId,
                 requestedAmount: trimmedAmount,
                 tenureMonths: tenureMonths,
+                status: isPersonalLoan ? .submitted : .draft,
                 disbursementAccountNumber: trimmedAccountNumber,
                 disbursementIfscCode: trimmedIFSC,
                 disbursementBankName: trimmedBankName,

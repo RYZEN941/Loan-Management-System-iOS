@@ -117,6 +117,7 @@ final class LoanGRPCClient: LoanServiceProtocol {
         branchId: String,
         requestedAmount: String,
         tenureMonths: Int,
+        status: LoanApplicationStatus,
         disbursementAccountNumber: String,
         disbursementIfscCode: String,
         disbursementBankName: String,
@@ -128,7 +129,7 @@ final class LoanGRPCClient: LoanServiceProtocol {
         request.branchID = branchId
         request.requestedAmount = requestedAmount
         request.tenureMonths = Int32(tenureMonths)
-        request.status = .submitted
+        request.status = status.proto
         request.disbursementAccountNumber = disbursementAccountNumber
         request.disbursementIfscCode = disbursementIfscCode
         request.disbursementBankName = disbursementBankName

@@ -231,6 +231,7 @@ func (s *service) CreateOrGetDirectRoom(ctx context.Context, req *chatv1.CreateO
 func (s *service) ListMyChatRooms(ctx context.Context, req *chatv1.ListMyChatRoomsRequest) (*chatv1.ListMyChatRoomsResponse, error) {
 	callerUserID, _, err := requireUserAndRole(ctx)
 	if err != nil {
+		log.Printf("ListMyChatRooms: failed to get user and role: %v", err)
 		return nil, err
 	}
 
@@ -241,6 +242,7 @@ func (s *service) ListMyChatRooms(ctx context.Context, req *chatv1.ListMyChatRoo
 		Offset:  offset,
 	})
 	if err != nil {
+		log.Printf("ListMyChatRooms: s.queries.ListChatRoomsForUser failed for UserAID=%s: %v", callerUserID, err)
 		return nil, status.Error(codes.Internal, "failed to list chat rooms")
 	}
 

@@ -33,13 +33,6 @@ struct LoanApplication: Identifiable, Codable, Hashable {
     /// Sanction letter tracking
     var sanctionLetter: SanctionLetter?
     
-    var isHighRisk: Bool {
-        financials.cibilScore >= 0 && financials.cibilScore < 600
-        || financials.foir >= 0 && financials.foir > 60
-        || slaStatus == .overdue
-        || riskLevel == .high
-    }
-
     var borrowerUserID: String = ""
     var borrowerHistoryThisBank: [BorrowerLoanHistoryEntry] = []
     var borrowerHistoryOtherLenders: [BorrowerLoanHistoryEntry] = []

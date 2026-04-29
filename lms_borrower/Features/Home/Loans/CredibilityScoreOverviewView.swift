@@ -61,16 +61,14 @@ struct CredibilityScoreOverviewView: View {
                 VStack(spacing: 24) {
                     ZStack {
                         Circle()
-                            .trim(from: 0, to: 0.75)
                             .stroke(DS.primaryLight.opacity(0.5), style: StrokeStyle(lineWidth: 24, lineCap: .round))
                             .frame(width: 220, height: 220)
-                            .rotationEffect(.degrees(135))
                         
                         Circle()
-                            .trim(from: 0, to: CGFloat(score) / 900 * 0.75)
+                            .trim(from: 0, to: CGFloat(score) / 900)
                             .stroke(scoreColor, style: StrokeStyle(lineWidth: 24, lineCap: .round))
                             .frame(width: 220, height: 220)
-                            .rotationEffect(.degrees(135))
+                            .rotationEffect(.degrees(-90))
                         
                         VStack(spacing: 4) {
                             Text("\(score)")
@@ -80,7 +78,6 @@ struct CredibilityScoreOverviewView: View {
                                 .font(.headline)
                                 .foregroundColor(scoreColor.opacity(0.9))
                         }
-                        .offset(y: -10)
                     }
                     .padding(.top, 40) // FIX: Increased top padding from 20 to 40 to give it proper breathing room
                     
@@ -224,10 +221,7 @@ private enum CreditTier {
     var color: Color {
         switch self {
         case .highRisk: return DS.danger
-        case .bronze: return Color(hex: "#B08D57")
-        case .silver: return .mainBlue
-        case .gold: return Color(hex: "#D4AF37")
-        case .platinum: return Color(hex: "#6A5ACD")
+        default: return Color(hex: "#00C48C")
         }
     }
 

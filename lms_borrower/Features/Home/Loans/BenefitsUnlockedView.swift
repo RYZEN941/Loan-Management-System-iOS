@@ -29,22 +29,45 @@ struct BenefitsUnlockedView: View {
                 // Tier Card
                 HStack(spacing: 20) {
                     Image(systemName: "medal.fill")
-                        .font(.system(size: 40))
+                        .font(.system(size: 56))
                         .foregroundColor(tier.medalColor)
+                        .shadow(color: tier.medalColor.opacity(0.4), radius: 8, x: 0, y: 4)
                     
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 6) {
                         Text("\(tier.tierName) Tier")
-                            .font(.title3).bold()
+                            .font(.title2).bold()
+                            .foregroundColor(.primary)
                         Text(tier.nextTierText)
-                            .font(.caption)
+                            .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
-                    Spacer()
+                    Spacer(minLength: 0)
                 }
-                .padding(20)
-                .background(Color.white)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
+                .padding(.vertical, 24)
+                .padding(.horizontal, 24)
+                .background(
+                    ZStack {
+                        Color.white
+                        LinearGradient(
+                            colors: [tier.medalColor.opacity(0.15), Color.white.opacity(0.0)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    }
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(
+                            LinearGradient(
+                                colors: [tier.medalColor.opacity(0.6), tier.medalColor.opacity(0.1)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 2
+                        )
+                )
+                .shadow(color: tier.medalColor.opacity(0.15), radius: 12, x: 0, y: 6)
                 .padding(.horizontal, 20)
                 
                 // Perks List
@@ -194,6 +217,7 @@ struct BenefitCard: View {
                     .foregroundColor(.secondary)
                     .lineSpacing(4)
             }
+            Spacer(minLength: 0)
         }
         .padding(20)
         .background(Color.white)

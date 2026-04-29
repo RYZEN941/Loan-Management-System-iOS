@@ -106,8 +106,6 @@ struct ProfileView: View {
                     ProfileMenuRow(icon: "clock.arrow.circlepath", title: "Loan History", route: .loanHistory)
                     Divider().padding(.leading, 56)
                     ProfileMenuRow(icon: "gearshape.fill", title: "Settings", route: .settings)
-                    Divider().padding(.leading, 56)
-                    ProfileMenuRow(icon: "questionmark.circle.fill", title: "Help & Support", route: .chatList)
                 }
                 .background(Color.white)
                 .clipShape(RoundedRectangle(cornerRadius: 16))

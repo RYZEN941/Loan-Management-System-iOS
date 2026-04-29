@@ -534,41 +534,29 @@ struct NextEMIBannerView: View {
     @EnvironmentObject var router: AppRouter
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             Circle()
                 .fill(emi.isUrgent ? DS.danger.opacity(0.12) : DS.primary.opacity(0.10))
-                .frame(width: 46, height: 46)
+                .frame(width: 44, height: 44)
                 .overlay(Image(systemName: emi.isUrgent ? "exclamationmark.circle.fill" : "calendar.badge.clock").font(.body).foregroundColor(emi.isUrgent ? .alertRed : .mainBlue))
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Next EMI")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                Text(emi.dueDate)
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(emi.isUrgent ? .alertRed : .primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
+                Text("Next EMI").font(.caption).foregroundColor(.secondary).lineLimit(1)
+                Text(emi.dueDate).font(.subheadline).bold().foregroundColor(emi.isUrgent ? .alertRed : .primary).lineLimit(1).minimumScaleFactor(0.8)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .layoutPriority(2)
             
+            Spacer(minLength: 4)
+
             VStack(alignment: .trailing, spacing: 2) {
                 Text("₹\(emi.amount.formatted(.number.grouping(.automatic)))")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.subheadline).bold()
                     .foregroundColor(.mainBlue)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                Text(emi.daysLeft)
-                    .font(.caption2)
-                    .foregroundColor(emi.isUrgent ? .alertRed : .secondary)
-                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .fixedSize(horizontal: true, vertical: false)
+                Text(emi.daysLeft).font(.caption2).foregroundColor(emi.isUrgent ? .alertRed : .secondary).lineLimit(1)
             }
-            .frame(width: 78, alignment: .trailing)
-            .layoutPriority(0)
-            .padding(.trailing, 2)
+            .padding(.trailing, 8)
 
             Button {
                 router.push(.paymentCheckout(
@@ -577,41 +565,15 @@ struct NextEMIBannerView: View {
                     amount: emi.amount
                 ))
             } label: {
-                Text("Pay Now")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.white)
-                    .frame(width: 124)
-                    .padding(.vertical, 10)
-                    .background(
-                        LinearGradient(
-                            colors: [DS.primary, .secondaryBlue],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                Text("Pay Now").font(.caption).bold().foregroundColor(.white).padding(.horizontal, 12).padding(.vertical, 8).background(DS.primary).clipShape(RoundedRectangle(cornerRadius: 10))
             }
-            .fixedSize()
+            .fixedSize(horizontal: true, vertical: false)
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 16)
-        .background(
-            LinearGradient(
-                colors: [
-                    Color.white.opacity(0.98),
-                    Color(hex: "#F8FAFF")
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(emi.isUrgent ? DS.danger.opacity(0.35) : Color.white.opacity(0.9), lineWidth: 1)
-        )
-        .shadow(color: Color(hex: "#AFC4FF").opacity(0.14), radius: 18, x: 0, y: 10)
-        .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 3)
+        .padding(14)
+        .background(.white.opacity(0.96))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(emi.isUrgent ? DS.danger.opacity(0.4) : Color.clear, lineWidth: 1.5))
+        .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 4)
     }
 }
 
@@ -846,7 +808,7 @@ final class HomeDashboardViewModel: ObservableObject {
     @Published var errorMessage: String? = nil
 
     let quickActions: [QuickAction] = [
-        QuickAction(kind: .schedule, icon: "calendar", label: String(localized: "Schedule")),
+        QuickAction(kind: .support, icon: "headphones", label: String(localized: "Messages")),
         QuickAction(kind: .payEMI, icon: "indianrupeesign.circle.fill", label: String(localized: "Pay EMI")),
         QuickAction(kind: .history, icon: "clock.arrow.circlepath", label: String(localized: "History")),
         QuickAction(kind: .analytics, icon: "chart.bar.fill", label: String(localized: "Analytics"))

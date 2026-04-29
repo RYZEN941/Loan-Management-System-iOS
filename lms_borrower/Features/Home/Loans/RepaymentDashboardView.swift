@@ -88,8 +88,12 @@ struct RepaymentDashboardView: View {
 
                             Button {
                                 guard let amountDouble = Double(nextEMI.emiAmount) else { return }
+                                // Resolve the correct loanId for this EMI across all loans
+                                let resolvedLoanId = viewModel.loanIdByEmiId[nextEMI.id]
+                                    ?? viewModel.activeLoan?.id
+                                    ?? ""
                                 router.push(.paymentCheckout(
-                                    loanId: loan.id,
+                                    loanId: resolvedLoanId,
                                     emiScheduleId: nextEMI.id,
                                     amount: amountDouble
                                 ))
@@ -131,11 +135,11 @@ struct RepaymentDashboardView: View {
                     // Links to EMI schedule and history
                     VStack(spacing: 16) {
                         RepaymentNavRow(title: "Upcoming Schedule", icon: "calendar.badge.clock") {
-                            router.push(.repaymentsList(loanId: loan.id, initialTab: 0))
+                            router.push(.repaymentsList(loanId: "", initialTab: 0))
                         }
                         Divider()
                         RepaymentNavRow(title: "Payment History", icon: "clock.arrow.circlepath") {
-                            router.push(.repaymentsList(loanId: loan.id, initialTab: 1))
+                            router.push(.repaymentsList(loanId: "", initialTab: 1))
                         }
                     }
                     .padding(20)
@@ -166,7 +170,7 @@ struct RepaymentDashboardView: View {
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            viewModel.fetchAll(applicationId: applicationId)
+            viewModel.fetchAllLoans()
         }
     }
 

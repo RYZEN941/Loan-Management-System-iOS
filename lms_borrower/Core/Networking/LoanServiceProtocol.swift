@@ -90,4 +90,10 @@ protocol LoanServiceProtocol {
         amount: String,
         externalTransactionId: String
     ) async throws -> LoanPayment
+
+    // MARK: - Loan Lifecycle (Borrower)
+    // Backend: LoanService.RescheduleLoan (loan.proto line 74) — Manager/admin only.
+    // Borrower-side: used to compute foreclosure quote via current outstanding.
+    // To initiate foreclosure the app calls UpdateLoanApplicationStatus(.cancelled).
+    func rescheduleLoan(loanId: String, newTenureMonths: Int) async throws -> ActiveLoan
 }

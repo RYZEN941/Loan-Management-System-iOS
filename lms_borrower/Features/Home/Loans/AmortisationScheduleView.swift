@@ -153,6 +153,7 @@ struct AmortisationScheduleView: View {
     let loanId: String?
 
     @StateObject private var viewModel: AmortisationScheduleViewModel
+    @EnvironmentObject var router: AppRouter
 
     init(
         loanId: String? = nil,
@@ -160,6 +161,27 @@ struct AmortisationScheduleView: View {
     ) {
         self.loanId = loanId
         _viewModel = StateObject(wrappedValue: AmortisationScheduleViewModel(loanId: loanId, service: service))
+    }
+
+    // MARK: - Payment eligibility helpers
+
+    /// Returns true only if:
+    ///  • the month is not already paid
+    ///  • every month with a lower installmentNumber is .paid
+    private func canPay(_ month: AmortisationMonth) -> Bool {
+        guard month.status != .paid else { return false }
+        let prior = viewModel.schedule.filter { $0.monthIndex < month.monthIndex }
+        return prior.allSatisfy { $0.status == .paid }
+    }
+
+    /// Human-readable reason why payment is blocked (nil when unblocked or already paid).
+    private func blockedReason(for month: AmortisationMonth) -> String? {
+        guard month.status != .paid else { return nil }
+        let unpaidPrior = viewModel.schedule
+            .filter { $0.monthIndex < month.monthIndex && $0.status != .paid }
+            .sorted { $0.monthIndex < $1.monthIndex }
+        guard let first = unpaidPrior.first else { return nil }
+        return "EMI #\(first.monthIndex) must be paid before you can pay this EMI."
     }
 
     var body: some View {
@@ -194,7 +216,18 @@ struct AmortisationScheduleView: View {
                     if let selectedMonth = viewModel.selectedMonth {
                         SelectedMonthCard(
                             month: selectedMonth,
-                            totalEmiCount: viewModel.totalEmiCount
+                            totalEmiCount: viewModel.totalEmiCount,
+                            canPay: canPay(selectedMonth),
+                            blockedReason: blockedReason(for: selectedMonth),
+                            onPay: {
+                                guard let loanId = viewModel.activeLoan?.id else { return }
+                                let amount = selectedMonth.emiAmount
+                                router.push(.paymentCheckout(
+                                    loanId: loanId,
+                                    emiScheduleId: selectedMonth.id,
+                                    amount: amount
+                                ))
+                            }
                         )
                         .padding(.horizontal, 20)
                     }
@@ -430,6 +463,9 @@ private struct CalendarYearGrid: View {
 private struct SelectedMonthCard: View {
     let month: AmortisationMonth
     let totalEmiCount: Int
+    var canPay: Bool = false
+    var blockedReason: String? = nil
+    var onPay: (() -> Void)? = nil
 
     private var dateString: String {
         month.date.formatted(.dateTime.month(.wide).year())
@@ -437,6 +473,7 @@ private struct SelectedMonthCard: View {
 
     var body: some View {
         VStack(spacing: 16) {
+            // ── Header row ──────────────────────────────────────
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(dateString)
@@ -456,6 +493,7 @@ private struct SelectedMonthCard: View {
                     .clipShape(Capsule())
             }
 
+            // ── Principal / Interest bar ─────────────────────────
             GeometryReader { geometry in
                 let total = month.principalPaid + month.interestPaid
                 let principalWidth = total > 0 ? geometry.size.width * CGFloat(month.principalPaid / total) : 0
@@ -471,6 +509,7 @@ private struct SelectedMonthCard: View {
             }
             .frame(height: 10)
 
+            // ── Breakdown row ────────────────────────────────────
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
@@ -506,6 +545,7 @@ private struct SelectedMonthCard: View {
 
             Divider()
 
+            // ── Remaining balance row ────────────────────────────
             HStack {
                 Text("Remaining Balance")
                     .font(.subheadline).foregroundColor(.secondary)
@@ -513,11 +553,76 @@ private struct SelectedMonthCard: View {
                 Text(formatCurrency(month.balance))
                     .font(.subheadline).bold()
             }
+
+            // ── Payment action section ───────────────────────────
+            if month.status == .paid {
+                // Already paid – show a success pill
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .foregroundColor(Color(hex: "#00C48C"))
+                    Text("This EMI has been paid")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(Color(hex: "#00C48C"))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 13)
+                .background(Color(hex: "#00C48C").opacity(0.10))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            } else if canPay {
+                // Payable – show Pay EMI button
+                Button {
+                    onPay?()
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "indianrupeesign.circle.fill")
+                            .font(.headline)
+                        Text("Pay \(formatCurrency(month.emiAmount))")
+                            .font(.headline)
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        LinearGradient(
+                            colors: [DS.primary, DS.primaryLight.opacity(0.85)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .shadow(color: DS.primary.opacity(0.35), radius: 8, x: 0, y: 4)
+                }
+                .buttonStyle(.plain)
+
+            } else if let reason = blockedReason {
+                // Blocked – show lock warning
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "lock.fill")
+                        .font(.subheadline)
+                        .foregroundColor(DS.danger)
+                        .padding(.top, 1)
+                    Text(reason)
+                        .font(.subheadline)
+                        .foregroundColor(DS.danger)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(12)
+                .background(DS.danger.opacity(0.07))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(DS.danger.opacity(0.25), lineWidth: 1)
+                )
+            }
         }
         .padding(20)
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 4)
+        .animation(.spring(response: 0.3), value: canPay)
+        .animation(.spring(response: 0.3), value: month.id)
     }
 
     private var statusIcon: String {

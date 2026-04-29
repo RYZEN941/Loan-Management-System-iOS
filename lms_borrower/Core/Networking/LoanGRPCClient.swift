@@ -382,4 +382,21 @@ final class LoanGRPCClient: LoanServiceProtocol {
             throw LoanError.from(error)
         }
     }
+
+    func rescheduleLoan(loanId: String, newTenureMonths: Int) async throws -> ActiveLoan {
+        var request = Loan_V1_RescheduleLoanRequest()
+        request.loanID = loanId
+        request.newTenureMonths = Int32(newTenureMonths)
+
+        do {
+            let (options, metadata) = try authContext()
+            let response = try await client.rescheduleLoan(
+                request: .init(message: request, metadata: metadata),
+                options: options
+            )
+            return ActiveLoan.from(proto: response.loan)
+        } catch {
+            throw LoanError.from(error)
+        }
+    }
 }

@@ -581,9 +581,7 @@ struct QuickActionItemView: View {
                     router.push(.repaymentDashboard(applicationId: appId))
                 }
             case .history:
-                if let loanId = viewModel.activeLoans.first?.id, !loanId.isEmpty {
-                    router.push(.repaymentsList(loanId: loanId, initialTab: 1))
-                }
+                router.push(.repaymentsList(loanId: "", initialTab: 1))
             case .support:
                 router.push(.chatList)
             case .schedule:
@@ -591,7 +589,9 @@ struct QuickActionItemView: View {
                     router.push(.amortisationSchedule(loanId: loanId))
                 }
             case .foreclose:
-                router.push(.outstandingBalance)
+                if let loan = viewModel.activeLoans.first, let appId = loan.application?.id, !loan.id.isEmpty {
+                    router.push(.outstandingBalance(loanId: loan.id, applicationId: appId))
+                }
             case .statement:
                 router.push(.statementDownload)
             case .analytics:

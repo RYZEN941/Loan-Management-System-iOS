@@ -88,7 +88,7 @@ struct MainTabView: View {
         case .emiCalculator: EMICalculatorView()
         case .activeLoanDetails(let application): ActiveLoanDetailsView(application: application)
         case .amortisationSchedule(let loanId): AmortisationScheduleView(loanId: loanId)
-        case .outstandingBalance: OutstandingBalanceView()
+        case .outstandingBalance(let loanId, let applicationId): OutstandingBalanceView(loanId: loanId, applicationId: applicationId)
         case .repaymentDashboard(let applicationId): RepaymentDashboardView(applicationId: applicationId)
         case .repaymentsList(let loanId, let tab): RepaymentsListView(loanId: loanId, selectedTab: tab)
         case .overdueDetails(let loanId): OverdueDetailsView(loanId: loanId)

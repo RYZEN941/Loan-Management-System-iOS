@@ -68,13 +68,7 @@ struct RepaymentsListView: View {
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            // Load EMI schedule and payments via the shared VM
-            // We pass a placeholder applicationId — the loanId path is used directly
-            guard let loan = viewModel.activeLoan else {
-                viewModel.fetchAllByLoanId(loanId: loanId)
-                return
-            }
-            _ = loan // already loaded
+            viewModel.fetchAllLoans()
         }
     }
 

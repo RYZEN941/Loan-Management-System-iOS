@@ -165,17 +165,19 @@ final class MessagesViewModel: ObservableObject {
 
         Task {
             do {
-                _ = try await chatAPI.createOrGetDirectRoom(targetUserID: candidate.id)
+                try await ensureCurrentUserID()
+                let room = try await chatAPI.createOrGetDirectRoom(targetUserID: candidate.id)
                 addUserSuccess = true
                 showAddUser = false
                 addUserInput = ""
+
                 try await refreshKnownUsers(query: "")
-                let rooms = try await chatAPI.listMyChatRooms(limit: 100, offset: 0)
-                let mapped = rooms.map(mapConversation).sorted { $0.lastMessageTime > $1.lastMessageTime }
-                conversations = mapped
-                if let room = mapped.first(where: { $0.participantUserID == candidate.id }) {
-                    selectConversation(room)
-                }
+
+                let mappedRoom = mapConversation(room)
+                upsertConversation(mappedRoom)
+                selectConversation(mappedRoom)
+
+                try await refreshConversationsFromServer()
             } catch {
                 addUserError = (error as? LocalizedError)?.errorDescription ?? "Failed to start conversation"
             }
@@ -217,6 +219,27 @@ final class MessagesViewModel: ObservableObject {
         }
 
         knownUsersByID = merged
+    }
+
+    private func refreshConversationsFromServer() async throws {
+        let rooms = try await chatAPI.listMyChatRooms(limit: 100, offset: 0)
+        let mapped = rooms.map(mapConversation).sorted { $0.lastMessageTime > $1.lastMessageTime }
+        conversations = mapped
+
+        if let currentSelectedID = selectedConversation?.id,
+           let refreshedSelection = mapped.first(where: { $0.id == currentSelectedID }) {
+            selectedConversation = refreshedSelection
+        }
+    }
+
+    private func upsertConversation(_ conversation: Conversation) {
+        if let existingIndex = conversations.firstIndex(where: { $0.id == conversation.id }) {
+            conversations[existingIndex] = conversation
+        } else {
+            conversations.insert(conversation, at: 0)
+        }
+
+        conversations.sort { $0.lastMessageTime > $1.lastMessageTime }
     }
 
     private func startSubscription(for roomID: String) {

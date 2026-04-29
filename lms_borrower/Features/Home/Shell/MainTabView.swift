@@ -43,7 +43,7 @@ struct MainTabView: View {
                         handleRouting(for: route).environmentObject(discoveryRouter)
                     }
             }
-            .tabItem { Image(systemName: "magnifyingglass"); Text("Discover") }
+            .tabItem { Image(systemName: "plus.circle.fill"); Text("Apply") }
             .tag(1)
             
             // TAB 3: TRACK

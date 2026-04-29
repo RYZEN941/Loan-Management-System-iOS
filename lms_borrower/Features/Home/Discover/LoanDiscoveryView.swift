@@ -9,7 +9,7 @@ struct LoanMarketplaceView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Discover")
+                    Text("Apply for Loan")
                         .font(.largeTitle).bold()
                     Text("Find the right loan product from live backend data.")
                         .font(.subheadline)

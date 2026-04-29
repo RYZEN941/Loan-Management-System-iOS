@@ -20,6 +20,7 @@ struct AdminRiskView: View {
     @State private var sidebarCollapsed = false
     @State private var showAssignSheet: ActionItem? = nil
     @State private var showMessageSheet: ActionItem? = nil
+    @ObservedObject private var actionMock = ActionRequiredMockService.shared
     
     // Resolution confirmation
     @State private var showConfirmation = false
@@ -115,10 +116,11 @@ struct AdminRiskView: View {
                                        confirmationAction = { resolveFraud(item: item, message: "Fraud Confirmed and Resolved") }
                                        showConfirmation = true
                                    })
+                .presentationDetents([.height(420)])
             }
             .sheet(item: $activeOverride) { item in
                 OverrideModal(item: item, onApprove: {
-                    withAnimation { policyViolations.removeAll { $0.id == item.id } }
+                    withAnimation { actionMock.resolveItem(id: item.id) }
                 })
             }
             .confirmationDialog(confirmationMessage, isPresented: $showConfirmation, titleVisibility: .visible) {
@@ -134,13 +136,6 @@ struct AdminRiskView: View {
             }
             .onAppear {
                 riskVM.loadData()
-                syncFromBackend()
-            }
-            .onChange(of: riskVM.applications) { _, _ in
-                syncFromBackend()
-            }
-            .onChange(of: riskVM.fraudFlags) { _, _ in
-                syncFromBackend()
             }
         }
     }
@@ -157,7 +152,7 @@ struct AdminRiskView: View {
                         .foregroundStyle(.primary)
                 }
                 Spacer()
-                let totalActions = slaBreaches.count + fraudAlerts.count + policyViolations.count + stuckApps.count
+                let totalActions = actionMock.openItems.count
                 if totalActions > 0 {
                     Text("\(totalActions)")
                         .font(.system(size: 13, weight: .bold))
@@ -206,7 +201,7 @@ struct AdminRiskView: View {
                 Spacer()
                 
                 if section == .actionRequired {
-                    let totalActions = slaBreaches.count + fraudAlerts.count + policyViolations.count + stuckApps.count
+                    let totalActions = actionMock.openItems.count
                     if totalActions > 0 {
                         Text("\(totalActions)")
                             .font(.system(size: 12, weight: .bold))
@@ -430,7 +425,7 @@ struct AdminRiskView: View {
             }
             actionButton(title: "Review Policy", icon: "gearshape") {
                 selectedTab = 4 // Navigate to System
-                adminVM.selectedSystemSection = "Policy Config"
+                adminVM.selectedSystemSection = "Policy Configurations"
             }
             
         case .stuckApplication:
@@ -461,7 +456,7 @@ struct AdminRiskView: View {
 
     private func resolveFraud(item: ActionItem, message: String) {
         withAnimation {
-            fraudAlerts.removeAll { $0.id == item.id }
+            actionMock.resolveItem(id: item.id)
             activeInvestigation = nil
             toastMessage = message
             showToast = true
@@ -522,103 +517,31 @@ struct AdminRiskView: View {
     }
     
     private var filteredActionItems: [ActionItem] {
+        let models: [ActionItemModel]
         switch adminVM.selectedRiskFilter {
-        case .slaBreach: return slaBreaches
-        case .fraudAlert: return fraudAlerts
-        case .policyViolation: return policyViolations
-        case .stuckApplication: return stuckApps
+        case .slaBreach: models = actionMock.slaBreaches
+        case .fraudAlert: models = actionMock.fraudAlerts
+        case .policyViolation: models = actionMock.policyViolations
+        case .stuckApplication: models = actionMock.stuckApps
+        }
+        let relative = RelativeDateTimeFormatter()
+        let now = Date()
+        return models.map { m in
+            ActionItem(
+                id: m.id,
+                loanId: m.id,
+                issue: m.title,
+                severity: m.severity.rawValue,
+                time: relative.localizedString(for: m.timestamp, relativeTo: now),
+                officer: m.assignedOfficer,
+                details: m.description,
+                signals: m.type == .fraud ? ["System Anomaly Detected", "Identity Check Failed"] : nil
+            )
         }
     }
     
     private func updateOfficer(for item: ActionItem, to newOfficer: String) {
-        officerOverrides[item.id] = newOfficer
-        syncFromBackend()
-    }
-
-    private func syncFromBackend() {
-        let apps = riskVM.applications
-        let now = Date()
-        let relative = RelativeDateTimeFormatter()
-
-        func officer(for id: String, fallback: String) -> String {
-            officerOverrides[id] ?? fallback
-        }
-
-        slaBreaches = apps
-            .filter { $0.slaStatus == .overdue }
-            .prefix(50)
-            .map { app in
-                let id = "SLA-\(app.id)"
-                return ActionItem(
-                    id: id,
-                    loanId: app.id,
-                    issue: "SLA Breach",
-                    severity: "High",
-                    time: relative.localizedString(for: app.createdAt, relativeTo: now),
-                    officer: officer(for: id, fallback: "Unassigned")
-                )
-            }
-
-        fraudAlerts = riskVM.fraudFlags
-            .prefix(50)
-            .map { flag in
-                let id = "FRAUD-\(flag.applicationId)"
-                return ActionItem(
-                    id: id,
-                    loanId: flag.applicationId,
-                    issue: "Risk Signal",
-                    severity: flag.severity == .high ? "High" : "Medium",
-                    time: relative.localizedString(for: flag.flaggedAt, relativeTo: now),
-                    officer: officer(for: id, fallback: "System"),
-                    details: flag.reason,
-                    signals: flag.reason.components(separatedBy: " · ")
-                )
-            }
-
-        policyViolations = apps
-            .filter {
-                let foirRatio = $0.financials.foir > 0 ? (Double($0.financials.foir) / 100.0) : $0.financials.dtiRatio
-                return foirRatio > 0.50 || $0.financials.ltvRatio > 0.80
-            }
-            .prefix(50)
-            .map { app in
-                let id = "POL-\(app.id)"
-                let foirRatio = app.financials.foir > 0 ? (Double(app.financials.foir) / 100.0) : app.financials.dtiRatio
-                let issue: String
-                let detail: String
-                if app.financials.ltvRatio > 0.80 {
-                    issue = "LTV Exceeded"
-                    detail = "LTV is \(Int((app.financials.ltvRatio * 100).rounded()))% (Max allowed: 80%)"
-                } else {
-                    issue = "FOIR High"
-                    detail = "FOIR is \(Int((foirRatio * 100).rounded()))% (Limit: 50%)"
-                }
-                return ActionItem(
-                    id: id,
-                    loanId: app.id,
-                    issue: issue,
-                    severity: "Medium",
-                    time: relative.localizedString(for: app.createdAt, relativeTo: now),
-                    officer: officer(for: id, fallback: "Unassigned"),
-                    details: detail
-                )
-            }
-
-        let stuckThreshold = Date().addingTimeInterval(-3 * 24 * 60 * 60)
-        stuckApps = apps
-            .filter { $0.status == .underReview && $0.createdAt < stuckThreshold }
-            .prefix(50)
-            .map { app in
-                let id = "STUCK-\(app.id)"
-                return ActionItem(
-                    id: id,
-                    loanId: app.id,
-                    issue: "Stuck in Verification",
-                    severity: "Medium",
-                    time: relative.localizedString(for: app.createdAt, relativeTo: now),
-                    officer: officer(for: id, fallback: "Unassigned")
-                )
-            }
+        actionMock.assignItem(id: item.id, to: newOfficer)
     }
     
     private func severityBadge(text: String) -> some View {

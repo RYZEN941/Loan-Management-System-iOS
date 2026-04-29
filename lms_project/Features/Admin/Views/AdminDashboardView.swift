@@ -20,6 +20,7 @@ struct AdminDashboardView: View {
     
     @State private var lastRefresh = Date()
     @State private var isAnimating = false
+    @ObservedObject private var actionMock = ActionRequiredMockService.shared
     
     var body: some View {
         NavigationStack {
@@ -124,28 +125,28 @@ struct AdminDashboardView: View {
                 // SLA Breaches: Blue if 0, Red if > 0
                 statusCard(title: "SLA Breaches",
                            count: slaBreachesCount,
-                           color: slaBreachesCount > 0 ? .red : Theme.Colors.adaptivePrimary(colorScheme),
+                           color: Theme.Colors.adaptivePrimary(colorScheme),
                            icon: "timer",
                            subtext: slaBreachesCount == 0 ? "No overdue SLA" : "Requires attention")
                 
                 // Fraud Alerts: Blue if 0, Orange if > 0
                 statusCard(title: "Fraud Alerts",
-                           count: riskVM.fraudFlagCount,
-                           color: riskVM.fraudFlagCount > 0 ? .orange : Theme.Colors.adaptivePrimary(colorScheme),
+                           count: actionMock.fraudAlerts.count,
+                           color: Theme.Colors.adaptivePrimary(colorScheme),
                            icon: "shield.righthalf.filled",
-                           subtext: riskVM.fraudFlagCount == 0 ? "No derived flags" : "Review signals")
+                           subtext: actionMock.fraudAlerts.count == 0 ? "No derived flags" : "Review signals")
                 
                 // Policy Violations: Blue if 0, Orange if > 0
                 statusCard(title: "Policy Violations",
                            count: policyViolationCount,
-                           color: policyViolationCount > 0 ? .orange : Theme.Colors.adaptivePrimary(colorScheme),
+                           color: Theme.Colors.adaptivePrimary(colorScheme),
                            icon: "doc.on.doc.fill",
                            subtext: policyViolationCount == 0 ? "Within policy thresholds" : "FOIR/LTV threshold breach")
                 
                 // Stuck Applications: Blue if 0, Yellow if > 0
                 statusCard(title: "Stuck Applications",
                            count: stuckApplicationsCount,
-                           color: stuckApplicationsCount > 0 ? .yellow : Theme.Colors.adaptivePrimary(colorScheme),
+                           color: Theme.Colors.adaptivePrimary(colorScheme),
                            icon: "hourglass.badge.plus",
                            subtext: stuckApplicationsCount == 0 ? "No stuck apps" : "Under review > 3 days")
             }
@@ -298,7 +299,7 @@ struct AdminDashboardView: View {
                 PremiumLineChart(
                     data: adminVM.slaBreachTrendData,
                     labels: adminVM.slaBreachTrendLabels,
-                    accentColor: .red,
+                    accentColor: Theme.Colors.adaptivePrimary(colorScheme),
                     showPoints: true,
                     unit: "breaches"
                 )
@@ -590,7 +591,7 @@ struct AdminDashboardView: View {
     private var liveApplications: [LoanApplication] { applicationsVM.applications }
 
     private var slaBreachesCount: Int {
-        liveApplications.filter { $0.slaStatus == .overdue }.count
+        actionMock.slaBreaches.count
     }
 
     private var applicationsTodayCount: Int {
@@ -599,15 +600,11 @@ struct AdminDashboardView: View {
     }
 
     private var stuckApplicationsCount: Int {
-        let threshold = Date().addingTimeInterval(-3 * 24 * 60 * 60)
-        return liveApplications.filter { $0.status == .underReview && $0.createdAt < threshold }.count
+        actionMock.stuckApps.count
     }
 
     private var policyViolationCount: Int {
-        liveApplications.filter {
-            let foirRatio = $0.financials.foir > 0 ? (Double($0.financials.foir) / 100.0) : $0.financials.dtiRatio
-            return foirRatio > 0.50 || $0.financials.ltvRatio > 0.80
-        }.count
+        actionMock.policyViolations.count
     }
 
     private var slaCompliancePercent: Int {

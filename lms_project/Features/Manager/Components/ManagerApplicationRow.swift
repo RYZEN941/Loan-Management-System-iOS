@@ -71,6 +71,7 @@ struct ManagerApplicationRow: View {
 
                     Spacer()
 
+                    // Replace the old if application.riskLevel == .high block with:
                     if application.isHighRisk {
                         HStack(spacing: 3) {
                             Image(systemName: "exclamationmark.triangle.fill")

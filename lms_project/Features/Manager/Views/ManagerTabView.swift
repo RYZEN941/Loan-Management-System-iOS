@@ -10,6 +10,8 @@ struct ManagerTabView: View {
     
     @EnvironmentObject var authVM: AuthViewModel
     @Environment(\.colorScheme) private var colorScheme
+    @StateObject private var reportsVM = AdminReportsViewModel()
+    
     @State private var selectedTab = 0
     @State private var showProfile = false
     
@@ -38,6 +40,13 @@ struct ManagerTabView: View {
                     Label("Messages", systemImage: "message.fill")
                 }
                 .tag(3)
+            
+            AdminReportsView(showProfile: $showProfile)
+                .environmentObject(reportsVM)
+                .tabItem {
+                    Label("Reports", systemImage: "doc.text")
+                }
+                .tag(4)
         }
         .tint(ManagerTheme.Colors.primary(colorScheme))
         .sheet(isPresented: $showProfile) {

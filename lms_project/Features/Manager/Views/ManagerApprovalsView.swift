@@ -443,6 +443,9 @@ struct ManagerApprovalsView: View {
                                 .font(.system(size: 22, weight: .bold, design: .rounded))
                                 .lineLimit(1)
                             StatusBadge(status: app.status)
+                            if app.isHighRisk {
+                                    HighRiskBadge()
+                                }
                         }
                         
                         HStack(spacing: 6) {

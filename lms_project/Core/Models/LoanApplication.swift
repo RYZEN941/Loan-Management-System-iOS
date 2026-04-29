@@ -47,12 +47,23 @@ struct LoanApplication: Identifiable, Codable, Hashable {
     var repaymentHistory: [RepaymentHistoryItem] = []
     var isDisbursed: Bool = false
 
+    // MARK: - Risk Logic (Add here)
+    var isHighRisk: Bool {
+            // High Risk IF: CIBIL < 600 OR FOIR > 60% OR Overdue SLA OR Explicit High Risk Level
+            financials.cibilScore < 600 ||
+            financials.foir > 60 ||
+            slaStatus == .overdue ||
+            riskLevel == .high
+        }
+    
     var slaStatus: SLAStatus {
         let days = slaDeadline.daysRemaining
         if days < 0 { return .overdue }
         if days <= 2 { return .urgent }
         return .onTrack
     }
+    
+    
 }
 
 // MARK: - Sanction Letter

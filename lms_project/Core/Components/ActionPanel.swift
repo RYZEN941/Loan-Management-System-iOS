@@ -115,10 +115,10 @@ struct LOActionPanel: View {
 // MARK: - Manager Action Panel
 
 struct ManagerActionPanel: View {
+    let canTakeDecision: Bool
     let onApprove: () -> Void
     let onRejectWithRemarks: () -> Void   // triggers remarks sheet
     let onSendBack: () -> Void
-    var onEditTerms: (() -> Void)? = nil
     var onAssignOfficer: (() -> Void)? = nil
 
     @Environment(\.colorScheme) private var colorScheme
@@ -140,6 +140,7 @@ struct ManagerActionPanel: View {
                         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
                 }
                 .buttonStyle(.plain)
+                .disabled(!canTakeDecision)
 
                 // Reject
                 Button(action: onRejectWithRemarks) {
@@ -153,21 +154,11 @@ struct ManagerActionPanel: View {
                         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
                 }
                 .buttonStyle(.plain)
+                .disabled(!canTakeDecision)
             }
 
-            // Row 2: Edit actions + final Approve
+            // Row 2: Assignment + final approve
             HStack(spacing: Theme.Spacing.md) {
-                // Edit Terms (calls UpdateLoanApplicationTerms)
-                Button { onEditTerms?() } label: {
-                    Label("Edit Terms", systemImage: "pencil.circle")
-                        .font(.system(size: 12, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 36)
-                        .background(Theme.Colors.adaptiveSurfaceSecondary(colorScheme))
-                        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
-                }
-                .buttonStyle(.plain)
-
                 // Reassign Officer
                 Button { onAssignOfficer?() } label: {
                     Label("Reassign", systemImage: "person.badge.plus")
@@ -196,6 +187,7 @@ struct ManagerActionPanel: View {
                         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.sm))
                 }
                 .buttonStyle(.plain)
+                .disabled(!canTakeDecision)
             }
         }
         .padding(Theme.Spacing.md)

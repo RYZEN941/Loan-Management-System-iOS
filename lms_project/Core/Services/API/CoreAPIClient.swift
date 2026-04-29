@@ -4,6 +4,10 @@ import GRPCNIOTransportHTTP2
 
 @available(iOS 18.0, *)
 enum CoreAPIClient {
+    static func prewarmConnection() async {
+        _ = try? await withClient { _ in () }
+    }
+
     static func withClient<Result>(
         operation: @escaping @Sendable (GRPCClient<HTTP2ClientTransport.Posix>) async throws -> Result
     ) async throws -> Result {

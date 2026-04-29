@@ -23,17 +23,23 @@ struct LOTabView: View {
                 }
                 .tag(0)
 
-            LOApplicationsView(showProfile: $showProfile)
+            LOApplicationsView(selectedTab: $selectedTab, showProfile: $showProfile)
                 .tabItem {
                     Label("Applications", systemImage: "doc.text.fill")
                 }
                 .tag(1)
 
+            LOBorrowersView(selectedTab: $selectedTab, showProfile: $showProfile)
+                .tabItem {
+                    Label("Borrowers", systemImage: "person.text.rectangle.fill")
+                }
+                .tag(2)
+
             LOMessagesView(showProfile: $showProfile)
                 .tabItem {
                     Label("Messages", systemImage: "message.fill")
                 }
-                .tag(2)
+                .tag(3)
         }
         .tint(Theme.Colors.primary)
         .sheet(isPresented: $showProfile) {

@@ -65,6 +65,7 @@ enum AuthStep {
     case mfaVerification   // enter OTP
     case forcePasswordChange
     case authenticated     // logged in
+    case forgotPassword    // forgot password flow
 }
 
 // MARK: - AuthViewModel

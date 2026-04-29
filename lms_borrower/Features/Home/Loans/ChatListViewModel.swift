@@ -46,6 +46,7 @@ final class ChatListViewModel: ObservableObject {
     }
 
     func loadChatRooms(reset: Bool) {
+        print("DEBUG: [ChatListVM] loadChatRooms(reset: \(reset))")
         if reset {
             isLoading = true
             roomsOffset = 0
@@ -59,6 +60,7 @@ final class ChatListViewModel: ObservableObject {
         Task {
             do {
                 let rooms = try await chatService.listMyChatRooms(limit: roomsPageSize, offset: roomsOffset)
+                print("DEBUG: [ChatListVM] Successfully loaded \(rooms.count) rooms")
                 let names = await resolveParticipantNames(for: rooms)
                 await MainActor.run {
                     if reset {
@@ -73,6 +75,7 @@ final class ChatListViewModel: ObservableObject {
                     self.isLoadingMoreRooms = false
                 }
             } catch {
+                print("DEBUG: [ChatListVM] Failed to load chat rooms: \(error)")
                 await MainActor.run {
                     self.errorMessage = error.localizedDescription
                     self.isLoading = false
@@ -84,6 +87,7 @@ final class ChatListViewModel: ObservableObject {
 
     func loadMoreRoomsIfNeeded(currentRoom: ChatRoom) {
         guard let lastID = chatRooms.last?.id, currentRoom.id == lastID else { return }
+        print("DEBUG: [ChatListVM] loadMoreRoomsIfNeeded triggered")
         loadChatRooms(reset: false)
     }
 
@@ -96,12 +100,14 @@ final class ChatListViewModel: ObservableObject {
             }
         }
         do {
+            print("DEBUG: [ChatListVM] Resolving participant names...")
             let users = try await chatService.listEligibleUsers(query: "", limit: 100, offset: 0)
             for user in users {
                 names[user.id] = user.displayName
             }
+            print("DEBUG: [ChatListVM] Resolved names for \(users.count) users")
         } catch {
-            // Best-effort: names without a match stay "User"
+            print("DEBUG: [ChatListVM] resolveParticipantNames best-effort error: \(error)")
         }
         return names
     }
@@ -119,6 +125,7 @@ final class ChatListViewModel: ObservableObject {
             try? await Task.sleep(nanoseconds: 300_000_000)
             guard !Task.isCancelled else { return }
             do {
+                print("DEBUG: [ChatListVM] Searching users with query: \(searchQuery)")
                 let users = try await chatService.listEligibleUsers(
                     query: searchQuery,
                     limit: 20,
@@ -129,8 +136,10 @@ final class ChatListViewModel: ObservableObject {
                     for user in users {
                         self.participantNames[user.id] = user.displayName
                     }
+                    print("DEBUG: [ChatListVM] Search returned \(users.count) users")
                 }
             } catch {
+                print("DEBUG: [ChatListVM] Search failed: \(error)")
                 await MainActor.run {
                     self.errorMessage = error.localizedDescription
                 }
@@ -140,11 +149,12 @@ final class ChatListViewModel: ObservableObject {
 
     // MARK: - Room Creation
 
-    func createRoomWithUser(userID: String, contextApplicationID: String? = nil) async throws -> ChatRoom {
+    func createRoomWithUser(userID: String) async throws -> ChatRoom {
+        print("DEBUG: [ChatListVM] createRoomWithUser: \(userID)")
         let room = try await chatService.createOrGetDirectRoom(
-            targetUserID: userID,
-            contextApplicationID: contextApplicationID
+            targetUserID: userID
         )
+        print("DEBUG: [ChatListVM] Created/Resolved room: \(room.id)")
         if !chatRooms.contains(where: { $0.id == room.id }) {
             chatRooms.insert(room, at: 0)
         }

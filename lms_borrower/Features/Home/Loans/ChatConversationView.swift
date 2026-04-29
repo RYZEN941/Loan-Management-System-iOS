@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import GRPCCore
 
 @MainActor
 @available(iOS 18.0, *)
@@ -112,30 +113,47 @@ class ChatConversationViewModel: ObservableObject {
     // MARK: - Streaming
 
     private func startStreaming() {
+        print("DEBUG: [ChatConversationVM] startStreaming requested for room: \(roomID)")
         messageStreamTask?.cancel()
         messageStreamTask = Task {
             while !Task.isCancelled {
+                print("DEBUG: [ChatConversationVM] Opening stream connection for room: \(roomID)")
                 let stream = chatService.subscribeToRoomMessages(roomID: roomID, afterMessageID: lastMessageID)
                 do {
                     for try await event in stream {
-                        if Task.isCancelled { break }
+                        if Task.isCancelled { 
+                            print("DEBUG: [ChatConversationVM] Task cancelled, exiting stream loop for room: \(roomID)")
+                            break 
+                        }
 
                         if !event.isHeartbeat, let newMessage = event.message {
+                            print("DEBUG: [ChatConversationVM] New message received via stream: \(newMessage.id)")
                             await MainActor.run {
                                 self.messages = self.normalizeMessages(self.messages + [newMessage])
                                 self.lastMessageID = self.messages.last?.id
                             }
+                        } else if event.isHeartbeat {
+                            print("DEBUG: [ChatConversationVM] Heartbeat received for room: \(roomID)")
                         }
                     }
+                    print("DEBUG: [ChatConversationVM] Stream ended normally for room: \(roomID)")
                     break
                 } catch {
-                    if Task.isCancelled { break }
+                    if Task.isCancelled { 
+                        print("DEBUG: [ChatConversationVM] Stream caught error but task is cancelled: \(error)")
+                        break 
+                    }
+                    print("DEBUG: [ChatConversationVM] Stream error for room \(roomID): \(error)")
                     await MainActor.run {
                         self.handleChatError(error)
                     }
+                    
+                    print("DEBUG: [ChatConversationVM] Attempting to reconcile messages after error for room: \(roomID)")
                     await reconcileLatestMessages()
+                    
                     reconnectAttempt += 1
                     let delaySeconds = min(UInt64(1 << min(reconnectAttempt, 5)), maxReconnectDelaySeconds)
+                    print("DEBUG: [ChatConversationVM] Reconnect attempt #\(reconnectAttempt) in \(delaySeconds)s...")
                     try? await Task.sleep(nanoseconds: (delaySeconds * 1_000_000_000) + UInt64.random(in: 0...500_000_000))
                 }
             }
@@ -144,12 +162,15 @@ class ChatConversationViewModel: ObservableObject {
 
     private func reconcileLatestMessages() async {
         do {
+            print("DEBUG: [ChatConversationVM] Reconciling latest messages for room: \(roomID)")
             let recent = try await chatService.listRoomMessages(roomID: roomID, limit: messagePageSize, offset: 0)
             await MainActor.run {
                 self.messages = self.normalizeMessages(self.messages + recent)
                 self.lastMessageID = self.messages.last?.id
+                print("DEBUG: [ChatConversationVM] Reconciliation complete. New message count: \(self.messages.count)")
             }
         } catch {
+            print("DEBUG: [ChatConversationVM] Reconciliation failed: \(error)")
             await MainActor.run {
                 self.handleChatError(error)
             }
@@ -171,7 +192,10 @@ class ChatConversationViewModel: ObservableObject {
         Task {
             do {
                 let rooms = try await chatService.listMyChatRooms(limit: 100, offset: 0)
-                guard let room = rooms.first(where: { $0.id == roomID }) else { return }
+                guard let room = rooms.first(where: { $0.id == roomID }) else { 
+                    print("DEBUG: [ChatConversationVM] Could not find room \(roomID) in MyChatRooms")
+                    return 
+                }
                 let otherID = room.otherUserID(currentUserID: currentUserID)
                 let users = try await chatService.listEligibleUsers(query: "", limit: 100, offset: 0)
                 let participant = users.first(where: { $0.id == otherID })
@@ -180,15 +204,47 @@ class ChatConversationViewModel: ObservableObject {
                     self.participantRole = participant?.role.capitalized ?? ""
                 }
             } catch {
-                // best-effort participant info only
+                print("DEBUG: [ChatConversationVM] loadParticipantInfo best-effort error: \(error)")
             }
         }
     }
 
     private func handleChatError(_ error: Error) {
+        let errorDesc = "\(error)"
+        print("DEBUG: [ChatConversationVM] handleChatError: \(errorDesc)")
+        
         if let chatError = error as? ChatError, case .unauthenticated = chatError {
+            print("DEBUG: [ChatConversationVM] Unauthenticated error detected, posting session expired")
             NotificationCenter.default.post(name: .sessionExpired, object: nil)
         }
+        
+        // Suppress alert for common stream-interruption network errors that we automatically retry
+        if let chatError = error as? ChatError {
+            switch chatError {
+            case .networkError(let msg):
+                print("DEBUG: [ChatConversationVM] Suppressing alert for network error: \(msg)")
+                return
+            case .underlyingError(let rpc):
+                if rpc.code == .unavailable || rpc.code == .deadlineExceeded || rpc.code == .cancelled {
+                    print("DEBUG: [ChatConversationVM] Suppressing alert for RPC transient error: \(rpc.code)")
+                    return
+                }
+                // Handle the case where transport throws an unexpected error which is a CancellationError
+                if rpc.code == .unknown && (errorDesc.contains("CancellationError") || rpc.message.contains("unexpected error")) {
+                    print("DEBUG: [ChatConversationVM] Suppressing alert for unexpected transport cancellation")
+                    return
+                }
+            default:
+                break
+            }
+        }
+        
+        // Also check raw error string for CancellationError
+        if errorDesc.contains("CancellationError") {
+            print("DEBUG: [ChatConversationVM] Suppressing alert for raw CancellationError")
+            return
+        }
+        
         errorMessage = error.localizedDescription
     }
 

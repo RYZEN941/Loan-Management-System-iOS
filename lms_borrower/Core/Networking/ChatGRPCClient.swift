@@ -41,85 +41,89 @@ public enum ChatError: Error, LocalizedError {
     }
 
 static func from(_ error: Error) -> ChatError {
-        if let rpc = error as? RPCError {
-            switch rpc.code {
-            case .unauthenticated:
-                return .unauthenticated
-            case .permissionDenied:
-                return .permissionDenied
-            case .notFound:
-                return .roomNotFound
-            case .invalidArgument:
-                let message = rpc.message.lowercased()
-                if message.contains("room") {
-                    return .invalidRoomID
-                }
-                if message.contains("user") {
-                    return .invalidUserID
-                }
-                return .underlyingError(rpc)
-            case .unavailable, .deadlineExceeded:
-                return .networkError(rpc.message)
-            default:
-                return .underlyingError(rpc)
+    print("DEBUG: [ChatGRPCClient] Converting error: \(error) (type: \(type(of: error)))")
+
+    if let rpc = error as? RPCError {
+        print("DEBUG: [ChatGRPCClient] RPC Error - Code: \(rpc.code), Message: \(rpc.message)")
+        switch rpc.code {
+        case .unauthenticated:
+            return .unauthenticated
+        case .permissionDenied:
+            return .permissionDenied
+        case .notFound:
+            return .roomNotFound
+        case .invalidArgument:
+            let message = rpc.message.lowercased()
+            if message.contains("room") {
+                return .invalidRoomID
             }
+            if message.contains("user") {
+                return .invalidUserID
+            }
+            return .underlyingError(rpc)
+        case .unavailable, .deadlineExceeded:
+            return .networkError(rpc.message)
+        default:
+            return .underlyingError(rpc)
         }
-        if let chatError = error as? ChatError {
-            return chatError
-        }
-        return .unknown
     }
+    if let chatError = error as? ChatError {
+        return chatError
+    }
+    print("DEBUG: [ChatGRPCClient] Fallback to .unknown for error: \(error)")
+    return .unknown
+}
 }
 
 // MARK: - ChatGRPCClientProtocol
 
 @available(iOS 18.0, *)
 public protocol ChatGRPCClientProtocol: Sendable {
-    func listChatEligibleUsers(request: Chat_V1_ListChatEligibleUsersRequest, metadata: Metadata, options: CallOptions) async throws -> Chat_V1_ListChatEligibleUsersResponse
-    func createOrGetDirectRoom(request: Chat_V1_CreateOrGetDirectRoomRequest, metadata: Metadata, options: CallOptions) async throws -> Chat_V1_CreateOrGetDirectRoomResponse
-    func listMyChatRooms(request: Chat_V1_ListMyChatRoomsRequest, metadata: Metadata, options: CallOptions) async throws -> Chat_V1_ListMyChatRoomsResponse
-    func listRoomMessages(request: Chat_V1_ListRoomMessagesRequest, metadata: Metadata, options: CallOptions) async throws -> Chat_V1_ListRoomMessagesResponse
-    func sendMessage(request: Chat_V1_SendMessageRequest, metadata: Metadata, options: CallOptions) async throws -> Chat_V1_SendMessageResponse
-    func subscribeRoomMessages(request: Chat_V1_SubscribeRoomMessagesRequest, metadata: Metadata, options: CallOptions) async throws -> AsyncThrowingStream<Chat_V1_ChatMessageEvent, Error>
+func listChatEligibleUsers(request: Chat_V1_ListChatEligibleUsersRequest, metadata: Metadata, options: CallOptions) async throws -> Chat_V1_ListChatEligibleUsersResponse
+func createOrGetDirectRoom(request: Chat_V1_CreateOrGetDirectRoomRequest, metadata: Metadata, options: CallOptions) async throws -> Chat_V1_CreateOrGetDirectRoomResponse
+func listMyChatRooms(request: Chat_V1_ListMyChatRoomsRequest, metadata: Metadata, options: CallOptions) async throws -> Chat_V1_ListMyChatRoomsResponse
+func listRoomMessages(request: Chat_V1_ListRoomMessagesRequest, metadata: Metadata, options: CallOptions) async throws -> Chat_V1_ListRoomMessagesResponse
+func sendMessage(request: Chat_V1_SendMessageRequest, metadata: Metadata, options: CallOptions) async throws -> Chat_V1_SendMessageResponse
+func subscribeRoomMessages(request: Chat_V1_SubscribeRoomMessagesRequest, metadata: Metadata, options: CallOptions) async throws -> AsyncThrowingStream<Chat_V1_ChatMessageEvent, Error>
 }
 
 extension ChatGRPCClientProtocol {
-    // Default implementations to make metadata optional
-    public func listChatEligibleUsers(request: Chat_V1_ListChatEligibleUsersRequest, options: CallOptions) async throws -> Chat_V1_ListChatEligibleUsersResponse {
-        try await listChatEligibleUsers(request: request, metadata: Metadata(), options: options)
-    }
-    public func createOrGetDirectRoom(request: Chat_V1_CreateOrGetDirectRoomRequest, options: CallOptions) async throws -> Chat_V1_CreateOrGetDirectRoomResponse {
-        try await createOrGetDirectRoom(request: request, metadata: Metadata(), options: options)
-    }
-    public func listMyChatRooms(request: Chat_V1_ListMyChatRoomsRequest, options: CallOptions) async throws -> Chat_V1_ListMyChatRoomsResponse {
-        try await listMyChatRooms(request: request, metadata: Metadata(), options: options)
-    }
-    public func listRoomMessages(request: Chat_V1_ListRoomMessagesRequest, options: CallOptions) async throws -> Chat_V1_ListRoomMessagesResponse {
-        try await listRoomMessages(request: request, metadata: Metadata(), options: options)
-    }
-    public func sendMessage(request: Chat_V1_SendMessageRequest, options: CallOptions) async throws -> Chat_V1_SendMessageResponse {
-        try await sendMessage(request: request, metadata: Metadata(), options: options)
-    }
-    public func subscribeRoomMessages(request: Chat_V1_SubscribeRoomMessagesRequest, options: CallOptions) async throws -> AsyncThrowingStream<Chat_V1_ChatMessageEvent, Error> {
-        try await subscribeRoomMessages(request: request, metadata: Metadata(), options: options)
-    }
+// Default implementations to make metadata optional
+public func listChatEligibleUsers(request: Chat_V1_ListChatEligibleUsersRequest, options: CallOptions) async throws -> Chat_V1_ListChatEligibleUsersResponse {
+    try await listChatEligibleUsers(request: request, metadata: Metadata(), options: options)
+}
+public func createOrGetDirectRoom(request: Chat_V1_CreateOrGetDirectRoomRequest, options: CallOptions) async throws -> Chat_V1_CreateOrGetDirectRoomResponse {
+    try await createOrGetDirectRoom(request: request, metadata: Metadata(), options: options)
+}
+public func listMyChatRooms(request: Chat_V1_ListMyChatRoomsRequest, options: CallOptions) async throws -> Chat_V1_ListMyChatRoomsResponse {
+    try await listMyChatRooms(request: request, metadata: Metadata(), options: options)
+}
+public func listRoomMessages(request: Chat_V1_ListRoomMessagesRequest, options: CallOptions) async throws -> Chat_V1_ListRoomMessagesResponse {
+    try await listRoomMessages(request: request, metadata: Metadata(), options: options)
+}
+public func sendMessage(request: Chat_V1_SendMessageRequest, options: CallOptions) async throws -> Chat_V1_SendMessageResponse {
+    try await sendMessage(request: request, metadata: Metadata(), options: options)
+}
+public func subscribeRoomMessages(request: Chat_V1_SubscribeRoomMessagesRequest, options: CallOptions) async throws -> AsyncThrowingStream<Chat_V1_ChatMessageEvent, Error> {
+    try await subscribeRoomMessages(request: request, metadata: Metadata(), options: options)
+}
 }
 
 // MARK: - ChatGRPCClient
 
 @available(iOS 18.0, *)
 public final class ChatGRPCClient: ChatGRPCClientProtocol {
-
+    
     // The generated Client<Transport> works with any ClientTransport.
     // We pin the concrete type to avoid existential boxing.
     private let client: Chat_V1_ChatService.Client<HTTP2ClientTransport.Posix>
-
+    
     public init(grpcClient: GRPCClient<HTTP2ClientTransport.Posix> = GRPCChannelFactory.shared.client) {
         self.client = Chat_V1_ChatService.Client(wrapping: grpcClient)
     }
-
+    
     // MARK: - Room Management
-
+    
     public func listChatEligibleUsers(
         request: Chat_V1_ListChatEligibleUsersRequest,
         metadata: Metadata,
@@ -130,9 +134,12 @@ public final class ChatGRPCClient: ChatGRPCClientProtocol {
                 request: .init(message: request, metadata: metadata),
                 options: options
             )
-        } catch { throw ChatError.from(error) }
+        } catch {
+            print("DEBUG: [ChatGRPCClient] listChatEligibleUsers failed: \(error)")
+            throw ChatError.from(error)
+        }
     }
-
+    
     public func createOrGetDirectRoom(
         request: Chat_V1_CreateOrGetDirectRoomRequest,
         metadata: Metadata,
@@ -143,9 +150,12 @@ public final class ChatGRPCClient: ChatGRPCClientProtocol {
                 request: .init(message: request, metadata: metadata),
                 options: options
             )
-        } catch { throw ChatError.from(error) }
+        } catch {
+            print("DEBUG: [ChatGRPCClient] createOrGetDirectRoom failed: \(error)")
+            throw ChatError.from(error)
+        }
     }
-
+    
     public func listMyChatRooms(
         request: Chat_V1_ListMyChatRoomsRequest,
         metadata: Metadata,
@@ -156,11 +166,14 @@ public final class ChatGRPCClient: ChatGRPCClientProtocol {
                 request: .init(message: request, metadata: metadata),
                 options: options
             )
-        } catch { throw ChatError.from(error) }
+        } catch {
+            print("DEBUG: [ChatGRPCClient] listMyChatRooms failed: \(error)")
+            throw ChatError.from(error)
+        }
     }
-
+    
     // MARK: - Messages
-
+    
     public func listRoomMessages(
         request: Chat_V1_ListRoomMessagesRequest,
         metadata: Metadata,
@@ -171,9 +184,12 @@ public final class ChatGRPCClient: ChatGRPCClientProtocol {
                 request: .init(message: request, metadata: metadata),
                 options: options
             )
-        } catch { throw ChatError.from(error) }
+        } catch {
+            print("DEBUG: [ChatGRPCClient] listRoomMessages failed: \(error)")
+            throw ChatError.from(error)
+        }
     }
-
+    
     public func sendMessage(
         request: Chat_V1_SendMessageRequest,
         metadata: Metadata,
@@ -184,33 +200,55 @@ public final class ChatGRPCClient: ChatGRPCClientProtocol {
                 request: .init(message: request, metadata: metadata),
                 options: options
             )
-        } catch { throw ChatError.from(error) }
+        } catch {
+            print("DEBUG: [ChatGRPCClient] sendMessage failed: \(error)")
+            throw ChatError.from(error)
+        }
     }
-
+    
     // MARK: - Streaming
-
+    
     public func subscribeRoomMessages(
         request: Chat_V1_SubscribeRoomMessagesRequest,
         metadata: Metadata,
         options: CallOptions
     ) async throws -> AsyncThrowingStream<Chat_V1_ChatMessageEvent, Error> {
-        AsyncThrowingStream { continuation in
-            Task {
+        return AsyncThrowingStream { continuation in
+            let task = Task {
                 do {
+                    print("DEBUG: [ChatGRPCClient] Starting room subscription for \(request.roomID)")
                     try await client.subscribeRoomMessages(
                         request,
                         metadata: metadata,
                         options: options,
                         onResponse: { streamingResponse in
+                            print("DEBUG: [ChatGRPCClient] Stream connected for \(request.roomID)")
                             for try await message in streamingResponse.messages {
+                                guard !Task.isCancelled else { 
+                                    print("DEBUG: [ChatGRPCClient] Stream task cancelled while reading messages for \(request.roomID)")
+                                    break 
+                                }
                                 continuation.yield(message)
                             }
+                            print("DEBUG: [ChatGRPCClient] Stream messages ended for \(request.roomID)")
                         }
                     )
+                    print("DEBUG: [ChatGRPCClient] subscribeRoomMessages finished for \(request.roomID)")
                     continuation.finish()
                 } catch {
-                    continuation.finish(throwing: error)
+                    if Task.isCancelled || "\(error)".contains("CancellationError") {
+                        print("DEBUG: [ChatGRPCClient] subscribeRoomMessages task was cancelled or caught CancellationError for \(request.roomID)")
+                        continuation.finish()
+                    } else {
+                        print("DEBUG: [ChatGRPCClient] subscribeRoomMessages stream error for \(request.roomID): \(error)")
+                        continuation.finish(throwing: error)
+                    }
                 }
+            }
+            
+            continuation.onTermination = { @Sendable _ in
+                print("DEBUG: [ChatGRPCClient] Stream termination triggered for \(request.roomID)")
+                task.cancel()
             }
         }
     }

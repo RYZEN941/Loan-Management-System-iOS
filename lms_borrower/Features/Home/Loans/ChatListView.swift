@@ -146,7 +146,7 @@ struct ChatRoomPreviewRow: View {
                         .foregroundColor(.secondary)
                 }
 
-                Text(room.contextApplicationID != nil ? "Loan Application" : "General")
+                Text("Direct Message")
                     .font(.caption).bold()
                     .foregroundColor(.secondary)
 

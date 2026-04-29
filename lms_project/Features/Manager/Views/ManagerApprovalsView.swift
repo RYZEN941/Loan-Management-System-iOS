@@ -359,7 +359,7 @@ struct ManagerApprovalsView: View {
                             onSendBack: { applicationsVM.beginSendBack(app) },
                             onAssignOfficer: {
                                 selectedOfficerID = app.assignedTo
-                                applicationsVM.loadBranchOfficers(branchName: app.branch)
+                                applicationsVM.loadBranchOfficers(branchID: app.branchID, branchName: app.branch)
                                 showAssignOfficerSheet = true
                             }
                         )
@@ -367,11 +367,11 @@ struct ManagerApprovalsView: View {
                         .shadow(color: Color.black.opacity(0.05), radius: 10, y: -5)
                     }
                 }
-                .onChange(of: applicationsVM.selectedApplication) { _ in
+                .onChange(of: applicationsVM.selectedApplication) {
                     selectedVersionIndex = 0
                     if let app = applicationsVM.selectedApplication {
                         selectedOfficerID = app.assignedTo
-                        applicationsVM.loadBranchOfficers(branchName: app.branch)
+                        applicationsVM.loadBranchOfficers(branchID: app.branchID, branchName: app.branch)
                     } else {
                         selectedOfficerID = ""
                     }
@@ -1277,13 +1277,31 @@ struct ManagerApprovalsView: View {
                 
                 Text("Explain why this application is being rejected.")
                     .font(Theme.Typography.subheadline).foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
                 
-                TextEditor(text: $applicationsVM.rejectionRemarksText)
-                    .padding(12)
-                    .background(ManagerTheme.Colors.surface(colorScheme))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1))
-                    .frame(height: 180).padding(.horizontal)
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Reason")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    TextEditor(text: $applicationsVM.rejectionRemarksText)
+                        .padding(12)
+                        .frame(height: 180)
+                        .scrollContentBackground(.hidden)
+                        .background(ManagerTheme.Colors.surface(colorScheme))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1))
+                    HStack {
+                        Text("This reason is sent to the backend and saved in internal remarks.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text("\(applicationsVM.rejectionRemarksText.trimmingCharacters(in: .whitespacesAndNewlines).count) chars")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .padding(.horizontal)
                 
                 Button { applicationsVM.confirmRejectWithRemarks() } label: {
                     Text("Confirm Rejection").font(.headline).foregroundColor(.white)
@@ -1388,7 +1406,17 @@ struct ManagerApprovalsView: View {
                         Divider()
 
                         // ── Officer list ────────────────────────────────
-                        if applicationsVM.availableBranchOfficers.isEmpty {
+                        if applicationsVM.isLoadingBranchOfficers {
+                            VStack(spacing: 14) {
+                                ProgressView()
+                                    .progressViewStyle(.circular)
+                                Text("Loading loan officers for this branch...")
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background(ManagerTheme.Colors.background(colorScheme))
+                        } else if applicationsVM.availableBranchOfficers.isEmpty {
                             VStack(spacing: 14) {
                                 Image(systemName: "person.slash")
                                     .font(.system(size: 36, weight: .thin))

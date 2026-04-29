@@ -119,6 +119,7 @@ extension LoanApplication {
             primaryBorrowerProfileID: value.primaryBorrowerProfileID,
             createdByUserID: value.createdByUserID,
             createdByName: enrichment.createdByName,
+            branchID: value.branchID,
             branch: value.branchName.isEmpty ? value.branchID : value.branchName,
             riskLevel: RiskLevel.from(
                 cibilScore: cibilScore,

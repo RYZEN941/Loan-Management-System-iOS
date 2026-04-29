@@ -22,6 +22,7 @@ struct LoanApplication: Identifiable, Codable, Hashable {
     var primaryBorrowerProfileID: String = ""
     var createdByUserID: String = ""
     var createdByName: String = ""
+    var branchID: String = ""
     var branch: String
     var riskLevel: RiskLevel
     var createdAt: Date

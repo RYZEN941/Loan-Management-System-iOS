@@ -54,6 +54,7 @@ class ApplicationsViewModel: ObservableObject {
     @Published var availableLoanProducts: [LoanProduct] = []
     @Published var availableBranchOfficers: [OfficerDirectoryItem] = []
     @Published var officerDirectoryUnavailableMessage: String? = nil
+    @Published var isLoadingBranchOfficers = false
     @Published private(set) var mediaPreviewCache: [String: CachedMediaPreview] = [:]
 
     /// Tracks whether initial data has been loaded after login to avoid redundant fetches.
@@ -77,8 +78,9 @@ class ApplicationsViewModel: ObservableObject {
     private let borrowerUserDefaultsKey = "ApplicationsViewModel.borrowerUserIDsByProfileID"
     private var realtimeRefreshTask: Task<Void, Never>? = nil
     private var inFlightDetailRefreshes: Set<String> = []
-    private let realtimeRefreshIntervalNanoseconds: UInt64 = 5_000_000_000
+    private let realtimeRefreshIntervalNanoseconds: UInt64 = 15_000_000_000
     private var loadedOfficerDirectoryBranchName: String = ""
+    private var loadedOfficerDirectoryBranchID: String = ""
 
     // Manager send back sheet
     @Published var showSendBackSheet = false
@@ -335,8 +337,8 @@ class ApplicationsViewModel: ObservableObject {
         withAnimation(.easeInOut(duration: 0.2)) {
             selectedApplication = app
         }
-        if !app.branch.isEmpty {
-            loadBranchOfficers(branchName: app.branch)
+        if !app.branchID.isEmpty || !app.branch.isEmpty {
+            loadBranchOfficers(branchID: app.branchID, branchName: app.branch)
         }
         Task { await refreshSelectedApplicationDetail(applicationID: app.id) }
     }
@@ -396,7 +398,8 @@ class ApplicationsViewModel: ObservableObject {
                 applicationID: app.id,
                 status: .officerRejected,
                 escalationReason: nil,
-                successMessage: "Application rejected"
+                successMessage: "Application rejected",
+                internalRemarkAuthor: "Loan Officer"
             )
         }
     }
@@ -434,12 +437,7 @@ class ApplicationsViewModel: ObservableObject {
         : (sendBackCustomRemark.isEmpty ? sendBackReason : "\(sendBackReason): \(sendBackCustomRemark)")
 
         Task {
-            await updateApplicationStatus(
-                applicationID: app.id,
-                status: .officerReview,
-                escalationReason: finalRemark,
-                successMessage: "Application returned to Loan Officer"
-            )
+            await sendBackToOfficer(applicationID: app.id, remark: finalRemark)
         }
         showSendBackSheet = false
         pendingSendBackApp = nil
@@ -465,12 +463,7 @@ class ApplicationsViewModel: ObservableObject {
         guard let app = pendingRejectionApp else { return }
         let remarks = rejectionRemarksText.trimmingCharacters(in: .whitespacesAndNewlines)
         Task {
-            await updateApplicationStatus(
-                applicationID: app.id,
-                status: .managerRejected,
-                escalationReason: remarks.isEmpty ? nil : remarks,
-                successMessage: "Application rejected"
-            )
+            await rejectFromManager(applicationID: app.id, remark: remarks)
         }
         showRejectionRemarksSheet = false
         pendingRejectionApp = nil
@@ -608,14 +601,24 @@ class ApplicationsViewModel: ObservableObject {
         }
     }
 
-    func loadBranchOfficers(branchName: String) {
+    func loadBranchOfficers(branchID: String = "", branchName: String = "") {
         Task {
+            isLoadingBranchOfficers = true
+            defer { isLoadingBranchOfficers = false }
             do {
+                let normalizedBranchID = branchID.trimmingCharacters(in: .whitespacesAndNewlines)
                 let normalizedBranch = branchName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-                if loadedOfficerDirectoryBranchName == normalizedBranch && !availableBranchOfficers.isEmpty {
+                if loadedOfficerDirectoryBranchID == normalizedBranchID,
+                   loadedOfficerDirectoryBranchName == normalizedBranch,
+                   !availableBranchOfficers.isEmpty {
                     return
                 }
-                let employees = try await adminAPI.listEmployeeAccounts(limit: 500, offset: 0)
+                let employees: [Admin_V1_EmployeeAccount]
+                if !normalizedBranchID.isEmpty {
+                    employees = try await adminAPI.listBranchOfficers(branchID: normalizedBranchID, limit: 500, offset: 0)
+                } else {
+                    employees = try await adminAPI.listEmployeeAccounts(limit: 500, offset: 0)
+                }
                 cacheEmployeeNames(from: employees)
                 let officers = employees.compactMap { account -> OfficerDirectoryItem? in
                     guard account.role == .officer, account.isActive else { return nil }
@@ -630,12 +633,14 @@ class ApplicationsViewModel: ObservableObject {
                 let branchMatches = officers.filter { officer in
                     guard !normalizedBranch.isEmpty else { return true }
                     let candidate = officer.branchName.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                    guard !candidate.isEmpty else { return false }
                     return candidate == normalizedBranch
                         || candidate.contains(normalizedBranch)
                         || normalizedBranch.contains(candidate)
                 }
                 let mapped = branchMatches.isEmpty ? officers : branchMatches
                 availableBranchOfficers = mapped.sorted(by: { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending })
+                loadedOfficerDirectoryBranchID = normalizedBranchID
                 loadedOfficerDirectoryBranchName = normalizedBranch
                 officerDirectoryUnavailableMessage = mapped.isEmpty
                     ? "Officer directory is currently unavailable for this branch. Reassignment options will appear once officer data is available."
@@ -941,7 +946,8 @@ class ApplicationsViewModel: ObservableObject {
         applicationID: String,
         status: Loan_V1_LoanApplicationStatus,
         escalationReason: String?,
-        successMessage: String
+        successMessage: String,
+        internalRemarkAuthor: String? = nil
     ) async {
         guard #available(iOS 18.0, *) else {
             actionMessage = "Status update requires iOS 18 or later"
@@ -957,7 +963,8 @@ class ApplicationsViewModel: ObservableObject {
             applyStatusUpdateLocally(
                 applicationID: applicationID,
                 status: ApplicationStatus(proto: status),
-                escalationReason: escalationReason
+                escalationReason: escalationReason,
+                internalRemarkAuthor: internalRemarkAuthor
             )
             await refreshSelectedApplicationDetail(applicationID: applicationID)
             actionMessage = successMessage
@@ -1019,6 +1026,75 @@ class ApplicationsViewModel: ObservableObject {
         showActionAlert = true
     }
 
+    private func sendBackToOfficer(applicationID: String, remark: String) async {
+        let trimmedRemark = remark.trimmingCharacters(in: .whitespacesAndNewlines)
+        let statusAttempts: [(Loan_V1_LoanApplicationStatus, String)] = [
+            (.officerReview, "Application sent back to Loan Officer"),
+            (.underReview, "Application sent back to Loan Officer")
+        ]
+
+        await updateApplicationStatusWithFallback(
+            applicationID: applicationID,
+            attempts: statusAttempts,
+            escalationReason: trimmedRemark.isEmpty ? nil : trimmedRemark,
+            internalRemarkAuthor: "Manager"
+        )
+    }
+
+    private func rejectFromManager(applicationID: String, remark: String) async {
+        let trimmedRemark = remark.trimmingCharacters(in: .whitespacesAndNewlines)
+        let statusAttempts: [(Loan_V1_LoanApplicationStatus, String)] = [
+            (.managerRejected, "Application rejected"),
+            (.rejected, "Application rejected")
+        ]
+
+        await updateApplicationStatusWithFallback(
+            applicationID: applicationID,
+            attempts: statusAttempts,
+            escalationReason: trimmedRemark.isEmpty ? nil : trimmedRemark,
+            internalRemarkAuthor: "Manager"
+        )
+    }
+
+    private func updateApplicationStatusWithFallback(
+        applicationID: String,
+        attempts: [(Loan_V1_LoanApplicationStatus, String)],
+        escalationReason: String?,
+        internalRemarkAuthor: String
+    ) async {
+        guard #available(iOS 18.0, *) else {
+            actionMessage = "Status update requires iOS 18 or later"
+            showActionAlert = true
+            return
+        }
+
+        var lastError: Error?
+        for (nextStatus, successMessage) in attempts {
+            do {
+                _ = try await LoanAPI().updateLoanApplicationStatus(
+                    applicationID: applicationID,
+                    status: nextStatus,
+                    escalationReason: escalationReason
+                )
+                applyStatusUpdateLocally(
+                    applicationID: applicationID,
+                    status: ApplicationStatus(proto: nextStatus),
+                    escalationReason: escalationReason,
+                    internalRemarkAuthor: internalRemarkAuthor
+                )
+                await refreshSelectedApplicationDetail(applicationID: applicationID)
+                actionMessage = successMessage
+                showActionAlert = true
+                return
+            } catch {
+                lastError = error
+            }
+        }
+
+        actionMessage = (lastError as? LocalizedError)?.errorDescription ?? "Unable to update application status"
+        showActionAlert = true
+    }
+
     private func refreshApplications(selectApplicationID: String?, autoSelectFirst: Bool) async throws {
         guard #available(iOS 18.0, *) else {
             throw APIError.failedPrecondition("Loan application APIs require iOS 18 or later.")
@@ -1027,16 +1103,12 @@ class ApplicationsViewModel: ObservableObject {
         // Fire list + context prefetch concurrently where possible
         let loanAPI = LoanAPI()
         async let listLoad = loanAPI.listLoanApplications(limit: 100, offset: 0, branchID: defaultBranchID)
-        async let employeePrefetch: Void = loadEmployeeNamesIfNeeded()
-        async let productPrefetch: Void = {
-            if await self.availableLoanProducts.isEmpty {
-                await self.loadAvailableLoanProducts()
-            }
-        }()
-
-        // Await list first, prefetches can complete in parallel
         let list = try await listLoad
-        _ = await (employeePrefetch, productPrefetch)
+
+        Task { await self.loadEmployeeNamesIfNeeded() }
+        if availableLoanProducts.isEmpty {
+            Task { await self.loadAvailableLoanProducts() }
+        }
 
         let previousApplicationsByID = Dictionary(uniqueKeysWithValues: applications.map { ($0.id, $0) })
         let mapped = list.map { application in
@@ -1060,9 +1132,8 @@ class ApplicationsViewModel: ObservableObject {
             }
         }
         syncSelectedApplicationWithFilters(preferredApplicationID: selectApplicationID)
-        // Start detail enrichment for selected application in background (non-blocking)
         if let selectedID = selectedApplication?.id {
-            await refreshSelectedApplicationDetail(applicationID: selectedID)
+            Task { await self.refreshSelectedApplicationDetail(applicationID: selectedID) }
         }
     }
 
@@ -1569,7 +1640,8 @@ class ApplicationsViewModel: ObservableObject {
     private func applyStatusUpdateLocally(
         applicationID: String,
         status: ApplicationStatus,
-        escalationReason: String?
+        escalationReason: String?,
+        internalRemarkAuthor: String? = nil
     ) {
         guard let index = applications.firstIndex(where: { $0.id == applicationID }) else { return }
         applications[index].status = status
@@ -1579,7 +1651,7 @@ class ApplicationsViewModel: ObservableObject {
                 applications[index].rejectionRemarks = trimmedReason
                 appendInternalRemark(
                     applicationID: applicationID,
-                    author: status.remarkAuthorLabel,
+                    author: internalRemarkAuthor ?? status.remarkAuthorLabel,
                     text: trimmedReason,
                     timestamp: Date()
                 )

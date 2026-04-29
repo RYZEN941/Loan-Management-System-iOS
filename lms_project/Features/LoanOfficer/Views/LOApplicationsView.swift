@@ -147,7 +147,7 @@ struct LOApplicationsView: View {
                 applicationsVM.syncSelectedApplicationWithFilters()
                 
                 if let app = applicationsVM.selectedApplication {
-                    applicationsVM.loadBranchOfficers(branchName: app.branch)
+                    applicationsVM.loadBranchOfficers(branchID: app.branchID, branchName: app.branch)
                 }
             }
             .onChange(of: applicationsVM.filteredApplications.map(\.id)) {

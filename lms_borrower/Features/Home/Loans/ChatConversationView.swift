@@ -135,6 +135,9 @@ class ChatConversationViewModel: ObservableObject {
                         } else if event.isHeartbeat {
                             print("DEBUG: [ChatConversationVM] Heartbeat received for room: \(roomID)")
                         }
+                        
+                        // Reset attempt on successful event
+                        reconnectAttempt = 0
                     }
                     
                     if Task.isCancelled {
@@ -144,7 +147,6 @@ class ChatConversationViewModel: ObservableObject {
                     
                     print("DEBUG: [ChatConversationVM] Stream ended normally (server disconnected). Reconnecting...")
                     await reconcileLatestMessages()
-                    reconnectAttempt += 1
                     let delaySeconds = min(UInt64(1 << min(reconnectAttempt, 5)), maxReconnectDelaySeconds)
                     try? await Task.sleep(nanoseconds: (delaySeconds * 1_000_000_000) + UInt64.random(in: 0...500_000_000))
                 } catch {

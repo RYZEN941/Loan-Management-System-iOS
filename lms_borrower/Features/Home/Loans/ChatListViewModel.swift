@@ -110,19 +110,11 @@ final class ChatListViewModel: ObservableObject {
         var names: [String: String] = [:]
         for room in rooms {
             let otherID = room.otherUserID(currentUserID: currentUserID)
-            if names[otherID] == nil {
+            if let participant = room.participants.first(where: { $0.id == otherID }) {
+                names[otherID] = participant.displayName
+            } else if names[otherID] == nil {
                 names[otherID] = "User"
             }
-        }
-        do {
-            print("DEBUG: [ChatListVM] Resolving participant names...")
-            let users = try await chatService.listEligibleUsers(query: "", limit: 100, offset: 0)
-            for user in users {
-                names[user.id] = user.displayName
-            }
-            print("DEBUG: [ChatListVM] Resolved names for \(users.count) users")
-        } catch {
-            print("DEBUG: [ChatListVM] resolveParticipantNames best-effort error: \(error)")
         }
         return names
     }

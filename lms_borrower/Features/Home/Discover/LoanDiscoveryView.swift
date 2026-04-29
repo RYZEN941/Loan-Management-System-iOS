@@ -173,6 +173,21 @@ struct LoanDetailScreen: View {
         return String(format: "%.2f%%", rate)
     }
 
+    private var processingFeeText: String {
+        guard let fee = loan.fees.first(where: { $0.type == .processing }) else {
+            return "N/A"
+        }
+        
+        switch fee.calcMethod {
+        case .flat:
+            return formatCurrency(fee.value)
+        case .percentage:
+            return "\(fee.value)%"
+        default:
+            return "N/A"
+        }
+    }
+
     private var eligibilityTitle: String {
         loan.isActive ? "Eligible" : "Not Eligible"
     }
@@ -210,10 +225,12 @@ struct LoanDetailScreen: View {
                         Text(loan.name)
                             .font(.title).bold()
 
-                        HStack(spacing: 24) {
+                        HStack(spacing: 12) {
                             DetailHighlight(title: "Max Amount", value: maxAmountText)
                             DetailHighlight(title: "Interest", value: "From \(rateText)")
+                            DetailHighlight(title: "Proc. Fee", value: processingFeeText)
                         }
+                        .padding(.horizontal, 20)
                     }
                     .padding(.top, 20)
 
@@ -303,7 +320,10 @@ struct DetailHighlight: View {
             Text(value)
                 .font(.headline)
                 .foregroundColor(.mainBlue)
+                .minimumScaleFactor(0.8)
+                .lineLimit(1)
         }
+        .frame(maxWidth: .infinity)
         .padding(12)
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 12))

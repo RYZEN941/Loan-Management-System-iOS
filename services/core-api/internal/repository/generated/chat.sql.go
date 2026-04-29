@@ -432,8 +432,8 @@ SELECT
     r.id, r.room_type, r.user_a_id, r.user_b_id, r.created_by_user_id, r.created_at, r.updated_at,
     m.id AS latest_message_id,
     m.sender_user_id AS latest_sender_user_id,
-    m.message_type AS latest_message_type,
-    m.body AS latest_message_body,
+    CAST(COALESCE(m.message_type::text, '') AS text) AS latest_message_type,
+    CAST(COALESCE(m.body, '') AS text) AS latest_message_body,
     m.created_at AS latest_message_created_at
 FROM chat_rooms r
 LEFT JOIN LATERAL (
@@ -464,7 +464,7 @@ type ListChatRoomsForUserRow struct {
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
 	LatestMessageID        pgtype.UUID        `json:"latest_message_id"`
 	LatestSenderUserID     pgtype.UUID        `json:"latest_sender_user_id"`
-	LatestMessageType      ChatMessageType    `json:"latest_message_type"`
+	LatestMessageType      string             `json:"latest_message_type"`
 	LatestMessageBody      string             `json:"latest_message_body"`
 	LatestMessageCreatedAt pgtype.Timestamptz `json:"latest_message_created_at"`
 }

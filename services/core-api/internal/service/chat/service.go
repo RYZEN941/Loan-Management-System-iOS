@@ -702,7 +702,7 @@ func (s *service) mapChatRoomFromListRow(row generated.ListChatRoomsForUserRow) 
 			Id:           row.LatestMessageID.String(),
 			RoomId:       row.ID.String(),
 			SenderUserId: nullableUUIDToString(row.LatestSenderUserID),
-			MessageType:  toProtoChatMessageType(row.LatestMessageType),
+			MessageType:  toProtoChatMessageType(generated.ChatMessageType(row.LatestMessageType)),
 			Body:         row.LatestMessageBody,
 			CreatedAt:    timeToString(row.LatestMessageCreatedAt),
 		}

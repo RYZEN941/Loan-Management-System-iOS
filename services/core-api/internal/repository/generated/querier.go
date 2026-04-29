@@ -24,6 +24,7 @@ type Querier interface {
 	CreateAdminUser(ctx context.Context, arg CreateAdminUserParams) (User, error)
 	CreateApplicationCoapplicant(ctx context.Context, arg CreateApplicationCoapplicantParams) (ApplicationCoapplicant, error)
 	CreateApplicationDocument(ctx context.Context, arg CreateApplicationDocumentParams) (ApplicationDocument, error)
+	CreateApplicationRemark(ctx context.Context, arg CreateApplicationRemarkParams) (ApplicationRemark, error)
 	// audit.sql
 	CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) (AuditLog, error)
 	CreateBankBranch(ctx context.Context, arg CreateBankBranchParams) (BankBranch, error)
@@ -102,6 +103,7 @@ type Querier interface {
 	ListAllLoans(ctx context.Context, arg ListAllLoansParams) ([]Loan, error)
 	ListApplicationCoapplicants(ctx context.Context, applicationID pgtype.UUID) ([]ApplicationCoapplicant, error)
 	ListApplicationDocumentsByApplicationID(ctx context.Context, applicationID pgtype.UUID) ([]ApplicationDocument, error)
+	ListApplicationRemarks(ctx context.Context, applicationID pgtype.UUID) ([]ApplicationRemark, error)
 	ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error)
 	ListBankBranches(ctx context.Context, arg ListBankBranchesParams) ([]BankBranch, error)
 	ListBorrowerAadhaarKycHistory(ctx context.Context, arg ListBorrowerAadhaarKycHistoryParams) ([]BorrowerAadhaarKycHistory, error)

@@ -25,7 +25,8 @@ proto:
 		$(PROTO_DIR)/onboarding/v1/onboarding.proto \
 		$(PROTO_DIR)/loan/v1/loan.proto \
 		$(PROTO_DIR)/query/v1/query.proto \
-		$(PROTO_DIR)/branch/v1/branch.proto
+		$(PROTO_DIR)/branch/v1/branch.proto \
+		$(PROTO_DIR)/remark/v1/remark.proto
 
 sqlc:
 	cd $(CORE_API_DIR) && sqlc generate

@@ -17,6 +17,7 @@ type Application struct {
 	MediaHandler           *transportgrpc.MediaHandler
 	OnboardingHandler      *transportgrpc.OnboardingHandler
 	BranchHandler          *transportgrpc.BranchHandler
+	RemarkHandler          *transportgrpc.RemarkHandler
 	RazorpayWebhookHandler *http.RazorpayHandler
 }
 
@@ -31,6 +32,7 @@ func New(
 	mediaService transportgrpc.MediaService,
 	onboardingService transportgrpc.OnboardingService,
 	branchService transportgrpc.BranchService,
+	remarkService transportgrpc.RemarkHandlerService,
 	razorpayClient *razorpay.Client,
 ) *Application {
 	return &Application{
@@ -44,6 +46,7 @@ func New(
 		MediaHandler:           transportgrpc.NewMediaHandler(mediaService),
 		OnboardingHandler:      transportgrpc.NewOnboardingHandler(onboardingService),
 		BranchHandler:          transportgrpc.NewBranchHandler(branchService),
+		RemarkHandler:          transportgrpc.NewRemarkHandler(remarkService),
 		RazorpayWebhookHandler: http.NewRazorpayHandler(loanService, razorpayClient),
 	}
 }

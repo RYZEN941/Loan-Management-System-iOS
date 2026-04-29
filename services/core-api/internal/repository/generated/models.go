@@ -1089,6 +1089,15 @@ type ApplicationDocument struct {
 	ReviewedAt         pgtype.Timestamptz         `json:"reviewed_at"`
 }
 
+type ApplicationRemark struct {
+	ID            pgtype.UUID        `json:"id"`
+	ApplicationID pgtype.UUID        `json:"application_id"`
+	SenderUserID  pgtype.UUID        `json:"sender_user_id"`
+	SenderRole    UserRole           `json:"sender_role"`
+	Message       string             `json:"message"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+}
+
 type AuditLog struct {
 	ID           pgtype.UUID        `json:"id"`
 	ActorID      pgtype.UUID        `json:"actor_id"`

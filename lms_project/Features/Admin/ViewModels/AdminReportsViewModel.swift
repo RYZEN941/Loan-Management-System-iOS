@@ -488,28 +488,28 @@ class AdminReportsViewModel: ObservableObject {
         case "RPT-01":
             if let r = portfolioReport {
                 return [
-                    ReportRow(id: "r1", label: "Portfolio Value",     value: r.kpis.totalPortfolioValue.currencyFormatted, change: "—", isPositive: true),
+                    ReportRow(id: "r1", label: "Portfolio Value",     value: r.kpis.totalPortfolioValue.lakhsFormatted, change: "—", isPositive: true),
                     ReportRow(id: "r2", label: "Active Loans",        value: "\(r.kpis.totalActiveLoans)",                 change: "—", isPositive: true),
-                    ReportRow(id: "r3", label: "Disbursed Amount",    value: r.kpis.totalDisbursedAmount.currencyFormatted, change: "—", isPositive: true),
+                    ReportRow(id: "r3", label: "Disbursed Amount",    value: r.kpis.totalDisbursedAmount.lakhsFormatted, change: "—", isPositive: true),
                     ReportRow(id: "r4", label: "NPA %",               value: String(format: "%.2f%%", r.kpis.npaPercentage), change: "—", isPositive: r.kpis.npaPercentage < 3),
                     ReportRow(id: "r5", label: "Approval Rate",       value: String(format: "%.1f%%", r.kpis.approvalRate), change: "—", isPositive: r.kpis.approvalRate >= 70),
-                    ReportRow(id: "r6", label: "Avg Loan Size",       value: r.kpis.avgLoanSize.currencyFormatted,         change: "—", isPositive: true)
+                    ReportRow(id: "r6", label: "Avg Loan Size",       value: r.kpis.avgLoanSize.lakhsFormatted,         change: "—", isPositive: true)
                 ]
             }
         case "RPT-02":
             if let r = collectionReport {
                 return [
-                    ReportRow(id: "r1", label: "EMI Collected",       value: r.kpis.totalEmiCollected.currencyFormatted,           change: "—", isPositive: true),
+                    ReportRow(id: "r1", label: "EMI Collected",       value: r.kpis.totalEmiCollected.lakhsFormatted,           change: "—", isPositive: true),
                     ReportRow(id: "r2", label: "Collection Efficiency", value: String(format: "%.1f%%", r.kpis.collectionEfficiencyPercentage), change: "—", isPositive: r.kpis.collectionEfficiencyPercentage >= 90),
-                    ReportRow(id: "r3", label: "Pending Amount",      value: r.kpis.pendingAmount.currencyFormatted,               change: "—", isPositive: r.kpis.pendingAmount == 0),
-                    ReportRow(id: "r4", label: "Overdue Amount",       value: r.kpis.overdueAmount.currencyFormatted,               change: "—", isPositive: r.kpis.overdueAmount == 0)
+                    ReportRow(id: "r3", label: "Pending Amount",      value: r.kpis.pendingAmount.lakhsFormatted,               change: "—", isPositive: r.kpis.pendingAmount == 0),
+                    ReportRow(id: "r4", label: "Overdue Amount",       value: r.kpis.overdueAmount.lakhsFormatted,               change: "—", isPositive: r.kpis.overdueAmount == 0)
                 ]
             }
         case "RPT-03":
             if let r = disbursementReport {
                 return [
-                    ReportRow(id: "r1", label: "Total Disbursed",     value: r.kpis.totalDisbursedAmount.currencyFormatted,       change: "—", isPositive: true),
-                    ReportRow(id: "r2", label: "Avg Disbursement",    value: r.kpis.avgDisbursementSize.currencyFormatted,         change: "—", isPositive: true),
+                    ReportRow(id: "r1", label: "Total Disbursed",     value: r.kpis.totalDisbursedAmount.lakhsFormatted,       change: "—", isPositive: true),
+                    ReportRow(id: "r2", label: "Avg Disbursement",    value: r.kpis.avgDisbursementSize.lakhsFormatted,         change: "—", isPositive: true),
                     ReportRow(id: "r3", label: "Growth %",            value: String(format: "%.1f%%", r.kpis.disbursementGrowthPercentage), change: "—", isPositive: r.kpis.disbursementGrowthPercentage > 0),
                     ReportRow(id: "r4", label: "Count",               value: "\(r.kpis.totalDisbursementCount)",                   change: "—", isPositive: true)
                 ]
@@ -526,7 +526,7 @@ class AdminReportsViewModel: ObservableObject {
         case "RPT-NPA":
             if let r = npaReport {
                 return [
-                    ReportRow(id: "r1", label: "Total NPA",           value: r.kpis.totalNpaAmount.currencyFormatted,              change: "—", isPositive: false),
+                    ReportRow(id: "r1", label: "Total NPA",           value: r.kpis.totalNpaAmount.lakhsFormatted,              change: "—", isPositive: false),
                     ReportRow(id: "r2", label: "NPA %",               value: String(format: "%.2f%%", r.kpis.npaPercentage),       change: "—", isPositive: r.kpis.npaPercentage < 3),
                     ReportRow(id: "r3", label: "NPA Count",           value: "\(r.kpis.totalNpaCount)",                            change: "—", isPositive: r.kpis.totalNpaCount == 0)
                 ]
@@ -617,11 +617,11 @@ class AdminReportsViewModel: ObservableObject {
             if let r = portfolioReport {
                 let columns = ["Metric", "Value"]
                 let rows: [[String]] = [
-                    ["Portfolio Value", r.kpis.totalPortfolioValue.currencyFormatted],
+                    ["Portfolio Value", r.kpis.totalPortfolioValue.lakhsFormatted],
                     ["Active Loans", "\(r.kpis.totalActiveLoans)"],
-                    ["Disbursed Amount", r.kpis.totalDisbursedAmount.currencyFormatted],
-                    ["Avg Loan Size", r.kpis.avgLoanSize.currencyFormatted],
-                    ["NPA Amount", r.kpis.npaAmount.currencyFormatted],
+                    ["Disbursed Amount", r.kpis.totalDisbursedAmount.lakhsFormatted],
+                    ["Avg Loan Size", r.kpis.avgLoanSize.lakhsFormatted],
+                    ["NPA Amount", r.kpis.npaAmount.lakhsFormatted],
                     ["NPA %", String(format: "%.2f%%", r.kpis.npaPercentage)],
                     ["Approval Rate", String(format: "%.1f%%", r.kpis.approvalRate)]
                 ]

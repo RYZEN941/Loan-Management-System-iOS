@@ -906,25 +906,39 @@ func (s *service) GetBorrowerProfile(ctx context.Context, req *authv1.GetBorrowe
 	role, _ := ctx.Value(interceptors.ContextRoleKey).(string)
 
 	targetUserIDStr := strings.TrimSpace(req.GetUserID())
-	if targetUserIDStr == "" {
-		return nil, status.Error(codes.InvalidArgument, "user_id is required")
-	}
-	targetUserID, err := uuid.Parse(targetUserIDStr)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "user_id must be a valid uuid")
+	targetProfileIDStr := strings.TrimSpace(req.GetProfileID())
+
+	if targetUserIDStr == "" && targetProfileIDStr == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id or profile_id is required")
 	}
 
-	switch role {
-	case "borrower":
-		if targetUserID != callerUserID {
+	var profile generated.BorrowerProfile
+	var err error
+
+	if targetUserIDStr != "" {
+		targetUserID, parseErr := uuid.Parse(targetUserIDStr)
+		if parseErr != nil {
+			return nil, status.Error(codes.InvalidArgument, "user_id must be a valid uuid")
+		}
+		if role == "borrower" && targetUserID != callerUserID {
 			return nil, status.Error(codes.PermissionDenied, "borrower can only view own profile")
 		}
-	case "officer", "manager", "admin", "dst":
-	default:
+		profile, err = s.queries.GetBorrowerProfileByUserID(ctx, pgtype.UUID{Bytes: targetUserID, Valid: true})
+	} else {
+		targetProfileID, parseErr := uuid.Parse(targetProfileIDStr)
+		if parseErr != nil {
+			return nil, status.Error(codes.InvalidArgument, "profile_id must be a valid uuid")
+		}
+		profile, err = s.queries.GetBorrowerProfileByID(ctx, pgtype.UUID{Bytes: targetProfileID, Valid: true})
+		if err == nil && role == "borrower" && profile.UserID.Bytes != callerUserID {
+			return nil, status.Error(codes.PermissionDenied, "borrower can only view own profile")
+		}
+	}
+
+	if role != "borrower" && role != "officer" && role != "manager" && role != "admin" && role != "dst" {
 		return nil, status.Error(codes.PermissionDenied, "access denied")
 	}
 
-	profile, err := s.queries.GetBorrowerProfileByUserID(ctx, pgtype.UUID{Bytes: targetUserID, Valid: true})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, status.Error(codes.NotFound, "borrower profile not found")
@@ -951,6 +965,7 @@ func (s *service) GetBorrowerProfile(ctx context.Context, req *authv1.GetBorrowe
 		PanVerifiedAt:              timeToString(profile.PanVerifiedAt),
 		CreatedAt:                  timeToString(profile.CreatedAt),
 		CibilScore:                 profile.CibilScore,
+		UserId:                     profile.UserID.String(),
 	}
 
 	return result, nil

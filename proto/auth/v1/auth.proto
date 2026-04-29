@@ -58,6 +58,7 @@ message SignupRequest {
 
 message GetBorrowerProfileRequest {
   string userID = 1;
+  string profileID = 2;
 }
 
 enum UserRole {
@@ -260,6 +261,7 @@ message BorrowerProfile {
   string pan_verified_at = 16;
   string created_at = 17;
   int32 cibil_score = 18;
+  string user_id = 19;
 }
 
 message GetMyProfileResponse {

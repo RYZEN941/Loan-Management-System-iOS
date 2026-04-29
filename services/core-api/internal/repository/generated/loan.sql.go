@@ -879,10 +879,12 @@ SELECT
     lp.category AS product_category,
     bb.name AS branch_name,
     bb.region AS branch_region,
-    bb.city AS branch_city
+    bb.city AS branch_city,
+    bp.user_id AS borrower_user_id
 FROM loan_applications la
 JOIN loan_products lp ON lp.id = la.loan_product_id
 JOIN bank_branches bb ON bb.id = la.branch_id
+JOIN borrower_profiles bp ON bp.id = la.primary_borrower_profile_id
 WHERE la.id = $1
 LIMIT 1
 `
@@ -914,6 +916,7 @@ type GetLoanApplicationViewByIDRow struct {
 	BranchName                    string                      `json:"branch_name"`
 	BranchRegion                  string                      `json:"branch_region"`
 	BranchCity                    string                      `json:"branch_city"`
+	BorrowerUserID                pgtype.UUID                 `json:"borrower_user_id"`
 }
 
 func (q *Queries) GetLoanApplicationViewByID(ctx context.Context, id pgtype.UUID) (GetLoanApplicationViewByIDRow, error) {
@@ -946,6 +949,7 @@ func (q *Queries) GetLoanApplicationViewByID(ctx context.Context, id pgtype.UUID
 		&i.BranchName,
 		&i.BranchRegion,
 		&i.BranchCity,
+		&i.BorrowerUserID,
 	)
 	return i, err
 }
@@ -1310,10 +1314,12 @@ const listAllLoanApplications = `-- name: ListAllLoanApplications :many
 SELECT
     la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at, la.disbursement_account_number, la.disbursement_ifsc_code, la.disbursement_bank_name, la.disbursement_account_holder_name,
     lp.name AS product_name,
-    bb.name AS branch_name
+    bb.name AS branch_name,
+    bp.user_id AS borrower_user_id
 FROM loan_applications la
 JOIN loan_products lp ON lp.id = la.loan_product_id
 JOIN bank_branches bb ON bb.id = la.branch_id
+JOIN borrower_profiles bp ON bp.id = la.primary_borrower_profile_id
 ORDER BY la.created_at DESC
 LIMIT $1 OFFSET $2
 `
@@ -1347,6 +1353,7 @@ type ListAllLoanApplicationsRow struct {
 	DisbursementAccountHolderName pgtype.Text                 `json:"disbursement_account_holder_name"`
 	ProductName                   string                      `json:"product_name"`
 	BranchName                    string                      `json:"branch_name"`
+	BorrowerUserID                pgtype.UUID                 `json:"borrower_user_id"`
 }
 
 func (q *Queries) ListAllLoanApplications(ctx context.Context, arg ListAllLoanApplicationsParams) ([]ListAllLoanApplicationsRow, error) {
@@ -1382,6 +1389,7 @@ func (q *Queries) ListAllLoanApplications(ctx context.Context, arg ListAllLoanAp
 			&i.DisbursementAccountHolderName,
 			&i.ProductName,
 			&i.BranchName,
+			&i.BorrowerUserID,
 		); err != nil {
 			return nil, err
 		}
@@ -1583,10 +1591,12 @@ const listLoanApplicationsByAssignedOfficer = `-- name: ListLoanApplicationsByAs
 SELECT
     la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at, la.disbursement_account_number, la.disbursement_ifsc_code, la.disbursement_bank_name, la.disbursement_account_holder_name,
     lp.name AS product_name,
-    bb.name AS branch_name
+    bb.name AS branch_name,
+    bp.user_id AS borrower_user_id
 FROM loan_applications la
 JOIN loan_products lp ON lp.id = la.loan_product_id
 JOIN bank_branches bb ON bb.id = la.branch_id
+JOIN borrower_profiles bp ON bp.id = la.primary_borrower_profile_id
 WHERE la.assigned_officer_user_id = $1
 ORDER BY la.created_at DESC
 LIMIT $2 OFFSET $3
@@ -1622,6 +1632,7 @@ type ListLoanApplicationsByAssignedOfficerRow struct {
 	DisbursementAccountHolderName pgtype.Text                 `json:"disbursement_account_holder_name"`
 	ProductName                   string                      `json:"product_name"`
 	BranchName                    string                      `json:"branch_name"`
+	BorrowerUserID                pgtype.UUID                 `json:"borrower_user_id"`
 }
 
 func (q *Queries) ListLoanApplicationsByAssignedOfficer(ctx context.Context, arg ListLoanApplicationsByAssignedOfficerParams) ([]ListLoanApplicationsByAssignedOfficerRow, error) {
@@ -1657,6 +1668,7 @@ func (q *Queries) ListLoanApplicationsByAssignedOfficer(ctx context.Context, arg
 			&i.DisbursementAccountHolderName,
 			&i.ProductName,
 			&i.BranchName,
+			&i.BorrowerUserID,
 		); err != nil {
 			return nil, err
 		}
@@ -1672,10 +1684,12 @@ const listLoanApplicationsByBranchID = `-- name: ListLoanApplicationsByBranchID 
 SELECT
     la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at, la.disbursement_account_number, la.disbursement_ifsc_code, la.disbursement_bank_name, la.disbursement_account_holder_name,
     lp.name AS product_name,
-    bb.name AS branch_name
+    bb.name AS branch_name,
+    bp.user_id AS borrower_user_id
 FROM loan_applications la
 JOIN loan_products lp ON lp.id = la.loan_product_id
 JOIN bank_branches bb ON bb.id = la.branch_id
+JOIN borrower_profiles bp ON bp.id = la.primary_borrower_profile_id
 WHERE la.branch_id = $1
 ORDER BY la.created_at DESC
 LIMIT $2 OFFSET $3
@@ -1711,6 +1725,7 @@ type ListLoanApplicationsByBranchIDRow struct {
 	DisbursementAccountHolderName pgtype.Text                 `json:"disbursement_account_holder_name"`
 	ProductName                   string                      `json:"product_name"`
 	BranchName                    string                      `json:"branch_name"`
+	BorrowerUserID                pgtype.UUID                 `json:"borrower_user_id"`
 }
 
 func (q *Queries) ListLoanApplicationsByBranchID(ctx context.Context, arg ListLoanApplicationsByBranchIDParams) ([]ListLoanApplicationsByBranchIDRow, error) {
@@ -1746,6 +1761,7 @@ func (q *Queries) ListLoanApplicationsByBranchID(ctx context.Context, arg ListLo
 			&i.DisbursementAccountHolderName,
 			&i.ProductName,
 			&i.BranchName,
+			&i.BorrowerUserID,
 		); err != nil {
 			return nil, err
 		}
@@ -1761,10 +1777,12 @@ const listLoanApplicationsByCreatedByUserID = `-- name: ListLoanApplicationsByCr
 SELECT
     la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at, la.disbursement_account_number, la.disbursement_ifsc_code, la.disbursement_bank_name, la.disbursement_account_holder_name,
     lp.name AS product_name,
-    bb.name AS branch_name
+    bb.name AS branch_name,
+    bp.user_id AS borrower_user_id
 FROM loan_applications la
 JOIN loan_products lp ON lp.id = la.loan_product_id
 JOIN bank_branches bb ON bb.id = la.branch_id
+JOIN borrower_profiles bp ON bp.id = la.primary_borrower_profile_id
 WHERE la.created_by_user_id = $1
 ORDER BY la.created_at DESC
 LIMIT $2 OFFSET $3
@@ -1800,6 +1818,7 @@ type ListLoanApplicationsByCreatedByUserIDRow struct {
 	DisbursementAccountHolderName pgtype.Text                 `json:"disbursement_account_holder_name"`
 	ProductName                   string                      `json:"product_name"`
 	BranchName                    string                      `json:"branch_name"`
+	BorrowerUserID                pgtype.UUID                 `json:"borrower_user_id"`
 }
 
 func (q *Queries) ListLoanApplicationsByCreatedByUserID(ctx context.Context, arg ListLoanApplicationsByCreatedByUserIDParams) ([]ListLoanApplicationsByCreatedByUserIDRow, error) {
@@ -1835,6 +1854,7 @@ func (q *Queries) ListLoanApplicationsByCreatedByUserID(ctx context.Context, arg
 			&i.DisbursementAccountHolderName,
 			&i.ProductName,
 			&i.BranchName,
+			&i.BorrowerUserID,
 		); err != nil {
 			return nil, err
 		}
@@ -1850,10 +1870,12 @@ const listLoanApplicationsForBorrowerProfile = `-- name: ListLoanApplicationsFor
 SELECT
     la.id, la.reference_number, la.primary_borrower_profile_id, la.loan_product_id, la.branch_id, la.requested_amount, la.tenure_months, la.offered_interest_rate, la.status, la.assigned_officer_user_id, la.escalation_reason, la.created_by_user_id, la.created_by_role, la.created_by_channel, la.product_snapshot_json, la.created_at, la.updated_at, la.disbursement_account_number, la.disbursement_ifsc_code, la.disbursement_bank_name, la.disbursement_account_holder_name,
     lp.name AS product_name,
-    bb.name AS branch_name
+    bb.name AS branch_name,
+    bp.user_id AS borrower_user_id
 FROM loan_applications la
 JOIN loan_products lp ON lp.id = la.loan_product_id
 JOIN bank_branches bb ON bb.id = la.branch_id
+JOIN borrower_profiles bp ON bp.id = la.primary_borrower_profile_id
 WHERE la.primary_borrower_profile_id = $1
 ORDER BY la.created_at DESC
 LIMIT $2 OFFSET $3
@@ -1889,6 +1911,7 @@ type ListLoanApplicationsForBorrowerProfileRow struct {
 	DisbursementAccountHolderName pgtype.Text                 `json:"disbursement_account_holder_name"`
 	ProductName                   string                      `json:"product_name"`
 	BranchName                    string                      `json:"branch_name"`
+	BorrowerUserID                pgtype.UUID                 `json:"borrower_user_id"`
 }
 
 func (q *Queries) ListLoanApplicationsForBorrowerProfile(ctx context.Context, arg ListLoanApplicationsForBorrowerProfileParams) ([]ListLoanApplicationsForBorrowerProfileRow, error) {
@@ -1924,6 +1947,7 @@ func (q *Queries) ListLoanApplicationsForBorrowerProfile(ctx context.Context, ar
 			&i.DisbursementAccountHolderName,
 			&i.ProductName,
 			&i.BranchName,
+			&i.BorrowerUserID,
 		); err != nil {
 			return nil, err
 		}

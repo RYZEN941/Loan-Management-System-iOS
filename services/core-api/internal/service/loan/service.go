@@ -1876,6 +1876,7 @@ func mapLoanApplicationView(row generated.GetLoanApplicationViewByIDRow) *loanv1
 		DisbursementIfscCode:          textToString(row.DisbursementIfscCode),
 		DisbursementBankName:          textToString(row.DisbursementBankName),
 		DisbursementAccountHolderName: textToString(row.DisbursementAccountHolderName),
+		PrimaryBorrowerUserId:         row.BorrowerUserID.String(),
 	}
 }
 
@@ -1904,6 +1905,7 @@ func mapLoanApplicationRowForBorrower(row generated.ListLoanApplicationsForBorro
 		DisbursementIfscCode:          textToString(row.DisbursementIfscCode),
 		DisbursementBankName:          textToString(row.DisbursementBankName),
 		DisbursementAccountHolderName: textToString(row.DisbursementAccountHolderName),
+		PrimaryBorrowerUserId:         row.BorrowerUserID.String(),
 	}
 }
 
@@ -1932,6 +1934,7 @@ func mapLoanApplicationRowForBranch(row generated.ListLoanApplicationsByBranchID
 		DisbursementIfscCode:          textToString(row.DisbursementIfscCode),
 		DisbursementBankName:          textToString(row.DisbursementBankName),
 		DisbursementAccountHolderName: textToString(row.DisbursementAccountHolderName),
+		PrimaryBorrowerUserId:         row.BorrowerUserID.String(),
 	}
 }
 
@@ -1960,6 +1963,7 @@ func mapLoanApplicationRowForAdmin(row generated.ListAllLoanApplicationsRow) *lo
 		DisbursementIfscCode:          textToString(row.DisbursementIfscCode),
 		DisbursementBankName:          textToString(row.DisbursementBankName),
 		DisbursementAccountHolderName: textToString(row.DisbursementAccountHolderName),
+		PrimaryBorrowerUserId:         row.BorrowerUserID.String(),
 	}
 }
 
@@ -1988,6 +1992,7 @@ func mapLoanApplicationRowForOfficer(row generated.ListLoanApplicationsByAssigne
 		DisbursementIfscCode:          textToString(row.DisbursementIfscCode),
 		DisbursementBankName:          textToString(row.DisbursementBankName),
 		DisbursementAccountHolderName: textToString(row.DisbursementAccountHolderName),
+		PrimaryBorrowerUserId:         row.BorrowerUserID.String(),
 	}
 }
 
@@ -2016,6 +2021,7 @@ func mapLoanApplicationRowForDst(row generated.ListLoanApplicationsByCreatedByUs
 		DisbursementIfscCode:          textToString(row.DisbursementIfscCode),
 		DisbursementBankName:          textToString(row.DisbursementBankName),
 		DisbursementAccountHolderName: textToString(row.DisbursementAccountHolderName),
+		PrimaryBorrowerUserId:         row.BorrowerUserID.String(),
 	}
 }
 

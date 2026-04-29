@@ -181,10 +181,12 @@ SELECT
     lp.category AS product_category,
     bb.name AS branch_name,
     bb.region AS branch_region,
-    bb.city AS branch_city
+    bb.city AS branch_city,
+    bp.user_id AS borrower_user_id
 FROM loan_applications la
 JOIN loan_products lp ON lp.id = la.loan_product_id
 JOIN bank_branches bb ON bb.id = la.branch_id
+JOIN borrower_profiles bp ON bp.id = la.primary_borrower_profile_id
 WHERE la.id = $1
 LIMIT 1;
 
@@ -192,10 +194,12 @@ LIMIT 1;
 SELECT
     la.*,
     lp.name AS product_name,
-    bb.name AS branch_name
+    bb.name AS branch_name,
+    bp.user_id AS borrower_user_id
 FROM loan_applications la
 JOIN loan_products lp ON lp.id = la.loan_product_id
 JOIN bank_branches bb ON bb.id = la.branch_id
+JOIN borrower_profiles bp ON bp.id = la.primary_borrower_profile_id
 WHERE la.primary_borrower_profile_id = $1
 ORDER BY la.created_at DESC
 LIMIT $2 OFFSET $3;
@@ -204,10 +208,12 @@ LIMIT $2 OFFSET $3;
 SELECT
     la.*,
     lp.name AS product_name,
-    bb.name AS branch_name
+    bb.name AS branch_name,
+    bp.user_id AS borrower_user_id
 FROM loan_applications la
 JOIN loan_products lp ON lp.id = la.loan_product_id
 JOIN bank_branches bb ON bb.id = la.branch_id
+JOIN borrower_profiles bp ON bp.id = la.primary_borrower_profile_id
 WHERE la.branch_id = $1
 ORDER BY la.created_at DESC
 LIMIT $2 OFFSET $3;
@@ -216,10 +222,12 @@ LIMIT $2 OFFSET $3;
 SELECT
     la.*,
     lp.name AS product_name,
-    bb.name AS branch_name
+    bb.name AS branch_name,
+    bp.user_id AS borrower_user_id
 FROM loan_applications la
 JOIN loan_products lp ON lp.id = la.loan_product_id
 JOIN bank_branches bb ON bb.id = la.branch_id
+JOIN borrower_profiles bp ON bp.id = la.primary_borrower_profile_id
 ORDER BY la.created_at DESC
 LIMIT $1 OFFSET $2;
 
@@ -227,10 +235,12 @@ LIMIT $1 OFFSET $2;
 SELECT
     la.*,
     lp.name AS product_name,
-    bb.name AS branch_name
+    bb.name AS branch_name,
+    bp.user_id AS borrower_user_id
 FROM loan_applications la
 JOIN loan_products lp ON lp.id = la.loan_product_id
 JOIN bank_branches bb ON bb.id = la.branch_id
+JOIN borrower_profiles bp ON bp.id = la.primary_borrower_profile_id
 WHERE la.assigned_officer_user_id = $1
 ORDER BY la.created_at DESC
 LIMIT $2 OFFSET $3;
@@ -239,10 +249,12 @@ LIMIT $2 OFFSET $3;
 SELECT
     la.*,
     lp.name AS product_name,
-    bb.name AS branch_name
+    bb.name AS branch_name,
+    bp.user_id AS borrower_user_id
 FROM loan_applications la
 JOIN loan_products lp ON lp.id = la.loan_product_id
 JOIN bank_branches bb ON bb.id = la.branch_id
+JOIN borrower_profiles bp ON bp.id = la.primary_borrower_profile_id
 WHERE la.created_by_user_id = $1
 ORDER BY la.created_at DESC
 LIMIT $2 OFFSET $3;

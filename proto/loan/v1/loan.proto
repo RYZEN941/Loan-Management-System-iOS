@@ -410,6 +410,7 @@ message LoanApplication {
   string disbursement_ifsc_code = 21;
   string disbursement_bank_name = 22;
   string disbursement_account_holder_name = 23;
+  string primary_borrower_user_id = 24;
 }
 
 // Request to create a loan application.

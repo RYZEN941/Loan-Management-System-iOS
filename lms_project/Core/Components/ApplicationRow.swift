@@ -74,9 +74,19 @@ struct ApplicationRow: View {
                     
                     Spacer()
                     
-                    // Replace the old if application.riskLevel == .high block with:
+                    // Risk badge
                     if application.isHighRisk {
-                        HighRiskBadge()
+                        HStack(spacing: 3) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 10))
+                            Text("High Risk")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .foregroundStyle(Theme.Colors.critical)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Theme.Colors.critical.opacity(0.1))
+                        .clipShape(Capsule())
                     }
                 }
             }
@@ -86,7 +96,8 @@ struct ApplicationRow: View {
         .background(
             isSelected
             ? (colorScheme == .dark ? Theme.Colors.adaptiveSurfaceSecondary(colorScheme) : Theme.Colors.lightBlue)
-            : (application.isHighRisk ? Theme.Colors.adaptiveCritical(colorScheme).opacity(0.03) : Color.clear)        )
+            : (application.isHighRisk ? Theme.Colors.adaptiveCritical(colorScheme).opacity(0.03) : Color.clear)
+        )
         .overlay(
             Group {
                 if isSelected {

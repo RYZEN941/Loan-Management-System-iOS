@@ -349,6 +349,9 @@ struct CredentialsStep: View {
             withAnimation(.easeOut(duration: 0.5).delay(0.05)) { appeared = true }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) { focus = .email }
         }
+        .onChange(of: email) { _, newValue in
+            authVM.primeSignInExperience(identifier: newValue)
+        }
     }
 
     private func submit() {

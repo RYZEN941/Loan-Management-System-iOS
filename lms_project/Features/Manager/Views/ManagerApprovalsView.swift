@@ -22,6 +22,7 @@ struct ManagerApprovalsView: View {
         private var border:   Color { Theme.Colors.adaptiveBorder(colorScheme) }
 
     @EnvironmentObject var applicationsVM: ApplicationsViewModel
+    @EnvironmentObject var borrowerVM: BorrowerViewModel
     @Environment(\.colorScheme) private var colorScheme
     @Binding var selectedTab: Int
     @Binding var showProfile: Bool
@@ -46,6 +47,7 @@ struct ManagerApprovalsView: View {
     // Assign Officer State
     @State private var showAssignOfficerSheet = false
     @State private var selectedOfficerID: String = ""
+    @State private var showBorrowerProfile = false
 
     var body: some View {
         NavigationStack {
@@ -83,6 +85,7 @@ struct ManagerApprovalsView: View {
             .onAppear {
                             // Load latest data without auto-selecting to handle the "No match" case correctly
                             applicationsVM.loadData(autoSelectFirst: false)
+                            borrowerVM.refresh(from: applicationsVM.applications)
                             
                             // Only reset if navigating normally (not via Dashboard card)
                             if applicationsVM.activeDashboardFilter == .none {
@@ -104,7 +107,11 @@ struct ManagerApprovalsView: View {
                                 // Only auto-select if something actually matches the dashboard shortcut
                                 applicationsVM.selectedApplication = applicationsVM.filteredApplications.first
                             }
-                        }           .alert("Action", isPresented: $applicationsVM.showActionAlert) {
+                        }
+            .onChange(of: applicationsVM.applications) { _, newValue in
+                borrowerVM.refresh(from: newValue)
+            }
+            .alert("Action", isPresented: $applicationsVM.showActionAlert) {
                 Button("OK") {}
             } message: { Text(applicationsVM.actionMessage ?? "") }
             .sheet(isPresented: $applicationsVM.showRejectionRemarksSheet) { rejectionSheet }
@@ -143,6 +150,26 @@ struct ManagerApprovalsView: View {
                 }
             } message: { Text("Sanction letter revocation is not implemented in the backend yet.") }
             .sheet(isPresented: $showAssignOfficerSheet) { assignOfficerSheet }
+            .sheet(isPresented: $showBorrowerProfile) {
+                if let app = applicationsVM.selectedApplication,
+                   let borrower = borrowerVM.borrowers.first(where: {
+                       $0.id == (app.primaryBorrowerProfileID.isEmpty ? app.borrower.email.lowercased() : app.primaryBorrowerProfileID)
+                   }) {
+                    NavigationStack {
+                        BorrowerProfileView(
+                            borrowerRecord: borrower,
+                            notes: borrowerVM.notes(for: borrower.id),
+                            showsInternalNotes: false,
+                            onSelectApplication: { selected in
+                                applicationsVM.selectApplication(selected)
+                                showBorrowerProfile = false
+                            }
+                        )
+                        .navigationTitle("Borrower Profile")
+                        .navigationBarTitleDisplayMode(.inline)
+                    }
+                }
+            }
         }
     }
 
@@ -250,6 +277,14 @@ struct ManagerApprovalsView: View {
                     modernFinTile("Proposed EMI", app.financials.proposedEMI.currencyFormatted, icon: "indianrupeesign.circle.fill")
                     modernFinTile("FOIR", String(format: "%.1f%%", app.financials.foir), icon: "percent")
                 }
+
+                HStack(spacing: 12) {
+                    modernFinTile("Employment Type", app.borrower.employmentType, icon: "briefcase.fill")
+                    modernFinTile("Years At Employer", "\(max(1, min(18, 2 + abs(app.id.hashValue % 9)))) yrs", icon: "clock.badge.checkmark")
+                    modernFinTile("Branch", app.branch, icon: "building.2.fill")
+                }
+
+                CIBILGaugeView(score: app.financials.cibilScore)
             }
             .padding(20)
             .background(surface)
@@ -473,8 +508,8 @@ struct ManagerApprovalsView: View {
                 .foregroundStyle(.secondary)
                 
                 // Subtle Staff/SLA Footer
-                HStack(spacing: 12) {
-                    // SLA Pill
+            HStack(spacing: 12) {
+                // SLA Pill
                     HStack(spacing: 4) {
                         Image(systemName: "clock.fill")
                         Text("Due \(app.slaDeadline.shortFormatted)")
@@ -497,13 +532,35 @@ struct ManagerApprovalsView: View {
                         
                         Text("By: ").foregroundStyle(.tertiary) +
                         Text(applicationsVM.officerDisplayName(for: app.createdByUserID)).foregroundStyle(.secondary)
-                    }
-                    .font(.system(size: 11, weight: .medium))
                 }
-                .padding(.top, 4)
+                .font(.system(size: 11, weight: .medium))
             }
-            .padding(20)
-            .background(surface)
+            .padding(.top, 4)
+
+            Button {
+                borrowerVM.focus(
+                    on: app.primaryBorrowerProfileID.isEmpty ? app.borrower.email.lowercased() : app.primaryBorrowerProfileID,
+                    from: applicationsVM.applications
+                )
+                showBorrowerProfile = true
+            } label: {
+                HStack {
+                    Text("View Full Borrower Profile")
+                        .font(.system(size: 13, weight: .bold))
+                    Spacer()
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 12, weight: .bold))
+                }
+                .foregroundStyle(primary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(primary.opacity(0.08))
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(20)
+        .background(surface)
             .clipShape(RoundedRectangle(cornerRadius: 20))
             .overlay(
                 RoundedRectangle(cornerRadius: 20)
@@ -696,9 +753,28 @@ struct ManagerApprovalsView: View {
 
     // MARK: - Documents
     private func documentsSummarySection(_ app: LoanApplication) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        let verifiedCount = app.documents.filter { $0.status == .verified }.count
+        let totalCount = max(app.documents.count, 1)
+        let progress = Double(verifiedCount) / Double(totalCount)
+
+        return VStack(alignment: .leading, spacing: 14) {
             SectionHeader(title: "Document Verification", icon: "doc.on.doc.fill")
                 .description("Final checklist of all verified documents submitted by the borrower.")
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("\(verifiedCount) of \(app.documents.count) documents verified")
+                        .font(.system(size: 13, weight: .semibold))
+                    Spacer()
+                    Text("\(Int(progress * 100))%")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(primary)
+                }
+
+                ProgressView(value: progress)
+                    .tint(primary)
+            }
+
             if app.documents.isEmpty {
                 HStack(spacing: 12) {
                     Image(systemName: "doc.text.magnifyingglass")

@@ -80,8 +80,25 @@ struct AdminReportsView: View {
                         .padding(.top, 8)
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
+
+                if let error = reportsVM.reportError {
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Image(systemName: "exclamationmark.triangle.fill").font(.system(size: 14)).foregroundStyle(.white)
+                        Text(error).font(Theme.Typography.caption).fontWeight(.medium).foregroundStyle(.white).lineLimit(2)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.red.opacity(0.85))
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.md))
+                    .padding(.horizontal, Theme.Spacing.lg)
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .onTapGesture { reportsVM.reportError = nil }
+                }
             }
             .animation(.spring(response: 0.35, dampingFraction: 0.8), value: showingBanner)
+            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: reportsVM.reportError != nil)
             .navigationTitle("Reports")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -91,6 +108,25 @@ struct AdminReportsView: View {
             }
             .onAppear {
                 reportsVM.loadData()
+            }
+            .onChange(of: selectedCategory) { _, _ in
+                reportsVM.refreshReportData(for: currentReportId())
+            }
+            .onChange(of: dateRange) { _, newValue in
+                reportsVM.activeDateRange = newValue
+                reportsVM.reloadReport(reportId: currentReportId())
+            }
+            .onChange(of: loanTypeFilter) { _, newValue in
+                reportsVM.activeLoanType = newValue
+                reportsVM.reloadReport(reportId: currentReportId())
+            }
+            .onChange(of: regionFilter) { _, newValue in
+                reportsVM.activeRegion = newValue
+                reportsVM.reloadReport(reportId: currentReportId())
+            }
+            .onChange(of: statusFilter) { _, newValue in
+                reportsVM.activeStatus = newValue
+                reportsVM.reloadReport(reportId: currentReportId())
             }
             // SINGLE .sheet modifier — fixes SwiftUI iOS 16/17 silent-ignore bug
             // where only the first .sheet in a chain actually fires.
@@ -105,8 +141,10 @@ struct AdminReportsView: View {
                         triggerExport(report: report, format: format)
                     })
                     .environmentObject(reportsVM)
+                    .onAppear { reportsVM.reloadReport(reportId: report.id) }
                 case .customBuilder:
                     AdminCustomReportBuilderSheet()
+                        .environmentObject(reportsVM)
                 case .share(let item):
                     ShareSheet(activityItems: [item.url])
                 }
@@ -218,6 +256,12 @@ struct AdminReportsView: View {
 
     // MARK: - Export Logic
 
+    private func currentReportId() -> String {
+        // Return the report ID for the currently selected category
+        let ids = ["RPT-PERF", "RPT-DISB", "RPT-COLL", "RPT-NPA", "RPT-RISK"]
+        return ids.indices.contains(selectedCategory) ? ids[selectedCategory] : "RPT-PERF"
+    }
+
     private func triggerExport(report: ReportItem, format: ExportFormat, dateRangeOverride: String? = nil) {
         // KEY FIX: Do NOT set activeSheet = nil here.
         // The sheet that triggered this (ExportOptionsSheet or ReportPreviewSheet)
@@ -232,15 +276,20 @@ struct AdminReportsView: View {
         bannerMessage = "Generating \(report.title) as \(format.displayName)…"
         withAnimation { showingBanner = true }
 
-        // Wait for backend data if still loading
-        if reportsVM.isLoading {
+        // Wait for initial load or a report-specific refresh before exporting.
+        if reportsVM.isLoading || reportsVM.isLoadingReport(report.id) {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 triggerExport(report: report, format: format, dateRangeOverride: dateRangeOverride)
             }
             return
         }
 
-        let (rows, _) = reportsVM.generateReportData()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
+            exportLocally(report: report, format: format, dateRangeOverride: dateRangeOverride)
+        }
+    }
+
+    private func exportLocally(report: ReportItem, format: ExportFormat, dateRangeOverride: String? = nil) {
         let exportDateRange = dateRangeOverride ?? dateRange
         let pdfPayload = reportsVM.generatePDFReportData(
             reportTitle: report.title,
@@ -250,28 +299,37 @@ struct AdminReportsView: View {
             status: statusFilter
         )
 
-        // 0.55s delay — lets the dismiss animation fully complete before
-        // we assign a new activeSheet value. Without this, SwiftUI drops
-        // the new sheet assignment because the old sheet is still animating out.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
-            switch format {
-            case .pdf:
-                AdminReportPDFService.generatePDF(payload: pdfPayload) { fileURL in
-                    withAnimation { self.showingBanner = false }
-                    guard let fileURL else {
-                        print("[AdminReports] PDF generation returned nil — skipping share sheet")
-                        return
-                    }
-                    print("[AdminReports] Setting activeSheet to .share for: \(fileURL.lastPathComponent)")
-                    self.activeSheet = .share(ShareItem(url: fileURL))
+        switch format {
+        case .pdf:
+            AdminReportPDFService.generatePDF(payload: pdfPayload) { fileURL in
+                withAnimation { self.showingBanner = false }
+                guard let fileURL else {
+                    print("[AdminReports] PDF generation returned nil — skipping share sheet")
+                    return
                 }
+                self.activeSheet = .share(ShareItem(url: fileURL))
+            }
 
-            case .csv, .excel:
-                ReportExportService.generateCSV(rows: rows) { fileURL in
-                    withAnimation { showingBanner = false }
-                    print("[AdminReports] Setting activeSheet to .share for: \(fileURL.lastPathComponent)")
-                    activeSheet = .share(ShareItem(url: fileURL))
-                }
+        case .csv, .excel:
+            let csvContent = reportsVM.generateReportCSV(
+                reportId: report.id,
+                dateRange: exportDateRange,
+                loanType: loanTypeFilter,
+                region: regionFilter,
+                status: statusFilter
+            )
+            let ext = format == .excel ? "xlsx" : "csv"
+            let safeName = report.title.replacingOccurrences(of: " ", with: "_").replacingOccurrences(of: "/", with: "-")
+            let fileName = "\(safeName)_\(Int(Date().timeIntervalSince1970)).\(ext)"
+            let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent(fileName)
+            do {
+                try csvContent.write(to: url, atomically: true, encoding: .utf8)
+                withAnimation { showingBanner = false }
+                activeSheet = .share(ShareItem(url: url))
+            } catch {
+                print("[AdminReports] CSV write failed: \(error)")
+                withAnimation { showingBanner = false }
             }
         }
     }
@@ -376,9 +434,10 @@ private struct AdminReportItemRow: View {
 struct AdminCustomReportBuilderSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject private var reportsVM: AdminReportsViewModel
 
     @State private var selectedSource = "Portfolio Data"
-    private let sources = ["Portfolio Data", "Active Collections", "Risk Flags", "Disbursement Logs"]
+    private let sources = ["Portfolio Data", "Disbursement Data", "Collection Data", "NPA Data", "Risk & Credit Data"]
 
     @State private var columns: [String: Bool] = [
         "Applicant Name": true,
@@ -393,6 +452,7 @@ struct AdminCustomReportBuilderSheet: View {
     @State private var selectedFormat: ExportFormat = .csv
     @State private var isGenerating = false
     @State private var shareItem: ShareItem? = nil
+    @State private var errorMessage: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -458,18 +518,80 @@ struct AdminCustomReportBuilderSheet: View {
                 ShareSheet(activityItems: [item.url])
                     .onDisappear { dismiss() }
             }
+            .alert("Export Failed", isPresented: .constant(errorMessage != nil), actions: {
+                Button("OK") { errorMessage = nil }
+            }, message: {
+                Text(errorMessage ?? "")
+            })
         }
     }
 
     private func generateReport() {
         isGenerating = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            isGenerating = false
-            let fileName = "Custom_\(selectedSource.replacingOccurrences(of: " ", with: "_")).\(selectedFormat.rawValue)"
+        errorMessage = nil
+
+        let reportTitle: String = {
+            switch selectedSource {
+            case "Portfolio Data":     return "Portfolio Performance"
+            case "Disbursement Data":  return "Disbursement Report"
+            case "Collection Data":    return "Collection Report"
+            case "NPA Data":           return "NPA Report"
+            case "Risk & Credit Data": return "Risk & Credit Report"
+            default:                   return "Portfolio Performance"
+            }
+        }()
+
+        let payload = reportsVM.generatePDFReportData(
+            reportTitle: reportTitle,
+            dateRange: reportsVM.activeDateRange,
+            loanType: reportsVM.activeLoanType,
+            region: reportsVM.activeRegion,
+            status: reportsVM.activeStatus
+        )
+
+        switch selectedFormat {
+        case .pdf:
+            AdminReportPDFService.generatePDF(payload: payload) { fileURL in
+                isGenerating = false
+                guard let fileURL else {
+                    errorMessage = "Failed to generate PDF."
+                    return
+                }
+                shareItem = ShareItem(url: fileURL)
+            }
+        case .csv, .excel:
+            let reportId: String = {
+                switch selectedSource {
+                case "Portfolio Data":     return "RPT-PERF"
+                case "Disbursement Data":  return "RPT-DISB"
+                case "Collection Data":    return "RPT-COLL"
+                case "NPA Data":           return "RPT-NPA"
+                case "Risk & Credit Data": return "RPT-RISK"
+                default:                   return "RPT-PERF"
+                }
+            }()
+
+            let csvContent = reportsVM.generateReportCSV(
+                reportId: reportId,
+                dateRange: reportsVM.activeDateRange,
+                loanType: reportsVM.activeLoanType,
+                region: reportsVM.activeRegion,
+                status: reportsVM.activeStatus
+            )
+            let safeName = selectedSource.replacingOccurrences(of: " ", with: "_")
+            let ext = selectedFormat == .excel ? "xlsx" : "csv"
+            let fileName = "Custom_\(safeName)_\(Int(Date().timeIntervalSince1970)).\(ext)"
             let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             let tempURL = documentsURL.appendingPathComponent(fileName)
-            try? "Mock dynamically generated data for \(selectedSource)".write(to: tempURL, atomically: true, encoding: .utf8)
-            shareItem = ShareItem(url: tempURL)
+
+            do {
+                try csvContent.write(to: tempURL, atomically: true, encoding: .utf8)
+                isGenerating = false
+                shareItem = ShareItem(url: tempURL)
+            } catch {
+                isGenerating = false
+                errorMessage = error.localizedDescription
+            }
         }
     }
 }
@@ -556,6 +678,14 @@ enum ExportFormat: String, CaseIterable {
         case .pdf:   return "PDF"
         case .excel: return "Excel"
         case .csv:   return "CSV"
+        }
+    }
+
+    var backendFormat: String {
+        switch self {
+        case .pdf:   return "pdf"
+        case .excel: return "xlsx"
+        case .csv:   return "csv"
         }
     }
 }
@@ -1517,15 +1647,15 @@ private final class AdminReportPDFService {
                     beginPage()
                     switch payload.reportName {
                     case "Portfolio Performance":
-                        drawPortfolioReport(Self.samplePortfolioPerformanceReport(generatedAt: Date()))
+                        drawPortfolioReport(payload.portfolioResponse.map(Self.portfolioReportFromBackend) ?? Self.samplePortfolioPerformanceReport(generatedAt: Date()))
                     case "Disbursement Report":
-                        drawDisbursementReport(Self.sampleDisbursementReport(generatedAt: Date()))
+                        drawDisbursementReport(payload.disbursementResponse.map(Self.disbursementReportFromBackend) ?? Self.sampleDisbursementReport(generatedAt: Date()))
                     case "Collection Report":
-                        drawCollectionReport(Self.sampleCollectionReport(generatedAt: Date()))
+                        drawCollectionReport(payload.collectionResponse.map(Self.collectionReportFromBackend) ?? Self.sampleCollectionReport(generatedAt: Date()))
                     case "NPA Report":
-                        drawNPAReport(Self.sampleNPAReport(generatedAt: Date()))
+                        drawNPAReport(payload.npaResponse.map(Self.npaReportFromBackend) ?? Self.sampleNPAReport(generatedAt: Date()))
                     case "Risk & Credit Report":
-                        drawRiskCreditReport(Self.sampleRiskCreditReport(generatedAt: Date()))
+                        drawRiskCreditReport(payload.riskCreditResponse.map(Self.riskCreditReportFromBackend) ?? Self.sampleRiskCreditReport(generatedAt: Date()))
                     default:
                         drawHeader()
                         drawSummary()
@@ -1742,6 +1872,123 @@ private final class AdminReportPDFService {
         )
     }
 
+    private static func fmtCurrency(_ v: Double) -> String {
+        let f = NumberFormatter()
+        f.numberStyle = .currency; f.currencySymbol = "Rs."
+        f.maximumFractionDigits = 0; f.locale = Locale(identifier: "en_IN")
+        return f.string(from: NSNumber(value: v)) ?? "Rs.\(Int(v))"
+    }
+
+    private static func parseMeta(_ meta: ReportMeta) -> (date: Date, range: String, filters: String) {
+        let date = ISO8601DateFormatter().date(from: meta.generatedAt) ?? Date()
+        let range = "\(meta.dateRange.from) to \(meta.dateRange.to)"
+        let filters = "Type: \(meta.filters.loanType) | Region: \(meta.filters.region) | Status: \(meta.filters.status)"
+        return (date, range, filters)
+    }
+
+    private static func portfolioReportFromBackend(_ r: PortfolioPerformanceResponse) -> PortfolioPerformanceReport {
+        let (date, range, filters) = parseMeta(r.reportMeta)
+        let kpis: [PortfolioKPI] = [
+            PortfolioKPI(title: "Portfolio Value", value: fmtCurrency(r.kpis.totalPortfolioValue), note: "outstanding"),
+            PortfolioKPI(title: "Active Loans",    value: "\(r.kpis.totalActiveLoans)",            note: "accounts"),
+            PortfolioKPI(title: "Disbursed",       value: fmtCurrency(r.kpis.totalDisbursedAmount), note: "period total"),
+            PortfolioKPI(title: "Avg Loan Size",   value: fmtCurrency(r.kpis.avgLoanSize),         note: "portfolio avg"),
+            PortfolioKPI(title: "NPA Amount",      value: fmtCurrency(r.kpis.npaAmount),           note: "watch closely"),
+            PortfolioKPI(title: "NPA %",           value: String(format: "%.2f%%", r.kpis.npaPercentage), note: "of portfolio"),
+            PortfolioKPI(title: "Approval Rate",   value: String(format: "%.1f%%", r.kpis.approvalRate), note: "of apps")
+        ]
+        let pv = r.trends.portfolioValueTrend; let dv = r.trends.disbursementTrend; let lc = r.trends.loanCountTrend
+        let trends = pv.indices.map { i in
+            PortfolioTrendPoint(period: pv[i].period,
+                                portfolioValue: fmtCurrency(pv[i].value),
+                                disbursement: i < dv.count ? fmtCurrency(dv[i].value) : "—",
+                                loanCount: i < lc.count ? "\(Int(lc[i].value))" : "—")
+        }
+        let loanDist = r.distributions.byLoanType.map {
+            PortfolioDistributionItem(name: $0.name, value: fmtCurrency($0.value), percentage: String(format: "%.0f%%", $0.percentage ?? 0))
+        }
+        let regDist = r.distributions.byRegion.map {
+            PortfolioDistributionItem(name: $0.name, value: fmtCurrency($0.value), percentage: String(format: "%.0f%%", $0.percentage ?? 0))
+        }
+        let aging = r.npaSummary.agingBuckets.map {
+            PortfolioNPAgingBucket(bucket: $0.bucket, amount: fmtCurrency($0.amount), count: "\($0.count)")
+        }
+        return PortfolioPerformanceReport(
+            meta: PortfolioReportMeta(generatedAt: date, dateRange: range, filters: filters),
+            kpis: kpis, trends: trends, loanTypeDistribution: loanDist, regionDistribution: regDist,
+            totalNpaAmount: fmtCurrency(r.npaSummary.totalNpaAmount),
+            npaPercentage: String(format: "%.2f%%", r.npaSummary.npaPercentage),
+            npaCount: "\(r.npaSummary.npaCount)", agingBuckets: aging, topInsights: r.insights
+        )
+    }
+
+    private static func disbursementReportFromBackend(_ r: DisbursementResponse) -> DisbursementReport {
+        let (date, range, filters) = parseMeta(r.reportMeta)
+        let kpis: [ReportKPI] = [
+            ReportKPI(title: "Total Disbursed", value: fmtCurrency(r.kpis.totalDisbursedAmount), note: "period total"),
+            ReportKPI(title: "Avg Size",        value: fmtCurrency(r.kpis.avgDisbursementSize),  note: "per loan"),
+            ReportKPI(title: "Growth",          value: String(format: "+%.1f%%", r.kpis.disbursementGrowthPercentage), note: "vs prev"),
+            ReportKPI(title: "Count",           value: "\(r.kpis.totalDisbursementCount)", note: "loans funded")
+        ]
+        let trend = r.trends.disbursementTrend.map { ReportTrendPoint(period: $0.period, value: fmtCurrency($0.value)) }
+        let byType = r.distributions.byLoanType.map {
+            ReportDistributionItem(name: $0.name, value: fmtCurrency($0.value), percentage: String(format: "%.0f%%", $0.percentage ?? 0))
+        }
+        let byRegion = r.distributions.byRegion.map { ReportBucket(name: $0.name, value: fmtCurrency($0.value), count: "\($0.count ?? 0)") }
+        return DisbursementReport(meta: VisualReportMeta(generatedAt: date, dateRange: range, filters: filters),
+                                  kpis: kpis, disbursementTrend: trend, byLoanType: byType, byRegion: byRegion, insights: r.insights)
+    }
+
+    private static func collectionReportFromBackend(_ r: CollectionResponse) -> CollectionReport {
+        let (date, range, filters) = parseMeta(r.reportMeta)
+        let kpis: [ReportKPI] = [
+            ReportKPI(title: "EMI Collected", value: fmtCurrency(r.kpis.totalEmiCollected), note: "cash received"),
+            ReportKPI(title: "Efficiency",    value: String(format: "%.1f%%", r.kpis.collectionEfficiencyPercentage), note: "rate"),
+            ReportKPI(title: "Pending",       value: fmtCurrency(r.kpis.pendingAmount), note: "current"),
+            ReportKPI(title: "Overdue",       value: fmtCurrency(r.kpis.overdueAmount), note: "past due")
+        ]
+        let trend = r.trends.collectionTrend.map { ReportTrendPoint(period: $0.period, value: fmtCurrency($0.value)) }
+        let dpd   = r.summaries.dpdBuckets.map { ReportBucket(name: $0.bucket, value: fmtCurrency($0.amount), count: "\($0.count)") }
+        let pvp   = r.summaries.paidVsPending.map {
+            ReportDistributionItem(name: $0.name, value: fmtCurrency($0.value), percentage: String(format: "%.0f%%", $0.percentage ?? 0))
+        }
+        return CollectionReport(meta: VisualReportMeta(generatedAt: date, dateRange: range, filters: filters),
+                                kpis: kpis, collectionTrend: trend, dpdBuckets: dpd, paidVsPending: pvp, insights: r.insights)
+    }
+
+    private static func npaReportFromBackend(_ r: NPAResponse) -> NPAReport {
+        let (date, range, filters) = parseMeta(r.reportMeta)
+        let kpis: [ReportKPI] = [
+            ReportKPI(title: "Total NPA", value: fmtCurrency(r.kpis.totalNpaAmount), note: "exposure"),
+            ReportKPI(title: "NPA %",     value: String(format: "%.2f%%", r.kpis.npaPercentage), note: "of portfolio"),
+            ReportKPI(title: "NPA Count", value: "\(r.kpis.totalNpaCount)", note: "accounts")
+        ]
+        let aging   = r.summaries.agingBuckets.map { ReportBucket(name: $0.bucket, value: fmtCurrency($0.amount), count: "\($0.count)") }
+        let health  = r.summaries.npaVsHealthy.map {
+            ReportDistributionItem(name: $0.name, value: fmtCurrency($0.value), percentage: String(format: "%.2f%%", $0.percentage ?? 0))
+        }
+        let regions = r.summaries.topRegions.map { ReportBucket(name: $0.name, value: fmtCurrency($0.value), count: "\($0.count ?? 0)") }
+        return NPAReport(meta: VisualReportMeta(generatedAt: date, dateRange: range, filters: filters),
+                         kpis: kpis, agingBuckets: aging, npaVsHealthy: health, topRegions: regions, insights: r.insights)
+    }
+
+    private static func riskCreditReportFromBackend(_ r: RiskCreditResponse) -> RiskCreditReport {
+        let (date, range, filters) = parseMeta(r.reportMeta)
+        let kpis: [ReportKPI] = [
+            ReportKPI(title: "Avg CIBIL",   value: "\(r.kpis.avgCibilScore)", note: "score"),
+            ReportKPI(title: "High Risk %", value: String(format: "%.1f%%", r.kpis.highRiskPercentage), note: "of applicants"),
+            ReportKPI(title: "Fraud Flags", value: "\(r.kpis.fraudFlagsCount)", note: "manual review"),
+            ReportKPI(title: "Avg FOIR",    value: String(format: "%.0f%%", r.kpis.avgFoir), note: "portfolio avg")
+        ]
+        let cibil = r.distributions.cibilScoreDistribution.map { ReportBucket(name: $0.bucket, value: "\($0.count)", count: "borrowers") }
+        let risk  = r.distributions.riskCategories.map {
+            ReportDistributionItem(name: $0.name, value: "\(Int($0.value))", percentage: String(format: "%.0f%%", $0.percentage ?? 0))
+        }
+        let foir  = r.distributions.foirDistribution.map { ReportBucket(name: $0.bucket, value: "\($0.count)", count: "borrowers") }
+        return RiskCreditReport(meta: VisualReportMeta(generatedAt: date, dateRange: range, filters: filters),
+                                kpis: kpis, cibilDistribution: cibil, riskCategories: risk, foirDistribution: foir, insights: r.insights)
+    }
+
     private static func attrs(size: CGFloat, weight: UIFont.Weight, color: UIColor) -> [NSAttributedString.Key: Any] {
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineBreakMode = .byWordWrapping
@@ -1801,16 +2048,54 @@ private struct ReportPreviewSheet: View {
     }
 
     private var statsRows: [ReportRow] {
-        AdminReportsViewModel.liveReportRows(
+        // Use backend-derived rows first, then fall back to local
+        let backendRows = reportsVM.reportRowsFromBackend(for: report.id)
+        if !backendRows.isEmpty { return backendRows }
+        return AdminReportsViewModel.liveReportRows(
             for: reportsVM.normalizedReportID(report.id),
             from: reportsVM.applications
         )
     }
 
+    private var insights: [String] {
+        let id = reportsVM.normalizedReportID(report.id)
+        switch id {
+        case "RPT-01":  return reportsVM.portfolioReport?.insights ?? []
+        case "RPT-02":  return reportsVM.collectionReport?.insights ?? []
+        case "RPT-03":  return reportsVM.disbursementReport?.insights ?? []
+        case "RPT-NPA": return reportsVM.npaReport?.insights ?? []
+        case "RPT-04":  return reportsVM.riskCreditReport?.insights ?? []
+        default:        return []
+        }
+    }
+
+    private var generatedAt: String {
+        let id = reportsVM.normalizedReportID(report.id)
+        let meta: ReportMeta? = {
+            switch id {
+            case "RPT-01":  return reportsVM.portfolioReport?.reportMeta
+            case "RPT-02":  return reportsVM.collectionReport?.reportMeta
+            case "RPT-03":  return reportsVM.disbursementReport?.reportMeta
+            case "RPT-NPA": return reportsVM.npaReport?.reportMeta
+            case "RPT-04":  return reportsVM.riskCreditReport?.reportMeta
+            default:        return nil
+            }
+        }()
+        return meta?.generatedAt ?? report.lastGenerated
+    }
+
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+            Group {
+                if reportsVM.isLoadingReport(report.id) {
+                    VStack(spacing: 16) {
+                        ProgressView().progressViewStyle(.circular).scaleEffect(1.2)
+                        Text("Loading report data…").font(Theme.Typography.caption).foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                     // Report header
                     HStack(spacing: Theme.Spacing.md) {
                         ZStack {
@@ -1827,7 +2112,7 @@ private struct ReportPreviewSheet: View {
                         }
                         Spacer()
                         VStack(alignment: .trailing, spacing: 2) {
-                            Text("Last: \(report.lastGenerated)").font(Theme.Typography.caption).foregroundStyle(.secondary)
+                            Text("Generated: \(generatedAt)").font(Theme.Typography.caption).foregroundStyle(.secondary)
                             Text(report.size).font(Theme.Typography.caption).foregroundStyle(.tertiary)
                         }
                     }
@@ -1886,10 +2171,30 @@ private struct ReportPreviewSheet: View {
                             exportButton("CSV",   icon: "list.bullet.rectangle.fill", format: .csv,   color: Theme.Colors.adaptivePrimary(colorScheme))
                         }
                     }
+
+                    // Insights from backend
+                    if !insights.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("Key Insights", systemImage: "lightbulb.fill")
+                                .font(Theme.Typography.subheadline)
+                                .foregroundStyle(.secondary)
+
+                            ForEach(insights.indices, id: \.self) { idx in
+                                HStack(alignment: .top, spacing: 8) {
+                                    Text("•").font(Theme.Typography.caption).foregroundStyle(.secondary)
+                                    Text(insights[idx]).font(Theme.Typography.caption).foregroundStyle(.primary)
+                                }
+                            }
+                        }
+                        .padding(Theme.Spacing.md)
+                        .cardStyle(colorScheme: colorScheme)
+                    }
                 }
                 .padding(Theme.Spacing.lg)
             }
             .background(Theme.Colors.adaptiveBackground(colorScheme))
+                }
+            }
             .navigationTitle("Preview: \(report.title)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

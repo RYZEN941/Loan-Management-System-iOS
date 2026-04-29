@@ -14,6 +14,7 @@ struct lms_projectApp: App {
     @StateObject private var applicationsVM = ApplicationsViewModel()
     @StateObject private var messagesVM = MessagesViewModel()
     @StateObject private var adminVM = AdminViewModel()
+    @StateObject private var borrowerVM = BorrowerViewModel()
     
     var body: some Scene {
         WindowGroup {
@@ -23,6 +24,7 @@ struct lms_projectApp: App {
                 .environmentObject(applicationsVM)
                 .environmentObject(messagesVM)
                 .environmentObject(adminVM)
+                .environmentObject(borrowerVM)
                 .preferredColorScheme(authVM.isDarkMode ? .dark : .light)
         }
     }

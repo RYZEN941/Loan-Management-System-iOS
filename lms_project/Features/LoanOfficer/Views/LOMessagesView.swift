@@ -138,6 +138,14 @@ struct LOMessagesView: View {
         }
     }
 
+    private var unreadConversations: [Conversation] {
+        filteredConversations.filter { $0.unreadCount > 0 }
+    }
+
+    private var readConversations: [Conversation] {
+        filteredConversations.filter { $0.unreadCount == 0 }
+    }
+
     private var conversationList: some View {
         VStack(spacing: 0) {
 
@@ -206,22 +214,41 @@ struct LOMessagesView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
-                    LazyVStack(spacing: 0) {
-                        ForEach(filteredConversations) { conversation in
-                            ConversationRow(
-                                conversation: conversation,
-                                isSelected: messagesVM.selectedConversation?.id == conversation.id
-                            )
-                            .onTapGesture {
-                                messagesVM.selectConversation(conversation)
-                            }
-                            Divider().padding(.leading, 64)
+                    VStack(alignment: .leading, spacing: 12) {
+                        if !unreadConversations.isEmpty {
+                            conversationSection(title: "Unread", conversations: unreadConversations)
+                        }
+
+                        if !readConversations.isEmpty {
+                            conversationSection(title: unreadConversations.isEmpty ? "All Conversations" : "Recent", conversations: readConversations)
                         }
                     }
+                    .padding(.vertical, 8)
                 }
             }
         }
         .background(Theme.Colors.adaptiveSurface(colorScheme))
+    }
+
+    private func conversationSection(title: String, conversations: [Conversation]) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
+
+            ForEach(conversations) { conversation in
+                ConversationRow(
+                    conversation: conversation,
+                    isSelected: messagesVM.selectedConversation?.id == conversation.id
+                )
+                .onTapGesture {
+                    messagesVM.selectConversation(conversation)
+                }
+                Divider().padding(.leading, 64)
+            }
+        }
     }
 
     // MARK: - Chat Panel (right)

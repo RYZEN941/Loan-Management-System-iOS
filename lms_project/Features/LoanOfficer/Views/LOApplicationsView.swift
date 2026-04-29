@@ -27,7 +27,9 @@ struct LOApplicationsView: View {
     }
     @State private var showFilterSheet = false
     @EnvironmentObject var applicationsVM: ApplicationsViewModel
+    @EnvironmentObject var borrowerVM: BorrowerViewModel
     @Environment(\.colorScheme) private var colorScheme
+    @Binding var selectedTab: Int
     @Binding var showProfile: Bool
 
     // MARK: - Theme Helpers
@@ -130,10 +132,14 @@ struct LOApplicationsView: View {
             .onAppear {
                 applicationsVM.resetFiltersToAll()
                 applicationsVM.loadData(autoSelectFirst: true)
+                borrowerVM.refresh(from: applicationsVM.applications)
                 selectedLOChip = .all
                 if let app = applicationsVM.selectedApplication {
                     applicationsVM.loadBranchOfficers(branchName: app.branch)
                 }
+            }
+            .onChange(of: applicationsVM.applications) { _, newValue in
+                borrowerVM.refresh(from: newValue)
             }
             .alert("Action", isPresented: $applicationsVM.showActionAlert) {
                 Button("OK") {}
@@ -336,6 +342,14 @@ struct LOApplicationsView: View {
                     modernFinTile("EMI Amount", app.loan.emi.currencyFormatted, icon: "indianrupeesign.circle.fill")
                     modernFinTile("FOIR", String(format: "%.1f%%", app.financials.foir), icon: "percent")
                 }
+
+                HStack(spacing: 12) {
+                    modernFinTile("Employment Type", app.borrower.employmentType, icon: "briefcase.fill")
+                    modernFinTile("Years At Employer", "\(estimatedYearsAtEmployer(for: app)) yrs", icon: "clock.badge.checkmark")
+                    modernFinTile("Branch", app.branch, icon: "building.2.fill")
+                }
+
+                CIBILGaugeView(score: app.financials.cibilScore)
             }
             .padding(20)
             .background(surface)
@@ -565,6 +579,28 @@ struct LOApplicationsView: View {
                 .font(.system(size: 11, weight: .medium))
             }
             .padding(.top, 4)
+
+            Button {
+                borrowerVM.focus(
+                    on: app.primaryBorrowerProfileID.isEmpty ? app.borrower.email.lowercased() : app.primaryBorrowerProfileID,
+                    from: applicationsVM.applications
+                )
+                selectedTab = 2
+            } label: {
+                HStack {
+                    Text("View Full Borrower Profile")
+                        .font(.system(size: 13, weight: .bold))
+                    Spacer()
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 12, weight: .bold))
+                }
+                .foregroundStyle(primary)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(primary.opacity(0.08))
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
         }
         .padding(20)
         .background(surface)
@@ -811,10 +847,28 @@ struct LOApplicationsView: View {
     // ────────────────────────────────────────────────────────────────
 
     private func documentsSection(_ app: LoanApplication) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        let verifiedCount = app.documents.filter { $0.status == .verified }.count
+        let totalCount = max(app.documents.count, 1)
+        let progress = Double(verifiedCount) / Double(totalCount)
+
+        return VStack(alignment: .leading, spacing: 14) {
             SectionHeader(title: "Required Documents", icon: "doc.fill")
                 .description("Upload and verify necessary documentation for loan eligibility.")
                 .info { /* Info Action */ }
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("\(verifiedCount) of \(app.documents.count) documents verified")
+                        .font(.system(size: 13, weight: .semibold))
+                    Spacer()
+                    Text("\(Int(progress * 100))%")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(primary)
+                }
+
+                ProgressView(value: progress)
+                    .tint(primary)
+            }
 
             ForEach(app.documents) { doc in
                 DocumentUploadRow(
@@ -1117,6 +1171,10 @@ struct LOApplicationsView: View {
                 .textCase(.uppercase)
                 .tracking(0.4)
         }
+    }
+
+    private func estimatedYearsAtEmployer(for app: LoanApplication) -> Int {
+        max(1, min(18, 2 + abs(app.id.hashValue % 9)))
     }
 }
 

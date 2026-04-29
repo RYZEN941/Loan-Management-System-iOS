@@ -161,7 +161,7 @@ struct BorrowerProfileView: View {
                     ForEach(Array(borrowerRecord.latestKYCStatuses.enumerated()), id: \.offset) { _, item in
                         HStack(spacing: 6) {
                             Circle()
-                                .fill(item.status.color)
+                                .fill(primary)
                                 .frame(width: 8, height: 8)
                             Text(item.title)
                                 .font(.system(size: 12, weight: .semibold))
@@ -171,7 +171,7 @@ struct BorrowerProfileView: View {
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 8)
-                        .background(item.status.color.opacity(0.1))
+                        .background(primary.opacity(0.1))
                         .clipShape(Capsule())
                     }
                 }
@@ -224,7 +224,7 @@ struct BorrowerProfileView: View {
                 } label: {
                     HStack(spacing: 12) {
                         RoundedRectangle(cornerRadius: 4)
-                            .fill(application.riskLevel.color)
+                            .fill(primary)
                             .frame(width: 5)
 
                         VStack(alignment: .leading, spacing: 4) {
@@ -244,10 +244,10 @@ struct BorrowerProfileView: View {
                                 .foregroundStyle(.primary)
                             Text(application.status.displayName)
                                 .font(.system(size: 11, weight: .bold))
-                                .foregroundStyle(application.status.color)
+                                .foregroundStyle(primary)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
-                                .background(application.status.backgroundColor)
+                                .background(primary.opacity(0.1))
                                 .clipShape(Capsule())
                         }
                     }
@@ -286,12 +286,12 @@ struct BorrowerProfileView: View {
                             .frame(width: 44, alignment: .leading)
 
                         RoundedRectangle(cornerRadius: 8)
-                            .fill(item.color.opacity(0.85))
+                            .fill(primary.opacity(0.15))
                             .frame(height: 12)
                             .overlay(alignment: .leading) {
                                 Text(item.status)
                                     .font(.system(size: 10, weight: .bold))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(primary)
                                     .padding(.leading, 8)
                             }
                     }
@@ -429,9 +429,7 @@ struct BorrowerProfileView: View {
     }
 
     private func dtiColor(_ value: Double) -> Color {
-        if value <= 0.30 { return Theme.Colors.success }
-        if value <= 0.40 { return .orange }
-        return Theme.Colors.critical
+        return .primary
     }
 
     private func repaymentTimeline(for application: LoanApplication) -> [RepaymentSnapshot] {
@@ -450,9 +448,9 @@ struct BorrowerProfileView: View {
                 status: status,
                 color: {
                     switch status {
-                    case "Paid": return Theme.Colors.success
-                    case "Late": return .orange
-                    default: return Theme.Colors.critical
+                    case "Paid": return .primary
+                    case "Late": return .primary.opacity(0.7)
+                    default: return .primary.opacity(0.5)
                     }
                 }()
             )

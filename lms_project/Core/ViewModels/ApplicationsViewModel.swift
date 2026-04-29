@@ -94,7 +94,7 @@ class ApplicationsViewModel: ObservableObject {
     
     // MARK: - Dashboard Context State
     enum DashboardFilterType {
-        case none, pending, nearSLA, risky, overdue
+        case none, pending, nearSLA, risky, overdue, approved
     }
 
     @Published var activeDashboardFilter: DashboardFilterType = .none
@@ -121,6 +121,8 @@ class ApplicationsViewModel: ObservableObject {
             result = result.filter { $0.slaStatus == .urgent }
         case .overdue:
             result = result.filter { $0.slaStatus == .overdue }
+        case .approved:
+            result = result.filter { [.approved, .managerApproved, .officerApproved].contains($0.status) }
         case .none:
             if let statuses = filterStatuses {
                 result = result.filter { statuses.contains($0.status) }
@@ -229,10 +231,12 @@ class ApplicationsViewModel: ObservableObject {
 
     func loanOfficerFilterChip(for dashboardFilter: DashboardFilterType) -> String {
         switch dashboardFilter {
-        case .pending:
-            return "New"
-        default:
-            return "All"
+        case .pending: return "New"
+        case .risky:   return "Risk"
+        case .nearSLA: return "Urgent"
+        case .overdue: return "Overdue"
+        case .approved: return "Approved"
+        case .none:    return "All"
         }
     }
 
@@ -260,7 +264,7 @@ class ApplicationsViewModel: ObservableObject {
             if application.slaStatus == .overdue { return 0 }
         case .nearSLA:
             if application.slaStatus == .urgent { return 0 }
-        case .pending, .risky, .none:
+        case .pending, .risky, .none, .approved:
             break
         }
 

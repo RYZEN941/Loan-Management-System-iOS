@@ -147,8 +147,7 @@ struct LODashboardView: View {
                            value: "\(approvedCount)",
                            badge: "Life-time",
                            color: approvedCount > 0 ? success : Theme.Colors.adaptivePrimary(colorScheme)) {
-                    applicationsVM.activeDashboardFilter = .none
-                    applicationsVM.filterStatuses = [.approved, .managerApproved, .officerApproved]
+                    applicationsVM.activeDashboardFilter = .approved
                     withAnimation { selectedTab = 1 }
                 }
             }

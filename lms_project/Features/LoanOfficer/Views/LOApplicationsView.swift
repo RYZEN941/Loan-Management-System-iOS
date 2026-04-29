@@ -24,6 +24,9 @@ struct LOApplicationsView: View {
         case sentToManager = "Sent to Manager"
         case approved = "Approved"
         case rejected = "Rejected"
+        case risk = "Risk"
+        case urgent = "Urgent"
+        case overdue = "Overdue"
     }
     @State private var showFilterSheet = false
     @EnvironmentObject var applicationsVM: ApplicationsViewModel
@@ -49,6 +52,7 @@ struct LOApplicationsView: View {
     @State private var selectedLOChip: LOChip = .all
     @State private var showBorrowerHistorySheet = false
     @State private var borrowerHistoryEntries: [BorrowerLoanHistoryEntry] = []
+    @State private var expandedHistoryID: String? = nil
     @State private var showEditTerms = false
     @State private var editTenureText = ""
     @State private var editInterestRateText = ""
@@ -140,11 +144,9 @@ struct LOApplicationsView: View {
                 
                 if applicationsVM.activeDashboardFilter == .none {
                     applicationsVM.resetFiltersToAll()
+                    selectedLOChip = .all
                 } else {
                     selectedLOChip = LOChip(rawValue: applicationsVM.loanOfficerFilterChip(for: applicationsVM.activeDashboardFilter)) ?? .all
-                }
-                if applicationsVM.activeDashboardFilter == .none {
-                    selectedLOChip = .all
                 }
                 applicationsVM.syncSelectedApplicationWithFilters()
                 
@@ -259,6 +261,15 @@ struct LOApplicationsView: View {
                                 case .sentToManager: applicationsVM.filterStatuses = applicationsVM.loanOfficerSentToManagerStatuses
                                 case .approved: applicationsVM.filterStatuses = applicationsVM.approvedStatuses
                                 case .rejected: applicationsVM.filterStatuses = applicationsVM.rejectedStatuses
+                                case .risk: 
+                                    applicationsVM.activeDashboardFilter = .risky
+                                    applicationsVM.filterStatuses = nil
+                                case .urgent:
+                                    applicationsVM.activeDashboardFilter = .nearSLA
+                                    applicationsVM.filterStatuses = nil
+                                case .overdue:
+                                    applicationsVM.activeDashboardFilter = .overdue
+                                    applicationsVM.filterStatuses = nil
                                 }
                                 applicationsVM.syncSelectedApplicationWithFilters()
                             }
@@ -711,6 +722,16 @@ struct LOApplicationsView: View {
                 }
             }
 
+            // ── Other Banks ──
+            if !otherBanks.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    historySubHeader("Other Institutions", icon: "building.2.fill", color: .secondary)
+                    ForEach(otherBanks.prefix(2)) { entry in
+                        historyRowButton(entry)
+                    }
+                }
+            }
+
 
         }
         .padding(16)
@@ -735,7 +756,7 @@ struct LOApplicationsView: View {
         }
     }
 
-    private func historyRow(_ entry: BorrowerLoanHistoryEntry) -> some View {
+    private func historyRow(_ entry: BorrowerLoanHistoryEntry, isExpanded: Bool) -> some View {
         let accent = historyColor(entry.statusStyle)
         return HStack(spacing: 12) {
             // Left accent
@@ -758,32 +779,72 @@ struct LOApplicationsView: View {
                 Text(entry.amount)
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
-                Text(entry.status)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(accent)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(accent.opacity(0.12))
-                    .clipShape(Capsule())
+                HStack(spacing: 4) {
+                    Text(entry.status)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(accent)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.tertiary)
+                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(accent.opacity(0.12))
+                .clipShape(Capsule())
             }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .background(accent.opacity(0.04))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(accent.opacity(0.12), lineWidth: 1)
-        )
     }
 
     private func historyRowButton(_ entry: BorrowerLoanHistoryEntry) -> some View {
-        Button {
-            applicationsVM.selectApplication(applicationID: entry.id)
-        } label: {
-            historyRow(entry)
+        VStack(spacing: 0) {
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                    if expandedHistoryID == entry.id {
+                        expandedHistoryID = nil
+                    } else {
+                        expandedHistoryID = entry.id
+                    }
+                }
+            } label: {
+                historyRow(entry, isExpanded: expandedHistoryID == entry.id)
+            }
+            .buttonStyle(.plain)
+
+            if expandedHistoryID == entry.id {
+                VStack(alignment: .leading, spacing: 12) {
+                    Divider().padding(.vertical, 8)
+                    
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Application ID").font(.system(size: 10, weight: .bold)).foregroundStyle(.tertiary)
+                            Text(entry.id).font(.system(size: 12, weight: .medium, design: .monospaced))
+                        }
+                        Spacer()
+                        Button {
+                            applicationsVM.selectApplication(applicationID: entry.id)
+                        } label: {
+                            Text("Open Full Details")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(Theme.Colors.primary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Theme.Colors.primary.opacity(0.1))
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 12)
+                .background(Color.primary.opacity(0.02))
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
-        .buttonStyle(.plain)
+        .background(expandedHistoryID == entry.id ? Color.primary.opacity(0.02) : Color.clear)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     private func historyColor(_ style: HistoryStatusStyle) -> Color {

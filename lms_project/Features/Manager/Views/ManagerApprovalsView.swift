@@ -50,6 +50,7 @@ struct ManagerApprovalsView: View {
     @State private var showBorrowerProfile = false
     @State private var showBorrowerHistorySheet = false
     @State private var borrowerHistoryEntries: [BorrowerLoanHistoryEntry] = []
+    @State private var expandedHistoryID: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -97,9 +98,10 @@ struct ManagerApprovalsView: View {
                             } else {
                                 // Sync the UI chips to visually match the dashboard category
                                 switch applicationsVM.activeDashboardFilter {
-                                case .pending: selectedManagerChip = .pendingReview
-                                case .risky:   selectedManagerChip = .highRisk
-                                default:       selectedManagerChip = .all
+                                case .pending:  selectedManagerChip = .pendingReview
+                                case .risky:    selectedManagerChip = .highRisk
+                                case .approved: selectedManagerChip = .approved
+                                default:        selectedManagerChip = .all
                                 }
                             }
                             
@@ -175,6 +177,9 @@ struct ManagerApprovalsView: View {
                         .navigationBarTitleDisplayMode(.inline)
                     }
                 }
+            }
+            .sheet(isPresented: $showBorrowerHistorySheet) {
+                borrowerHistoryListSheet
             }
         }
     }
@@ -745,7 +750,19 @@ struct ManagerApprovalsView: View {
                         .font(.system(size: 13)).foregroundStyle(.secondary)
                         .padding(.leading, 4)
                 } else {
-                    ForEach(previewEntries) { entry in historyRowButton(entry) }
+                    ForEach(thisBank.prefix(3)) { entry in
+                        historyRowButton(entry)
+                    }
+                }
+            }
+
+            // ── Other Banks ──
+            if !otherBanks.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    historySubHeader("Other Institutions", icon: "building.2.fill", color: .secondary)
+                    ForEach(otherBanks.prefix(2)) { entry in
+                        historyRowButton(entry)
+                    }
                 }
             }
 
@@ -765,34 +782,95 @@ struct ManagerApprovalsView: View {
         }
     }
 
-    private func historyRow(_ entry: BorrowerLoanHistoryEntry) -> some View {
+    private func historyRow(_ entry: BorrowerLoanHistoryEntry, isExpanded: Bool) -> some View {
         let accent = historyColor(entry.statusStyle)
-        return HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(entry.loanType).font(.system(size: 14, weight: .semibold)).foregroundStyle(.primary)
-                Text(entry.institution).font(.system(size: 12)).foregroundStyle(.secondary)
+        return HStack(spacing: 12) {
+            // Left accent
+            RoundedRectangle(cornerRadius: 2)
+                .fill(accent)
+                .frame(width: 4, height: 48)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(entry.loanType)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.primary)
+                Text(entry.institution)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
             }
+
             Spacer()
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(entry.amount).font(.system(size: 14, weight: .bold, design: .rounded))
-                Text(entry.status).font(.system(size: 11, weight: .semibold)).foregroundStyle(accent)
+
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(entry.amount)
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                HStack(spacing: 4) {
+                    Text(entry.status)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(accent)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.tertiary)
+                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(accent.opacity(0.12))
+                .clipShape(Capsule())
             }
         }
-        .padding(.horizontal, 12).padding(.vertical, 10)
-        .background(accent.opacity(0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8).stroke(accent.opacity(0.1), lineWidth: 1)
-        )
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(accent.opacity(0.04))
     }
 
     private func historyRowButton(_ entry: BorrowerLoanHistoryEntry) -> some View {
-        Button {
-            applicationsVM.selectApplication(applicationID: entry.id)
-        } label: {
-            historyRow(entry)
+        VStack(spacing: 0) {
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                    if expandedHistoryID == entry.id {
+                        expandedHistoryID = nil
+                    } else {
+                        expandedHistoryID = entry.id
+                    }
+                }
+            } label: {
+                historyRow(entry, isExpanded: expandedHistoryID == entry.id)
+            }
+            .buttonStyle(.plain)
+
+            if expandedHistoryID == entry.id {
+                VStack(alignment: .leading, spacing: 12) {
+                    Divider().padding(.vertical, 8)
+                    
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Application ID").font(.system(size: 10, weight: .bold)).foregroundStyle(.tertiary)
+                            Text(entry.id).font(.system(size: 12, weight: .medium, design: .monospaced))
+                        }
+                        Spacer()
+                        Button {
+                            applicationsVM.selectApplication(applicationID: entry.id)
+                        } label: {
+                            Text("Open Full Details")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(Theme.Colors.primary)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Theme.Colors.primary.opacity(0.1))
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 12)
+                .background(Color.primary.opacity(0.02))
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
-        .buttonStyle(.plain)
+        .background(expandedHistoryID == entry.id ? Color.primary.opacity(0.02) : Color.clear)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     private func historyColor(_ style: HistoryStatusStyle) -> Color {

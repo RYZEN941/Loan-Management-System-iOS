@@ -310,7 +310,7 @@ struct AdminReportsView: View {
                 self.activeSheet = .share(ShareItem(url: fileURL))
             }
 
-        case .csv, .excel:
+        case .csv:
             let csvContent = reportsVM.generateReportCSV(
                 reportId: report.id,
                 dateRange: exportDateRange,
@@ -318,7 +318,7 @@ struct AdminReportsView: View {
                 region: regionFilter,
                 status: statusFilter
             )
-            let ext = format == .excel ? "xlsx" : "csv"
+            let ext = "csv"
             let safeName = report.title.replacingOccurrences(of: " ", with: "_").replacingOccurrences(of: "/", with: "-")
             let fileName = "\(safeName)_\(Int(Date().timeIntervalSince1970)).\(ext)"
             let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -408,9 +408,6 @@ private struct AdminReportItemRow: View {
                     Divider()
                     Button(action: onExport) {
                         Label("Export PDF", systemImage: "doc.fill")
-                    }
-                    Button(action: onExport) {
-                        Label("Export Excel", systemImage: "tablecells.fill")
                     }
                     Button(action: onExport) {
                         Label("Export CSV", systemImage: "list.bullet")
@@ -559,7 +556,7 @@ struct AdminCustomReportBuilderSheet: View {
                 }
                 shareItem = ShareItem(url: fileURL)
             }
-        case .csv, .excel:
+        case .csv:
             let reportId: String = {
                 switch selectedSource {
                 case "Portfolio Data":     return "RPT-PERF"
@@ -579,7 +576,7 @@ struct AdminCustomReportBuilderSheet: View {
                 status: reportsVM.activeStatus
             )
             let safeName = selectedSource.replacingOccurrences(of: " ", with: "_")
-            let ext = selectedFormat == .excel ? "xlsx" : "csv"
+            let ext = "csv"
             let fileName = "Custom_\(safeName)_\(Int(Date().timeIntervalSince1970)).\(ext)"
             let documentsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
             let tempURL = documentsURL.appendingPathComponent(fileName)
@@ -670,13 +667,11 @@ struct ReportItem: Identifiable {
 
 enum ExportFormat: String, CaseIterable {
     case pdf = "pdf"
-    case excel = "excel"
     case csv = "csv"
 
     var displayName: String {
         switch self {
         case .pdf:   return "PDF"
-        case .excel: return "Excel"
         case .csv:   return "CSV"
         }
     }
@@ -684,7 +679,6 @@ enum ExportFormat: String, CaseIterable {
     var backendFormat: String {
         switch self {
         case .pdf:   return "pdf"
-        case .excel: return "xlsx"
         case .csv:   return "csv"
         }
     }
@@ -2167,7 +2161,6 @@ private struct ReportPreviewSheet: View {
 
                         HStack(spacing: 16) {
                             exportButton("PDF",   icon: "doc.text.fill",              format: .pdf,   color: .red)
-                            exportButton("Excel", icon: "tablecells.fill",            format: .excel, color: .green)
                             exportButton("CSV",   icon: "list.bullet.rectangle.fill", format: .csv,   color: Theme.Colors.adaptivePrimary(colorScheme))
                         }
                     }
@@ -2207,10 +2200,19 @@ private struct ReportPreviewSheet: View {
 
     private func previewStat(label: String, value: String, color: Color) -> some View {
         VStack(spacing: 4) {
-            Text(value).font(.system(size: 20, weight: .bold, design: .rounded)).foregroundStyle(color)
-            Text(label).font(Theme.Typography.caption).foregroundStyle(.secondary)
+            Text(value)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundStyle(color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(label)
+                .font(Theme.Typography.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity)
+        .frame(height: 70) // Fixed height for uniformity
         .padding(Theme.Spacing.sm)
         .cardStyle(colorScheme: colorScheme)
     }

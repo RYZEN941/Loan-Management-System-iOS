@@ -76,6 +76,13 @@ extension Double {
         }
         return String(format: "%.0f", self)
     }
+
+    /// Formats as Lakhs: "165.6 L"
+    var lakhsFormatted: String {
+        guard self.isFinite else { return "N/A" }
+        let lakhs = self / 100_000.0
+        return String(format: "%.1f L", lakhs)
+    }
 }
 
 extension Int {

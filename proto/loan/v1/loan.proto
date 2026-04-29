@@ -35,6 +35,8 @@ service LoanService {
   rpc ListLoanApplications(ListLoanApplicationsRequest) returns (ListLoanApplicationsResponse);
   // Advance the application status through the approval workflow.
   rpc UpdateLoanApplicationStatus(UpdateLoanApplicationStatusRequest) returns (UpdateLoanApplicationStatusResponse);
+  // Delete a draft loan application.
+  rpc DeleteLoanApplication(DeleteLoanApplicationRequest) returns (DeleteLoanApplicationResponse);
   // Update offered terms (tenure, interest rate) on an application.
   rpc UpdateLoanApplicationTerms(UpdateLoanApplicationTermsRequest) returns (UpdateLoanApplicationTermsResponse);
   // Assign a loan officer to an application. Manager/admin only.
@@ -466,6 +468,16 @@ message UpdateLoanApplicationStatusRequest {
 
 // Response for loan application status update.
 message UpdateLoanApplicationStatusResponse {
+  bool success = 1;
+}
+
+// Request to delete a draft loan application.
+message DeleteLoanApplicationRequest {
+  string application_id = 1;
+}
+
+// Response for draft loan application deletion.
+message DeleteLoanApplicationResponse {
   bool success = 1;
 }
 

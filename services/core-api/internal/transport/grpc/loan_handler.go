@@ -18,6 +18,7 @@ type LoanService interface {
 	CreateLoanApplication(ctx context.Context, req *loanv1.CreateLoanApplicationRequest) (*loanv1.CreateLoanApplicationResponse, error)
 	GetLoanApplication(ctx context.Context, req *loanv1.GetLoanApplicationRequest) (*loanv1.GetLoanApplicationResponse, error)
 	ListLoanApplications(ctx context.Context, req *loanv1.ListLoanApplicationsRequest) (*loanv1.ListLoanApplicationsResponse, error)
+	DeleteLoanApplication(ctx context.Context, req *loanv1.DeleteLoanApplicationRequest) (*loanv1.DeleteLoanApplicationResponse, error)
 	UpdateLoanApplicationStatus(ctx context.Context, req *loanv1.UpdateLoanApplicationStatusRequest) (*loanv1.UpdateLoanApplicationStatusResponse, error)
 	UpdateLoanApplicationTerms(ctx context.Context, req *loanv1.UpdateLoanApplicationTermsRequest) (*loanv1.UpdateLoanApplicationTermsResponse, error)
 	AssignLoanApplicationOfficer(ctx context.Context, req *loanv1.AssignLoanApplicationOfficerRequest) (*loanv1.AssignLoanApplicationOfficerResponse, error)
@@ -82,6 +83,9 @@ func (h *LoanHandler) GetLoanApplication(ctx context.Context, req *loanv1.GetLoa
 }
 func (h *LoanHandler) ListLoanApplications(ctx context.Context, req *loanv1.ListLoanApplicationsRequest) (*loanv1.ListLoanApplicationsResponse, error) {
 	return h.loanService.ListLoanApplications(ctx, req)
+}
+func (h *LoanHandler) DeleteLoanApplication(ctx context.Context, req *loanv1.DeleteLoanApplicationRequest) (*loanv1.DeleteLoanApplicationResponse, error) {
+	return h.loanService.DeleteLoanApplication(ctx, req)
 }
 func (h *LoanHandler) UpdateLoanApplicationStatus(ctx context.Context, req *loanv1.UpdateLoanApplicationStatusRequest) (*loanv1.UpdateLoanApplicationStatusResponse, error) {
 	return h.loanService.UpdateLoanApplicationStatus(ctx, req)

@@ -31,6 +31,7 @@ const (
 	LoanService_GetLoanApplication_FullMethodName                    = "/loan.v1.LoanService/GetLoanApplication"
 	LoanService_ListLoanApplications_FullMethodName                  = "/loan.v1.LoanService/ListLoanApplications"
 	LoanService_UpdateLoanApplicationStatus_FullMethodName           = "/loan.v1.LoanService/UpdateLoanApplicationStatus"
+	LoanService_DeleteLoanApplication_FullMethodName                 = "/loan.v1.LoanService/DeleteLoanApplication"
 	LoanService_UpdateLoanApplicationTerms_FullMethodName            = "/loan.v1.LoanService/UpdateLoanApplicationTerms"
 	LoanService_AssignLoanApplicationOfficer_FullMethodName          = "/loan.v1.LoanService/AssignLoanApplicationOfficer"
 	LoanService_AddApplicationCoapplicant_FullMethodName             = "/loan.v1.LoanService/AddApplicationCoapplicant"
@@ -82,6 +83,8 @@ type LoanServiceClient interface {
 	ListLoanApplications(ctx context.Context, in *ListLoanApplicationsRequest, opts ...grpc.CallOption) (*ListLoanApplicationsResponse, error)
 	// Advance the application status through the approval workflow.
 	UpdateLoanApplicationStatus(ctx context.Context, in *UpdateLoanApplicationStatusRequest, opts ...grpc.CallOption) (*UpdateLoanApplicationStatusResponse, error)
+	// Delete a draft loan application.
+	DeleteLoanApplication(ctx context.Context, in *DeleteLoanApplicationRequest, opts ...grpc.CallOption) (*DeleteLoanApplicationResponse, error)
 	// Update offered terms (tenure, interest rate) on an application.
 	UpdateLoanApplicationTerms(ctx context.Context, in *UpdateLoanApplicationTermsRequest, opts ...grpc.CallOption) (*UpdateLoanApplicationTermsResponse, error)
 	// Assign a loan officer to an application. Manager/admin only.
@@ -244,6 +247,16 @@ func (c *loanServiceClient) UpdateLoanApplicationStatus(ctx context.Context, in 
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateLoanApplicationStatusResponse)
 	err := c.cc.Invoke(ctx, LoanService_UpdateLoanApplicationStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *loanServiceClient) DeleteLoanApplication(ctx context.Context, in *DeleteLoanApplicationRequest, opts ...grpc.CallOption) (*DeleteLoanApplicationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeleteLoanApplicationResponse)
+	err := c.cc.Invoke(ctx, LoanService_DeleteLoanApplication_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -470,6 +483,8 @@ type LoanServiceServer interface {
 	ListLoanApplications(context.Context, *ListLoanApplicationsRequest) (*ListLoanApplicationsResponse, error)
 	// Advance the application status through the approval workflow.
 	UpdateLoanApplicationStatus(context.Context, *UpdateLoanApplicationStatusRequest) (*UpdateLoanApplicationStatusResponse, error)
+	// Delete a draft loan application.
+	DeleteLoanApplication(context.Context, *DeleteLoanApplicationRequest) (*DeleteLoanApplicationResponse, error)
 	// Update offered terms (tenure, interest rate) on an application.
 	UpdateLoanApplicationTerms(context.Context, *UpdateLoanApplicationTermsRequest) (*UpdateLoanApplicationTermsResponse, error)
 	// Assign a loan officer to an application. Manager/admin only.
@@ -553,6 +568,9 @@ func (UnimplementedLoanServiceServer) ListLoanApplications(context.Context, *Lis
 }
 func (UnimplementedLoanServiceServer) UpdateLoanApplicationStatus(context.Context, *UpdateLoanApplicationStatusRequest) (*UpdateLoanApplicationStatusResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateLoanApplicationStatus not implemented")
+}
+func (UnimplementedLoanServiceServer) DeleteLoanApplication(context.Context, *DeleteLoanApplicationRequest) (*DeleteLoanApplicationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteLoanApplication not implemented")
 }
 func (UnimplementedLoanServiceServer) UpdateLoanApplicationTerms(context.Context, *UpdateLoanApplicationTermsRequest) (*UpdateLoanApplicationTermsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateLoanApplicationTerms not implemented")
@@ -844,6 +862,24 @@ func _LoanService_UpdateLoanApplicationStatus_Handler(srv interface{}, ctx conte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(LoanServiceServer).UpdateLoanApplicationStatus(ctx, req.(*UpdateLoanApplicationStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _LoanService_DeleteLoanApplication_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteLoanApplicationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(LoanServiceServer).DeleteLoanApplication(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: LoanService_DeleteLoanApplication_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(LoanServiceServer).DeleteLoanApplication(ctx, req.(*DeleteLoanApplicationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1244,6 +1280,10 @@ var LoanService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateLoanApplicationStatus",
 			Handler:    _LoanService_UpdateLoanApplicationStatus_Handler,
+		},
+		{
+			MethodName: "DeleteLoanApplication",
+			Handler:    _LoanService_DeleteLoanApplication_Handler,
 		},
 		{
 			MethodName: "UpdateLoanApplicationTerms",

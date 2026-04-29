@@ -273,6 +273,12 @@ SET escalation_reason = $2,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = $1;
 
+-- name: DeleteDraftLoanApplication :execrows
+DELETE FROM loan_applications
+WHERE id = $1
+  AND status = 'DRAFT'
+  AND created_by_user_id = $2;
+
 -- name: CreateApplicationCoapplicant :one
 INSERT INTO application_coapplicants (
     application_id,

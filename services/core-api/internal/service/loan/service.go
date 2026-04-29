@@ -36,6 +36,7 @@ type Service interface {
 	CreateLoanApplication(ctx context.Context, req *loanv1.CreateLoanApplicationRequest) (*loanv1.CreateLoanApplicationResponse, error)
 	GetLoanApplication(ctx context.Context, req *loanv1.GetLoanApplicationRequest) (*loanv1.GetLoanApplicationResponse, error)
 	ListLoanApplications(ctx context.Context, req *loanv1.ListLoanApplicationsRequest) (*loanv1.ListLoanApplicationsResponse, error)
+	DeleteLoanApplication(ctx context.Context, req *loanv1.DeleteLoanApplicationRequest) (*loanv1.DeleteLoanApplicationResponse, error)
 	UpdateLoanApplicationStatus(ctx context.Context, req *loanv1.UpdateLoanApplicationStatusRequest) (*loanv1.UpdateLoanApplicationStatusResponse, error)
 	UpdateLoanApplicationTerms(ctx context.Context, req *loanv1.UpdateLoanApplicationTermsRequest) (*loanv1.UpdateLoanApplicationTermsResponse, error)
 	AssignLoanApplicationOfficer(ctx context.Context, req *loanv1.AssignLoanApplicationOfficerRequest) (*loanv1.AssignLoanApplicationOfficerResponse, error)
@@ -541,6 +542,35 @@ func (s *service) ListLoanApplications(ctx context.Context, req *loanv1.ListLoan
 		return nil, status.Error(codes.PermissionDenied, "role cannot list loan applications")
 	}
 	return &loanv1.ListLoanApplicationsResponse{Items: items}, nil
+}
+
+func (s *service) DeleteLoanApplication(ctx context.Context, req *loanv1.DeleteLoanApplicationRequest) (*loanv1.DeleteLoanApplicationResponse, error) {
+	callerUserID, role, err := requireUserAndRole(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if role != "dst" {
+		return nil, status.Error(codes.PermissionDenied, "only dst can delete draft applications")
+	}
+
+	appID, err := parseUUID(req.GetApplicationId(), "application_id")
+	if err != nil {
+		return nil, err
+	}
+
+	rowsAffected, err := s.queries.DeleteDraftLoanApplication(ctx, generated.DeleteDraftLoanApplicationParams{
+		ID:              uuidToPg(appID),
+		CreatedByUserID: uuidToPg(callerUserID),
+	})
+	if err != nil {
+		return nil, status.Error(codes.Internal, "failed to delete loan application")
+	}
+
+	if rowsAffected == 0 {
+		return nil, status.Error(codes.NotFound, "draft loan application not found or unauthorized")
+	}
+
+	return &loanv1.DeleteLoanApplicationResponse{Success: true}, nil
 }
 
 func (s *service) UpdateLoanApplicationStatus(ctx context.Context, req *loanv1.UpdateLoanApplicationStatusRequest) (*loanv1.UpdateLoanApplicationStatusResponse, error) {

@@ -53,6 +53,7 @@ type Querier interface {
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateUserConsent(ctx context.Context, arg CreateUserConsentParams) (UserConsent, error)
 	CreateWebAuthnCredential(ctx context.Context, arg CreateWebAuthnCredentialParams) (WebauthnCredential, error)
+	DeleteDraftLoanApplication(ctx context.Context, arg DeleteDraftLoanApplicationParams) (int64, error)
 	DeleteProductFeesByProductID(ctx context.Context, loanProductID pgtype.UUID) error
 	DeleteProductRequiredDocumentsByProductID(ctx context.Context, loanProductID pgtype.UUID) error
 	DeleteUpcomingEmiSchedulesByLoanID(ctx context.Context, loanID pgtype.UUID) error

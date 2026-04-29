@@ -654,6 +654,26 @@ func (q *Queries) CreateProductRequiredDocument(ctx context.Context, arg CreateP
 	return i, err
 }
 
+const deleteDraftLoanApplication = `-- name: DeleteDraftLoanApplication :execrows
+DELETE FROM loan_applications
+WHERE id = $1
+  AND status = 'DRAFT'
+  AND created_by_user_id = $2
+`
+
+type DeleteDraftLoanApplicationParams struct {
+	ID              pgtype.UUID `json:"id"`
+	CreatedByUserID pgtype.UUID `json:"created_by_user_id"`
+}
+
+func (q *Queries) DeleteDraftLoanApplication(ctx context.Context, arg DeleteDraftLoanApplicationParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteDraftLoanApplication, arg.ID, arg.CreatedByUserID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const deleteProductFeesByProductID = `-- name: DeleteProductFeesByProductID :exec
 DELETE FROM product_fees
 WHERE loan_product_id = $1

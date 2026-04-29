@@ -18,8 +18,11 @@ struct LoanApplication: Identifiable, Codable, Hashable {
     var internalRemarks: [InternalRemark]
     var status: ApplicationStatus
     var assignedTo: String
+    var assignedToName: String = ""
     var primaryBorrowerProfileID: String = ""
     var createdByUserID: String = ""
+    var createdByName: String = ""
+    var branchID: String = ""
     var branch: String
     var riskLevel: RiskLevel
     var createdAt: Date
@@ -29,6 +32,13 @@ struct LoanApplication: Identifiable, Codable, Hashable {
     
     /// Sanction letter tracking
     var sanctionLetter: SanctionLetter?
+    
+    var borrowerUserID: String = ""
+    var borrowerHistoryThisBank: [BorrowerLoanHistoryEntry] = []
+    var borrowerHistoryOtherLenders: [BorrowerLoanHistoryEntry] = []
+    var repaymentSummary: RepaymentSummary = .na
+    var repaymentHistory: [RepaymentHistoryItem] = []
+    var isDisbursed: Bool = false
 
     // MARK: - Risk Logic (Add here)
     var isHighRisk: Bool {
@@ -78,6 +88,44 @@ struct InternalRemark: Identifiable, Codable, Hashable {
     var timestamp: Date
 }
 
+struct BorrowerLoanHistoryEntry: Identifiable, Codable, Hashable {
+    let id: String
+    let loanType: String
+    let institution: String
+    let amount: String
+    let status: String
+    let statusStyle: HistoryStatusStyle
+}
+
+enum HistoryStatusStyle: String, Codable, Hashable {
+    case primary
+    case success
+    case warning
+    case critical
+    case neutral
+}
+
+struct RepaymentSummary: Codable, Hashable {
+    let outstanding: String
+    let paidToDate: String
+    let nextEmi: String
+
+    static let na = RepaymentSummary(
+        outstanding: "N/A",
+        paidToDate: "N/A",
+        nextEmi: "N/A"
+    )
+}
+
+struct RepaymentHistoryItem: Identifiable, Codable, Hashable {
+    let id: String
+    let period: String
+    let dueDateText: String
+    let amount: String
+    let status: String
+    let isPaid: Bool
+}
+
 
 // MARK: - Borrower
 
@@ -119,6 +167,8 @@ struct Financials: Codable, Hashable {
 
 struct LoanDocument: Identifiable, Codable, Hashable {
     let id: String
+    var backendDocumentID: String? = nil
+    var requiredDocID: String? = nil
     var type: DocumentType
     var label: String
     var status: DocumentStatus

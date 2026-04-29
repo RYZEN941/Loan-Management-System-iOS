@@ -94,6 +94,8 @@ class AuthViewModel: ObservableObject {
     private var mfaSessionID: String = ""
     private var allowedMFAMethods: [MFAMethod] = []
     private var pendingCurrentPassword: String = ""
+    private var loginPrimeTask: Task<Void, Never>? = nil
+    private var hasPrewarmedConnection = false
 
     var isLoggedIn: Bool { currentRole != nil }
     var availableMFAMethods: [MFAMethod] {
@@ -133,6 +135,19 @@ class AuthViewModel: ObservableObject {
                 loginError = (error as? LocalizedError)?.errorDescription ?? "Login failed"
             }
             isLoading = false
+        }
+    }
+
+    func primeSignInExperience(identifier: String) {
+        let trimmed = identifier.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 4, !hasPrewarmedConnection else { return }
+
+        loginPrimeTask?.cancel()
+        loginPrimeTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            guard let self, !Task.isCancelled else { return }
+            await CoreAPIClient.prewarmConnection()
+            self.hasPrewarmedConnection = true
         }
     }
 

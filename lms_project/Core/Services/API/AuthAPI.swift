@@ -83,6 +83,81 @@ struct AuthAPI {
         }
     }
 
+    func getBorrowerProfile(userID: String) async throws -> Auth_V1_BorrowerProfile {
+        var request = Auth_V1_GetBorrowerProfileRequest()
+        request.userID = userID
+        let descriptor = GRPCCore.MethodDescriptor(
+            service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "auth.v1.AuthService"),
+            method: "GetBorrowerProfile"
+        )
+        let metadata = await CoreAPIClient.authorizedMetadata()
+        do {
+            return try await CoreAPIClient.withClient { client in
+                try await client.unary(
+                    request: .init(message: request, metadata: metadata),
+                    descriptor: descriptor,
+                    serializer: GRPCProtobuf.ProtobufSerializer<Auth_V1_GetBorrowerProfileRequest>(),
+                    deserializer: GRPCProtobuf.ProtobufDeserializer<Auth_V1_BorrowerProfile>(),
+                    options: .defaults
+                ) { response in
+                    try response.message
+                }
+            }
+        } catch {
+            throw APIError.from(error)
+        }
+    }
+
+    func getBorrowerProfileSnapshot(userID: String) async throws -> Auth_V1_BorrowerProfileSnapshot {
+        var request = Auth_V1_GetBorrowerProfileRequest()
+        request.userID = userID
+        let descriptor = GRPCCore.MethodDescriptor(
+            service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "auth.v1.AuthService"),
+            method: "GetBorrowerProfile"
+        )
+        let metadata = await CoreAPIClient.authorizedMetadata()
+        do {
+            return try await CoreAPIClient.withClient { client in
+                try await client.unary(
+                    request: .init(message: request, metadata: metadata),
+                    descriptor: descriptor,
+                    serializer: GRPCProtobuf.ProtobufSerializer<Auth_V1_GetBorrowerProfileRequest>(),
+                    deserializer: GRPCProtobuf.ProtobufDeserializer<Auth_V1_BorrowerProfileSnapshot>(),
+                    options: .defaults
+                ) { response in
+                    try response.message
+                }
+            }
+        } catch {
+            throw APIError.from(error)
+        }
+    }
+
+    func getUser(userID: String) async throws -> Auth_V1_GetUserResponse {
+        var request = Auth_V1_GetUserRequest()
+        request.userID = userID
+        let descriptor = GRPCCore.MethodDescriptor(
+            service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "auth.v1.AuthService"),
+            method: "GetUser"
+        )
+        let metadata = await CoreAPIClient.authorizedMetadata()
+        do {
+            return try await CoreAPIClient.withClient { client in
+                try await client.unary(
+                    request: .init(message: request, metadata: metadata),
+                    descriptor: descriptor,
+                    serializer: GRPCProtobuf.ProtobufSerializer<Auth_V1_GetUserRequest>(),
+                    deserializer: GRPCProtobuf.ProtobufDeserializer<Auth_V1_GetUserResponse>(),
+                    options: .defaults
+                ) { response in
+                    try response.message
+                }
+            }
+        } catch {
+            throw APIError.from(error)
+        }
+    }
+
     func searchBorrowerSignupStatus(query: String, limit: Int32 = 20, offset: Int32 = 0) async throws -> [BorrowerSignupStatusSearchItem] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return [] }
@@ -289,6 +364,157 @@ struct Auth_V1_SearchBorrowerSignupStatusResponse: Sendable, SwiftProtobuf.Messa
     }
     static func ==(lhs: Self, rhs: Self) -> Bool {
         return lhs.items == rhs.items
+    }
+}
+
+struct Auth_V1_GetBorrowerProfileRequest: Sendable, SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+    static let protoMessageName = "auth.v1.GetBorrowerProfileRequest"
+    static let _protobuf_nameMap: SwiftProtobuf._NameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0")
+
+    var userID: String = ""
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+    mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+        while let f = try decoder.nextFieldNumber() {
+            switch f {
+            case 1: try decoder.decodeSingularStringField(value: &userID)
+            default: break
+            }
+        }
+    }
+    func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+        if !userID.isEmpty { try visitor.visitSingularStringField(value: userID, fieldNumber: 1) }
+        try unknownFields.traverse(visitor: &visitor)
+    }
+    static func ==(lhs: Self, rhs: Self) -> Bool {
+        lhs.userID == rhs.userID && lhs.unknownFields == rhs.unknownFields
+    }
+}
+
+struct Auth_V1_GetUserRequest: Sendable, SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+    static let protoMessageName = "auth.v1.GetUserRequest"
+    static let _protobuf_nameMap: SwiftProtobuf._NameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0")
+
+    var userID: String = ""
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+    mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+        while let f = try decoder.nextFieldNumber() {
+            switch f {
+            case 1: try decoder.decodeSingularStringField(value: &userID)
+            default: break
+            }
+        }
+    }
+    func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+        if !userID.isEmpty { try visitor.visitSingularStringField(value: userID, fieldNumber: 1) }
+        try unknownFields.traverse(visitor: &visitor)
+    }
+    static func ==(lhs: Self, rhs: Self) -> Bool {
+        lhs.userID == rhs.userID && lhs.unknownFields == rhs.unknownFields
+    }
+}
+
+struct Auth_V1_UserPublicProfile: Sendable, SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+    static let protoMessageName = "auth.v1.UserPublicProfile"
+    static let _protobuf_nameMap: SwiftProtobuf._NameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}user_id\0\u{1}email\0\u{1}phone\0\u{1}role\0\u{3}is_active\0\u{3}created_at\0")
+
+    var userID: String = ""
+    var email: String = ""
+    var phone: String = ""
+    var role: Auth_V1_UserRole = .unspecified
+    var isActive: Bool = false
+    var createdAt: String = ""
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+    mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+        while let f = try decoder.nextFieldNumber() {
+            switch f {
+            case 1: try decoder.decodeSingularStringField(value: &userID)
+            case 2: try decoder.decodeSingularStringField(value: &email)
+            case 3: try decoder.decodeSingularStringField(value: &phone)
+            case 4: try decoder.decodeSingularEnumField(value: &role)
+            case 5: try decoder.decodeSingularBoolField(value: &isActive)
+            case 6: try decoder.decodeSingularStringField(value: &createdAt)
+            default: break
+            }
+        }
+    }
+    func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+        if !userID.isEmpty { try visitor.visitSingularStringField(value: userID, fieldNumber: 1) }
+        if !email.isEmpty { try visitor.visitSingularStringField(value: email, fieldNumber: 2) }
+        if !phone.isEmpty { try visitor.visitSingularStringField(value: phone, fieldNumber: 3) }
+        if role != .unspecified { try visitor.visitSingularEnumField(value: role, fieldNumber: 4) }
+        if isActive { try visitor.visitSingularBoolField(value: isActive, fieldNumber: 5) }
+        if !createdAt.isEmpty { try visitor.visitSingularStringField(value: createdAt, fieldNumber: 6) }
+        try unknownFields.traverse(visitor: &visitor)
+    }
+    static func ==(lhs: Self, rhs: Self) -> Bool {
+        lhs.userID == rhs.userID &&
+        lhs.email == rhs.email &&
+        lhs.phone == rhs.phone &&
+        lhs.role == rhs.role &&
+        lhs.isActive == rhs.isActive &&
+        lhs.createdAt == rhs.createdAt &&
+        lhs.unknownFields == rhs.unknownFields
+    }
+}
+
+struct Auth_V1_GetUserResponse: Sendable, SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+    static let protoMessageName = "auth.v1.GetUserResponse"
+    static let _protobuf_nameMap: SwiftProtobuf._NameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}user\0")
+
+    var user = Auth_V1_UserPublicProfile()
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+    mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+        while let f = try decoder.nextFieldNumber() {
+            switch f {
+            case 1:
+                var decodedUser: Auth_V1_UserPublicProfile?
+                try decoder.decodeSingularMessageField(value: &decodedUser)
+                if let decodedUser {
+                    user = decodedUser
+                }
+            default: break
+            }
+        }
+    }
+    func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+        if user != Auth_V1_UserPublicProfile() { try visitor.visitSingularMessageField(value: user, fieldNumber: 1) }
+        try unknownFields.traverse(visitor: &visitor)
+    }
+    static func ==(lhs: Self, rhs: Self) -> Bool {
+        lhs.user == rhs.user && lhs.unknownFields == rhs.unknownFields
+    }
+}
+
+struct Auth_V1_BorrowerProfileSnapshot: Sendable, SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+    static let protoMessageName = "auth.v1.BorrowerProfile"
+    static let _protobuf_nameMap: SwiftProtobuf._NameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{B}cibil_score\0")
+
+    var cibilScore: Int32 = 0
+    var unknownFields = SwiftProtobuf.UnknownStorage()
+
+    init() {}
+    mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+        while let f = try decoder.nextFieldNumber() {
+            switch f {
+            case 18: try decoder.decodeSingularInt32Field(value: &cibilScore)
+            default: break
+            }
+        }
+    }
+    func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+        if cibilScore != 0 { try visitor.visitSingularInt32Field(value: cibilScore, fieldNumber: 18) }
+        try unknownFields.traverse(visitor: &visitor)
+    }
+    static func ==(lhs: Self, rhs: Self) -> Bool {
+        lhs.cibilScore == rhs.cibilScore && lhs.unknownFields == rhs.unknownFields
     }
 }
 

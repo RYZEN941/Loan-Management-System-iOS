@@ -48,6 +48,8 @@ struct ManagerApprovalsView: View {
     @State private var showAssignOfficerSheet = false
     @State private var selectedOfficerID: String = ""
     @State private var showBorrowerProfile = false
+    @State private var showBorrowerHistorySheet = false
+    @State private var borrowerHistoryEntries: [BorrowerLoanHistoryEntry] = []
 
     var body: some View {
         NavigationStack {
@@ -217,7 +219,17 @@ struct ManagerApprovalsView: View {
                         AppFilterChip(label: chip.rawValue, isSelected: selectedManagerChip == chip) {
                             withAnimation {
                                 applicationsVM.activeDashboardFilter = .none
-                                selectedManagerChip = chip }
+                                selectedManagerChip = chip
+                                applicationsVM.filterRisk = nil
+                                switch chip {
+                                case .all: applicationsVM.filterStatuses = nil
+                                case .pendingReview: applicationsVM.filterStatuses = applicationsVM.managerPendingReviewStatuses
+                                case .highRisk: applicationsVM.filterStatuses = nil; applicationsVM.filterRisk = .high
+                                case .approved: applicationsVM.filterStatuses = applicationsVM.approvedStatuses
+                                case .rejected: applicationsVM.filterStatuses = applicationsVM.rejectedStatuses
+                                }
+                                applicationsVM.syncSelectedApplicationWithFilters()
+                            }
                         }
                     }
                 }
@@ -267,15 +279,15 @@ struct ManagerApprovalsView: View {
                     modernFinTile("Email Address", app.borrower.email, icon: "envelope.fill")
                     
                     // Risk / Financial Metrics
-                    modernFinTile("CIBIL Score", "\(app.financials.cibilScore)", icon: "bolt.fill", color: cibilColor(app.financials.cibilScore))
+                    modernFinTile("CIBIL Score", app.financials.cibilScore >= 0 ? "\(app.financials.cibilScore)" : "N/A", icon: "bolt.fill", color: cibilColor(app.financials.cibilScore))
                     modernFinTile("DTI Ratio", app.financials.dtiRatio.percentFormatted, icon: "chart.pie.fill", color: dtiColor(app.financials.dtiRatio))
                     modernFinTile("Risk Assessment", app.riskLevel.displayName, icon: "shield.fill", color: app.riskLevel.adaptiveColor(colorScheme))
                     
                     // Income & EMI
                     modernFinTile("Monthly Income", app.financials.monthlyIncome.currencyFormatted, icon: "arrow.up.right.circle")
-                    modernFinTile("Annual Income", app.financials.annualIncome.currencyFormatted, icon: "calendar")
+                    modernFinTile("Existing EMI", app.financials.existingEMI.currencyFormatted, icon: "arrow.down.right.circle")
                     modernFinTile("Proposed EMI", app.financials.proposedEMI.currencyFormatted, icon: "indianrupeesign.circle.fill")
-                    modernFinTile("FOIR", String(format: "%.1f%%", app.financials.foir), icon: "percent")
+                    modernFinTile("FOIR", app.financials.foir >= 0 ? String(format: "%.1f%%", app.financials.foir) : "N/A", icon: "percent")
                 }
 
                 HStack(spacing: 12) {
@@ -299,17 +311,20 @@ struct ManagerApprovalsView: View {
                 
                 // 1. Debt Summary Cards
                 HStack(spacing: 12) {
-                    summaryMiniTile(label: "Outstanding", value: "₹18,45,200", color: primary)
-                    summaryMiniTile(label: "Paid to Date", value: "₹6,54,800", color: .secondary)
-                    summaryMiniTile(label: "Next EMI", value: "15 May", color: .orange)
+                    summaryMiniTile(label: "Outstanding", value: app.repaymentSummary.outstanding, color: primary)
+                    summaryMiniTile(label: "Paid to Date", value: app.repaymentSummary.paidToDate, color: .secondary)
+                    summaryMiniTile(label: "Next EMI", value: app.repaymentSummary.nextEmi, color: .orange)
                 }
                 
                 // 2. Transaction List
                 VStack(spacing: 0) {
-                    repaymentRow(period: "April 2026", date: "15 Apr", amount: app.loan.emi.currencyFormatted, status: "Paid", isPaid: true)
-                    repaymentRow(period: "March 2026", date: "15 Mar", amount: app.loan.emi.currencyFormatted, status: "Paid", isPaid: true)
-                    repaymentRow(period: "February 2026", date: "15 Feb", amount: app.loan.emi.currencyFormatted, status: "Paid", isPaid: true)
-                    repaymentRow(period: "May 2026", date: "15 May", amount: app.loan.emi.currencyFormatted, status: "Upcoming", isPaid: false)
+                    if app.repaymentHistory.isEmpty {
+                        repaymentRow(period: "Repayment History", date: "N/A", amount: "N/A", status: "Unavailable", isPaid: false)
+                    } else {
+                        ForEach(app.repaymentHistory) { item in
+                            repaymentRow(period: item.period, date: item.dueDateText, amount: item.amount, status: item.status, isPaid: item.isPaid)
+                        }
+                    }
                 }
                 .background(Color(.tertiarySystemFill).opacity(0.3))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -361,11 +376,12 @@ struct ManagerApprovalsView: View {
             if let app = applicationsVM.selectedApplication {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
-                        selectedApplicationHint(app)
                         detailHeader(app)
                         consolidatedBorrowerProfile(app)
                         borrowerHistorySection(app)
-                        repaymentHistorySection(app) // <-- ADD THIS HERE
+                        if app.isDisbursed {
+                            repaymentHistorySection(app)
+                        }
                         editTermsSummarySection(app)   // ← Manager can edit terms
                         documentsSummarySection(app)
                         sanctionLetterSection(app)
@@ -376,20 +392,15 @@ struct ManagerApprovalsView: View {
                 }
                 .background(ManagerTheme.Colors.background(colorScheme))
                 .safeAreaInset(edge: .bottom) {
-                    if app.status == .officerApproved || app.status == .managerReview ||
-                       app.status == .underReview || app.status == .pending {
-                         ManagerActionPanel(
+                    if applicationsVM.canManagerReassign(application: app) {
+                        ManagerActionPanel(
+                            canTakeDecision: applicationsVM.canManagerTakeDecision(on: app),
                             onApprove: { showApprovalConfirmation = true },
                             onRejectWithRemarks: { applicationsVM.beginRejectWithRemarks(app) },
                             onSendBack: { applicationsVM.beginSendBack(app) },
-                            onEditTerms: {
-                                editTenureText = "\(app.loan.tenure)"
-                                editInterestRateText = String(format: "%.2f", app.loan.interestRate)
-                                showEditTerms = true
-                            },
                             onAssignOfficer: {
                                 selectedOfficerID = app.assignedTo
-                                applicationsVM.loadBranchOfficers(branchName: app.branch)
+                                applicationsVM.loadBranchOfficers(branchID: app.branchID, branchName: app.branch)
                                 showAssignOfficerSheet = true
                             }
                         )
@@ -397,28 +408,28 @@ struct ManagerApprovalsView: View {
                         .shadow(color: Color.black.opacity(0.05), radius: 10, y: -5)
                     }
                 }
-                .onChange(of: applicationsVM.selectedApplication) { _ in
+                .onChange(of: applicationsVM.selectedApplication) {
                     selectedVersionIndex = 0
                     if let app = applicationsVM.selectedApplication {
                         selectedOfficerID = app.assignedTo
-                        applicationsVM.loadBranchOfficers(branchName: app.branch)
+                        applicationsVM.loadBranchOfficers(branchID: app.branchID, branchName: app.branch)
                     } else {
                         selectedOfficerID = ""
                     }
                 }
             }
             // 2. Filter Result Empty Case: Explicitly show "No applications found"
-                        else if applicationsVM.filteredApplications.isEmpty {
-                            VStack(spacing: 16) {
-                                Image(systemName: "exclamationmark.magnifyingglass")
-                                    .font(.system(size: 48, weight: .thin))
-                                    .foregroundStyle(.secondary)
-                                Text("No applications found for this category")
-                                    .font(Theme.Typography.headline)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        }
+            else if applicationsVM.filteredApplications.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.magnifyingglass")
+                        .font(.system(size: 48, weight: .thin))
+                        .foregroundStyle(.secondary)
+                    Text("No applications found for this category")
+                        .font(Theme.Typography.headline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
             else {
                 VStack(spacing: 16) {
                     Image(systemName: "checkmark.circle.badge.questionmark").font(.system(size: 48, weight: .thin)).foregroundStyle(ManagerTheme.Colors.primary(colorScheme).opacity(0.4))
@@ -467,10 +478,11 @@ struct ManagerApprovalsView: View {
                             .foregroundStyle(primary)
                     }
                     
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        VStack(alignment: .leading, spacing: 4) {
                             Text(app.borrower.name)
                                 .font(.system(size: 22, weight: .bold, design: .rounded))
+                                .lineLimit(1)
                             StatusBadge(status: app.status)
                             if app.isHighRisk {
                                     HighRiskBadge()
@@ -501,7 +513,9 @@ struct ManagerApprovalsView: View {
                 
                 // Borrower Meta Grid
                 HStack(spacing: 20) {
-                    metaLabel(app.borrower.employer, systemImage: "building.2.fill")
+                    if app.borrower.employer != "N/A" {
+                        metaLabel(app.borrower.employer, systemImage: "building.2.fill")
+                    }
                     metaLabel(app.borrower.employmentType, systemImage: "person.text.rectangle.fill")
                 }
                 .font(.system(size: 13))
@@ -526,7 +540,7 @@ struct ManagerApprovalsView: View {
                     // Origin/Assignment labels
                     Group {
                         Text("Officer: ").foregroundStyle(.tertiary) +
-                        Text(applicationsVM.officerDisplayName(for: app.assignedTo)).foregroundStyle(.secondary)
+                        Text(app.assignedToName.isEmpty ? "Unassigned" : app.assignedToName).foregroundStyle(.secondary)
                         
                         Text(" • ").foregroundStyle(.tertiary)
                         
@@ -652,21 +666,33 @@ struct ManagerApprovalsView: View {
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(color.opacity(0.08), lineWidth: 0.5))
         }
 
-    private func cibilColor(_ s: Int) -> Color { 
-        s >= 750 ? Theme.Colors.adaptiveSuccess(colorScheme) : s >= 650 ? Theme.Colors.adaptiveWarning(colorScheme) : Theme.Colors.adaptiveCritical(colorScheme) 
+    private func cibilColor(_ s: Int) -> Color {
+        s < 0 ? Theme.Colors.neutral : (s >= 750 ? Theme.Colors.adaptiveSuccess(colorScheme) : s >= 650 ? Theme.Colors.adaptiveWarning(colorScheme) : Theme.Colors.adaptiveCritical(colorScheme))
     }
-    private func dtiColor(_ r: Double) -> Color { 
-        r <= 0.30 ? Theme.Colors.adaptiveSuccess(colorScheme) : r <= 0.40 ? Theme.Colors.adaptiveWarning(colorScheme) : Theme.Colors.adaptiveCritical(colorScheme) 
+    private func dtiColor(_ r: Double) -> Color {
+        r < 0 ? Theme.Colors.neutral : (r <= 0.30 ? Theme.Colors.adaptiveSuccess(colorScheme) : r <= 0.40 ? Theme.Colors.adaptiveWarning(colorScheme) : Theme.Colors.adaptiveCritical(colorScheme))
     }
 
     // MARK: - Borrower History Section
     private func borrowerHistorySection(_ app: LoanApplication) -> some View {
-        let thisBank = sampleThisBankLoans(for: app)
-        let otherBanks = sampleOtherBankLoans(for: app)
+        let thisBank = app.borrowerHistoryThisBank
+        let otherBanks = app.borrowerHistoryOtherLenders
+        let previewEntries = Array(thisBank.prefix(3))
 
         return VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "Borrower History", icon: "clock.arrow.circlepath")
-                .description("Previous loans from this bank and other institutions.")
+            HStack(alignment: .top) {
+                SectionHeader(title: "Borrower History", icon: "clock.arrow.circlepath")
+                    .description("Previous loans from this bank and other institutions.")
+                Spacer()
+                if thisBank.count > 3 {
+                    Button("Show All") {
+                        borrowerHistoryEntries = thisBank
+                        showBorrowerHistorySheet = true
+                    }
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(primary)
+                }
+            }
 
             // ── This Bank ──
             VStack(alignment: .leading, spacing: 8) {
@@ -676,21 +702,10 @@ struct ManagerApprovalsView: View {
                         .font(.system(size: 13)).foregroundStyle(.secondary)
                         .padding(.leading, 4)
                 } else {
-                    ForEach(thisBank) { entry in historyRow(entry) }
+                    ForEach(previewEntries) { entry in historyRowButton(entry) }
                 }
             }
-            
-            // ── Other Banks ──
-            VStack(alignment: .leading, spacing: 8) {
-                historySubHeader("Other Banks / NBFCs", icon: "building.2.fill", color: Color(hex: "#5E5CE6"))
-                if otherBanks.isEmpty {
-                    Text("No declared external loan history.")
-                        .font(.system(size: 13)).foregroundStyle(.secondary)
-                        .padding(.leading, 4)
-                } else {
-                    ForEach(otherBanks) { entry in historyRow(entry) }
-                }
-            }
+
         }
         .padding(18)
         .background(RoundedRectangle(cornerRadius: Theme.Radius.lg).fill(ManagerTheme.Colors.surface(colorScheme)))
@@ -708,7 +723,8 @@ struct ManagerApprovalsView: View {
     }
 
     private func historyRow(_ entry: BorrowerLoanHistoryEntry) -> some View {
-        HStack(alignment: .center, spacing: 12) {
+        let accent = historyColor(entry.statusStyle)
+        return HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(entry.loanType).font(.system(size: 14, weight: .semibold)).foregroundStyle(.primary)
                 Text(entry.institution).font(.system(size: 12)).foregroundStyle(.secondary)
@@ -716,39 +732,72 @@ struct ManagerApprovalsView: View {
             Spacer()
             VStack(alignment: .trailing, spacing: 4) {
                 Text(entry.amount).font(.system(size: 14, weight: .bold, design: .rounded))
-                Text(entry.status).font(.system(size: 11, weight: .semibold)).foregroundStyle(entry.statusColor)
+                Text(entry.status).font(.system(size: 11, weight: .semibold)).foregroundStyle(accent)
             }
         }
         .padding(.horizontal, 12).padding(.vertical, 10)
-        .background(entry.statusColor.opacity(0.05))
+        .background(accent.opacity(0.05))
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(
-            RoundedRectangle(cornerRadius: 8).stroke(entry.statusColor.opacity(0.1), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 8).stroke(accent.opacity(0.1), lineWidth: 1)
         )
     }
 
-    private func sampleThisBankLoans(for app: LoanApplication) -> [BorrowerLoanHistoryEntry] {
-        if app.borrower.name.contains("Ramesh") || app.id.hasSuffix("12") {
-            return [
-                BorrowerLoanHistoryEntry(loanType: "Personal Loan", institution: "Our Bank", amount: "₹1,50,000", status: "Closed", statusColor: Theme.Colors.success),
-                BorrowerLoanHistoryEntry(loanType: "Vehicle Loan",  institution: "Our Bank", amount: "₹3,20,000", status: "Active",  statusColor: Theme.Colors.primary)
-            ]
+    private func historyRowButton(_ entry: BorrowerLoanHistoryEntry) -> some View {
+        Button {
+            applicationsVM.selectApplication(applicationID: entry.id)
+        } label: {
+            historyRow(entry)
         }
-        return []
+        .buttonStyle(.plain)
     }
 
-    private func sampleOtherBankLoans(for app: LoanApplication) -> [BorrowerLoanHistoryEntry] {
-        if app.borrower.name.contains("Kumar") || app.id.hasSuffix("12") {
-            return [
-                BorrowerLoanHistoryEntry(loanType: "Home Loan",     institution: "HDFC Bank",  amount: "₹28,00,000", status: "Active",  statusColor: Theme.Colors.warning),
-                BorrowerLoanHistoryEntry(loanType: "Credit Card",   institution: "ICICI Bank", amount: "₹50,000",    status: "Overdue", statusColor: Theme.Colors.critical)
-            ]
-        } else if app.borrower.name.contains("Anjali") {
-            return [
-                BorrowerLoanHistoryEntry(loanType: "Education Loan", institution: "SBI",       amount: "₹4,00,000",  status: "Closed", statusColor: Theme.Colors.success)
-            ]
+    private func historyColor(_ style: HistoryStatusStyle) -> Color {
+        switch style {
+        case .primary: return Theme.Colors.primary
+        case .success: return Theme.Colors.success
+        case .warning: return Theme.Colors.warning
+        case .critical: return Theme.Colors.critical
+        case .neutral: return Theme.Colors.neutral
         }
-        return []
+    }
+
+    private var borrowerHistoryListSheet: some View {
+        NavigationStack {
+            List(borrowerHistoryEntries) { entry in
+                Button {
+                    showBorrowerHistorySheet = false
+                    applicationsVM.selectApplication(applicationID: entry.id)
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(entry.loanType)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.primary)
+                            Text(entry.institution)
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text(entry.amount)
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                            Text(entry.status)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(historyColor(entry.statusStyle))
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+            .navigationTitle("Previous Applications")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Close") { showBorrowerHistorySheet = false }
+                }
+            }
+        }
     }
 
     // MARK: - Documents
@@ -1313,13 +1362,31 @@ struct ManagerApprovalsView: View {
                 
                 Text("Explain why this application is being rejected.")
                     .font(Theme.Typography.subheadline).foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
                 
-                TextEditor(text: $applicationsVM.rejectionRemarksText)
-                    .padding(12)
-                    .background(ManagerTheme.Colors.surface(colorScheme))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1))
-                    .frame(height: 180).padding(.horizontal)
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Reason")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                    TextEditor(text: $applicationsVM.rejectionRemarksText)
+                        .padding(12)
+                        .frame(height: 180)
+                        .scrollContentBackground(.hidden)
+                        .background(ManagerTheme.Colors.surface(colorScheme))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(ManagerTheme.Colors.border(colorScheme), lineWidth: 1))
+                    HStack {
+                        Text("This reason is sent to the backend and saved in internal remarks.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text("\(applicationsVM.rejectionRemarksText.trimmingCharacters(in: .whitespacesAndNewlines).count) chars")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .padding(.horizontal)
                 
                 Button { applicationsVM.confirmRejectWithRemarks() } label: {
                     Text("Confirm Rejection").font(.headline).foregroundColor(.white)
@@ -1424,7 +1491,17 @@ struct ManagerApprovalsView: View {
                         Divider()
 
                         // ── Officer list ────────────────────────────────
-                        if applicationsVM.availableBranchOfficers.isEmpty {
+                        if applicationsVM.isLoadingBranchOfficers {
+                            VStack(spacing: 14) {
+                                ProgressView()
+                                    .progressViewStyle(.circular)
+                                Text("Loading loan officers for this branch...")
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background(ManagerTheme.Colors.background(colorScheme))
+                        } else if applicationsVM.availableBranchOfficers.isEmpty {
                             VStack(spacing: 14) {
                                 Image(systemName: "person.slash")
                                     .font(.system(size: 36, weight: .thin))

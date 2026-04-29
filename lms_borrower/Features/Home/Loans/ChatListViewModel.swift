@@ -15,6 +15,7 @@ final class ChatListViewModel: ObservableObject {
     @Published var errorMessage: String? = nil
     @Published var conversationSearchQuery: String = ""
     @Published var userSearchQuery: String = ""
+    @Published var searchQuery: String = ""
     @Published var participantNames: [String: String] = [:]
     @Published var hasMoreRooms: Bool = true
     @Published var isLoadingMoreRooms: Bool = false
@@ -92,6 +93,19 @@ final class ChatListViewModel: ObservableObject {
         loadChatRooms(reset: false)
     }
 
+    func filteredChatRooms(currentUserID: String) -> [ChatRoom] {
+        let query = conversationSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if query.isEmpty {
+            return chatRooms
+        }
+        return chatRooms.filter { room in
+            let otherID = room.otherUserID(currentUserID: currentUserID)
+            let name = participantNames[otherID]?.lowercased() ?? "user"
+            let lastMsg = room.latestMessage?.body.lowercased() ?? ""
+            return name.contains(query) || lastMsg.contains(query)
+        }
+    }
+
     private func resolveParticipantNames(for rooms: [ChatRoom]) async -> [String: String] {
         var names: [String: String] = [:]
         for room in rooms {
@@ -117,7 +131,7 @@ final class ChatListViewModel: ObservableObject {
 
     func searchEligibleUsers() {
         searchDebounceTask?.cancel()
-        let trimmedQuery = userSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedQuery = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedQuery.isEmpty else {
             eligibleUsers = []
             return

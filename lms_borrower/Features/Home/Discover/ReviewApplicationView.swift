@@ -215,6 +215,8 @@ struct ReviewApplicationView: View {
         let trimmed = accountNumber.trimmingCharacters(in: .whitespacesAndNewlines)
         guard trimmed.count > 4 else { return fallbackValue(trimmed) }
         return String(repeating: "•", count: max(trimmed.count - 4, 0)) + String(trimmed.suffix(4))
+    }
+
     private var processingFeeAmount: Double {
         guard let fee = product?.fees.first(where: { $0.type == .processing }),
               let requestedAmount = Double(currentApplication.requestedAmount),
@@ -235,6 +237,8 @@ struct ReviewApplicationView: View {
     private func fallbackValue(_ value: String) -> String {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? "Not provided" : trimmed
+    }
+
     private var totalPaymentAmount: Double {
         guard let principal = Double(currentApplication.requestedAmount),
               let rate = Double(currentApplication.offeredInterestRate) else {

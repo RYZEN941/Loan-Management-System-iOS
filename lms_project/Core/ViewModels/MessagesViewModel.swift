@@ -272,6 +272,7 @@ final class MessagesViewModel: ObservableObject {
                     roomID: roomID,
                     afterMessageID: lastSeenMessageIDByRoom[roomID]
                 ) { [weak self] event in
+                    attempt = 0 // Reset attempt on successful connection/event
                     await self?.handleStreamEvent(event, roomID: roomID)
                 }
 
@@ -347,6 +348,10 @@ final class MessagesViewModel: ObservableObject {
     }
 
     private func mapConversation(_ room: Chat_V1_ChatRoom) -> Conversation {
+        for participant in room.participants {
+            knownUsersByID[participant.userID] = participant
+        }
+
         let participantID = room.userAID == currentUserID ? room.userBID : room.userAID
         let participant = knownUsersByID[participantID]
         let latestBody = room.hasLatestMessage ? room.latestMessage.body : ""

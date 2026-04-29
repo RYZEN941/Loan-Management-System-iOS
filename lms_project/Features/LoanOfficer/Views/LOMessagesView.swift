@@ -234,7 +234,16 @@ struct LOMessagesView: View {
             Divider()
 
             // ── List ──
-            if filteredConversations.isEmpty {
+            if messagesVM.isLoading && filteredConversations.isEmpty {
+                VStack(spacing: 12) {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                    Text("Loading conversations...")
+                        .font(Theme.Typography.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if filteredConversations.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "bubble.left.and.bubble.right")
                         .font(.system(size: 32, weight: .thin))

@@ -17,8 +17,6 @@ struct RejectionTimelineStep: Identifiable {
 
 // MARK: - View Model
 class RejectionStatusViewModel: ObservableObject {
-    @Published var loanID = "APP-4011-RX"
-    
     @Published var steps: [RejectionTimelineStep] = [
         RejectionTimelineStep(title: "Application Submitted", description: "Documents received.", status: .completed),
         RejectionTimelineStep(title: "Credit Assessment", description: "Application halted during credit review.", status: .rejected),
@@ -28,6 +26,7 @@ class RejectionStatusViewModel: ObservableObject {
 
 // MARK: - Main View
 struct RejectionStatusView: View {
+    let application: BorrowerLoanApplication
     @StateObject var viewModel = RejectionStatusViewModel()
     @EnvironmentObject var router: AppRouter // 1. Added AppRouter
     
@@ -40,9 +39,9 @@ struct RejectionStatusView: View {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 50))
                         .foregroundColor(.alertRed)
-                    Text("Application Unsuccessful")
+                    Text("Application Rejected")
                         .font(.title2).bold()
-                    Text("ID: \(viewModel.loanID)")
+                    Text("ID: \(application.referenceNumber)")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -57,7 +56,7 @@ struct RejectionStatusView: View {
                     }
                     .foregroundColor(.alertRed)
                     
-                    Text("Unfortunately, your current credit score does not meet the minimum requirements for this specific loan product. We recommend improving your credit score and reapplying after 90 days.")
+                    Text(application.escalationReason.isEmpty ? "Unfortunately, your current credit score does not meet the minimum requirements for this specific loan product. We recommend improving your credit score and reapplying after 90 days." : application.escalationReason)
                         .font(.subheadline)
                         .foregroundColor(.primary)
                         .lineSpacing(4)
@@ -178,7 +177,27 @@ struct RejectionTimelineRow: View {
 
 #Preview {
     NavigationStack {
-        RejectionStatusView()
+        RejectionStatusView(application: BorrowerLoanApplication(
+            id: "test",
+            referenceNumber: "APP-4011-RX",
+            primaryBorrowerProfileId: "bp1",
+            loanProductId: "lp1",
+            loanProductName: "Personal Loan",
+            branchId: "b1",
+            branchName: "Main Branch",
+            requestedAmount: "50000",
+            tenureMonths: 12,
+            status: .rejected,
+            escalationReason: "We regret to inform you that your loan application was rejected due to insufficient credit score.",
+            offeredInterestRate: "0",
+            disbursementAccountNumber: "123456789012",
+            disbursementIfscCode: "SBIN0000456",
+            disbursementBankName: "State Bank of India",
+            disbursementAccountHolderName: "Ravi Kumar",
+            createdAt: "2023-10-01",
+            updatedAt: "2023-10-02",
+            documents: []
+        ))
             .environmentObject(AppRouter())
     }
 }

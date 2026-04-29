@@ -26,7 +26,7 @@ struct SetupTOTPView: View {
             topBar
 
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 22) {
+                VStack(alignment: .leading, spacing: 12) {
                     headerSection
                         .opacity(appeared ? 1 : 0)
                         .offset(y: appeared ? 0 : 10)
@@ -48,7 +48,7 @@ struct SetupTOTPView: View {
                             .offset(y: appeared ? 0 : 20)
                             .animation(.easeOut(duration: 0.48).delay(0.08), value: appeared)
 
-                        Divider().padding(.vertical, 8)
+                        Divider().padding(.vertical, 3)
 
                         verifySection
                             .opacity(appeared ? 1 : 0)
@@ -106,53 +106,53 @@ struct SetupTOTPView: View {
             Spacer()
         }
         .padding(.horizontal, 20)
-        .padding(.top, 12)
-        .padding(.bottom, 6)
+        .padding(.top, 10)
+        .padding(.bottom, 2)
     }
 
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 6) {
             Text("Set up authenticator")
-                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .font(.system(size: 22, weight: .bold, design: .rounded))
                 .foregroundColor(DS.textPrimary)
 
             Text("Scan this code in your authenticator app to finish securing your account.")
-                .font(.system(size: 16))
+                .font(.system(size: 14))
                 .foregroundColor(DS.textSecondary)
-                .lineSpacing(3)
+                .lineSpacing(2)
         }
     }
 
     private func qrCard(uri: String) -> some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 10) {
             if let qr = TOTPProvider.generateQRCode(from: uri) {
                 qr
                     .interpolation(.none)
                     .resizable()
                     .scaledToFit()
-                    .frame(width: 196, height: 196)
-                    .padding(14)
+                    .frame(width: 158, height: 158)
+                    .padding(12)
                     .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             } else {
                 Text("Failed to generate QR Code")
-                    .frame(width: 196, height: 196)
+                    .frame(width: 158, height: 158)
             }
 
             Text("Open Google Authenticator, 1Password, or another compatible app and scan the code.")
-                .font(.system(size: 14))
+                .font(.system(size: 13))
                 .foregroundColor(DS.textSecondary)
                 .multilineTextAlignment(.center)
-                .lineSpacing(2)
+                .lineSpacing(1)
                 .padding(.horizontal, 8)
         }
         .frame(maxWidth: .infinity)
-        .padding(22)
+        .padding(14)
         .background(.white.opacity(0.82))
         .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(.white.opacity(0.9), lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.04), radius: 14, x: 0, y: 6)

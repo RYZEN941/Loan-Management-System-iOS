@@ -57,11 +57,42 @@ struct BorrowerLoanApplication: Identifiable, Hashable {
     let requestedAmount: String           // proto: requested_amount
     let tenureMonths: Int                 // proto: tenure_months
     let status: LoanApplicationStatus     // proto: status (enum)
+    let escalationReason: String          // proto: escalation_reason
     let offeredInterestRate: String       // proto: offered_interest_rate
+    let disbursementAccountNumber: String // proto: disbursement_account_number
+    let disbursementIfscCode: String      // proto: disbursement_ifsc_code
+    let disbursementBankName: String      // proto: disbursement_bank_name
+    let disbursementAccountHolderName: String // proto: disbursement_account_holder_name
     let createdAt: String                 // proto: created_at
     let updatedAt: String                 // proto: updated_at
     // Documents attached to this application
     var documents: [BorrowerApplicationDocument]
+}
+
+extension BorrowerLoanApplication {
+    func withStatus(_ status: LoanApplicationStatus) -> BorrowerLoanApplication {
+        BorrowerLoanApplication(
+            id: id,
+            referenceNumber: referenceNumber,
+            primaryBorrowerProfileId: primaryBorrowerProfileId,
+            loanProductId: loanProductId,
+            loanProductName: loanProductName,
+            branchId: branchId,
+            branchName: branchName,
+            requestedAmount: requestedAmount,
+            tenureMonths: tenureMonths,
+            status: status,
+            escalationReason: escalationReason,
+            offeredInterestRate: offeredInterestRate,
+            disbursementAccountNumber: disbursementAccountNumber,
+            disbursementIfscCode: disbursementIfscCode,
+            disbursementBankName: disbursementBankName,
+            disbursementAccountHolderName: disbursementAccountHolderName,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            documents: documents
+        )
+    }
 }
 
 // MARK: - BorrowerApplicationDocument

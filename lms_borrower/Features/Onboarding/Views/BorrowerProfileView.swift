@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import CoreLocation
 
 @available(iOS 18.0, *)
 struct BorrowerProfileView: View {
@@ -7,6 +8,7 @@ struct BorrowerProfileView: View {
     @EnvironmentObject private var viewModel: OnboardingViewModel
     @EnvironmentObject private var session: SessionStore
 
+    @State private var showingAddressSearch = false
     @State private var firstName = ""
     @State private var lastName = ""
     @State private var dateOfBirth = Calendar.current.date(from: DateComponents(year: 1995, month: 8, day: 20)) ?? Date()
@@ -24,7 +26,7 @@ struct BorrowerProfileView: View {
         !addressLine1.trimmed.isEmpty &&
         !city.trimmed.isEmpty &&
         !stateField.trimmed.isEmpty &&
-        pincode.trimmed.count == 6 &&
+        !pincode.trimmed.isEmpty &&
         (Decimal(string: monthlyIncome.trimmed) ?? 0) > 0
     }
 
@@ -61,24 +63,45 @@ struct BorrowerProfileView: View {
             }
 
             Section {
+                Button(action: { showingAddressSearch = true }) {
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                        Text("Search for an address...")
+                    }
+                    .foregroundColor(DS.primary)
+                }
+
                 TextField("Address line 1", text: $addressLine1, axis: .vertical)
                     .textContentType(.streetAddressLine1)
                     .textInputAutocapitalization(.words)
                     .lineLimit(1...3)
 
                 TextField("City", text: $city)
-                    .textContentType(.addressCity)
-                    .textInputAutocapitalization(.words)
+                    .disabled(true)
+                    .foregroundStyle(.secondary)
 
                 TextField("State", text: $stateField)
-                    .textContentType(.addressState)
-                    .textInputAutocapitalization(.words)
+                    .disabled(true)
+                    .foregroundStyle(.secondary)
 
-                TextField("Pincode", text: $pincode)
+                TextField("Pincode/Zipcode", text: $pincode)
                     .textContentType(.postalCode)
                     .keyboardType(.numberPad)
-                    .onChange(of: pincode) { _, value in
-                        pincode = String(value.filter(\.isNumber).prefix(6))
+                    .onChange(of: pincode) { _, newValue in
+                        let cleaned = newValue.filter(\.isNumber)
+                        if cleaned.count == 6 {
+                            let geocoder = CLGeocoder()
+                            geocoder.geocodeAddressString(cleaned) { placemarks, _ in
+                                if let place = placemarks?.first {
+                                    if let fetchedCity = place.locality ?? place.subAdministrativeArea {
+                                        self.city = fetchedCity
+                                    }
+                                    if let fetchedState = place.administrativeArea {
+                                        self.stateField = fetchedState
+                                    }
+                                }
+                            }
+                        }
                     }
             } header: {
                 Text("Current address")
@@ -119,6 +142,13 @@ struct BorrowerProfileView: View {
         }
         .safeAreaInset(edge: .bottom) {
             bottomBar
+        }
+        .sheet(isPresented: $showingAddressSearch) {
+            AddressSearchView { selectedCity, selectedState, selectedPincode in
+                if !selectedCity.isEmpty { self.city = selectedCity }
+                if !selectedState.isEmpty { self.stateField = selectedState }
+                if !selectedPincode.isEmpty { self.pincode = selectedPincode }
+            }
         }
     }
 
@@ -167,6 +197,7 @@ struct BorrowerProfileView: View {
                 viewModel.dateOfBirth = formatter.string(from: dateOfBirth)
 
                 Task {
+
                     if await viewModel.submitBorrowerProfile() {
                         if let accessToken = viewModel.newAccessToken,
                            let refreshToken = viewModel.newRefreshToken,

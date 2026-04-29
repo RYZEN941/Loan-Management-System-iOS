@@ -37,14 +37,14 @@ public final class LoginViewModel: ObservableObject {
     @MainActor
     init(
         authRepository: AuthRepository? = nil,
-        sessionManager: SessionManager = .shared,
-        passkeyManager: PasskeyManager = .shared,
-        quickLoginPreferencesStore: QuickLoginPreferencesStore = .shared
+        sessionManager: SessionManager? = nil,
+        passkeyManager: PasskeyManager? = nil,
+        quickLoginPreferencesStore: QuickLoginPreferencesStore? = nil
     ) {
         self.authRepository = authRepository ?? AuthRepository()
-        self.sessionManager = sessionManager
-        self.passkeyManager = passkeyManager
-        self.quickLoginPreferencesStore = quickLoginPreferencesStore
+        self.sessionManager = sessionManager ?? .shared
+        self.passkeyManager = passkeyManager ?? .shared
+        self.quickLoginPreferencesStore = quickLoginPreferencesStore ?? .shared
     }
 
     /// Step 1: Submit identifier and password. Returns `true` if MFA is required (will push next screen).

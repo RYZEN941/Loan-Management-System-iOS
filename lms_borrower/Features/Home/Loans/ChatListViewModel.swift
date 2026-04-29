@@ -13,7 +13,8 @@ final class ChatListViewModel: ObservableObject {
     @Published var eligibleUsers: [ChatUser] = []
     @Published var isLoading: Bool = false
     @Published var errorMessage: String? = nil
-    @Published var searchQuery: String = ""
+    @Published var conversationSearchQuery: String = ""
+    @Published var userSearchQuery: String = ""
     @Published var participantNames: [String: String] = [:]
     @Published var hasMoreRooms: Bool = true
     @Published var isLoadingMoreRooms: Bool = false
@@ -116,7 +117,8 @@ final class ChatListViewModel: ObservableObject {
 
     func searchEligibleUsers() {
         searchDebounceTask?.cancel()
-        guard !searchQuery.isEmpty else {
+        let trimmedQuery = userSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedQuery.isEmpty else {
             eligibleUsers = []
             return
         }
@@ -127,7 +129,7 @@ final class ChatListViewModel: ObservableObject {
             do {
                 print("DEBUG: [ChatListVM] Searching users with query: \(searchQuery)")
                 let users = try await chatService.listEligibleUsers(
-                    query: searchQuery,
+                    query: trimmedQuery,
                     limit: 20,
                     offset: 0
                 )

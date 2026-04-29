@@ -31,7 +31,7 @@ enum NotificationType {
     }
 }
 
-struct NotificationsView: View {
+struct AppNotificationsView: View {
     @State var notifications: [SystemNotification] = [
         SystemNotification(title: "EMI Due Soon", message: "Your next EMI of ₹14,200 is due in 6 days. Keep your account funded to avoid late fees.", time: "2 hours ago", isUnread: true, type: .alert),
         SystemNotification(title: "Statement Ready", message: "Your account statement for March 2026 is now available for download.", time: "1 day ago", isUnread: true, type: .general),
@@ -113,8 +113,8 @@ struct NotificationsView: View {
     }
 }
 
-struct NotificationsView_Previews: PreviewProvider {
+struct AppNotificationsView_Previews: PreviewProvider {
     static var previews: some View {
-        NotificationsView()
+        AppNotificationsView()
     }
 }

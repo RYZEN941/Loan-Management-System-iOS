@@ -9,7 +9,7 @@ struct LoanMarketplaceView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Loan Marketplace")
+                    Text("Apply for Loan")
                         .font(.largeTitle).bold()
                     Text("Find the right loan product from live backend data.")
                         .font(.subheadline)
@@ -173,6 +173,41 @@ struct LoanDetailScreen: View {
         return String(format: "%.2f%%", rate)
     }
 
+    private var processingFeeText: String {
+        guard let fee = loan.fees.first(where: { $0.type == .processing }) else {
+            return "N/A"
+        }
+        
+        switch fee.calcMethod {
+        case .flat:
+            return formatCurrency(fee.value)
+        case .percentage:
+            return "\(fee.value)%"
+        default:
+            return "N/A"
+        }
+    }
+
+    private var eligibilityTitle: String {
+        loan.isActive ? "Eligible" : "Not Eligible"
+    }
+
+    private var eligibilityIcon: String {
+        loan.isActive ? "checkmark.shield.fill" : "xmark.shield.fill"
+    }
+
+    private var eligibilityBackground: Color {
+        loan.isActive ? Color(hex: "#00C48C").opacity(0.14) : DS.danger.opacity(0.12)
+    }
+
+    private var eligibilityForeground: Color {
+        loan.isActive ? Color(hex: "#00A86B") : DS.danger
+    }
+
+    private var primaryCTAButtonTitle: String {
+        loan.name == "Home" ? "Ask Query" : "Apply Now"
+    }
+
     var body: some View {
         ZStack(alignment: .bottom) {
             ScrollView {
@@ -190,10 +225,12 @@ struct LoanDetailScreen: View {
                         Text(loan.name)
                             .font(.title).bold()
 
-                        HStack(spacing: 24) {
+                        HStack(spacing: 12) {
                             DetailHighlight(title: "Max Amount", value: maxAmountText)
                             DetailHighlight(title: "Interest", value: "From \(rateText)")
+                            DetailHighlight(title: "Proc. Fee", value: processingFeeText)
                         }
+                        .padding(.horizontal, 20)
                     }
                     .padding(.top, 20)
 
@@ -213,20 +250,16 @@ struct LoanDetailScreen: View {
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
 
-                        Button {
-                            router.push(.eligibilityChecker(loan))
-                        } label: {
-                            HStack {
-                                Image(systemName: "checkmark.shield")
-                                Text("Check Eligibility")
-                            }
-                            .font(.subheadline).bold()
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(DS.primary)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        HStack(spacing: 8) {
+                            Image(systemName: eligibilityIcon)
+                            Text(eligibilityTitle)
                         }
+                        .font(.subheadline).bold()
+                        .foregroundColor(eligibilityForeground)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(eligibilityBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                     .padding(.horizontal, 20)
 
@@ -249,7 +282,7 @@ struct LoanDetailScreen: View {
                 Button {
                     router.push(.startApplication(loan))
                 } label: {
-                    Text("Apply Now")
+                    Text(primaryCTAButtonTitle)
                         .font(.headline)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -287,7 +320,10 @@ struct DetailHighlight: View {
             Text(value)
                 .font(.headline)
                 .foregroundColor(.mainBlue)
+                .minimumScaleFactor(0.8)
+                .lineLimit(1)
         }
+        .frame(maxWidth: .infinity)
         .padding(12)
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 12))

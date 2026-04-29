@@ -29,10 +29,10 @@ struct IncomeDetailsView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
 
-            if viewModel.hasUploadedIncomeDocument {
-                Label("Uploaded to backend", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(DS.primary)
-            }
+//            if viewModel.hasUploadedIncomeDocument {
+//                Label("Uploaded to backend", systemImage: "checkmark.circle.fill")
+//                    .foregroundStyle(DS.primary)
+//            }
 
             Spacer()
 

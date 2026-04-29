@@ -21,7 +21,11 @@ protocol LoanServiceProtocol {
         loanProductId: String,
         branchId: String,
         requestedAmount: String,
-        tenureMonths: Int
+        tenureMonths: Int,
+        disbursementAccountNumber: String,
+        disbursementIfscCode: String,
+        disbursementBankName: String,
+        disbursementAccountHolderName: String
     ) async throws -> BorrowerLoanApplication
 
     // Used by: Borrower (Track screen detail)
@@ -31,6 +35,13 @@ protocol LoanServiceProtocol {
     // Used by: Borrower (Track screen list)
     // Backend: LoanService.ListLoanApplications (loan.proto line 19)
     func listLoanApplications(limit: Int, offset: Int) async throws -> [BorrowerLoanApplication]
+
+    // Backend: LoanService.UpdateLoanApplicationStatus
+    func updateLoanApplicationStatus(
+        applicationId: String,
+        status: LoanApplicationStatus,
+        escalationReason: String?
+    ) async throws
 
     // MARK: - Documents
     // Backend: LoanService.AddApplicationDocument (loan.proto line 27)
@@ -43,6 +54,9 @@ protocol LoanServiceProtocol {
     ) async throws -> BorrowerApplicationDocument
 
     // MARK: - Active Loan (Post-Disbursement)
+    // Backend: LoanService.CreateLoan
+    func createLoan(applicationId: String, principalAmount: String) async throws -> ActiveLoan
+
     // Backend: LoanService.GetLoan (loan.proto line 32)
     // Either loan_id or application_id can be passed
     func getLoan(loanId: String?, applicationId: String?) async throws -> ActiveLoan
@@ -55,6 +69,20 @@ protocol LoanServiceProtocol {
     func listEmiSchedule(loanId: String) async throws -> [EmiScheduleItem]
 
     // MARK: - Payments
+    // Backend: LoanService.InitiatePayment
+    func initiatePayment(
+        loanId: String,
+        emiScheduleId: String,
+        amount: String
+    ) async throws -> RazorpayPaymentOrder
+
+    // Backend: LoanService.VerifyPayment
+    func verifyPayment(
+        razorpayOrderId: String,
+        razorpayPaymentId: String,
+        razorpaySignature: String
+    ) async throws -> RazorpayPaymentVerificationResult
+
     // Backend: LoanService.ListPayments (loan.proto line 37)
     func listPayments(loanId: String) async throws -> [LoanPayment]
 
@@ -66,4 +94,10 @@ protocol LoanServiceProtocol {
         amount: String,
         externalTransactionId: String
     ) async throws -> LoanPayment
+
+    // MARK: - Loan Lifecycle (Borrower)
+    // Backend: LoanService.RescheduleLoan (loan.proto line 74) — Manager/admin only.
+    // Borrower-side: used to compute foreclosure quote via current outstanding.
+    // To initiate foreclosure the app calls UpdateLoanApplicationStatus(.cancelled).
+    func rescheduleLoan(loanId: String, newTenureMonths: Int) async throws -> ActiveLoan
 }

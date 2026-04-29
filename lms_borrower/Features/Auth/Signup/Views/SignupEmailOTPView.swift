@@ -123,7 +123,7 @@ struct SignupEmailOTPView: View {
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(DS.textSecondary)
 
-            OTPBoxRow(otp: $otp, focused: $focused)
+            OTPBoxRow(otp: $otp, focused: $focused, isSecure: true)
 
             Button {
                 guard timeRemaining == 0 else { return }

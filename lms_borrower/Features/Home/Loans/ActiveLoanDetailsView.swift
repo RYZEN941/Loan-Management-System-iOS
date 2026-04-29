@@ -95,12 +95,22 @@ struct ActiveLoanDetailsView: View {
     }
 
     private var actionGrid: some View {
-        HStack(spacing: 16) {
-            LoanActionTile(icon: "chart.bar.doc.horizontal", title: "Amortisation\nSchedule") {
-                router.push(.amortisationSchedule)
+        VStack(spacing: 16) {
+            HStack(spacing: 16) {
+                LoanActionTile(icon: "chart.bar.doc.horizontal", title: "Amortisation\nSchedule") {
+                    router.push(.amortisationSchedule(loanId: viewModel.activeLoan?.id))
+                }
+                LoanActionTile(icon: "indianrupeesign.circle", title: "Outstanding\nBreakdown") {
+                    if let loan = viewModel.activeLoan {
+                        router.push(.outstandingBalance(loanId: loan.id, applicationId: loan.applicationId))
+                    }
+                }
             }
-            LoanActionTile(icon: "indianrupeesign.circle", title: "Outstanding\nBreakdown") {
-                router.push(.outstandingBalance)
+            // Foreclosure tile — full width, danger accent
+            if let loan = viewModel.activeLoan {
+                ForeClosureTile {
+                    router.push(.outstandingBalance(loanId: loan.id, applicationId: loan.applicationId))
+                }
             }
         }
         .padding(.horizontal, 20)
@@ -213,6 +223,48 @@ struct LoanActionTile: View {
             .background(Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+        }
+    }
+}
+
+// MARK: - Foreclosure Tile
+struct ForeClosureTile: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: "lock.open.trianglebadge.exclamationmark.fill")
+                    .font(.title2)
+                    .foregroundColor(DS.danger)
+                    .padding(12)
+                    .background(DS.danger.opacity(0.10))
+                    .clipShape(Circle())
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Foreclose Loan")
+                        .font(.subheadline).bold()
+                        .foregroundColor(DS.danger)
+                    Text("View settlement quote & initiate early closure")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(DS.danger.opacity(0.6))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(DS.danger.opacity(0.25), lineWidth: 1)
+            )
+            .shadow(color: DS.danger.opacity(0.08), radius: 8, x: 0, y: 3)
         }
     }
 }

@@ -52,6 +52,12 @@ public protocol OnboardingGRPCClientProtocol: Sendable {
         metadata: Metadata,
         options: CallOptions
     ) async throws -> Onboarding_V1_CompleteBorrowerOnboardingResponse
+
+    func updateBorrowerProfile(
+        request: Onboarding_V1_UpdateBorrowerProfileRequest,
+        metadata: Metadata,
+        options: CallOptions
+    ) async throws -> Onboarding_V1_UpdateBorrowerProfileResponse
 }
 
 // MARK: - OnboardingGRPCClient
@@ -89,6 +95,21 @@ public final class OnboardingGRPCClient: OnboardingGRPCClientProtocol {
                 resp.success = true
                 return resp
             }
+            throw OnboardingError.from(error)
+        }
+    }
+
+    public func updateBorrowerProfile(
+        request: Onboarding_V1_UpdateBorrowerProfileRequest,
+        metadata: Metadata,
+        options: CallOptions
+    ) async throws -> Onboarding_V1_UpdateBorrowerProfileResponse {
+        do {
+            return try await client.updateBorrowerProfile(
+                request: .init(message: request, metadata: metadata),
+                options: options
+            )
+        } catch {
             throw OnboardingError.from(error)
         }
     }

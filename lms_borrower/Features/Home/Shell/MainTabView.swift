@@ -43,7 +43,7 @@ struct MainTabView: View {
                         handleRouting(for: route).environmentObject(discoveryRouter)
                     }
             }
-            .tabItem { Image(systemName: "magnifyingglass"); Text("Discover") }
+            .tabItem { Image(systemName: "plus.circle.fill"); Text("Apply") }
             .tag(1)
             
             // TAB 3: TRACK
@@ -84,11 +84,11 @@ struct MainTabView: View {
         case .submitConfirmation(let application): SubmitConfirmationView(application: application)
         case .draftApplications: DraftApplicationsView()
         case .detailedTracking(let application): ApplicationTrackingView(application: application)
-        case .rejectionReason: RejectionStatusView()
+        case .rejectionReason(let application): RejectionStatusView(application: application)
         case .emiCalculator: EMICalculatorView()
         case .activeLoanDetails(let application): ActiveLoanDetailsView(application: application)
-        case .amortisationSchedule: AmortisationScheduleView()
-        case .outstandingBalance: OutstandingBalanceView()
+        case .amortisationSchedule(let loanId): AmortisationScheduleView(loanId: loanId)
+        case .outstandingBalance(let loanId, let applicationId): OutstandingBalanceView(loanId: loanId, applicationId: applicationId)
         case .repaymentDashboard(let applicationId): RepaymentDashboardView(applicationId: applicationId)
         case .repaymentsList(let loanId, let tab): RepaymentsListView(loanId: loanId, selectedTab: tab)
         case .overdueDetails(let loanId): OverdueDetailsView(loanId: loanId)
@@ -110,7 +110,7 @@ struct MainTabView: View {
         case .languageSelection: LanguageSelectionView()
         case .accessibilitySettings: AccessibilitySettingsView()
         case .statementDownload: StatementDownloadView()
-        case .notifications: NotificationsView()
+        case .notifications: AppNotificationsView()
         case .autoPaySetup: AutoPaySetupView() // NEW: AutoPay Route
         }
     }

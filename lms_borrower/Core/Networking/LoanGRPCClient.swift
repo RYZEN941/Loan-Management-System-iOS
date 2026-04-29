@@ -116,7 +116,11 @@ final class LoanGRPCClient: LoanServiceProtocol {
         loanProductId: String,
         branchId: String,
         requestedAmount: String,
-        tenureMonths: Int
+        tenureMonths: Int,
+        disbursementAccountNumber: String,
+        disbursementIfscCode: String,
+        disbursementBankName: String,
+        disbursementAccountHolderName: String
     ) async throws -> BorrowerLoanApplication {
         var request = Loan_V1_CreateLoanApplicationRequest()
         request.primaryBorrowerProfileID = primaryBorrowerProfileId
@@ -125,6 +129,10 @@ final class LoanGRPCClient: LoanServiceProtocol {
         request.requestedAmount = requestedAmount
         request.tenureMonths = Int32(tenureMonths)
         request.status = .submitted
+        request.disbursementAccountNumber = disbursementAccountNumber
+        request.disbursementIfscCode = disbursementIfscCode
+        request.disbursementBankName = disbursementBankName
+        request.disbursementAccountHolderName = disbursementAccountHolderName
 
         do {
             let (options, metadata) = try authContext()
@@ -171,6 +179,29 @@ final class LoanGRPCClient: LoanServiceProtocol {
         }
     }
 
+    func updateLoanApplicationStatus(
+        applicationId: String,
+        status: LoanApplicationStatus,
+        escalationReason: String?
+    ) async throws {
+        var request = Loan_V1_UpdateLoanApplicationStatusRequest()
+        request.applicationID = applicationId
+        request.status = status.proto
+        if let escalationReason, !escalationReason.isEmpty {
+            request.escalationReason = escalationReason
+        }
+
+        do {
+            let (options, metadata) = try authContext()
+            _ = try await client.updateLoanApplicationStatus(
+                request: .init(message: request, metadata: metadata),
+                options: options
+            )
+        } catch {
+            throw LoanError.from(error)
+        }
+    }
+
     func addApplicationDocument(
         applicationId: String,
         borrowerProfileId: String,
@@ -191,6 +222,24 @@ final class LoanGRPCClient: LoanServiceProtocol {
                 options: options
             )
             return BorrowerApplicationDocument.from(proto: response.document)
+        } catch {
+            throw LoanError.from(error)
+        }
+    }
+
+    func createLoan(applicationId: String, principalAmount: String) async throws -> ActiveLoan {
+        var request = Loan_V1_CreateLoanRequest()
+        request.applicationID = applicationId
+        request.principalAmount = principalAmount
+        request.status = .active
+
+        do {
+            let (options, metadata) = try authContext()
+            let response = try await client.createLoan(
+                request: .init(message: request, metadata: metadata),
+                options: options
+            )
+            return ActiveLoan.from(proto: response.loan)
         } catch {
             throw LoanError.from(error)
         }
@@ -266,6 +315,57 @@ final class LoanGRPCClient: LoanServiceProtocol {
         }
     }
 
+    func initiatePayment(
+        loanId: String,
+        emiScheduleId: String,
+        amount: String
+    ) async throws -> RazorpayPaymentOrder {
+        var request = Loan_V1_InitiatePaymentRequest()
+        request.loanID = loanId
+        request.emiScheduleID = emiScheduleId
+        request.amount = amount
+
+        do {
+            let (options, metadata) = try authContext()
+            let response = try await client.initiatePayment(
+                request: .init(message: request, metadata: metadata),
+                options: options
+            )
+            return RazorpayPaymentOrder(
+                loanId: loanId,
+                emiScheduleId: emiScheduleId,
+                orderId: response.razorpayOrderID,
+                amount: response.amount,
+                currency: response.currency
+            )
+        } catch {
+            throw LoanError.from(error)
+        }
+    }
+
+    func verifyPayment(
+        razorpayOrderId: String,
+        razorpayPaymentId: String,
+        razorpaySignature: String
+    ) async throws -> RazorpayPaymentVerificationResult {
+        var request = Loan_V1_VerifyPaymentRequest()
+        request.razorpayOrderID = razorpayOrderId
+        request.razorpayPaymentID = razorpayPaymentId
+        request.razorpaySignature = razorpaySignature
+
+        do {
+            let (options, metadata) = try authContext()
+            let response = try await client.verifyPayment(
+                request: .init(message: request, metadata: metadata),
+                options: options
+            )
+            let payment = response.hasPayment ? LoanPayment.from(proto: response.payment) : nil
+            return RazorpayPaymentVerificationResult(success: response.success, payment: payment)
+        } catch {
+            throw LoanError.from(error)
+        }
+    }
+
     func recordPayment(
         loanId: String,
         emiScheduleId: String,
@@ -286,6 +386,23 @@ final class LoanGRPCClient: LoanServiceProtocol {
                 options: options
             )
             return LoanPayment.from(proto: response.payment)
+        } catch {
+            throw LoanError.from(error)
+        }
+    }
+
+    func rescheduleLoan(loanId: String, newTenureMonths: Int) async throws -> ActiveLoan {
+        var request = Loan_V1_RescheduleLoanRequest()
+        request.loanID = loanId
+        request.newTenureMonths = Int32(newTenureMonths)
+
+        do {
+            let (options, metadata) = try authContext()
+            let response = try await client.rescheduleLoan(
+                request: .init(message: request, metadata: metadata),
+                options: options
+            )
+            return ActiveLoan.from(proto: response.loan)
         } catch {
             throw LoanError.from(error)
         }

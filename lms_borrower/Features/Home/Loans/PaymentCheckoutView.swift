@@ -1,53 +1,16 @@
 import SwiftUI
 import Combine
 
-// MARK: - Payment ViewModel
-
-@MainActor
-@available(iOS 18.0, *)
-final class PaymentViewModel: ObservableObject {
-    @Published var isProcessing: Bool = false
-    @Published var errorMessage: String? = nil
-    @Published var completedPayment: LoanPayment? = nil
-
-    private let service: LoanServiceProtocol
-
-    init(service: LoanServiceProtocol = ServiceContainer.loanService) {
-        self.service = service
-    }
-
-    func recordPayment(loanId: String, emiScheduleId: String, amount: Double) async -> LoanPayment? {
-        isProcessing = true
-        errorMessage = nil
-        let externalTxnId = "TXN-\(UUID().uuidString.prefix(8).uppercased())"
-        do {
-            let payment = try await service.recordPayment(
-                loanId: loanId,
-                emiScheduleId: emiScheduleId,
-                amount: String(format: "%.0f", amount),
-                externalTransactionId: externalTxnId
-            )
-            completedPayment = payment
-            isProcessing = false
-            return payment
-        } catch {
-            errorMessage = (error as? LocalizedError)?.errorDescription ?? "Payment failed. Please try again."
-            isProcessing = false
-            return nil
-        }
-    }
-}
-
-// MARK: - Payment Checkout View
-
 @available(iOS 18.0, *)
 struct PaymentCheckoutView: View {
     let loanId: String
     let emiScheduleId: String
     let amount: Double
     @EnvironmentObject var router: AppRouter
-    @StateObject private var viewModel = PaymentViewModel()
+    @EnvironmentObject private var session: SessionStore
+    @StateObject private var viewModel = RazorpayPaymentViewModel()
     @State private var selectedMethod: String = "Google Pay"
+    @State private var showRazorpayCheckout = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -65,9 +28,11 @@ struct PaymentCheckoutView: View {
                     }
                     .padding(.top, 30)
 
+                    orderStatusCard
+
                     // Payment Method Selection
                     VStack(alignment: .leading, spacing: 16) {
-                        Text("UPI")
+                        Text("Preferred Method")
                             .font(.headline)
                             .padding(.horizontal, 20)
 
@@ -97,6 +62,8 @@ struct PaymentCheckoutView: View {
                         .padding(.horizontal, 20)
                     }
 
+                    launchInstructionsSection
+
                     Spacer().frame(height: 100)
                 }
             }
@@ -112,32 +79,24 @@ struct PaymentCheckoutView: View {
                         .padding(.horizontal, 20)
                 }
                 Button {
-                    Task {
-                        if let payment = await viewModel.recordPayment(
-                            loanId: loanId,
-                            emiScheduleId: emiScheduleId,
-                            amount: amount
-                        ) {
-                            router.push(.paymentSuccess(transactionID: payment.externalTransactionId))
-                        }
-                    }
+                    showRazorpayCheckout = true
                 } label: {
                     HStack {
-                        if viewModel.isProcessing {
+                        if viewModel.isBusy {
                             ProgressView()
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 .padding(.trailing, 8)
                         }
-                        Text(viewModel.isProcessing ? "Processing…" : "Proceed to Pay")
+                        Text(viewModel.isPreparingOrder ? "Preparing…" : "Open Razorpay")
                             .font(.headline)
                             .foregroundColor(.white)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
-                    .background(viewModel.isProcessing ? Color.secondary : DS.primary)
+                    .background(canLaunchCheckout ? DS.primary : Color.secondary)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
-                .disabled(viewModel.isProcessing)
+                .disabled(!canLaunchCheckout)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 10)
                 .background(Color(UIColor.systemGroupedBackground))
@@ -146,6 +105,178 @@ struct PaymentCheckoutView: View {
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationTitle("Checkout")
         .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await viewModel.prepareCheckout(
+                loanId: loanId,
+                emiScheduleId: emiScheduleId,
+                amount: amount
+            )
+        }
+        .sheet(isPresented: $showRazorpayCheckout) {
+            if let checkoutRequest = checkoutRequest {
+                RazorpayCheckoutWebView(
+                    request: checkoutRequest,
+                    onSuccess: { result in
+                        showRazorpayCheckout = false
+                        Task {
+                            if let payment = await viewModel.verifyPayment(
+                                razorpayPaymentId: result.paymentID,
+                                razorpaySignature: result.signature
+                            ) {
+                                router.push(.paymentSuccess(transactionID: payment.externalTransactionId))
+                            }
+                        }
+                    },
+                    onFailure: { message in
+                        showRazorpayCheckout = false
+                        viewModel.setCheckoutError(message)
+                    },
+                    onDismiss: {
+                        showRazorpayCheckout = false
+                    }
+                )
+                .ignoresSafeArea()
+            } else {
+                Color.clear
+            }
+        }
+    }
+
+    private var canLaunchCheckout: Bool {
+        viewModel.paymentOrder != nil &&
+        !viewModel.isBusy
+    }
+
+    private var checkoutRequest: RazorpayCheckoutRequest? {
+        guard let order = viewModel.paymentOrder else { return nil }
+
+        let name = session.userName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let email = session.userEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+        let contact = session.userPhone.trimmingCharacters(in: .whitespacesAndNewlines)
+        let amountInPaise = Int(((Double(order.amount) ?? amount) * 100).rounded())
+
+        return RazorpayCheckoutRequest(
+            keyID: RazorpayCheckoutConfig.keyID,
+            orderID: order.orderId,
+            amountInPaise: amountInPaise,
+            currency: order.currency,
+            name: name.isEmpty ? "Borrower" : name,
+            email: email,
+            contact: contact,
+            description: RazorpayCheckoutConfig.description
+        )
+    }
+
+    private var orderStatusCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Razorpay Order")
+                .font(.headline)
+
+            if viewModel.isPreparingOrder {
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text("Creating Razorpay order with the backend…")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            } else if let order = viewModel.paymentOrder {
+                orderDetailRow(title: "Order ID", value: order.orderId)
+                orderDetailRow(title: "Currency", value: order.currency)
+                orderDetailRow(title: "Amount", value: "₹\(order.amount)")
+                orderDetailRow(title: "Key ID", value: RazorpayCheckoutConfig.keyID)
+
+                Text("Your EMI payment order is ready. Tap the button below to open Razorpay checkout and complete the payment inside the borrower app.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button {
+                    Task {
+                        await viewModel.retryCheckout(
+                            loanId: loanId,
+                            emiScheduleId: emiScheduleId,
+                            amount: amount
+                        )
+                    }
+                } label: {
+                    Text("Regenerate Order")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.mainBlue)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(DS.primaryLight.opacity(0.5))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            } else {
+                Text("We couldn't create a Razorpay order yet. Retry to continue.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                Button {
+                    Task {
+                        await viewModel.retryCheckout(
+                            loanId: loanId,
+                            emiScheduleId: emiScheduleId,
+                            amount: amount
+                        )
+                    }
+                } label: {
+                    Text("Retry Order Creation")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(DS.primary)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+        }
+        .padding(20)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .padding(.horizontal, 20)
+    }
+
+    private var launchInstructionsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Checkout Flow")
+                .font(.headline)
+                .padding(.horizontal, 20)
+
+            VStack(alignment: .leading, spacing: 14) {
+                Text("The borrower app now opens Razorpay checkout using your live order ID and test key. Once the gateway returns the payment ID and signature, the app verifies them with the backend automatically.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text("Selected method: \(selectedMethod)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.mainBlue)
+
+                Text("If the payment service on the backend has not been deployed yet, order creation will fail before checkout opens.")
+                    .font(.footnote)
+                    .foregroundColor(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(20)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .padding(.horizontal, 20)
+        }
+    }
+
+    private func orderDetailRow(title: String, value: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.primary)
+                .frame(width: 84, alignment: .leading)
+            Text(value)
+                .font(.subheadline.monospaced())
+                .foregroundColor(.secondary)
+                .textSelection(.enabled)
+            Spacer(minLength: 0)
+        }
     }
 }
 

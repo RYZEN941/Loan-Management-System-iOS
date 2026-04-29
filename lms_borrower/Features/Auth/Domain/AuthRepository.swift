@@ -82,12 +82,27 @@ public final class AuthRepository: Sendable {
     }
 
     public struct MyProfileResult {
+        public struct BorrowerProfileDetails {
+            public let firstName: String
+            public let lastName: String
+            public let dateOfBirth: String
+            public let gender: String
+            public let addressLine1: String
+            public let city: String
+            public let state: String
+            public let pincode: String
+            public let employmentType: String
+            public let monthlyIncome: String
+        }
+
         public let fullName: String?
         public let email: String?
         public let phone: String?
         public let hasBorrowerProfile: Bool
         public let borrowerProfileId: String?
         public let cibilScore: Int?
+        public let borrowerProfile: BorrowerProfileDetails?
+        public let hasTotp: Bool
     }
 
     /// Step 1 of Login. Submits identifier/password and returns allowed MFA factors.
@@ -266,6 +281,7 @@ public final class AuthRepository: Sendable {
         var fullName: String? = nil
         var borrowerProfileId: String? = nil
         var cibilScore: Int? = nil
+        var borrowerProfile: MyProfileResult.BorrowerProfileDetails? = nil
         if case .borrowerProfile(let profile) = response.profile {
             hasBorrowerProfile = true
             let composedName = [profile.firstName, profile.lastName]
@@ -275,6 +291,18 @@ public final class AuthRepository: Sendable {
             fullName = composedName.isEmpty ? nil : composedName
             let pid = profile.profileID.trimmingCharacters(in: .whitespacesAndNewlines)
             borrowerProfileId = pid.isEmpty ? nil : pid
+            borrowerProfile = .init(
+                firstName: profile.firstName.trimmingCharacters(in: .whitespacesAndNewlines),
+                lastName: profile.lastName.trimmingCharacters(in: .whitespacesAndNewlines),
+                dateOfBirth: profile.dateOfBirth.trimmingCharacters(in: .whitespacesAndNewlines),
+                gender: profile.gender.trimmingCharacters(in: .whitespacesAndNewlines),
+                addressLine1: profile.addressLine1.trimmingCharacters(in: .whitespacesAndNewlines),
+                city: profile.city.trimmingCharacters(in: .whitespacesAndNewlines),
+                state: profile.state.trimmingCharacters(in: .whitespacesAndNewlines),
+                pincode: profile.pincode.trimmingCharacters(in: .whitespacesAndNewlines),
+                employmentType: profile.employmentType.trimmingCharacters(in: .whitespacesAndNewlines),
+                monthlyIncome: profile.monthlyIncome.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
             // Borrower app proto may lag backend schema; parse cibil_score (field 18)
             // from unknown fields so we can still surface it on the dashboard.
             cibilScore = Self.decodeInt32Field(from: profile, fieldNumber: 18)
@@ -290,7 +318,9 @@ public final class AuthRepository: Sendable {
             phone: phone.isEmpty ? nil : phone,
             hasBorrowerProfile: hasBorrowerProfile,
             borrowerProfileId: borrowerProfileId,
-            cibilScore: cibilScore
+            cibilScore: cibilScore,
+            borrowerProfile: borrowerProfile,
+            hasTotp: response.hasTotp_p
         )
     }
 

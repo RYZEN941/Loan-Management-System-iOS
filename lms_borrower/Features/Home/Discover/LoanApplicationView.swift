@@ -7,6 +7,7 @@ struct LoanApplicationView: View {
     @StateObject private var viewModel = LoanApplicationViewModel(service: ServiceContainer.loanService)
     @EnvironmentObject private var router: AppRouter
     @EnvironmentObject private var sessionStore: SessionStore
+    @State private var showDisbursementDetails = false
 
     private var minAmount: Double { max(Double(loan.minAmount) ?? 10_000, 1) }
     private var maxAmount: Double { max(Double(loan.maxAmount) ?? minAmount, minAmount) }
@@ -67,6 +68,10 @@ struct LoanApplicationView: View {
         }
         .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(isPresented: $showDisbursementDetails) {
+            DisbursementDetailsView(loan: loan, viewModel: viewModel)
+                .environmentObject(router)
+        }
         .task {
             viewModel.selectedProductId = loan.id
             // Inject the borrower profile ID from the authenticated session
@@ -260,33 +265,18 @@ struct LoanApplicationView: View {
                 Spacer()
 
                 Button {
-                    Task {
-                        guard let application = await viewModel.submitApplication() else { return }
-                        if loan.requiredDocuments.isEmpty {
-                            router.push(.reviewApplication(application))
-                        } else {
-                            router.push(.documentUpload(application))
-                        }
-                    }
+                    viewModel.submissionError = nil
+                    showDisbursementDetails = true
                 } label: {
-                    if viewModel.isSubmitting {
-                        ProgressView()
-                            .tint(.white)
-                            .padding(.horizontal, 32)
-                            .padding(.vertical, 14)
-                            .background(DS.primary)
-                            .clipShape(Capsule())
-                    } else {
-                        Text("Create Application")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 32)
-                            .padding(.vertical, 14)
-                            .background(DS.primary)
-                            .clipShape(Capsule())
-                    }
+                    Text("Continue")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 32)
+                        .padding(.vertical, 14)
+                        .background(DS.primary)
+                        .clipShape(Capsule())
                 }
-                .disabled(!viewModel.canSubmit())
+                .disabled(!viewModel.canProceedToDisbursementDetails())
             }
             .padding(.horizontal, 24)
             .padding(.top, 8)
@@ -321,6 +311,194 @@ private extension View {
             .background(tint)
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 2)
+    }
+}
+
+@available(iOS 18.0, *)
+private struct DisbursementDetailsView: View {
+    let loan: LoanProduct
+    @ObservedObject var viewModel: LoanApplicationViewModel
+
+    @EnvironmentObject private var router: AppRouter
+    @FocusState private var focusedField: Field?
+
+    private enum Field {
+        case accountHolderName
+        case bankName
+        case accountNumber
+        case ifscCode
+    }
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    headerSection
+                    creditDetailsSection
+                    securityNoteSection
+
+                    if let error = viewModel.submissionError {
+                        Text(error)
+                            .font(.footnote)
+                            .foregroundColor(.red)
+                            .padding(16)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.red.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+                .padding(.bottom, 120)
+            }
+
+            footerSection
+        }
+        .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+        .navigationTitle("Credit Details")
+        .navigationBarTitleDisplayMode(.inline)
+        .textInputAutocapitalization(.words)
+        .onAppear {
+            if viewModel.disbursementAccountHolderName.isEmpty {
+                viewModel.disbursementAccountHolderName = ""
+            }
+        }
+    }
+
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Where should we credit your loan?")
+                .font(.largeTitle).bold()
+            Text("Add the bank account details where your \(loan.name) amount should be disbursed.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    private var creditDetailsSection: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            DisbursementInputField(
+                title: "Account Holder Name",
+                placeholder: "Enter account holder name",
+                text: $viewModel.disbursementAccountHolderName
+            )
+            .focused($focusedField, equals: .accountHolderName)
+            .submitLabel(.next)
+            .onSubmit { focusedField = .bankName }
+
+            DisbursementInputField(
+                title: "Bank Name",
+                placeholder: "Enter bank name",
+                text: $viewModel.disbursementBankName
+            )
+            .focused($focusedField, equals: .bankName)
+            .submitLabel(.next)
+            .onSubmit { focusedField = .accountNumber }
+
+            DisbursementInputField(
+                title: "Account Number",
+                placeholder: "Enter account number",
+                text: $viewModel.disbursementAccountNumber,
+                keyboardType: .numberPad
+            )
+            .focused($focusedField, equals: .accountNumber)
+            .textInputAutocapitalization(.never)
+
+            DisbursementInputField(
+                title: "IFSC Code",
+                placeholder: "Enter IFSC code",
+                text: Binding(
+                    get: { viewModel.disbursementIfscCode },
+                    set: { viewModel.disbursementIfscCode = $0.uppercased() }
+                ),
+                keyboardType: .asciiCapable
+            )
+            .focused($focusedField, equals: .ifscCode)
+            .textInputAutocapitalization(.characters)
+            .submitLabel(.done)
+            .onSubmit { focusedField = nil }
+        }
+        .cardStyle()
+    }
+
+    private var securityNoteSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "lock.shield.fill")
+                    .font(.title3)
+                    .foregroundColor(.mainBlue)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Used for disbursement only")
+                        .font(.subheadline).bold()
+                    Text("We’ll use these details to credit the sanctioned amount after approval. Please make sure the account belongs to you.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .cardStyle(tint: DS.primaryLight.opacity(0.5))
+    }
+
+    private var footerSection: some View {
+        VStack(spacing: 16) {
+            Divider()
+
+            Button {
+                focusedField = nil
+                Task {
+                    guard let application = await viewModel.submitApplication() else { return }
+                    if loan.requiredDocuments.isEmpty {
+                        router.push(.reviewApplication(application))
+                    } else {
+                        router.push(.documentUpload(application))
+                    }
+                }
+            } label: {
+                if viewModel.isSubmitting {
+                    ProgressView()
+                        .tint(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(DS.primary)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                } else {
+                    Text("Create Application")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(DS.primary)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+            }
+            .disabled(viewModel.isSubmitting)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
+            .background(Color(UIColor.systemGroupedBackground))
+        }
+    }
+}
+
+private struct DisbursementInputField: View {
+    let title: String
+    let placeholder: String
+    @Binding var text: String
+    var keyboardType: UIKeyboardType = .default
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.primary)
+
+            TextField(placeholder, text: $text)
+                .keyboardType(keyboardType)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 14)
+                .background(Color(UIColor.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
     }
 }
 

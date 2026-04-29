@@ -21,7 +21,7 @@ struct HomeDashboardView: View {
             ZStack(alignment: .top) {
                 DS.surface.ignoresSafeArea()
                 HeaderGradientBackground()
-                    .frame(height: 300 + topInset)
+                    .frame(height: 560 + topInset)
                     .ignoresSafeArea(edges: .top)
 
                 ScrollView(.vertical, showsIndicators: false) {
@@ -45,14 +45,7 @@ struct HomeDashboardView: View {
                                 .padding(.top, 18)
                             }
 
-                            if viewModel.activeLoans.isEmpty {
-                                DashboardInfoCard(
-                                    title: "No active loans yet",
-                                    message: "Once a loan is disbursed, your live balance, EMI schedule, and repayment details will appear here."
-                                )
-                                .padding(.horizontal, 20)
-                                .padding(.top, 18)
-                            } else if !viewModel.activeLoans.isEmpty {
+                            if !viewModel.activeLoans.isEmpty {
                                 // ── 2. LOAN SUMMARY CARDS (Paging Scroll) ──────
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     LazyHStack(spacing: 16) {
@@ -63,7 +56,7 @@ struct HomeDashboardView: View {
                                                 }
                                             } label: {
                                                 LoanSummaryCardView(loan: loan)
-                                                    .frame(width: UIScreen.main.bounds.width * 0.85)
+                                                    .frame(width: proxy.size.width * 0.85)
                                             }
                                             .buttonStyle(PlainButtonStyle())
                                         }
@@ -165,10 +158,11 @@ struct HeaderGradientBackground: View {
                 colors: [
                     DS.primary,
                     DS.primary,
-                    DS.primaryLight
+                    DS.primaryLight,
+                    Color(hex: "#E9EEFF")
                 ],
                 startPoint: UnitPoint(x: 0.15, y: 0.0),
-                endPoint: UnitPoint(x: 0.95, y: 0.88)
+                endPoint: UnitPoint(x: 0.95, y: 1.0)
             )
 
             RadialGradient(
@@ -206,12 +200,31 @@ struct HeaderGradientBackground: View {
             LinearGradient(
                 colors: [
                     Color.clear,
-                    DS.surface.opacity(0.35),
+                    Color.white.opacity(0.18),
+                    DS.surface.opacity(0.30),
                     DS.surface
                 ],
-                startPoint: .top,
+                startPoint: UnitPoint(x: 0.5, y: 0.45),
                 endPoint: .bottom
             )
+
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.0),
+                            Color.white.opacity(0.06),
+                            Color.white.opacity(0.18),
+                            DS.surface.opacity(0.55),
+                            DS.surface.opacity(0.96)
+                        ],
+                        startPoint: UnitPoint(x: 0.5, y: 0.08),
+                        endPoint: .bottom
+                    )
+                )
+                .blur(radius: 20)
+                .scaleEffect(x: 1.05, y: 1.18, anchor: .bottom)
+                .offset(y: 180)
         }
     }
 }
@@ -295,21 +308,23 @@ struct LoanSummaryCardView: View {
         VStack(spacing: 0) {
             HStack {
                 Text(loan.title)
-                    .font(.subheadline).bold()
+                    .font(.subheadline.weight(.bold))
                     .foregroundColor(.secondaryBlue)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 6)
-                    .background(DS.primaryLight)
+                    .background(Color.white.opacity(0.88))
                     .clipShape(Capsule())
                 Spacer()
-                Text("Manage →").font(.subheadline).foregroundColor(.mainBlue)
+                Text("Manage →")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.mainBlue)
             }
             .padding(.bottom, 18)
 
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Outstanding Balance").font(.subheadline).foregroundColor(.secondary)
-                    Text("₹\(loan.outstandingBalance, specifier: "%.0f")")
+                    Text(formatINRCurrency(loan.outstandingBalance))
                         .font(.system(size: 34, weight: .bold))
                         .foregroundColor(.mainBlue)
                         .lineLimit(1)
@@ -319,14 +334,16 @@ struct LoanSummaryCardView: View {
                 Spacer()
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("Total Loan").font(.subheadline).foregroundColor(.secondary)
-                    Text("₹\(loan.totalAmount, specifier: "%.0f")").font(.system(size: 20, weight: .bold)).foregroundColor(.primary)
+                    Text(formatINRCurrency(loan.totalAmount)).font(.system(size: 20, weight: .bold)).foregroundColor(.primary)
                 }
             }
             .padding(.bottom, 18)
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 6).fill(DS.primaryLight).frame(height: 12)
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color(hex: "#E8EEFF"))
+                        .frame(height: 12)
                     RoundedRectangle(cornerRadius: 6)
                         .fill(LinearGradient(colors: [.mainBlue, .secondaryBlue], startPoint: .leading, endPoint: .trailing))
                         .frame(width: geo.size.width * loan.repaidFraction, height: 12)
@@ -342,10 +359,23 @@ struct LoanSummaryCardView: View {
             }
         }
         .padding(22)
-        .background(.white.opacity(0.96))
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-        .overlay(RoundedRectangle(cornerRadius: 20).stroke(DS.primary.opacity(0.3), lineWidth: 1.5))
-        .shadow(color: DS.primary.opacity(0.15), radius: 15, x: 0, y: 8)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(0.98),
+                    Color(hex: "#F7F9FF")
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(Color.white.opacity(0.85), lineWidth: 1)
+        )
+        .shadow(color: Color(hex: "#AFC4FF").opacity(0.24), radius: 24, x: 0, y: 12)
+        .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 3)
     }
 }
 
@@ -374,45 +404,127 @@ struct InProgressApplicationsCard: View {
     let applications: [BorrowerLoanApplication]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 20) {
             Text("Applications In Progress")
-                .font(.headline)
-                .foregroundColor(.primary)
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundColor(DS.textPrimary)
 
-            let topItems = Array(applications.prefix(2))
-            ForEach(topItems, id: \.id) { app in
-                HStack(spacing: 10) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(app.loanProductName.isEmpty ? "Loan Application" : app.loanProductName)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(.primary)
-                        Text("Status: \(app.status.displayName)")
-                            .font(.caption)
-                            .foregroundColor(app.status.color)
+            if let app = applications.first {
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(app.loanProductName.isEmpty ? "Loan Application" : app.loanProductName)
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundColor(DS.textPrimary)
+                            
+                            Text("Status: \(BorrowerSanctionLetterSupport.statusTitle(for: app))")
+                                .font(.system(size: 14))
+                                .foregroundColor(DS.textSecondary)
+                        }
+                        
+                        Spacer()
+                        
+                        Text(formatINRCurrency(app.requestedAmount))
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(DS.primary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(DS.primary.opacity(0.08))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(DS.primary.opacity(0.24), lineWidth: 1)
+                                    .shadow(color: DS.primary.opacity(0.2), radius: 4)
+                            )
                     }
-                    Spacer()
-                    Text("₹\(app.requestedAmount)")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.mainBlue)
-                }
-                .padding(.vertical, 2)
-            }
 
-            if applications.count > 2 {
-                Text("+\(applications.count - 2) more application(s) in Track tab")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            } else {
-                Text("Track tab shows full application details.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    // Progress Tracker
+                    ApplicationStepTracker(currentStatus: app.status)
+
+                    HStack {
+                        Spacer()
+                        Text("Track tab shows full application details...")
+                            .font(.system(size: 12))
+                            .foregroundColor(DS.textSecondary.opacity(0.8))
+                    }
+                }
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(20)
-        .background(.white.opacity(0.96))
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 4)
+        .padding(24)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .shadow(color: Color.black.opacity(0.06), radius: 15, x: 0, y: 5)
+    }
+}
+
+struct ApplicationStepTracker: View {
+    let currentStatus: LoanApplicationStatus
+    
+    let steps = ["Application", "Verification", "Approval", "Sanction", "Disbursement"]
+    
+    private var currentStep: Int {
+        switch currentStatus {
+        case .draft: return 0
+        case .submitted, .underReview, .officerReview, .managerReview: return 1
+        case .approved, .officerApproved: return 2
+        case .managerApproved: return 3
+        case .disbursed: return 4
+        case .rejected, .officerRejected, .managerRejected, .cancelled: return 0 // Fallback
+        default: return 0
+        }
+    }
+
+    var body: some View {
+        GeometryReader { geometry in
+            VStack(spacing: 12) {
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(DS.border.opacity(0.5))
+                        .frame(height: 6)
+
+                    Capsule()
+                        .fill(DS.primary)
+                        .frame(width: progressWidth(for: geometry.size.width), height: 6)
+
+                    HStack(spacing: 0) {
+                        ForEach(0..<steps.count) { index in
+                            Circle()
+                                .fill(index <= currentStep ? DS.primary : .white)
+                                .frame(width: 14, height: 14)
+                                .overlay(
+                                    Circle()
+                                        .stroke(index <= currentStep ? DS.primary : DS.border, lineWidth: 2)
+                                )
+                                .frame(maxWidth: .infinity, alignment: stepAlignment(index))
+                        }
+                    }
+                }
+
+                HStack(spacing: 0) {
+                    ForEach(0..<steps.count) { index in
+                        Text(steps[index])
+                            .font(.system(size: 10, weight: index == currentStep ? .bold : .medium))
+                            .foregroundColor(index <= currentStep ? DS.textPrimary : DS.textSecondary.opacity(0.6))
+                            .frame(maxWidth: .infinity, alignment: stepAlignment(index))
+                    }
+                }
+            }
+            .padding(.horizontal, 4)
+        }
+        .frame(height: 34)
+    }
+    
+    private func progressWidth(for availableWidth: CGFloat) -> CGFloat {
+        guard steps.count > 1 else { return 0 }
+        return (availableWidth / CGFloat(steps.count - 1)) * CGFloat(currentStep)
+    }
+    
+    private func stepAlignment(_ index: Int) -> Alignment {
+        if index == 0 { return .leading }
+        if index == steps.count - 1 { return .trailing }
+        return .center
     }
 }
 
@@ -422,29 +534,41 @@ struct NextEMIBannerView: View {
     @EnvironmentObject var router: AppRouter
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Circle()
                 .fill(emi.isUrgent ? DS.danger.opacity(0.12) : DS.primary.opacity(0.10))
-                .frame(width: 44, height: 44)
+                .frame(width: 46, height: 46)
                 .overlay(Image(systemName: emi.isUrgent ? "exclamationmark.circle.fill" : "calendar.badge.clock").font(.body).foregroundColor(emi.isUrgent ? .alertRed : .mainBlue))
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Next EMI").font(.caption).foregroundColor(.secondary).lineLimit(1)
-                Text(emi.dueDate).font(.subheadline).bold().foregroundColor(emi.isUrgent ? .alertRed : .primary).lineLimit(1).minimumScaleFactor(0.8)
+                Text("Next EMI")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                Text(emi.dueDate)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(emi.isUrgent ? .alertRed : .primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .layoutPriority(2)
             
-            Spacer(minLength: 4)
-
             VStack(alignment: .trailing, spacing: 2) {
                 Text("₹\(emi.amount.formatted(.number.grouping(.automatic)))")
-                    .font(.subheadline).bold()
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundColor(.mainBlue)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .fixedSize(horizontal: true, vertical: false)
-                Text(emi.daysLeft).font(.caption2).foregroundColor(emi.isUrgent ? .alertRed : .secondary).lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                Text(emi.daysLeft)
+                    .font(.caption2)
+                    .foregroundColor(emi.isUrgent ? .alertRed : .secondary)
+                    .lineLimit(1)
             }
-            .padding(.trailing, 8)
+            .frame(width: 78, alignment: .trailing)
+            .layoutPriority(0)
+            .padding(.trailing, 2)
 
             Button {
                 router.push(.paymentCheckout(
@@ -453,15 +577,41 @@ struct NextEMIBannerView: View {
                     amount: emi.amount
                 ))
             } label: {
-                Text("Pay Now").font(.caption).bold().foregroundColor(.white).padding(.horizontal, 12).padding(.vertical, 8).background(DS.primary).clipShape(RoundedRectangle(cornerRadius: 10))
+                Text("Pay Now")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 124)
+                    .padding(.vertical, 10)
+                    .background(
+                        LinearGradient(
+                            colors: [DS.primary, .secondaryBlue],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
-            .fixedSize(horizontal: true, vertical: false)
+            .fixedSize()
         }
-        .padding(14)
-        .background(.white.opacity(0.96))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(emi.isUrgent ? DS.danger.opacity(0.4) : Color.clear, lineWidth: 1.5))
-        .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 4)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 16)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(0.98),
+                    Color(hex: "#F8FAFF")
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(emi.isUrgent ? DS.danger.opacity(0.35) : Color.white.opacity(0.9), lineWidth: 1)
+        )
+        .shadow(color: Color(hex: "#AFC4FF").opacity(0.14), radius: 18, x: 0, y: 10)
+        .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 3)
     }
 }
 
@@ -492,25 +642,36 @@ struct QuickActionItemView: View {
 
     var body: some View {
         Button {
-            if action.label == String(localized: "AutoPay") { router.push(.autoPaySetup) }
-            // repaymentDashboard & repaymentsList require a loanId/applicationId;
-            // these are provided via the loan context from the dashboard ViewModel
-            // and accessed through the @EnvironmentObject viewModel injected in the parent.
-            // For safety: these buttons rely on HomeDashboardView's viewModel.
-            // If no active loan, the destination view will show a "no loan" empty state.
-            else if action.label == String(localized: "Pay EMI") {
-                let appId = viewModel.activeLoans.first?.application?.id ?? ""
-                router.push(.repaymentDashboard(applicationId: appId))
+            switch action.kind {
+            case .autoPay:
+                router.push(.autoPaySetup)
+            case .payEMI:
+                if let nextEMI = viewModel.nextEMI {
+                    router.push(.paymentCheckout(
+                        loanId: nextEMI.loanId,
+                        emiScheduleId: nextEMI.emiScheduleId,
+                        amount: nextEMI.amount
+                    ))
+                } else if let appId = viewModel.activeLoans.first?.application?.id, !appId.isEmpty {
+                    router.push(.repaymentDashboard(applicationId: appId))
+                }
+            case .history:
+                router.push(.repaymentsList(loanId: "", initialTab: 1))
+            case .support:
+                router.push(.chatList)
+            case .schedule:
+                if let loanId = viewModel.activeLoans.first?.id, !loanId.isEmpty {
+                    router.push(.amortisationSchedule(loanId: loanId))
+                }
+            case .foreclose:
+                if let loan = viewModel.activeLoans.first, let appId = loan.application?.id, !loan.id.isEmpty {
+                    router.push(.outstandingBalance(loanId: loan.id, applicationId: appId))
+                }
+            case .statement:
+                router.push(.statementDownload)
+            case .analytics:
+                router.push(.costBreakdown)
             }
-            else if action.label == String(localized: "History") {
-                let loanId = viewModel.activeLoans.first?.id ?? ""
-                router.push(.repaymentsList(loanId: loanId, initialTab: 1))
-            }
-            else if action.label == String(localized: "Support") { router.push(.chatList) }
-            else if action.label == String(localized: "Schedule") { router.push(.amortisationSchedule) }
-            else if action.label == String(localized: "Foreclose") { router.push(.outstandingBalance) }
-            else if action.label == String(localized: "Statement") { router.push(.statementDownload) }
-            else if action.label == String(localized: "Analytics") { router.push(.costBreakdown) }
         } label: {
             VStack(spacing: 10) {
                 RoundedRectangle(cornerRadius: 16).fill(DS.primaryLight).frame(width: 64, height: 64)
@@ -639,7 +800,39 @@ struct NextEMIInfo {
     let emiScheduleId: String
     let applicationId: String
 }
-struct QuickAction: Identifiable { let id = UUID(); let icon: String; let label: String }
+enum QuickActionKind: String, Hashable {
+    case autoPay
+    case payEMI
+    case history
+    case support
+    case schedule
+    case foreclose
+    case statement
+    case analytics
+}
+
+struct QuickAction: Identifiable {
+    let kind: QuickActionKind
+    let icon: String
+    let label: String
+
+    var id: QuickActionKind { kind }
+}
+
+private func formatINRCurrency(_ amount: Double) -> String {
+    let formatter = NumberFormatter()
+    formatter.locale = Locale(identifier: "en_IN")
+    formatter.numberStyle = .currency
+    formatter.currencySymbol = "₹"
+    formatter.maximumFractionDigits = 0
+    formatter.minimumFractionDigits = 0
+    return formatter.string(from: NSNumber(value: amount)) ?? "₹\(Int(amount))"
+}
+
+private func formatINRCurrency(_ rawAmount: String) -> String {
+    guard let amount = Double(rawAmount) else { return "₹\(rawAmount)" }
+    return formatINRCurrency(amount)
+}
 
 @MainActor
 @available(iOS 18.0, *)
@@ -653,14 +846,10 @@ final class HomeDashboardViewModel: ObservableObject {
     @Published var errorMessage: String? = nil
 
     let quickActions: [QuickAction] = [
-        QuickAction(icon: "arrow.triangle.2.circlepath", label: String(localized: "AutoPay")),
-        QuickAction(icon: "indianrupeesign.circle.fill", label: String(localized: "Pay EMI")),
-        QuickAction(icon: "clock.arrow.circlepath", label: String(localized: "History")),
-        QuickAction(icon: "headset", label: String(localized: "Support")),
-        QuickAction(icon: "calendar", label: String(localized: "Schedule")),
-        QuickAction(icon: "arrow.left.arrow.right", label: String(localized: "Foreclose")),
-        QuickAction(icon: "doc.plaintext.fill", label: String(localized: "Statement")),
-        QuickAction(icon: "chart.bar.fill", label: String(localized: "Analytics"))
+        QuickAction(kind: .schedule, icon: "calendar", label: String(localized: "Schedule")),
+        QuickAction(kind: .payEMI, icon: "indianrupeesign.circle.fill", label: String(localized: "Pay EMI")),
+        QuickAction(kind: .history, icon: "clock.arrow.circlepath", label: String(localized: "History")),
+        QuickAction(kind: .analytics, icon: "chart.bar.fill", label: String(localized: "Analytics"))
     ]
 
     private let service: LoanServiceProtocol
@@ -691,17 +880,25 @@ final class HomeDashboardViewModel: ObservableObject {
             async let profileTask = authRepository.getMyProfile()
 
             let (applications, loans, profile) = try await (applicationsTask, loansTask, profileTask)
-            let applicationsById = Dictionary(uniqueKeysWithValues: applications.map { ($0.id, $0) })
             let schedules = try await loadSchedules(for: loans)
-            let activeApplicationIDs = Set(loans.map(\.applicationId))
-            hasAnyLoanRecord = !loans.isEmpty
+            let liveLoans = loans.filter { loan in
+                !isLoanCompleted(loan, schedule: schedules[loan.id] ?? [])
+            }
+            let activeApplicationIDs = Set(liveLoans.map(\.applicationId))
+            let reconciledApplications = applications.map { application in
+                if application.status == .disbursed && !loans.contains(where: { $0.applicationId == application.id }) {
+                    return application.withStatus(.managerApproved)
+                }
+                return application
+            }
+            let applicationsById = Dictionary(uniqueKeysWithValues: reconciledApplications.map { ($0.id, $0) })
             credibilityScore = profile.cibilScore
 
-            inProgressApplications = applications
+            inProgressApplications = reconciledApplications
                 .filter { !activeApplicationIDs.contains($0.id) && $0.status.isInProgressForDashboard }
                 .sorted { parseDate($0.updatedAt) > parseDate($1.updatedAt) }
 
-            activeLoans = loans.map { loan in
+            activeLoans = liveLoans.map { loan in
                 let application = applicationsById[loan.applicationId]
                 let totalAmount = Double(loan.principalAmount) ?? Double(application?.requestedAmount ?? "") ?? 0
                 let outstanding = Double(loan.outstandingBalance) ?? 0
@@ -718,9 +915,10 @@ final class HomeDashboardViewModel: ObservableObject {
             .sorted { lhs, rhs in
                 parseDate(lhs.application?.updatedAt ?? "") > parseDate(rhs.application?.updatedAt ?? "")
             }
+            hasAnyLoanRecord = !activeLoans.isEmpty
 
             nextEMI = buildNextEMI(
-                loans: loans,
+                loans: liveLoans,
                 applicationsById: applicationsById,
                 schedules: schedules
             )
@@ -795,6 +993,23 @@ final class HomeDashboardViewModel: ObservableObject {
         return "\(days) days left"
     }
 
+    private func isLoanCompleted(_ loan: ActiveLoan, schedule: [EmiScheduleItem]) -> Bool {
+        if loan.status == .closed {
+            return true
+        }
+
+        let outstanding = Double(loan.outstandingBalance) ?? .greatestFiniteMagnitude
+        if outstanding <= 0.01 {
+            return true
+        }
+
+        if !schedule.isEmpty && schedule.allSatisfy({ $0.status == .paid }) {
+            return true
+        }
+
+        return false
+    }
+
     private func parseDate(_ raw: String) -> Date {
         if let date = ISO8601DateFormatter().date(from: raw) {
             return date
@@ -807,28 +1022,5 @@ final class HomeDashboardViewModel: ObservableObject {
 
     private func formatDate(_ date: Date) -> String {
         date.formatted(date: .abbreviated, time: .omitted)
-    }
-}
-
-private extension LoanApplicationStatus {
-    var isInProgressForDashboard: Bool {
-        switch self {
-        case .draft,
-             .submitted,
-             .underReview,
-             .officerReview,
-             .officerApproved,
-             .officerRejected,
-             .managerReview,
-             .managerApproved,
-             .managerRejected:
-            return true
-        case .approved,
-             .rejected,
-             .disbursed,
-             .cancelled,
-             .unspecified:
-            return false
-        }
     }
 }

@@ -20,13 +20,13 @@ enum AppRoute: Hashable {
     
     // Tracking
     case detailedTracking(BorrowerLoanApplication)
-    case rejectionReason
+    case rejectionReason(BorrowerLoanApplication)
     
     // Feature 7: EMI & Loan Management
     case emiCalculator
     case activeLoanDetails(BorrowerLoanApplication)
-    case amortisationSchedule
-    case outstandingBalance
+    case amortisationSchedule(loanId: String?)
+    case outstandingBalance(loanId: String, applicationId: String)
     
     // Feature 8: Repayment Module
     case repaymentDashboard(applicationId: String)

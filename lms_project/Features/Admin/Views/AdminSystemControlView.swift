@@ -731,6 +731,13 @@ struct AdminSystemControlView: View {
         else { return }
         var topVC = root
         while let presented = topVC.presentedViewController { topVC = presented }
+        
+        if let popover = vc.popoverPresentationController {
+            popover.sourceView = topVC.view
+            popover.sourceRect = CGRect(x: topVC.view.bounds.midX, y: topVC.view.bounds.midY, width: 0, height: 0)
+            popover.permittedArrowDirections = []
+        }
+        
         topVC.present(vc, animated: true)
     }
 

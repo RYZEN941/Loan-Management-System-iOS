@@ -79,6 +79,7 @@ class AdminReportsViewModel: ObservableObject {
     @Published var showExportAlert = false
     @Published var exportFormat = "PDF"
     @Published var isLoading = false
+    @Published var customReportPayload: CustomReportPayload?
 
     @Published private(set) var applications: [LoanApplication] = []
 
@@ -224,34 +225,7 @@ class AdminReportsViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Preview + Export payloads
-
-    func previewTable(for reportId: String) -> (columns: [String], rows: [[String]]) {
-        _ = normalizedReportID(reportId)
-        let columns = ["Application ID", "Borrower", "Amount", "Status", "Risk"]
-        let rows: [[String]] = applications.prefix(25).map { app in
-            let amount = app.loan.amount > 0 ? app.loan.amount.currencyFormatted : "—"
-            let status = app.status.displayName
-            let risk: String = {
-                let cibil = app.financials.cibilScore
-                let dti = app.financials.dtiRatio
-                if (cibil > 0 && cibil < 650) || dti > 0.45 { return "High" }
-                if (cibil > 0 && cibil < 700) || dti > 0.35 { return "Medium" }
-                return "Low"
-            }()
-            return [app.id, app.borrower.name, amount, status, risk]
-        }
-        return (columns, rows)
-    }
-
-    func exportContent(for reportId: String, format: String) -> String {
-        let rows = Self.liveReportRows(for: normalizedReportID(reportId), from: applications)
-        let header = ["Label", "Value", "Change", "Positive"].joined(separator: ",")
-        let body = rows.map { "\($0.label),\($0.value),\($0.change),\($0.isPositive)" }.joined(separator: "\n")
-        return "\(header)\n\(body)\n"
-    }
-
-    // MARK: - Generate Report Data (used by ReportExportService)
+    // MARK: - Generate Report Data
 
     func generateReportData() -> (rows: [AppReportRow], summary: AppReportSummary) {
         let rows: [AppReportRow] = applications.map { app in
@@ -475,6 +449,40 @@ class AdminReportsViewModel: ObservableObject {
             ]
         default:
             return []
+        }
+    }
+
+    // MARK: - Custom Report Builder
+
+    func fetchCustomReport(config: CustomReportConfig) async {
+        await MainActor.run { self.isLoading = true }
+        // Simulate API call to /api/reports/custom
+        try? await Task.sleep(nanoseconds: 800_000_000)
+
+        // Mock data logic based on config
+        let kpis = config.metrics.enumerated().map { (i, metric) in
+            CustomReportKPI(title: metric, value: "₹\(Int.random(in: 10...90)) L", note: "Auto-generated")
+        }
+
+        let buckets = config.dimensions.enumerated().map { (i, dim) in
+            CustomReportBucket(name: "\(dim) \(i+1)", value: "₹\(Int.random(in: 10...90)) L", count: "\(Int.random(in: 5...50))")
+        }
+
+        let trends = (1...4).map { w in
+            CustomReportTrendPoint(period: "W\(w)", value: "\(Int.random(in: 10...50))")
+        }
+
+        let payload = CustomReportPayload(
+            config: config,
+            kpis: kpis,
+            groupedData: buckets,
+            trendData: trends,
+            generatedAt: Date()
+        )
+
+        await MainActor.run {
+            self.customReportPayload = payload
+            self.isLoading = false
         }
     }
 }

@@ -335,22 +335,38 @@ final class ReportExportService {
     // MARK: - Audit Log CSV Generation
 
     static func generateAuditCSV(logs: [AuditLog]) -> URL {
-        var lines = ["Timestamp,Action,Description,Actor,Entity"]
-        let df = DateFormatter()
-        df.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        var lines = ["Timestamp,Event Title,Description,Actor,Event Type"]
+        let isoFormatter = ISO8601DateFormatter()
+        
         for log in logs {
+            let actionLower = log.action.lowercased()
+            let eventType: String
+            if actionLower.contains("approve") { eventType = "Approval" }
+            else if actionLower.contains("policy") { eventType = "Policy" }
+            else if actionLower.contains("config") { eventType = "Config" }
+            else if actionLower.contains("escalat") { eventType = "Escalation" }
+            else if actionLower.contains("fraud") || actionLower.contains("suspicious") { eventType = "Fraud" }
+            else { eventType = "System" }
+            
+            var cleanActor = log.user
+            if cleanActor.lowercased().hasPrefix("by ") {
+                cleanActor = String(cleanActor.dropFirst(3))
+            }
+            let cleanAction = log.action.replacingOccurrences(of: "\n", with: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+            let cleanDetail = log.detail.replacingOccurrences(of: "\n", with: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+            
             let csvRow = [
-                df.string(from: log.timestamp),
-                csvEscape(log.action),
-                csvEscape(log.detail),
-                csvEscape(log.user),
-                csvEscape(log.id)
+                isoFormatter.string(from: log.timestamp),
+                csvEscape(cleanAction),
+                csvEscape(cleanDetail),
+                csvEscape(cleanActor),
+                csvEscape(eventType)
             ].joined(separator: ",")
             lines.append(csvRow)
         }
         let content = lines.joined(separator: "\n")
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("audit_log_\(timestamp()).csv")
+            .appendingPathComponent("audit_logs_\(timestamp()).csv")
         try? content.write(to: url, atomically: true, encoding: .utf8)
         return url
     }

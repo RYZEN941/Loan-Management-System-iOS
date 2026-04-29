@@ -4,7 +4,6 @@ import PhotosUI
 import CoreLocation
 
 struct ProfileView: View {
-    @EnvironmentObject var router: AppRouter
     @EnvironmentObject private var session: SessionStore
     @State private var selectedPhotoItem: PhotosPickerItem?
 
@@ -100,15 +99,15 @@ struct ProfileView: View {
                 
                 // Menu Options
                 VStack(spacing: 0) {
-                    ProfileMenuRow(icon: "person.text.rectangle.fill", title: "Profile") { router.push(.editProfile) }
+                    ProfileMenuRow(icon: "person.text.rectangle.fill", title: "Profile", route: .editProfile)
                     Divider().padding(.leading, 56)
-                    ProfileMenuRow(icon: "checkmark.shield.fill", title: "KYC Status", value: kycStatusLabel, valueColor: kycStatusColor) { router.push(.kycStatus) }
+                    ProfileMenuRow(icon: "checkmark.shield.fill", title: "KYC Status", value: kycStatusLabel, valueColor: kycStatusColor, route: .kycStatus)
                     Divider().padding(.leading, 56)
-                    ProfileMenuRow(icon: "clock.arrow.circlepath", title: "Loan History") { router.push(.loanHistory) }
+                    ProfileMenuRow(icon: "clock.arrow.circlepath", title: "Loan History", route: .loanHistory)
                     Divider().padding(.leading, 56)
-                    ProfileMenuRow(icon: "gearshape.fill", title: "Settings") { router.push(.settings) }
+                    ProfileMenuRow(icon: "gearshape.fill", title: "Settings", route: .settings)
                     Divider().padding(.leading, 56)
-                    ProfileMenuRow(icon: "questionmark.circle.fill", title: "Help & Support") { router.push(.chatList) }
+                    ProfileMenuRow(icon: "questionmark.circle.fill", title: "Help & Support", route: .chatList)
                 }
                 .background(Color.white)
                 .clipShape(RoundedRectangle(cornerRadius: 16))
@@ -185,10 +184,10 @@ struct ProfileMenuRow: View {
     let title: String
     var value: String? = nil
     var valueColor: Color = .secondary
-    let action: () -> Void
+    let route: AppRoute
     
     var body: some View {
-        Button(action: action) {
+        NavigationLink(value: route) {
             HStack(spacing: 16) {
                 Image(systemName: icon)
                     .font(.title3)
@@ -212,7 +211,9 @@ struct ProfileMenuRow: View {
                     .foregroundColor(.secondary.opacity(0.5))
             }
             .padding(16)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 }
 

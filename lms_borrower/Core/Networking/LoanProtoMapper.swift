@@ -72,6 +72,10 @@ extension BorrowerLoanApplication {
             status: .from(proto: p.status),
             escalationReason: p.escalationReason,
             offeredInterestRate: p.offeredInterestRate,
+            disbursementAccountNumber: p.disbursementAccountNumber,
+            disbursementIfscCode: p.disbursementIfscCode,
+            disbursementBankName: p.disbursementBankName,
+            disbursementAccountHolderName: p.disbursementAccountHolderName,
             createdAt: p.createdAt,
             updatedAt: p.updatedAt,
             documents: []

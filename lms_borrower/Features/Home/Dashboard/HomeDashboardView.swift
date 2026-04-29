@@ -21,7 +21,7 @@ struct HomeDashboardView: View {
             ZStack(alignment: .top) {
                 DS.surface.ignoresSafeArea()
                 HeaderGradientBackground()
-                    .frame(height: 300 + topInset)
+                    .frame(height: 560 + topInset)
                     .ignoresSafeArea(edges: .top)
 
                 ScrollView(.vertical, showsIndicators: false) {
@@ -158,10 +158,11 @@ struct HeaderGradientBackground: View {
                 colors: [
                     DS.primary,
                     DS.primary,
-                    DS.primaryLight
+                    DS.primaryLight,
+                    Color(hex: "#E9EEFF")
                 ],
                 startPoint: UnitPoint(x: 0.15, y: 0.0),
-                endPoint: UnitPoint(x: 0.95, y: 0.88)
+                endPoint: UnitPoint(x: 0.95, y: 1.0)
             )
 
             RadialGradient(
@@ -199,12 +200,31 @@ struct HeaderGradientBackground: View {
             LinearGradient(
                 colors: [
                     Color.clear,
-                    DS.surface.opacity(0.35),
+                    Color.white.opacity(0.18),
+                    DS.surface.opacity(0.30),
                     DS.surface
                 ],
-                startPoint: .top,
+                startPoint: UnitPoint(x: 0.5, y: 0.45),
                 endPoint: .bottom
             )
+
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.0),
+                            Color.white.opacity(0.06),
+                            Color.white.opacity(0.18),
+                            DS.surface.opacity(0.55),
+                            DS.surface.opacity(0.96)
+                        ],
+                        startPoint: UnitPoint(x: 0.5, y: 0.08),
+                        endPoint: .bottom
+                    )
+                )
+                .blur(radius: 20)
+                .scaleEffect(x: 1.05, y: 1.18, anchor: .bottom)
+                .offset(y: 180)
         }
     }
 }
@@ -288,14 +308,16 @@ struct LoanSummaryCardView: View {
         VStack(spacing: 0) {
             HStack {
                 Text(loan.title)
-                    .font(.subheadline).bold()
+                    .font(.subheadline.weight(.bold))
                     .foregroundColor(.secondaryBlue)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 6)
-                    .background(DS.primaryLight)
+                    .background(Color.white.opacity(0.88))
                     .clipShape(Capsule())
                 Spacer()
-                Text("Manage →").font(.subheadline).foregroundColor(.mainBlue)
+                Text("Manage →")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.mainBlue)
             }
             .padding(.bottom, 18)
 
@@ -319,7 +341,9 @@ struct LoanSummaryCardView: View {
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 6).fill(DS.primaryLight).frame(height: 12)
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color(hex: "#E8EEFF"))
+                        .frame(height: 12)
                     RoundedRectangle(cornerRadius: 6)
                         .fill(LinearGradient(colors: [.mainBlue, .secondaryBlue], startPoint: .leading, endPoint: .trailing))
                         .frame(width: geo.size.width * loan.repaidFraction, height: 12)
@@ -335,10 +359,23 @@ struct LoanSummaryCardView: View {
             }
         }
         .padding(22)
-        .background(.white.opacity(0.96))
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-        .overlay(RoundedRectangle(cornerRadius: 20).stroke(DS.primary.opacity(0.3), lineWidth: 1.5))
-        .shadow(color: DS.primary.opacity(0.15), radius: 15, x: 0, y: 8)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(0.98),
+                    Color(hex: "#F7F9FF")
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(Color.white.opacity(0.85), lineWidth: 1)
+        )
+        .shadow(color: Color(hex: "#AFC4FF").opacity(0.24), radius: 24, x: 0, y: 12)
+        .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 3)
     }
 }
 
@@ -497,29 +534,41 @@ struct NextEMIBannerView: View {
     @EnvironmentObject var router: AppRouter
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Circle()
                 .fill(emi.isUrgent ? DS.danger.opacity(0.12) : DS.primary.opacity(0.10))
-                .frame(width: 44, height: 44)
+                .frame(width: 46, height: 46)
                 .overlay(Image(systemName: emi.isUrgent ? "exclamationmark.circle.fill" : "calendar.badge.clock").font(.body).foregroundColor(emi.isUrgent ? .alertRed : .mainBlue))
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Next EMI").font(.caption).foregroundColor(.secondary).lineLimit(1)
-                Text(emi.dueDate).font(.subheadline).bold().foregroundColor(emi.isUrgent ? .alertRed : .primary).lineLimit(1).minimumScaleFactor(0.8)
+                Text("Next EMI")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                Text(emi.dueDate)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(emi.isUrgent ? .alertRed : .primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .layoutPriority(2)
             
-            Spacer(minLength: 4)
-
             VStack(alignment: .trailing, spacing: 2) {
                 Text("₹\(emi.amount.formatted(.number.grouping(.automatic)))")
-                    .font(.subheadline).bold()
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundColor(.mainBlue)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .fixedSize(horizontal: true, vertical: false)
-                Text(emi.daysLeft).font(.caption2).foregroundColor(emi.isUrgent ? .alertRed : .secondary).lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                Text(emi.daysLeft)
+                    .font(.caption2)
+                    .foregroundColor(emi.isUrgent ? .alertRed : .secondary)
+                    .lineLimit(1)
             }
-            .padding(.trailing, 8)
+            .frame(width: 78, alignment: .trailing)
+            .layoutPriority(0)
+            .padding(.trailing, 2)
 
             Button {
                 router.push(.paymentCheckout(
@@ -528,15 +577,41 @@ struct NextEMIBannerView: View {
                     amount: emi.amount
                 ))
             } label: {
-                Text("Pay Now").font(.caption).bold().foregroundColor(.white).padding(.horizontal, 12).padding(.vertical, 8).background(DS.primary).clipShape(RoundedRectangle(cornerRadius: 10))
+                Text("Pay Now")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 124)
+                    .padding(.vertical, 10)
+                    .background(
+                        LinearGradient(
+                            colors: [DS.primary, .secondaryBlue],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
-            .fixedSize(horizontal: true, vertical: false)
+            .fixedSize()
         }
-        .padding(14)
-        .background(.white.opacity(0.96))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(emi.isUrgent ? DS.danger.opacity(0.4) : Color.clear, lineWidth: 1.5))
-        .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 4)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 16)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(0.98),
+                    Color(hex: "#F8FAFF")
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(emi.isUrgent ? DS.danger.opacity(0.35) : Color.white.opacity(0.9), lineWidth: 1)
+        )
+        .shadow(color: Color(hex: "#AFC4FF").opacity(0.14), radius: 18, x: 0, y: 10)
+        .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 3)
     }
 }
 
@@ -806,9 +881,12 @@ final class HomeDashboardViewModel: ObservableObject {
 
             let (applications, loans, profile) = try await (applicationsTask, loansTask, profileTask)
             let schedules = try await loadSchedules(for: loans)
-            let activeApplicationIDs = Set(loans.map(\.applicationId))
+            let liveLoans = loans.filter { loan in
+                !isLoanCompleted(loan, schedule: schedules[loan.id] ?? [])
+            }
+            let activeApplicationIDs = Set(liveLoans.map(\.applicationId))
             let reconciledApplications = applications.map { application in
-                if application.status == .disbursed && !activeApplicationIDs.contains(application.id) {
+                if application.status == .disbursed && !loans.contains(where: { $0.applicationId == application.id }) {
                     return application.withStatus(.managerApproved)
                 }
                 return application
@@ -820,7 +898,7 @@ final class HomeDashboardViewModel: ObservableObject {
                 .filter { !activeApplicationIDs.contains($0.id) && $0.status.isInProgressForDashboard }
                 .sorted { parseDate($0.updatedAt) > parseDate($1.updatedAt) }
 
-            activeLoans = loans.map { loan in
+            activeLoans = liveLoans.map { loan in
                 let application = applicationsById[loan.applicationId]
                 let totalAmount = Double(loan.principalAmount) ?? Double(application?.requestedAmount ?? "") ?? 0
                 let outstanding = Double(loan.outstandingBalance) ?? 0
@@ -840,7 +918,7 @@ final class HomeDashboardViewModel: ObservableObject {
             hasAnyLoanRecord = !activeLoans.isEmpty
 
             nextEMI = buildNextEMI(
-                loans: loans,
+                loans: liveLoans,
                 applicationsById: applicationsById,
                 schedules: schedules
             )
@@ -913,6 +991,23 @@ final class HomeDashboardViewModel: ObservableObject {
         if days == 0 { return "Due today" }
         if days == 1 { return "1 day left" }
         return "\(days) days left"
+    }
+
+    private func isLoanCompleted(_ loan: ActiveLoan, schedule: [EmiScheduleItem]) -> Bool {
+        if loan.status == .closed {
+            return true
+        }
+
+        let outstanding = Double(loan.outstandingBalance) ?? .greatestFiniteMagnitude
+        if outstanding <= 0.01 {
+            return true
+        }
+
+        if !schedule.isEmpty && schedule.allSatisfy({ $0.status == .paid }) {
+            return true
+        }
+
+        return false
     }
 
     private func parseDate(_ raw: String) -> Date {

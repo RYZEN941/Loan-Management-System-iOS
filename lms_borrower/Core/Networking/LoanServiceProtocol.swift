@@ -21,7 +21,11 @@ protocol LoanServiceProtocol {
         loanProductId: String,
         branchId: String,
         requestedAmount: String,
-        tenureMonths: Int
+        tenureMonths: Int,
+        disbursementAccountNumber: String,
+        disbursementIfscCode: String,
+        disbursementBankName: String,
+        disbursementAccountHolderName: String
     ) async throws -> BorrowerLoanApplication
 
     // Used by: Borrower (Track screen detail)

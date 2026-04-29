@@ -721,6 +721,10 @@ private struct DocumentScannerSheet: UIViewControllerRepresentable {
                 status: .submitted,
                 escalationReason: "",
                 offeredInterestRate: "10.5",
+                disbursementAccountNumber: "123456789012",
+                disbursementIfscCode: "HDFC0001234",
+                disbursementBankName: "HDFC Bank",
+                disbursementAccountHolderName: "Ravi Kumar",
                 createdAt: "",
                 updatedAt: "",
                 documents: []

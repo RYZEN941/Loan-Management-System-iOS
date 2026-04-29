@@ -15,6 +15,10 @@ final class LoanApplicationViewModel: ObservableObject {
     @Published var requestedAmount: String = ""
     @Published var tenureMonths: Int = 12
     @Published var borrowerProfileId: String = ""
+    @Published var disbursementAccountNumber: String = ""
+    @Published var disbursementIfscCode: String = ""
+    @Published var disbursementBankName: String = ""
+    @Published var disbursementAccountHolderName: String = ""
 
     @Published var isSubmitting: Bool = false
     @Published var submissionError: String? = nil
@@ -85,6 +89,10 @@ final class LoanApplicationViewModel: ObservableObject {
         !isSubmitting && !selectedBranchId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !branches.isEmpty
     }
 
+    func canProceedToDisbursementDetails() -> Bool {
+        canSubmit()
+    }
+
     func retryLoadingBranches() {
         preloadSubmissionContext()
     }
@@ -106,15 +114,53 @@ final class LoanApplicationViewModel: ObservableObject {
         return true
     }
 
+    func validateDisbursementDetails() -> Bool {
+        let trimmedAccountNumber = disbursementAccountNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedIFSC = disbursementIfscCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        let trimmedBankName = disbursementBankName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedAccountHolderName = disbursementAccountHolderName.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedAccountHolderName.isEmpty else {
+            submissionError = "Please enter the account holder name."
+            return false
+        }
+
+        guard !trimmedBankName.isEmpty else {
+            submissionError = "Please enter the bank name."
+            return false
+        }
+
+        guard trimmedAccountNumber.count >= 8, trimmedAccountNumber.allSatisfy(\.isNumber) else {
+            submissionError = "Please enter a valid account number."
+            return false
+        }
+
+        guard isValidIFSC(trimmedIFSC) else {
+            submissionError = "Please enter a valid IFSC code."
+            return false
+        }
+
+        disbursementIfscCode = trimmedIFSC
+        submissionError = nil
+        return true
+    }
+
     func submitApplication() async -> BorrowerLoanApplication? {
         guard !isSubmitting else { return nil }
         guard ensureBranchValidityBeforeSubmit() else {
+            return nil
+        }
+        guard validateDisbursementDetails() else {
             return nil
         }
 
         let trimmedProductId = selectedProductId.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedBranchId = selectedBranchId.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedAmount = requestedAmount.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedAccountNumber = disbursementAccountNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedIFSC = disbursementIfscCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedBankName = disbursementBankName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedAccountHolderName = disbursementAccountHolderName.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !trimmedProductId.isEmpty else {
             submissionError = "Loan product is missing. Please reopen the application flow."
@@ -136,7 +182,11 @@ final class LoanApplicationViewModel: ObservableObject {
                 loanProductId: trimmedProductId,
                 branchId: trimmedBranchId,
                 requestedAmount: trimmedAmount,
-                tenureMonths: tenureMonths
+                tenureMonths: tenureMonths,
+                disbursementAccountNumber: trimmedAccountNumber,
+                disbursementIfscCode: trimmedIFSC,
+                disbursementBankName: trimmedBankName,
+                disbursementAccountHolderName: trimmedAccountHolderName
             )
             submittedApplication = application
             isApplicationSubmitted = true
@@ -166,6 +216,11 @@ final class LoanApplicationViewModel: ObservableObject {
             return "Loan amount must be between ₹\(product.minAmount) and ₹\(product.maxAmount)."
         }
         return nil
+    }
+
+    private func isValidIFSC(_ value: String) -> Bool {
+        let pattern = "^[A-Z]{4}0[A-Z0-9]{6}$"
+        return value.range(of: pattern, options: .regularExpression) != nil
     }
 
 }

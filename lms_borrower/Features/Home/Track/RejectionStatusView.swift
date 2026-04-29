@@ -190,6 +190,10 @@ struct RejectionTimelineRow: View {
             status: .rejected,
             escalationReason: "We regret to inform you that your loan application was rejected due to insufficient credit score.",
             offeredInterestRate: "0",
+            disbursementAccountNumber: "123456789012",
+            disbursementIfscCode: "SBIN0000456",
+            disbursementBankName: "State Bank of India",
+            disbursementAccountHolderName: "Ravi Kumar",
             createdAt: "2023-10-01",
             updatedAt: "2023-10-02",
             documents: []

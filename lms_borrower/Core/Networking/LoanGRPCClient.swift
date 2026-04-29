@@ -116,7 +116,11 @@ final class LoanGRPCClient: LoanServiceProtocol {
         loanProductId: String,
         branchId: String,
         requestedAmount: String,
-        tenureMonths: Int
+        tenureMonths: Int,
+        disbursementAccountNumber: String,
+        disbursementIfscCode: String,
+        disbursementBankName: String,
+        disbursementAccountHolderName: String
     ) async throws -> BorrowerLoanApplication {
         var request = Loan_V1_CreateLoanApplicationRequest()
         request.primaryBorrowerProfileID = primaryBorrowerProfileId
@@ -125,6 +129,10 @@ final class LoanGRPCClient: LoanServiceProtocol {
         request.requestedAmount = requestedAmount
         request.tenureMonths = Int32(tenureMonths)
         request.status = .submitted
+        request.disbursementAccountNumber = disbursementAccountNumber
+        request.disbursementIfscCode = disbursementIfscCode
+        request.disbursementBankName = disbursementBankName
+        request.disbursementAccountHolderName = disbursementAccountHolderName
 
         do {
             let (options, metadata) = try authContext()

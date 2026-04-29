@@ -37,7 +37,7 @@ func MintTokens(ctx context.Context, queries generated.Querier, redisClient redi
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   userID.String(),
 			ID:        jti,
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -58,7 +58,7 @@ func MintTokens(ctx context.Context, queries generated.Querier, redisClient redi
 		return nil, status.Error(codes.Internal, "failed to persist refresh token")
 	}
 
-	err = redisClient.Set(ctx, fmt.Sprintf("active_token:%s", userID.String()), jti, 15*time.Minute).Err()
+	err = redisClient.Set(ctx, fmt.Sprintf("active_token:%s", userID.String()), jti, 30*time.Minute).Err()
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to set active session")
 	}

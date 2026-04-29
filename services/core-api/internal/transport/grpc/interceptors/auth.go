@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -106,6 +107,9 @@ func JWTUnaryInterceptor(cfg JWTConfig) grpc.UnaryServerInterceptor {
 			return nil, status.Error(codes.Unauthenticated, "token is no longer active")
 		}
 
+		// Extend session TTL on active use (Sliding Session)
+		cfg.RedisClient.Expire(ctx, key, 30*time.Minute)
+
 		// Enforce password change requirement
 		if claims.IsRequiringPasswordChange {
 			if info.FullMethod != "/auth.v1.AuthService/ChangePassword" && info.FullMethod != "/auth.v1.AuthService/Logout" && info.FullMethod != "/auth.v1.AuthService/GetMyProfile" {
@@ -113,27 +117,27 @@ func JWTUnaryInterceptor(cfg JWTConfig) grpc.UnaryServerInterceptor {
 			}
 		}
 
-// Enforce active profile requirement (onboarding)
-	// Inactive users can only access auth self-service, onboarding, and KYC read endpoints.
-	// Once CompleteBorrowerOnboarding succeeds, the user is activated and a fresh
-	// token pair is returned — all subsequent calls use the new token with is_active=true.
-	if !claims.IsActive {
-		switch info.FullMethod {
-		case "/auth.v1.AuthService/Logout",
-			"/auth.v1.AuthService/GetMyProfile",
-			"/auth.v1.AuthService/GetBorrowerProfile",
-			"/onboarding.v1.OnboardingService/CompleteBorrowerOnboarding",
-			"/onboarding.v1.OnboardingService/UpdateBorrowerProfile",
-			"/auth.v1.AuthService/ChangePassword",
-			"/auth.v1.AuthService/SetupTOTP",
-			"/auth.v1.AuthService/VerifyTOTPSetup",
-			"/kyc.v1.KycService/GetBorrowerKycStatus",
-			"/kyc.v1.KycService/ListBorrowerKycHistory":
-			// Allowed
-		default:
-			return nil, status.Error(codes.PermissionDenied, "user account is inactive. please complete onboarding.")
+		// Enforce active profile requirement (onboarding)
+		// Inactive users can only access auth self-service, onboarding, and KYC read endpoints.
+		// Once CompleteBorrowerOnboarding succeeds, the user is activated and a fresh
+		// token pair is returned — all subsequent calls use the new token with is_active=true.
+		if !claims.IsActive {
+			switch info.FullMethod {
+			case "/auth.v1.AuthService/Logout",
+				"/auth.v1.AuthService/GetMyProfile",
+				"/auth.v1.AuthService/GetBorrowerProfile",
+				"/onboarding.v1.OnboardingService/CompleteBorrowerOnboarding",
+				"/onboarding.v1.OnboardingService/UpdateBorrowerProfile",
+				"/auth.v1.AuthService/ChangePassword",
+				"/auth.v1.AuthService/SetupTOTP",
+				"/auth.v1.AuthService/VerifyTOTPSetup",
+				"/kyc.v1.KycService/GetBorrowerKycStatus",
+				"/kyc.v1.KycService/ListBorrowerKycHistory":
+				// Allowed
+			default:
+				return nil, status.Error(codes.PermissionDenied, "user account is inactive. please complete onboarding.")
+			}
 		}
-	}
 
 		userID, err := uuid.Parse(claims.Subject)
 		if err != nil {
@@ -186,6 +190,9 @@ func JWTStreamInterceptor(cfg JWTConfig) grpc.StreamServerInterceptor {
 		if activeJTI != claims.ID {
 			return status.Error(codes.Unauthenticated, "token is no longer active")
 		}
+
+		// Extend session TTL on active use (Sliding Session)
+		cfg.RedisClient.Expire(ss.Context(), key, 30*time.Minute)
 
 		if claims.IsRequiringPasswordChange {
 			if info.FullMethod != "/auth.v1.AuthService/ChangePassword" && info.FullMethod != "/auth.v1.AuthService/Logout" && info.FullMethod != "/auth.v1.AuthService/GetMyProfile" {

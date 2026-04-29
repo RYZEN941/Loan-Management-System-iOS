@@ -28,22 +28,6 @@ struct MessageBubble: View {
                             .font(Theme.Typography.subheadline)
                             .foregroundStyle(Color.black)
                     }
-                    
-                    // Attachment
-                    if let attachmentName = message.attachmentName {
-                        HStack(spacing: Theme.Spacing.xs) {
-                            Image(systemName: attachmentIconName(for: attachmentName))
-                                .font(.system(size: 12, weight: .semibold))
-                            Text(attachmentName)
-                                .font(Theme.Typography.caption)
-                                .lineLimit(1)
-                        }
-                        .foregroundStyle(Color.blue)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(Color.blue.opacity(0.1))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                    }
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
@@ -69,16 +53,6 @@ struct MessageBubble: View {
         }
     }
     
-    private func attachmentIconName(for attachmentName: String) -> String {
-        let lowercasedName = attachmentName.lowercased()
-        if lowercasedName.hasSuffix(".jpg") || lowercasedName.hasSuffix(".jpeg") || lowercasedName.hasSuffix(".png") || lowercasedName.hasSuffix(".heic") {
-            return "photo.fill"
-        }
-        if lowercasedName.hasSuffix(".pdf") {
-            return "doc.richtext.fill"
-        }
-        return "doc.fill"
-    }
 }
 
 struct ChatBubbleShape: Shape {

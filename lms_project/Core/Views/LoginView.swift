@@ -93,6 +93,12 @@ struct LoginView: View {
                 ))
         case .authenticated:
             Color.clear
+        case .forgotPassword:
+            ForgotPasswordView()
+                .transition(.asymmetric(
+                    insertion: .opacity.combined(with: .move(edge: .trailing)),
+                    removal:   .opacity.combined(with: .move(edge: .leading))
+                ))
         }
     }
 }
@@ -281,6 +287,23 @@ struct CredentialsStep: View {
                 )
                 .opacity(appeared ? 1 : 0)
                 .offset(y: appeared ? 0 : 16)
+                
+                HStack {
+                    Spacer()
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.32)) {
+                            authVM.authStep = .forgotPassword
+                        }
+                    } label: {
+                        Text("Forgot Password?")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(Theme.Colors.primary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.top, 12)
+                .padding(.trailing, 4)
+                .opacity(appeared ? 1 : 0)
 
                 // Error
                 if let err = authVM.loginError {

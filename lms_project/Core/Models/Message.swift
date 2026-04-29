@@ -9,6 +9,7 @@ import Foundation
 
 struct Conversation: Identifiable, Codable, Hashable {
     let id: String
+    var participantUserID: String
     var participantName: String
     var participantRole: String
     var participantEmail: String
@@ -16,6 +17,20 @@ struct Conversation: Identifiable, Codable, Hashable {
     var lastMessageTime: Date
     var unreadCount: Int
     var isOnline: Bool
+}
+
+enum ChatConnectionState: String {
+    case disconnected
+    case connecting
+    case connected
+    case reconnecting
+}
+
+struct ChatCandidate: Identifiable, Hashable {
+    let id: String
+    var name: String
+    var role: String
+    var email: String
 }
 
 // MARK: - Message (Global — Messages Tab)

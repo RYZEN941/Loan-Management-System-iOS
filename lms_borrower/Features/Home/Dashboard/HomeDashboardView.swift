@@ -771,13 +771,9 @@ final class HomeDashboardViewModel: ObservableObject {
     @Published var errorMessage: String? = nil
 
     let quickActions: [QuickAction] = [
-        QuickAction(kind: .autoPay, icon: "arrow.triangle.2.circlepath", label: String(localized: "AutoPay")),
+        QuickAction(kind: .schedule, icon: "calendar", label: String(localized: "Schedule")),
         QuickAction(kind: .payEMI, icon: "indianrupeesign.circle.fill", label: String(localized: "Pay EMI")),
         QuickAction(kind: .history, icon: "clock.arrow.circlepath", label: String(localized: "History")),
-        QuickAction(kind: .support, icon: "headset", label: String(localized: "Support")),
-        QuickAction(kind: .schedule, icon: "calendar", label: String(localized: "Schedule")),
-        QuickAction(kind: .foreclose, icon: "arrow.left.arrow.right", label: String(localized: "Foreclose")),
-        QuickAction(kind: .statement, icon: "doc.plaintext.fill", label: String(localized: "Statement")),
         QuickAction(kind: .analytics, icon: "chart.bar.fill", label: String(localized: "Analytics"))
     ]
 

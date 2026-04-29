@@ -333,3 +333,18 @@ SELECT EXISTS (
     WHERE dp.user_id = $1
       AND bp.user_id = $2
 );
+
+-- name: GetChatUsersByIDs :many
+SELECT
+    u.id AS user_id,
+    u.email,
+    u.phone,
+    u.role,
+    COALESCE(bp.first_name || ' ' || bp.last_name, op.name, mp.name, dp.name) AS target_name,
+    COALESCE(op.branch_id, mp.branch_id, dp.branch_id) AS branch_id
+FROM users u
+LEFT JOIN borrower_profiles bp ON bp.user_id = u.id
+LEFT JOIN officer_profiles op ON op.user_id = u.id
+LEFT JOIN manager_profiles mp ON mp.user_id = u.id
+LEFT JOIN dst_profiles dp ON dp.user_id = u.id
+WHERE u.id = ANY($1::uuid[]);

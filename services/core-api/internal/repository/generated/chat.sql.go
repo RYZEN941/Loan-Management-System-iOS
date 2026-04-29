@@ -234,6 +234,58 @@ func (q *Queries) GetChatRoomByUserPair(ctx context.Context, arg GetChatRoomByUs
 	return i, err
 }
 
+const getChatUsersByIDs = `-- name: GetChatUsersByIDs :many
+SELECT
+    u.id AS user_id,
+    u.email,
+    u.phone,
+    u.role,
+    COALESCE(bp.first_name || ' ' || bp.last_name, op.name, mp.name, dp.name) AS target_name,
+    COALESCE(op.branch_id, mp.branch_id, dp.branch_id) AS branch_id
+FROM users u
+LEFT JOIN borrower_profiles bp ON bp.user_id = u.id
+LEFT JOIN officer_profiles op ON op.user_id = u.id
+LEFT JOIN manager_profiles mp ON mp.user_id = u.id
+LEFT JOIN dst_profiles dp ON dp.user_id = u.id
+WHERE u.id = ANY($1::uuid[])
+`
+
+type GetChatUsersByIDsRow struct {
+	UserID     pgtype.UUID `json:"user_id"`
+	Email      string      `json:"email"`
+	Phone      string      `json:"phone"`
+	Role       UserRole    `json:"role"`
+	TargetName string      `json:"target_name"`
+	BranchID   pgtype.UUID `json:"branch_id"`
+}
+
+func (q *Queries) GetChatUsersByIDs(ctx context.Context, dollar_1 []pgtype.UUID) ([]GetChatUsersByIDsRow, error) {
+	rows, err := q.db.Query(ctx, getChatUsersByIDs, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetChatUsersByIDsRow
+	for rows.Next() {
+		var i GetChatUsersByIDsRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.Email,
+			&i.Phone,
+			&i.Role,
+			&i.TargetName,
+			&i.BranchID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAdminChatTargets = `-- name: ListAdminChatTargets :many
 SELECT
     u.id AS user_id,

@@ -68,6 +68,7 @@ type Querier interface {
 	GetChatMessageByID(ctx context.Context, id pgtype.UUID) (ChatMessage, error)
 	GetChatRoomByID(ctx context.Context, id pgtype.UUID) (ChatRoom, error)
 	GetChatRoomByUserPair(ctx context.Context, arg GetChatRoomByUserPairParams) (ChatRoom, error)
+	GetChatUsersByIDs(ctx context.Context, dollar_1 []pgtype.UUID) ([]GetChatUsersByIDsRow, error)
 	GetDstAccountByUserID(ctx context.Context, userID pgtype.UUID) (GetDstAccountByUserIDRow, error)
 	GetDstProfileByUserID(ctx context.Context, userID pgtype.UUID) (DstProfile, error)
 	GetEmiScheduleByID(ctx context.Context, id pgtype.UUID) (EmiSchedule, error)

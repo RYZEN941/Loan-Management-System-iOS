@@ -54,6 +54,7 @@ message ChatRoom {
   string created_at = 6;
   string updated_at = 7;
   ChatMessage latest_message = 8;
+  repeated ChatUser participants = 9;
 }
 
 message ListChatEligibleUsersRequest {

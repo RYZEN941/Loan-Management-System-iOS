@@ -198,13 +198,28 @@ func (s *service) CreateOrGetDirectRoom(ctx context.Context, req *chatv1.CreateO
 	// Canonical ordering for consistent unique index
 	userA, userB := canonicalPair(callerUserID, targetUserID)
 
+	usersMap := make(map[string]*chatv1.ChatUser)
+	users, mapErr := s.queries.GetChatUsersByIDs(ctx, []pgtype.UUID{uuidToPg(userA), uuidToPg(userB)})
+	if mapErr == nil {
+		for _, u := range users {
+			usersMap[u.UserID.String()] = &chatv1.ChatUser{
+				UserId:   u.UserID.String(),
+				Name:     u.TargetName,
+				Email:    u.Email,
+				Phone:    u.Phone,
+				Role:     string(u.Role),
+				BranchId: nullableUUIDToString(u.BranchID),
+			}
+		}
+	}
+
 	// Check if room already exists
 	existing, err := s.queries.GetChatRoomByUserPair(ctx, generated.GetChatRoomByUserPairParams{
 		UserAID: uuidToPg(userA),
 		UserBID: uuidToPg(userB),
 	})
 	if err == nil {
-		return &chatv1.CreateOrGetDirectRoomResponse{Room: s.mapChatRoom(existing, nil)}, nil
+		return &chatv1.CreateOrGetDirectRoomResponse{Room: s.mapChatRoom(existing, nil, usersMap)}, nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return nil, status.Error(codes.Internal, "failed to check existing room")
@@ -225,7 +240,7 @@ func (s *service) CreateOrGetDirectRoom(ctx context.Context, req *chatv1.CreateO
 		return nil, status.Error(codes.Internal, "failed to create chat room")
 	}
 
-	return &chatv1.CreateOrGetDirectRoomResponse{Room: s.mapChatRoom(row, nil)}, nil
+	return &chatv1.CreateOrGetDirectRoomResponse{Room: s.mapChatRoom(row, nil, usersMap)}, nil
 }
 
 func (s *service) ListMyChatRooms(ctx context.Context, req *chatv1.ListMyChatRoomsRequest) (*chatv1.ListMyChatRoomsResponse, error) {
@@ -246,9 +261,45 @@ func (s *service) ListMyChatRooms(ctx context.Context, req *chatv1.ListMyChatRoo
 		return nil, status.Error(codes.Internal, "failed to list chat rooms")
 	}
 
+	// Fetch participant user profiles
+	var userIDs []uuid.UUID
+	for _, row := range rows {
+		userIDs = append(userIDs, row.UserAID.Bytes)
+		userIDs = append(userIDs, row.UserBID.Bytes)
+	}
+
+	// Deduplicate userIDs
+	seen := make(map[uuid.UUID]bool)
+	var uniqueUserIDs []pgtype.UUID
+	for _, id := range userIDs {
+		if !seen[id] {
+			seen[id] = true
+			uniqueUserIDs = append(uniqueUserIDs, uuidToPg(id))
+		}
+	}
+
+	usersMap := make(map[string]*chatv1.ChatUser)
+	if len(uniqueUserIDs) > 0 {
+		users, err := s.queries.GetChatUsersByIDs(ctx, uniqueUserIDs)
+		if err == nil {
+			for _, u := range users {
+				usersMap[u.UserID.String()] = &chatv1.ChatUser{
+					UserId:   u.UserID.String(),
+					Name:     u.TargetName,
+					Email:    u.Email,
+					Phone:    u.Phone,
+					Role:     string(u.Role),
+					BranchId: nullableUUIDToString(u.BranchID),
+				}
+			}
+		} else {
+			log.Printf("ListMyChatRooms: GetChatUsersByIDs failed: %v", err)
+		}
+	}
+
 	items := make([]*chatv1.ChatRoom, 0, len(rows))
 	for _, row := range rows {
-		items = append(items, s.mapChatRoomFromListRow(row))
+		items = append(items, s.mapChatRoomFromListRow(row, usersMap))
 	}
 	return &chatv1.ListMyChatRoomsResponse{Items: items}, nil
 }
@@ -682,7 +733,17 @@ func (s *service) ensureRoomParticipant(ctx context.Context, roomID, userID uuid
 
 // --- Mappers ---
 
-func (s *service) mapChatRoom(row generated.ChatRoom, latestMsg *chatv1.ChatMessage) *chatv1.ChatRoom {
+func (s *service) mapChatRoom(row generated.ChatRoom, latestMsg *chatv1.ChatMessage, usersMap map[string]*chatv1.ChatUser) *chatv1.ChatRoom {
+	var participants []*chatv1.ChatUser
+	if usersMap != nil {
+		if p, ok := usersMap[row.UserAID.String()]; ok {
+			participants = append(participants, p)
+		}
+		if p, ok := usersMap[row.UserBID.String()]; ok {
+			participants = append(participants, p)
+		}
+	}
+
 	return &chatv1.ChatRoom{
 		Id:              row.ID.String(),
 		RoomType:        toProtoChatRoomType(row.RoomType),
@@ -692,10 +753,11 @@ func (s *service) mapChatRoom(row generated.ChatRoom, latestMsg *chatv1.ChatMess
 		CreatedAt:       timeToString(row.CreatedAt),
 		UpdatedAt:       timeToString(row.UpdatedAt),
 		LatestMessage:  latestMsg,
+		Participants:   participants,
 	}
 }
 
-func (s *service) mapChatRoomFromListRow(row generated.ListChatRoomsForUserRow) *chatv1.ChatRoom {
+func (s *service) mapChatRoomFromListRow(row generated.ListChatRoomsForUserRow, usersMap map[string]*chatv1.ChatUser) *chatv1.ChatRoom {
 	var latestMsg *chatv1.ChatMessage
 	if row.LatestMessageID.Valid {
 		latestMsg = &chatv1.ChatMessage{
@@ -716,7 +778,7 @@ func (s *service) mapChatRoomFromListRow(row generated.ListChatRoomsForUserRow) 
 		CreatedAt:       row.CreatedAt,
 		UpdatedAt:       row.UpdatedAt,
 	}
-	return s.mapChatRoom(room, latestMsg)
+	return s.mapChatRoom(room, latestMsg, usersMap)
 }
 
 func (s *service) mapChatMessage(row generated.ChatMessage) *chatv1.ChatMessage {

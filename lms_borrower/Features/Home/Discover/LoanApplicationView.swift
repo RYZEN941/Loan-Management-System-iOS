@@ -90,9 +90,9 @@ struct LoanApplicationView: View {
 
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Customize your loan")
+            Text(loan.category == .personal ? "Customize your loan" : "Account Details")
                 .font(.largeTitle).bold()
-            Text("Submitting a real application for \(loan.name).")
+            Text(loan.category == .personal ? "Submitting a real application for \(loan.name)." : "Inquiring about \(loan.name) for your specific needs.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
@@ -213,40 +213,57 @@ struct LoanApplicationView: View {
     }
 
     private var infoSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top, spacing: 12) {
-                Image(systemName: "checkmark.shield.fill")
-                    .foregroundColor(.mainBlue)
-                    .font(.title3)
+        Group {
+            if loan.category == .personal {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "checkmark.shield.fill")
+                            .foregroundColor(.mainBlue)
+                            .font(.title3)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Base rate \(String(format: "%.2f%%", interestRate)) p.a.")
-                        .font(.subheadline).bold()
-                    Text("Required documents: \(loan.requiredDocuments.count)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Base rate \(String(format: "%.2f%%", interestRate)) p.a.")
+                                .font(.subheadline).bold()
+                            Text("Required documents: \(loan.requiredDocuments.count)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
 
-            if let rule = loan.eligibilityRule {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Eligibility Snapshot")
-                        .font(.subheadline).bold()
-                    Text("Minimum age: \(rule.minAge)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text("Minimum monthly income: \(formatCurrency(rule.minMonthlyIncome))")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    if rule.minBureauScore > 0 {
-                        Text("Minimum bureau score: \(rule.minBureauScore)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                    if let rule = loan.eligibilityRule {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Eligibility Snapshot")
+                                .font(.subheadline).bold()
+                            Text("Minimum age: \(rule.minAge)")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text("Minimum monthly income: \(formatCurrency(rule.minMonthlyIncome))")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            if rule.minBureauScore > 0 {
+                                Text("Minimum bureau score: \(rule.minBureauScore)")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
                     }
                 }
+                .cardStyle(tint: DS.primaryLight.opacity(0.5))
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundColor(.mainBlue)
+                        Text("No Upfront Eligibility Check")
+                            .font(.subheadline).bold()
+                    }
+                    Text("Since this is a \(loan.name) inquiry, a dedicated Loan Officer will be assigned to verify your eligibility and guide you through the process.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .cardStyle(tint: DS.primaryLight.opacity(0.5))
             }
         }
-        .cardStyle(tint: DS.primaryLight.opacity(0.5))
     }
 
     private var footerSection: some View {
@@ -266,17 +283,30 @@ struct LoanApplicationView: View {
 
                 Button {
                     viewModel.submissionError = nil
-                    showDisbursementDetails = true
+                    if loan.category == .personal {
+                        showDisbursementDetails = true
+                    } else {
+                        Task {
+                            guard let application = await viewModel.submitApplication(isPersonalLoan: false) else { return }
+                            router.push(.submitConfirmation(application))
+                        }
+                    }
                 } label: {
-                    Text("Continue")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 32)
-                        .padding(.vertical, 14)
-                        .background(DS.primary)
-                        .clipShape(Capsule())
+                    if viewModel.isSubmitting {
+                        ProgressView()
+                            .tint(.white)
+                            .frame(width: 80)
+                    } else {
+                        Text(loan.category == .personal ? "Continue" : "Ask Query")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 32)
+                    }
                 }
-                .disabled(!viewModel.canProceedToDisbursementDetails())
+                .padding(.vertical, 14)
+                .background(DS.primary)
+                .clipShape(Capsule())
+                .disabled(viewModel.isSubmitting || !viewModel.canProceedToDisbursementDetails())
             }
             .padding(.horizontal, 24)
             .padding(.top, 8)
@@ -447,7 +477,7 @@ private struct DisbursementDetailsView: View {
             Button {
                 focusedField = nil
                 Task {
-                    guard let application = await viewModel.submitApplication() else { return }
+                    guard let application = await viewModel.submitApplication(isPersonalLoan: true) else { return }
                     if loan.requiredDocuments.isEmpty {
                         router.push(.reviewApplication(application))
                     } else {

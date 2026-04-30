@@ -189,23 +189,35 @@ struct LoanDetailScreen: View {
     }
 
     private var eligibilityTitle: String {
-        loan.isActive ? "Eligible" : "Not Eligible"
+        if loan.category != .personal {
+            return "Inquiry Open"
+        }
+        return loan.isActive ? "Eligible" : "Not Eligible"
     }
 
     private var eligibilityIcon: String {
-        loan.isActive ? "checkmark.shield.fill" : "xmark.shield.fill"
+        if loan.category != .personal {
+            return "questionmark.circle.fill"
+        }
+        return loan.isActive ? "checkmark.shield.fill" : "xmark.shield.fill"
     }
 
     private var eligibilityBackground: Color {
-        loan.isActive ? Color(hex: "#00C48C").opacity(0.14) : DS.danger.opacity(0.12)
+        if loan.category != .personal {
+            return Color.blue.opacity(0.12)
+        }
+        return loan.isActive ? Color(hex: "#00C48C").opacity(0.14) : DS.danger.opacity(0.12)
     }
 
     private var eligibilityForeground: Color {
-        loan.isActive ? Color(hex: "#00A86B") : DS.danger
+        if loan.category != .personal {
+            return .mainBlue
+        }
+        return loan.isActive ? Color(hex: "#00A86B") : DS.danger
     }
 
     private var primaryCTAButtonTitle: String {
-        loan.name == "Home" ? "Ask Query" : "Apply Now"
+        loan.category == .personal ? "Apply Now" : "Ask Query"
     }
 
     var body: some View {

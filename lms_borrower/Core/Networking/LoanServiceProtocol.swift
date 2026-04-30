@@ -22,6 +22,7 @@ protocol LoanServiceProtocol {
         branchId: String,
         requestedAmount: String,
         tenureMonths: Int,
+        status: LoanApplicationStatus,
         disbursementAccountNumber: String,
         disbursementIfscCode: String,
         disbursementBankName: String,

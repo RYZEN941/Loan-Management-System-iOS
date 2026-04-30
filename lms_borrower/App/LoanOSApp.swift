@@ -18,6 +18,7 @@ import SwiftUI
 @main
 struct LoanOSApp: App {
     @StateObject private var session: SessionStore
+    @AppStorage(AppLanguage.storageKey) private var selectedLanguageCode = AppLanguage.defaultLanguage.rawValue
 
     init() {
         Self.clearKeychainOnFreshInstall()
@@ -26,7 +27,9 @@ struct LoanOSApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView().environmentObject(session)
+            RootView()
+                .environmentObject(session)
+                .environment(\.locale, AppLanguage.from(storageValue: selectedLanguageCode).locale)
         }
     }
 

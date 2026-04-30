@@ -74,6 +74,12 @@ struct HomeDashboardView: View {
                                     .padding(.top, 18)
                             }
 
+                            if viewModel.activeLoans.isEmpty && viewModel.inProgressApplications.isEmpty && !viewModel.isLoading {
+                                NoActiveLoansCard()
+                                    .padding(.horizontal, 20)
+                                    .padding(.top, 18)
+                            }
+
                             // ── 3. NEXT EMI BANNER ─────────────────────────
                             if let nextEMI = viewModel.nextEMI {
                                 NextEMIBannerView(emi: nextEMI)
@@ -123,6 +129,7 @@ struct HeaderView: View {
     let userName: String
     let collapseProgress: CGFloat
     @EnvironmentObject var router: AppRouter
+    @ObservedObject private var notifStore = NotificationStore.shared
 
     var body: some View {
         HStack(alignment: .center) {
@@ -141,7 +148,7 @@ struct HeaderView: View {
             Button(action: {
                 router.push(.notifications)
             }) {
-                NotificationButton()
+                NotificationButton(hasUnread: notifStore.hasUnread)
             }
             .buttonStyle(.plain)
         }
@@ -254,6 +261,8 @@ struct HeaderTopBlurOverlay: View {
 }
 
 struct NotificationButton: View {
+    let hasUnread: Bool
+
     var body: some View {
         Circle()
             .fill(.white.opacity(0.16))
@@ -268,14 +277,16 @@ struct NotificationButton: View {
                     .foregroundStyle(.white.opacity(0.96))
             }
             .overlay(alignment: .topTrailing) {
-                Circle()
-                    .fill(DS.danger)
-                    .frame(width: 8, height: 8)
-                    .overlay(
-                        Circle()
-                            .stroke(.white.opacity(0.9), lineWidth: 1.5)
-                    )
-                    .offset(x: 0, y: 1)
+                if hasUnread {
+                    Circle()
+                        .fill(DS.danger)
+                        .frame(width: 8, height: 8)
+                        .overlay(
+                            Circle()
+                                .stroke(.white.opacity(0.9), lineWidth: 1.5)
+                        )
+                        .offset(x: 0, y: 1)
+                }
             }
             .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 4)
     }
@@ -397,6 +408,52 @@ struct DashboardInfoCard: View {
         .background(.white.opacity(0.96))
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 4)
+    }
+}
+
+struct NoActiveLoansCard: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            Circle()
+                .fill(DS.primaryLight)
+                .frame(width: 72, height: 72)
+                .overlay(
+                    Image(systemName: "doc.text.magnifyingglass")
+                        .font(.system(size: 30, weight: .semibold))
+                        .foregroundStyle(DS.primary)
+                )
+
+            VStack(spacing: 6) {
+                Text("No Active Loans")
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundColor(DS.textPrimary)
+
+                Text("You don't have any active loans yet. Once your loan is disbursed, it will appear here.")
+                    .font(.subheadline)
+                    .foregroundColor(DS.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 32)
+        .padding(.horizontal, 24)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(0.98),
+                    Color(hex: "#F7F9FF")
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.white.opacity(0.85), lineWidth: 1)
+        )
+        .shadow(color: Color(hex: "#AFC4FF").opacity(0.24), radius: 24, x: 0, y: 12)
+        .shadow(color: .black.opacity(0.04), radius: 8, x: 0, y: 3)
     }
 }
 
@@ -808,7 +865,7 @@ final class HomeDashboardViewModel: ObservableObject {
     @Published var errorMessage: String? = nil
 
     let quickActions: [QuickAction] = [
-        QuickAction(kind: .support, icon: "headphones", label: String(localized: "Messages")),
+        QuickAction(kind: .support, icon: "headphones", label: String(localized: "Support")),
         QuickAction(kind: .payEMI, icon: "indianrupeesign.circle.fill", label: String(localized: "Pay EMI")),
         QuickAction(kind: .history, icon: "clock.arrow.circlepath", label: String(localized: "History")),
         QuickAction(kind: .analytics, icon: "chart.bar.fill", label: String(localized: "Analytics"))
@@ -883,6 +940,16 @@ final class HomeDashboardViewModel: ObservableObject {
                 loans: liveLoans,
                 applicationsById: applicationsById,
                 schedules: schedules
+            )
+
+            // ── NOTIFICATIONS ──────────────────────────────────────────
+            NotificationGenerator.checkApplicationStatusChanges(applications: reconciledApplications)
+            NotificationGenerator.checkUpcomingEMIs(
+                loans: liveLoans,
+                schedules: schedules,
+                applicationsByLoanId: Dictionary(uniqueKeysWithValues: liveLoans.compactMap { loan in
+                    applicationsById[loan.applicationId].map { (loan.id, $0) }
+                })
             )
         } catch {
             errorMessage = (error as? LocalizedError)?.errorDescription ?? "Failed to load your live loan dashboard."

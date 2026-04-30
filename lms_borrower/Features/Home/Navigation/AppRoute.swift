@@ -33,7 +33,7 @@ enum AppRoute: Hashable {
     case repaymentsList(loanId: String, initialTab: Int)
     case overdueDetails(loanId: String)
     case paymentCheckout(loanId: String, emiScheduleId: String, amount: Double)
-    case paymentSuccess(transactionID: String)
+    case paymentSuccess(transactionID: String, loanId: String?)
     case autoPaySetup // No backend API – shows fallback alert
     
     // Feature 9: Smart Financial Tools

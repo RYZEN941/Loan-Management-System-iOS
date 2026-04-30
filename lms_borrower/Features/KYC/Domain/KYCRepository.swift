@@ -33,8 +33,11 @@ public final class KYCRepository: Sendable {
     }
 
     public struct AadhaarVerificationResult {
-        /// `true` when backend returned `success = true` and status == "VALID".
+        /// `true` when provider status == "VALID" (OTP verified successfully).
+        /// The backend may set `success = false` due to profile mismatch, but the
+        /// Aadhaar OTP itself was verified — the flow should still proceed.
         public let isValid: Bool
+        public let isProfileMismatch: Bool
         public let status: String
         public let message: String
         public let providerTransactionID: String
@@ -144,8 +147,10 @@ public final class KYCRepository: Sendable {
 
         let resp = try await kycClient.verifyAadhaarKycOtp(request: req, metadata: metadata, options: options)
 
+        let providerVerified = resp.status.uppercased() == "VALID"
         return AadhaarVerificationResult(
-            isValid: resp.success && resp.status.uppercased() == "VALID",
+            isValid: providerVerified,
+            isProfileMismatch: providerVerified && !resp.success,
             status: resp.status,
             message: resp.message,
             providerTransactionID: resp.providerTransactionID,

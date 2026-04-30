@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PaymentSuccessView: View {
     let transactionID: String
+    let loanId: String?
     @EnvironmentObject var router: AppRouter
     
     var body: some View {
@@ -63,5 +64,8 @@ struct PaymentSuccessView: View {
         }
         .background(Color(UIColor.systemBackground).ignoresSafeArea())
         .navigationBarHidden(true)
+        .onAppear {
+            NotificationGenerator.recordPaymentSuccess(transactionID: transactionID, loanId: loanId)
+        }
     }
 }

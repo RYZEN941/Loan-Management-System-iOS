@@ -24,11 +24,11 @@ struct AadhaarOTPVerifyView: View {
                             .font(.title2.weight(.bold))
                             .foregroundStyle(DS.textPrimary)
 
-                        if !viewModel.aadhaarReferenceID.isEmpty {
-                            Text("Reference ID: \(viewModel.aadhaarReferenceID)")
-                                .font(.footnote)
-                                .foregroundStyle(DS.textSecondary)
-                        }
+//                        if !viewModel.aadhaarReferenceID.isEmpty {
+//                            Text("Reference ID: \(viewModel.aadhaarReferenceID)")
+//                                .font(.footnote)
+//                                .foregroundStyle(DS.textSecondary)
+//                        }
                     }
                     .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
                 }
@@ -68,6 +68,7 @@ struct AadhaarOTPVerifyView: View {
                     Task {
                         let ok = await viewModel.verifyAadhaarOTP()
                         if ok {
+                            viewModel.errorMessage = nil
                             path.append(KYCRoute.panInput)
                         }
                     }

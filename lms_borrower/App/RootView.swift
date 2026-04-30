@@ -13,6 +13,7 @@ import Combine
 /// and WelcomeFlowController (new / logged-out user).
 struct RootView: View {
     @EnvironmentObject var session: SessionStore
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         Group {
@@ -39,6 +40,13 @@ struct RootView: View {
         }
         .onOpenURL { url in
             handleDeepLink(url)
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active, session.isLoggedIn {
+                if #available(iOS 18.0, *) {
+                    NotificationGenerator.checkKYCReminder(kycStatus: session.kycStatus)
+                }
+            }
         }
     }
 

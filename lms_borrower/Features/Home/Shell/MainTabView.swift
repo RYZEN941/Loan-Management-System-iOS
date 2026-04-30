@@ -93,7 +93,7 @@ struct MainTabView: View {
         case .repaymentsList(let loanId, let tab): RepaymentsListView(loanId: loanId, selectedTab: tab)
         case .overdueDetails(let loanId): OverdueDetailsView(loanId: loanId)
         case .paymentCheckout(let loanId, let emiScheduleId, let amount): PaymentCheckoutView(loanId: loanId, emiScheduleId: emiScheduleId, amount: amount)
-        case .paymentSuccess(let txnID): PaymentSuccessView(transactionID: txnID)
+        case .paymentSuccess(let txnID, let loanId): PaymentSuccessView(transactionID: txnID, loanId: loanId)
         case .prepaymentCalculator: PrepaymentCalculatorView()
         case .whatIfSimulator: WhatIfSimulatorView()
         case .savingsInsight: SavingsInsightView()

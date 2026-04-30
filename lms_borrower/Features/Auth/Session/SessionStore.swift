@@ -15,7 +15,13 @@ final class SessionStore: ObservableObject {
     @Published var isLoggedIn: Bool
     @Published var isAppUnlocked: Bool
     @Published var justLoggedIn: Bool = false
-    @Published var kycStatus: KYCStatus = .notStarted
+    @Published var kycStatus: KYCStatus = .notStarted {
+        didSet {
+            if #available(iOS 18.0, *) {
+                NotificationGenerator.checkKYCCompleted(kycStatus: kycStatus)
+            }
+        }
+    }
     @Published var userName: String // Still kept locally for display purposes
     @Published var userEmail: String
     @Published var userPhone: String
@@ -214,6 +220,7 @@ final class SessionStore: ObservableObject {
         self.hasTotp = false
         UserDefaults.standard.removeObject(forKey: "loanOS_borrowerProfileId")
         UserDefaults.standard.removeObject(forKey: "loanOS_has_totp")
+        NotificationStore.shared.clearAll()
 
         // Then do backend cleanup in background (best effort)
         Task {

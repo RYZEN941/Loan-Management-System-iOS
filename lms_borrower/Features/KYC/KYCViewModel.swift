@@ -157,7 +157,11 @@ public final class KYCViewModel: ObservableObject {
             )
 
             guard response.isValid else {
-                return fail(with: response.message)
+                return fail(with: response.message.isEmpty ? "Aadhaar verification failed. Please try again." : response.message)
+            }
+
+            if response.isProfileMismatch {
+                errorMessage = "Aadhaar verified, but some details don't match your profile. Verification will be reviewed."
             }
 
             aadhaarOTP = trimmedOTP

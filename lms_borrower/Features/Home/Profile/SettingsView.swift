@@ -4,6 +4,7 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject var router: AppRouter
     @EnvironmentObject private var session: SessionStore
+    @AppStorage(AppLanguage.storageKey) private var selectedLanguageCode = AppLanguage.defaultLanguage.rawValue
     @State private var notificationsEnabled = true
     @State private var activeSheet: SecuritySheet?
     @State private var isAuthenticatorQuickLoginEnabled = false
@@ -18,7 +19,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Preferences").font(.caption).foregroundColor(.secondary).padding(.horizontal, 20)
                     VStack(spacing: 0) {
-                        SettingsNavRow(icon: "globe", title: "Language", value: "English") { router.push(.languageSelection) }
+                        SettingsNavRow(icon: "globe", title: "Language", value: selectedLanguage.displayNameKey) { router.push(.languageSelection) }
                         Divider().padding(.leading, 56)
                         SettingsNavRow(icon: "figure.accessibility", title: "Accessibility") { router.push(.accessibilitySettings) }
                     }
@@ -97,14 +98,18 @@ struct SettingsView: View {
                         isAuthenticatorQuickLoginEnabled = true
                     }
                 )
-            case .message(let text):
+            case .activeUserVerificationFailed:
                 return Alert(
                     title: Text("Settings"),
-                    message: Text(text),
+                    message: Text("We couldn't verify the active user for this setting."),
                     dismissButton: .default(Text("OK"))
                 )
             }
         }
+    }
+
+    private var selectedLanguage: AppLanguage {
+        AppLanguage.from(storageValue: selectedLanguageCode)
     }
 
     private var authenticatorToggleBinding: Binding<Bool> {
@@ -154,7 +159,7 @@ struct SettingsView: View {
 
     private func persistAuthenticatorPreference(_ enabled: Bool) {
         guard let userID = currentUserID else {
-            alertContext = .message("We couldn't verify the active user for this setting.")
+            alertContext = .activeUserVerificationFailed
             return
         }
         QuickLoginPreferencesStore.shared.setAuthenticatorEnabled(enabled, for: userID)
@@ -169,33 +174,33 @@ private enum SecuritySheet: String, Identifiable {
 
 private enum SettingsAlertContext: Identifiable {
     case disableAuthenticator
-    case message(String)
+    case activeUserVerificationFailed
 
     var id: String {
         switch self {
         case .disableAuthenticator:
             return "disable-authenticator"
-        case .message(let text):
-            return "message-\(text)"
+        case .activeUserVerificationFailed:
+            return "active-user-verification-failed"
         }
     }
 }
 
 // MARK: - Language Selection View
 struct LanguageSelectionView: View {
-    @State private var selectedLanguage = "English"
-    let languages = ["English", "Hindi (हिन्दी)", "Marathi (मराठी)", "Tamil (தமிழ்)", "Telugu (தமிழ்)"]
+    @AppStorage(AppLanguage.storageKey) private var selectedLanguageCode = AppLanguage.defaultLanguage.rawValue
+    private let languages = AppLanguage.allCases
     
     var body: some View {
         List {
-            ForEach(languages, id: \.self) { lang in
+            ForEach(languages) { language in
                 Button {
-                    selectedLanguage = lang
+                    selectedLanguageCode = language.rawValue
                 } label: {
                     HStack {
-                        Text(lang).foregroundColor(.primary)
+                        Text(language.displayNameKey).foregroundColor(.primary)
                         Spacer()
-                        if selectedLanguage == lang {
+                        if selectedLanguageCode == language.rawValue {
                             Image(systemName: "checkmark").foregroundColor(.mainBlue)
                         }
                     }
@@ -240,8 +245,8 @@ struct AccessibilitySettingsView: View {
 // MARK: - Settings Subcomponents
 struct SettingsNavRow: View {
     let icon: String
-    let title: String
-    var value: String? = nil
+    let title: LocalizedStringKey
+    var value: LocalizedStringKey? = nil
     let action: () -> Void
     
     var body: some View {
@@ -260,7 +265,7 @@ struct SettingsNavRow: View {
 
 struct SettingsToggleRow: View {
     let icon: String
-    let title: String
+    let title: LocalizedStringKey
     @Binding var isOn: Bool
     
     var body: some View {
@@ -277,8 +282,8 @@ struct SettingsToggleRow: View {
 
 struct SettingsInfoRow: View {
     let icon: String
-    let title: String
-    let value: String
+    let title: LocalizedStringKey
+    let value: LocalizedStringKey
 
     var body: some View {
         HStack(spacing: 16) {

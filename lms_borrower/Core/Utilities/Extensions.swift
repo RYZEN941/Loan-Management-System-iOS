@@ -37,3 +37,15 @@ extension Color {
                   blue: Double(b)/255, opacity: Double(a)/255)
     }
 }
+
+// ═══════════════════════════════════════════════════════════════
+// MARK: - Date Extension
+// ═══════════════════════════════════════════════════════════════
+
+extension Date {
+    var relativeFormatted: String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter.localizedString(for: self, relativeTo: Date())
+    }
+}

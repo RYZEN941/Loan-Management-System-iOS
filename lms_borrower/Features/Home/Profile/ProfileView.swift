@@ -225,10 +225,10 @@ struct EditProfileView: View {
     
     var body: some View {
         List {
-            Section {
-                profileSummary
-                    .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
-            }
+//            Section {
+////                profileSummary
+////                    .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
+//            }
 
             Section {
                 TextField("First name", text: $viewModel.firstName)
@@ -359,17 +359,17 @@ struct EditProfileView: View {
         }
     }
 
-    private var profileSummary: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Borrower profile")
-                .font(.headline)
-                .foregroundStyle(DS.textPrimary)
-            Text("Review and update the onboarding information saved for your account.")
-                .font(.subheadline)
-                .foregroundStyle(DS.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
+//    private var profileSummary: some View {
+//        VStack(alignment: .leading, spacing: 10) {
+//            Text("Borrower profile")
+//                .font(.headline)
+//                .foregroundStyle(DS.textPrimary)
+//            Text("Review and update the onboarding information saved for your account.")
+//                .font(.subheadline)
+//                .foregroundStyle(DS.textSecondary)
+//                .fixedSize(horizontal: false, vertical: true)
+//        }
+//    }
 
     private var bottomBar: some View {
         VStack(spacing: 8) {

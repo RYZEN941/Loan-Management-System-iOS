@@ -28,7 +28,7 @@ struct PaymentCheckoutView: View {
                     }
                     .padding(.top, 30)
 
-                    orderStatusCard
+//                    orderStatusCard
 
                     // Payment Method Selection
                     VStack(alignment: .leading, spacing: 16) {
@@ -62,7 +62,7 @@ struct PaymentCheckoutView: View {
                         .padding(.horizontal, 20)
                     }
 
-                    launchInstructionsSection
+//                    launchInstructionsSection
 
                     Spacer().frame(height: 100)
                 }
@@ -87,7 +87,7 @@ struct PaymentCheckoutView: View {
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 .padding(.trailing, 8)
                         }
-                        Text(viewModel.isPreparingOrder ? "Preparing…" : "Open Razorpay")
+                        Text(viewModel.isPreparingOrder ? "Preparing…" : "Pay Now")
                             .font(.headline)
                             .foregroundColor(.white)
                     }
@@ -123,7 +123,7 @@ struct PaymentCheckoutView: View {
                                 razorpayPaymentId: result.paymentID,
                                 razorpaySignature: result.signature
                             ) {
-                                router.push(.paymentSuccess(transactionID: payment.externalTransactionId))
+                                router.push(.paymentSuccess(transactionID: payment.externalTransactionId, loanId: loanId))
                             }
                         }
                     },
@@ -167,103 +167,103 @@ struct PaymentCheckoutView: View {
         )
     }
 
-    private var orderStatusCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Razorpay Order")
-                .font(.headline)
+//    private var orderStatusCard: some View {
+//        VStack(alignment: .leading, spacing: 14) {
+//            Text("Razorpay Order")
+//                .font(.headline)
+//
+//            if viewModel.isPreparingOrder {
+//                HStack(spacing: 10) {
+//                    ProgressView()
+//                    Text("Creating Razorpay order with the backend…")
+//                        .font(.subheadline)
+//                        .foregroundColor(.secondary)
+//                }
+//            } else if let order = viewModel.paymentOrder {
+//                orderDetailRow(title: "Order ID", value: order.orderId)
+//                orderDetailRow(title: "Currency", value: order.currency)
+//                orderDetailRow(title: "Amount", value: "₹\(order.amount)")
+//                orderDetailRow(title: "Key ID", value: RazorpayCheckoutConfig.keyID)
+//
+//                Text("Your EMI payment order is ready. Tap the button below to open Razorpay checkout and complete the payment inside the borrower app.")
+//                    .font(.footnote)
+//                    .foregroundColor(.secondary)
+//                    .fixedSize(horizontal: false, vertical: true)
+//
+//                Button {
+//                    Task {
+//                        await viewModel.retryCheckout(
+//                            loanId: loanId,
+//                            emiScheduleId: emiScheduleId,
+//                            amount: amount
+//                        )
+//                    }
+//                } label: {
+//                    Text("Regenerate Order")
+//                        .font(.subheadline.weight(.semibold))
+//                        .foregroundColor(.mainBlue)
+//                        .frame(maxWidth: .infinity)
+//                        .padding(.vertical, 12)
+//                        .background(DS.primaryLight.opacity(0.5))
+//                        .clipShape(RoundedRectangle(cornerRadius: 12))
+//                }
+//            } else {
+//                Text("We couldn't create a Razorpay order yet. Retry to continue.")
+//                    .font(.subheadline)
+//                    .foregroundColor(.secondary)
+//
+//                Button {
+//                    Task {
+//                        await viewModel.retryCheckout(
+//                            loanId: loanId,
+//                            emiScheduleId: emiScheduleId,
+//                            amount: amount
+//                        )
+//                    }
+//                } label: {
+//                    Text("Retry Order Creation")
+//                        .font(.headline)
+//                        .foregroundColor(.white)
+//                        .frame(maxWidth: .infinity)
+//                        .padding(.vertical, 14)
+//                        .background(DS.primary)
+//                        .clipShape(RoundedRectangle(cornerRadius: 12))
+//                }
+//            }
+//        }
+//        .padding(20)
+//        .background(Color.white)
+//        .clipShape(RoundedRectangle(cornerRadius: 16))
+//        .padding(.horizontal, 20)
+//    }
 
-            if viewModel.isPreparingOrder {
-                HStack(spacing: 10) {
-                    ProgressView()
-                    Text("Creating Razorpay order with the backend…")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-            } else if let order = viewModel.paymentOrder {
-                orderDetailRow(title: "Order ID", value: order.orderId)
-                orderDetailRow(title: "Currency", value: order.currency)
-                orderDetailRow(title: "Amount", value: "₹\(order.amount)")
-                orderDetailRow(title: "Key ID", value: RazorpayCheckoutConfig.keyID)
-
-                Text("Your EMI payment order is ready. Tap the button below to open Razorpay checkout and complete the payment inside the borrower app.")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Button {
-                    Task {
-                        await viewModel.retryCheckout(
-                            loanId: loanId,
-                            emiScheduleId: emiScheduleId,
-                            amount: amount
-                        )
-                    }
-                } label: {
-                    Text("Regenerate Order")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.mainBlue)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(DS.primaryLight.opacity(0.5))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-            } else {
-                Text("We couldn't create a Razorpay order yet. Retry to continue.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-
-                Button {
-                    Task {
-                        await viewModel.retryCheckout(
-                            loanId: loanId,
-                            emiScheduleId: emiScheduleId,
-                            amount: amount
-                        )
-                    }
-                } label: {
-                    Text("Retry Order Creation")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(DS.primary)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-            }
-        }
-        .padding(20)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .padding(.horizontal, 20)
-    }
-
-    private var launchInstructionsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Checkout Flow")
-                .font(.headline)
-                .padding(.horizontal, 20)
-
-            VStack(alignment: .leading, spacing: 14) {
-                Text("The borrower app now opens Razorpay checkout using your live order ID and test key. Once the gateway returns the payment ID and signature, the app verifies them with the backend automatically.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text("Selected method: \(selectedMethod)")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.mainBlue)
-
-                Text("If the payment service on the backend has not been deployed yet, order creation will fail before checkout opens.")
-                    .font(.footnote)
-                    .foregroundColor(.orange)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(20)
-            .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .padding(.horizontal, 20)
-        }
-    }
+//    private var launchInstructionsSection: some View {
+//        VStack(alignment: .leading, spacing: 16) {
+//            Text("Checkout Flow")
+//                .font(.headline)
+//                .padding(.horizontal, 20)
+//
+//            VStack(alignment: .leading, spacing: 14) {
+//                Text("The borrower app now opens Razorpay checkout using your live order ID and test key. Once the gateway returns the payment ID and signature, the app verifies them with the backend automatically.")
+//                    .font(.subheadline)
+//                    .foregroundColor(.secondary)
+//                    .fixedSize(horizontal: false, vertical: true)
+//
+//                Text("Selected method: \(selectedMethod)")
+//                    .font(.caption.weight(.semibold))
+//                    .foregroundColor(.mainBlue)
+//
+//                Text("If the payment service on the backend has not been deployed yet, order creation will fail before checkout opens.")
+//                    .font(.footnote)
+//                    .foregroundColor(.orange)
+//                    .fixedSize(horizontal: false, vertical: true)
+//            }
+//            .padding(20)
+//            .background(Color.white)
+//            .clipShape(RoundedRectangle(cornerRadius: 16))
+//            .padding(.horizontal, 20)
+//        }
+//    }
 
     private func orderDetailRow(title: String, value: String) -> some View {
         HStack(alignment: .top, spacing: 12) {

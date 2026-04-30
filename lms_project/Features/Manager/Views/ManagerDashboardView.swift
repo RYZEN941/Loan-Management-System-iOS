@@ -383,8 +383,15 @@ struct ManagerDashboardView: View {
 
     private var npaSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            sectionHeader(title: "NPA Analysis", icon: "exclamationmark.shield.fill")
-
+                    HStack {
+                        sectionHeader(title: "NPA Analysis", icon: "exclamationmark.shield.fill")
+                        Spacer()
+                        NavigationLink(destination: ManagerNPAAnalyticsView()) {
+                            Text("Deep Insights")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(primary)
+                        }
+                    }
             // Overall banner
             HStack {
                 VStack(alignment: .leading, spacing: 3) {

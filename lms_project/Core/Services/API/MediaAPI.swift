@@ -254,10 +254,18 @@ enum Media_V1_MediaService {
 // MARK: - MediaAPI
 
 @available(iOS 18.0, *)
+struct UploadedMedia: Sendable {
+    let mediaID: String
+    let fileURL: URL?
+    let fileName: String
+    let contentType: String
+}
+
+@available(iOS 18.0, *)
 struct MediaAPI {
 
-    /// Full upload flow: initiate → HTTP PUT → complete → return mediaID
-    func uploadFile(data: Data, fileName: String, contentType: String, note: String = "") async throws -> String {
+    /// Full upload flow: initiate → HTTP PUT → complete → return media metadata.
+    func uploadFile(data: Data, fileName: String, contentType: String, note: String = "") async throws -> UploadedMedia {
         // Step 1: Initiate
         let initResponse = try await initiateMediaUpload(
             fileName: fileName, contentType: contentType, sizeBytes: Int64(data.count), note: note
@@ -291,7 +299,12 @@ struct MediaAPI {
             throw APIError.invalidArgument("Failed to complete media upload.")
         }
 
-        return completeResponse.mediaID
+        return UploadedMedia(
+            mediaID: completeResponse.mediaID,
+            fileURL: URL(string: completeResponse.fileUrl),
+            fileName: fileName,
+            contentType: contentType
+        )
     }
 
     func listMedia(limit: Int32 = 100, offset: Int32 = 0) async throws -> [Media_V1_MediaItem] {

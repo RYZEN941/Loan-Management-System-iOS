@@ -65,6 +65,7 @@ enum AuthStep {
     case mfaVerification   // enter OTP
     case forcePasswordChange
     case authenticated     // logged in
+    case forgotPassword    // forgot password flow
 }
 
 // MARK: - AuthViewModel
@@ -87,6 +88,12 @@ class AuthViewModel: ObservableObject {
     @Published var authNotice: String? = nil
     @Published var isLoading: Bool = false
 
+    // Forgot Password flow state
+    @Published var resetSessionID: String = ""
+    @Published var forgotPasswordError: String? = nil
+    @Published var maskedEmail: String = ""
+    @Published var maskedPhone: String = ""
+
     private let dataService = MockDataService.shared
     private let authAPI = AuthAPI()
     private let sessionStore = SessionStore.shared
@@ -94,6 +101,8 @@ class AuthViewModel: ObservableObject {
     private var mfaSessionID: String = ""
     private var allowedMFAMethods: [MFAMethod] = []
     private var pendingCurrentPassword: String = ""
+    private var loginPrimeTask: Task<Void, Never>? = nil
+    private var hasPrewarmedConnection = false
 
     var isLoggedIn: Bool { currentRole != nil }
     var availableMFAMethods: [MFAMethod] {
@@ -133,6 +142,19 @@ class AuthViewModel: ObservableObject {
                 loginError = (error as? LocalizedError)?.errorDescription ?? "Login failed"
             }
             isLoading = false
+        }
+    }
+
+    func primeSignInExperience(identifier: String) {
+        let trimmed = identifier.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 5, !hasPrewarmedConnection else { return }
+
+        loginPrimeTask?.cancel()
+        loginPrimeTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            guard let self, !Task.isCancelled else { return }
+            await CoreAPIClient.prewarmConnection()
+            self.hasPrewarmedConnection = true
         }
     }
 
@@ -346,6 +368,60 @@ class AuthViewModel: ObservableObject {
                 passwordChangeError = (error as? LocalizedError)?.errorDescription ?? "Failed to change password"
             }
             isLoading = false
+        }
+    }
+
+    // MARK: - Forgot Password Flow
+
+    func initiateForgotPassword(emailOrPhone: String) async -> Bool {
+        forgotPasswordError = nil
+        isLoading = true
+        defer { isLoading = false }
+        
+        do {
+            let response = try await authAPI.initiateForgotPassword(emailOrPhone: emailOrPhone)
+            resetSessionID = response.resetSessionID
+            maskedEmail = response.maskedEmail
+            maskedPhone = response.maskedPhone
+            return true
+        } catch {
+            forgotPasswordError = (error as? LocalizedError)?.errorDescription ?? "Failed to initiate password reset"
+            return false
+        }
+    }
+
+    func verifyForgotPasswordOTP(emailCode: String, phoneCode: String) async -> Bool {
+        forgotPasswordError = nil
+        isLoading = true
+        defer { isLoading = false }
+        
+        do {
+            let response = try await authAPI.verifyForgotPasswordOTPs(
+                resetSessionID: resetSessionID,
+                emailCode: emailCode,
+                phoneCode: phoneCode
+            )
+            return response.verified
+        } catch {
+            forgotPasswordError = (error as? LocalizedError)?.errorDescription ?? "OTP verification failed"
+            return false
+        }
+    }
+
+    func resetForgotPassword(newPassword: String) async -> Bool {
+        forgotPasswordError = nil
+        isLoading = true
+        defer { isLoading = false }
+        
+        do {
+            let response = try await authAPI.resetForgotPassword(
+                resetSessionID: resetSessionID,
+                newPassword: newPassword
+            )
+            return response.success
+        } catch {
+            forgotPasswordError = (error as? LocalizedError)?.errorDescription ?? "Failed to reset password"
+            return false
         }
     }
 

@@ -21,6 +21,15 @@ struct AdminAPI {
         }
     }
 
+    func listBranchOfficers(branchID: String, limit: Int32 = 200, offset: Int32 = 0) async throws -> [Admin_V1_EmployeeAccount] {
+        let normalizedBranchID = branchID.trimmingCharacters(in: .whitespacesAndNewlines)
+        let employees = try await listEmployeeAccounts(limit: limit, offset: offset)
+        guard !normalizedBranchID.isEmpty else { return employees }
+        return employees.filter { account in
+            account.branchID.trimmingCharacters(in: .whitespacesAndNewlines) == normalizedBranchID
+        }
+    }
+
     func createEmployeeAccount(
         name: String,
         email: String,

@@ -50,6 +50,7 @@ extension Date {
 extension Double {
     /// Formats as currency: "₹25,00,000"
     var currencyFormatted: String {
+        guard self.isFinite, self >= 0 else { return "N/A" }
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.currencySymbol = "₹"
@@ -60,7 +61,8 @@ extension Double {
     
     /// Formats as percentage: "29%"
     var percentFormatted: String {
-        return "\(Int(self * 100))%"
+        guard self.isFinite, self >= 0 else { return "N/A" }
+        return String(format: "%.1f%%", self * 100)
     }
     
     /// Formats as compact number: "25L", "5Cr"
@@ -74,12 +76,20 @@ extension Double {
         }
         return String(format: "%.0f", self)
     }
+
+    /// Formats as Lakhs: "165.6 L"
+    var lakhsFormatted: String {
+        guard self.isFinite else { return "N/A" }
+        let lakhs = self / 100_000.0
+        return String(format: "%.1f L", lakhs)
+    }
 }
 
 extension Int {
     /// Formats as currency
     var currencyFormatted: String {
-        Double(self).currencyFormatted
+        guard self >= 0 else { return "N/A" }
+        return Double(self).currencyFormatted
     }
     
     /// Formats as compact number

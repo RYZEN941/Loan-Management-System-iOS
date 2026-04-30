@@ -71,7 +71,8 @@ struct ManagerApplicationRow: View {
 
                     Spacer()
 
-                    if application.riskLevel == .high {
+                    // Replace the old if application.riskLevel == .high block with:
+                    if application.isHighRisk {
                         HStack(spacing: 3) {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.system(size: 10))
@@ -92,7 +93,7 @@ struct ManagerApplicationRow: View {
         .background(
             isSelected
             ? (colorScheme == .dark ? ManagerTheme.Colors.surfaceSecondary(colorScheme) : Theme.Colors.lightBlue)
-            : Color.clear
+            : (application.isHighRisk ? Theme.Colors.adaptiveCritical(colorScheme).opacity(0.03) : Color.clear)
         )
         .overlay(
             Group {

@@ -173,19 +173,19 @@ class MockDataService: LMSDataService {
     
     func fetchConversations() -> [Conversation] {
         return [
-            Conversation(id: "CONV-001", participantName: "Rajesh Kumar", participantRole: "Borrower", participantEmail: "rajesh.kumar@email.com",
+            Conversation(id: "CONV-001", participantUserID: "BOR-001", participantName: "Rajesh Kumar", participantRole: "Borrower", participantEmail: "rajesh.kumar@email.com",
                          lastMessage: "I have uploaded the bank statement.", lastMessageTime: Date().addingTimeInterval(-3600),
                          unreadCount: 2, isOnline: true),
-            Conversation(id: "CONV-002", participantName: "Priya Sharma", participantRole: "Borrower", participantEmail: "priya.sharma@email.com",
+            Conversation(id: "CONV-002", participantUserID: "BOR-002", participantName: "Priya Sharma", participantRole: "Borrower", participantEmail: "priya.sharma@email.com",
                          lastMessage: "When will I receive an update?", lastMessageTime: Date().addingTimeInterval(-7200),
                          unreadCount: 1, isOnline: false),
-            Conversation(id: "CONV-003", participantName: "Neha Kapoor", participantRole: "Loan Officer", participantEmail: "neha.kapoor@bank.com",
+            Conversation(id: "CONV-003", participantUserID: "LO-002", participantName: "Neha Kapoor", participantRole: "Loan Officer", participantEmail: "neha.kapoor@bank.com",
                          lastMessage: "Can you review APP-2024-005?", lastMessageTime: Date().addingTimeInterval(-14400),
                          unreadCount: 0, isOnline: true),
-            Conversation(id: "CONV-004", participantName: "Vikram Desai", participantRole: "Borrower", participantEmail: "vikram.desai@email.com",
+            Conversation(id: "CONV-004", participantUserID: "BOR-003", participantName: "Vikram Desai", participantRole: "Borrower", participantEmail: "vikram.desai@email.com",
                          lastMessage: "Thank you for the update.", lastMessageTime: Date().addingTimeInterval(-86400),
                          unreadCount: 0, isOnline: false),
-            Conversation(id: "CONV-005", participantName: "Ravi Shankar", participantRole: "Loan Officer", participantEmail: "ravi.shankar@bank.com",
+            Conversation(id: "CONV-005", participantUserID: "LO-003", participantName: "Ravi Shankar", participantRole: "Loan Officer", participantEmail: "ravi.shankar@bank.com",
                          lastMessage: "Meeting at 3 PM today.", lastMessageTime: Date().addingTimeInterval(-28800),
                          unreadCount: 0, isOnline: true)
         ]
@@ -361,13 +361,22 @@ class MockDataService: LMSDataService {
             documents: [
                 LoanDocument(id: "\(id)-DOC-1", type: .panCard, label: "PAN Card",
                              status: status == .pending ? .pending : .verified,
-                             uploadedAt: status == .pending ? nil : createdAt),
+                             uploadedAt: status == .pending ? nil : createdAt,
+                             fileName: status == .pending ? nil : "pan_card.jpg",
+                             contentType: "image/jpeg",
+                             fileURL: status == .pending ? nil : URL(string: "https://picsum.photos/seed/\(id)1/800/1200")),
                 LoanDocument(id: "\(id)-DOC-2", type: .aadhaar, label: "Aadhaar Card",
                              status: status == .pending ? .pending : (risk == .high ? .pending : .verified),
-                             uploadedAt: risk == .high ? nil : createdAt),
+                             uploadedAt: risk == .high ? nil : createdAt,
+                             fileName: risk == .high ? nil : "aadhaar_card.jpg",
+                             contentType: "image/jpeg",
+                             fileURL: risk == .high ? nil : URL(string: "https://picsum.photos/seed/\(id)2/800/1200")),
                 LoanDocument(id: "\(id)-DOC-3", type: .bankStatement, label: "Bank Statement",
                              status: risk == .high ? .pending : .uploaded,
-                             uploadedAt: risk == .high ? nil : createdAt.addingTimeInterval(86400))
+                             uploadedAt: risk == .high ? nil : createdAt.addingTimeInterval(86400),
+                             fileName: risk == .high ? nil : "bank_statement.jpg",
+                             contentType: "image/jpeg",
+                             fileURL: risk == .high ? nil : URL(string: "https://picsum.photos/seed/\(id)3/800/1200"))
             ],
             verification: [
                 VerificationItem(id: "\(id)-VER-1", field: "PAN Name",

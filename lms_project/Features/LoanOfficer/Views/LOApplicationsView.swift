@@ -468,7 +468,7 @@ struct LOApplicationsView: View {
                             documentsSection(app)
                             sanctionLetterSection(app)
                             internalRemarksSection(app)
-                            conversationSection(app)
+//                            conversationSection(app)
                         }
                     }
                     .padding(20)

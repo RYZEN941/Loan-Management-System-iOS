@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package remark.v1;
+
+option go_package = "github.com/chirag3003/lms-monorepo/services/core-api/internal/transport/grpc/generated/remarkv1;remarkv1";
+
+service RemarkService {
+  rpc AddRemark(AddRemarkRequest) returns (AddRemarkResponse);
+  rpc ListRemarks(ListRemarksRequest) returns (ListRemarksResponse);
+}
+
+message Remark {
+  string id = 1;
+  string application_id = 2;
+  string sender_user_id = 3;
+  string sender_role = 4;
+  string message = 5;
+  string created_at = 6;
+}
+
+message AddRemarkRequest {
+  string application_id = 1;
+  string message = 2;
+}
+
+message AddRemarkResponse {
+  Remark remark = 1;
+}
+
+message ListRemarksRequest {
+  string application_id = 1;
+}
+
+message ListRemarksResponse {
+  repeated Remark remarks = 1;
+}

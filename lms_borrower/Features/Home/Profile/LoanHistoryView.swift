@@ -119,23 +119,23 @@ private struct ClosedLoanCard: View {
                     Text("\(loan.tenureMonths) Months").font(.subheadline).bold()
                 }
             }
-
-            Divider()
-
-            Button {
-                // Wire this to the NDC endpoint once the backend provides the document download.
-            } label: {
-                HStack {
-                    Image(systemName: "arrow.down.doc.fill")
-                    Text("Download No Dues Certificate")
-                }
-                .font(.subheadline).bold()
-                .foregroundColor(.mainBlue)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(DS.primaryLight)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
+//
+//            Divider()
+//
+//            Button {
+//                // Wire this to the NDC endpoint once the backend provides the document download.
+//            } label: {
+//                HStack {
+//                    Image(systemName: "arrow.down.doc.fill")
+//                    Text("Download No Dues Certificate")
+//                }
+//                .font(.subheadline).bold()
+//                .foregroundColor(.mainBlue)
+//                .frame(maxWidth: .infinity)
+//                .padding(.vertical, 12)
+//                .background(DS.primaryLight)
+//                .clipShape(RoundedRectangle(cornerRadius: 12))
+//            }
         }
         .padding(20)
         .background(Color.white)

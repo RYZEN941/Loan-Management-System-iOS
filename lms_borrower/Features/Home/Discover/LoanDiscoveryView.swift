@@ -11,7 +11,7 @@ struct LoanMarketplaceView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Apply for Loan")
                         .font(.largeTitle).bold()
-                    Text("Find the right loan product from live backend data.")
+                    Text("Find the right loan product for you.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -279,9 +279,23 @@ struct LoanDetailScreen: View {
                         Text("Features & Benefits")
                             .font(.headline)
 
-                        FeatureRow(icon: "clock.fill", title: "Fast Processing", subtitle: "Application moves to review as soon as your docs are uploaded.")
-                        FeatureRow(icon: "doc.text.fill", title: "Product-Based Documents", subtitle: "Required documents are loaded from this product's backend configuration.")
-                        FeatureRow(icon: "percent", title: "Transparent Pricing", subtitle: "Rate and fee settings are fetched from backend product terms.")
+                        FeatureRow(
+                            icon: "bolt.fill",
+                            title: "Instant Application Flow",
+                            subtitle: "Your application is automatically routed for review the moment required documents are submitted."
+                        )
+
+                        FeatureRow(
+                            icon: "folder.badge.person.crop",
+                            title: "Smart Document Handling",
+                            subtitle: "Only relevant documents are requested dynamically based on the selected loan product."
+                        )
+
+                        FeatureRow(
+                            icon: "chart.line.uptrend.xyaxis",
+                            title: "Clear & Predictable Costs",
+                            subtitle: "Interest rates and charges are transparently defined using product-level configurations."
+                        )
                     }
                     .padding(.horizontal, 20)
 

@@ -456,7 +456,7 @@ struct LOApplicationsView: View {
                                 }
                                 .frame(maxWidth: .infinity)
                             }
-                            conversationSection(app)
+//                            conversationSection(app)
                         } else {
                             // Normal stacked layout
                             consolidatedBorrowerProfile(app)
@@ -468,7 +468,7 @@ struct LOApplicationsView: View {
                             documentsSection(app)
                             sanctionLetterSection(app)
                             internalRemarksSection(app)
-                            conversationSection(app)
+//                            conversationSection(app)
                         }
                     }
                     .padding(20)

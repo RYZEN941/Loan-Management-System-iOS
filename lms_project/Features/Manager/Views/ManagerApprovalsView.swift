@@ -394,7 +394,7 @@ struct ManagerApprovalsView: View {
                         documentsSummarySection(app)
                         sanctionLetterSection(app)
                         internalRemarksSection(app)
-                        conversationSection(app)
+//                        conversationSection(app)
                     }
                     .padding(20)
                 }

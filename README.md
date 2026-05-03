@@ -244,6 +244,7 @@ AADHAAR_API_KEY=your_aadhaar_api_key
 | Sakshi Beloshe | Scrum Master | UI & integrations |
 | Chirag Bhalotia | Backend Lead | Backend & integrations |
 | Prathamesh Patil | Full Stack | Integrations & UI |
+| Ritik Ranjan | iOS Developer | DST & Employee app UI |
 | Yajan Mehta | iOS Developer | Employee app UI |
 | Aayudh Ninwane | iOS Developer | Employee app UI |
 | Manas Jiwnani | iOS Developer | Employee app UI |
